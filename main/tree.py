@@ -11,17 +11,26 @@ class Node():
         None
     Attributes:
         random_val (float): Uniform random sample used to split ties / and create
-            a relative order of nodes.
+            a relative order of nodes. Note that in the creation of the tree, nodes are chosen
+            based on their cost, and this value is simply used to break ties. 
+            
         type (str): Internally set to 'node' or 'leaf' depending on if the node is a
             normal node or a leaf node.
+            
         label (int): (For leaf nodes only) Prediction label to be associated with this node.
         feature (int): The axis aligned feature to split on. 
+        
         feature_label (str): Name for the given feature (for printing and display). 
-        threshold (float): The value of feature to split on
+        
+        threshold (float): The value of feature to split on.
+        
         left_child (Node): (For non-leaf nodes only) Pointer to the left branch of the current node.
+        
         right_child (Node): (For non-leaf nodes only) Pointer to the right branch of the 
             current node. 
+            
         points (np.ndarray): The set of data points associated with points belonging to this node.  
+        
         cost (float): The cost associated with points belonging to this node. 
         
     """
@@ -39,7 +48,7 @@ class Node():
     def __lt__(self, other):
         """
         Creates an ordering of nodes by defining a < comparison. 
-        For now, I simply order nodes randomly via randomly sampled values. 
+        This simply order nodes randomly via randomly sampled values. 
 
         Args:
             other (Node): Another node to compare with.
@@ -88,23 +97,26 @@ class Node():
         self.cost = cost
         self.points = points
         
-        
-        
 ####################################################################################################
         
 class Tree():
     """
     Decision Tree object with simple axis aligned splitting conditions. 
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1):
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
         """
         Args:
             max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
                 Defaults to None.
+                
             max_depth (int, optional): Optional constraint for maximum depth. 
                 Defaults to None.
+                
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
+                
+            random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+                used for breaking ties between nodes, or if you are using a RandomTree!
             
         Attributes:
             heap (heapq list): Maintains the heap structure of the tree.
@@ -114,6 +126,10 @@ class Tree():
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
+        
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        
         self.feature_labels = None
         self.heap = []
         self.leaf_count = 0
@@ -271,10 +287,29 @@ class RandomTree(Tree):
     chosen from the input space.
     
     NOTE: In order to imitate results from [Galmath, Jia, Polak, Svensson 2021], fit this model on 
-    a dataset of centers or representative points. 
+        a dataset of centers or representative points. 
+        
+    Args:
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+            used for breaking ties between nodes, or if you are using a RandomTree!
+        
+    Attributes:
+        heap (heapq list): Maintains the heap structure of the tree.
+        leaf_count (int): Number of leaves in the tree.
+        node_count (int): Number of nodes in the tree.
+    
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1):
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf)
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
+        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, random_seed)
         
     def _cost(self, X_):
         """
@@ -328,13 +363,31 @@ class RandomTree(Tree):
 ####################################################################################################
             
 
-class kMeansTree(Tree):
+class KMeansTree(Tree):
     """
     Inherits from the Tree class to implement a decision tree in which split criterion chosen so
     that points in any leaf node are close in distance to their mean. 
+    
+    Args:
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        random_seed (int, optional): Random seed. In the kMeansTree object randomness is only ever 
+            used for breaking ties between nodes which have the same cost.
+        
+    Attributes:
+        heap (heapq list): Maintains the heap structure of the tree.
+        leaf_count (int): Number of leaves in the tree.
+        node_count (int): Number of nodes in the tree.
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1):
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf)
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
+        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, random_seed)
         
         
     def _cost(self, X_):
@@ -400,15 +453,31 @@ class kMeansTree(Tree):
         
 ####################################################################################################
 
-
-
-class kMediansTree(Tree):
+class KMediansTree(Tree):
     """
     Inherits from the Tree class to implement a decision tree in which split criterion chosen so
     that points in any leaf node are close in distance to their median. 
+    
+    Args:
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        random_seed (int, optional): Random seed. In the kMediansTree object randomness is only ever 
+            used for breaking ties between nodes which have the same cost.
+        
+    Attributes:
+        heap (heapq list): Maintains the heap structure of the tree.
+        leaf_count (int): Number of leaves in the tree.
+        node_count (int): Number of nodes in the tree.
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1):
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf)
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
+        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, random_seed)
         
         
     def _cost(self, X_):
@@ -469,6 +538,5 @@ class kMediansTree(Tree):
                         best_split = split
 
             return best_split
-        
         
 ####################################################################################################

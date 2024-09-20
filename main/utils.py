@@ -4,38 +4,133 @@ import pygraphviz as pgv
 from IPython.display import Image
 
 ####################################################################################################
-def kmeans_plus_plus_initialization(X, k):
+
+def kmeans_cost(X, clustering, centers):
     """
-    Implements KMeans++ initialization to choose `k` initial cluster centers.
+    Computes the squared L2 norm cost of a clustering with an associated set of centers
 
     Args:
-    X : np.ndarray : Data points (n_samples, n_features)
-    k : int : Number of clusters
+        X (np.ndarray): (n x m) Dataset
+        
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i. 
+            
+        centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
+
+    Returns:
+        cost (float): Total cost of the clustering.
+    """
+    cost = 0
+    for i, cluster in enumerate(clustering):
+        center = centers[i,:]
+        cost += np.sum(np.linalg.norm(X[cluster,:] - center, axis = 1)**2)
+    return cost
+
+####################################################################################################
+
+def kmedians_cost(X, clustering, centers):
+    """
+    Computes the L1 norm cost of a clustering with an associated set of centers
+
+    Args:
+        X (np.ndarray): (n x m) Dataset
+        
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i. 
+            
+        centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
+
+    Returns:
+        cost (float): Total cost of the clustering.
+    """
+    cost = 0
+    for i, cluster in enumerate(clustering):
+        center = centers[i,:]
+        cost += np.sum(np.abs(X[cluster,:] - center, axis = 1))
+    return cost
+
+####################################################################################################
+
+def clustering_to_labels(clustering):
+    """
+    Takes an input clustering and returns its associated list of labels.
+    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
+    
+    Args:
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i. 
+
+    Returns:
+        labels (List[int]): List of integers where an entry at index i has value j if the 
+            item associated with index i is present within cluster j. 
+    """
+    lens = [len(i) for i in clustering]
+    labels = [-1]*np.sum(lens)
+    
+    for i,cluster in enumerate(clustering):
+        for j in cluster:
+            labels[j] = i
+            
+    return labels
+        
+####################################################################################################
+
+def labels_to_clustering(labels):
+    """
+    Takes an input list of labels and returns its associated clustering.
+    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
+    
+    Args:
+        labels (List[int]): List of integers where an entry at index i has value j if the 
+            item associated with index i is present within cluster j. 
+
+    Returns:
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i. 
+    """
+    clustering = [[] for i in range(int(np.max(labels)) + 1)]
+    for i,j in enumerate(labels):
+        clustering[int(j)].append(i)
+        
+    return clustering
+
+####################################################################################################
+
+def kmeans_plus_plus_initialization(X, k, random_seed = None):
+    """
+    Implements KMeans++ initialization to choose k initial cluster centers.
+
+    Args:
+    X (np.ndarray): Data points (n_samples, n_features)
+    k (int): Number of clusters
     
     Returns:
-    centers : np.ndarray : Initialized cluster centers (k, n_features)
+    centers (np.ndarray): Initialized cluster centers (k, n_features)
     """
+    if random_seed is not None:
+        np.random.seed(random_seed)
+        
     n, m = X.shape
     centers = np.empty((k, m))
+    centers[:] = np.inf
     
     # Randomly choose the first center
     first_center = np.random.choice(n)
-    centers[0] = X[first_center,:]
+    centers[0,:] = X[first_center,:]
 
-
-    distances = np.full(n, np.inf)
     for i in range(1, k):
-        distances = np.minimum(distances, np.sum((X - centers[i - 1]) ** 2, axis=1))
+        diffs = X[np.newaxis, :, :] - centers[:, np.newaxis, :]
+        distances = np.sum(diffs ** 2, axis=-1)
+        min_distances = np.min(distances, axis = 0)
         
         # Choose the next center with probability proportional to the squared distance
-        probabilities = distances / distances.sum()
+        probabilities = min_distances / min_distances.sum()
         next_center_index = np.random.choice(n, p=probabilities)
-        centers[i] = X[next_center_index]
+        centers[i,:] = X[next_center_index,:]
 
     return centers
 
 ####################################################################################################
-
 
 def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
                 feature_labels = None, leaf_colors = None):
@@ -117,7 +212,6 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
 
     return graph
 
-
 ####################################################################################################
 
 def visualize_tree(custom_root, output_file='tree.png', feature_labels = None, leaf_colors = None):
@@ -172,11 +266,8 @@ def remove_rows_cols(matrix, indices):
         matrix = np.delete(matrix, idx, axis=1)
     return matrix
 
-
 ####################################################################################################
 
-# Given a data matrix, add a new row and a new column to its end points, i.e. 
-# the new column/row is the last column/row in the matrix
 def add_row_col(matrix, new_row, new_col):
     """
     Given a data matrix, add a new row and a new column.
