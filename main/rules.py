@@ -352,11 +352,7 @@ class Rule:
             if count == len(new_term_list):
                 full_pass = True
                 
-        self.term_list = new_term_list
-                        
-                        
-        
-            
+        self.term_list = new_term_list        
 
     def evaluate(self, data_point):
         """

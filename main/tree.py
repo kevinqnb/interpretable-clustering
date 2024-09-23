@@ -244,20 +244,6 @@ class Tree():
             heapq.heappush(self.heap, right_obj)
             self.node_count += 2
 
-
-    def predict(self, X):
-        """
-        Predicts the class labels of an input dataset X by recursing through the tree to 
-        find where data points fall into leaf nodes.
-
-        Args:
-            X (np.ndarray): Input n x m dataset
-
-        Returns:
-            (np.ndarray): Length n array of class labels. 
-        """
-        return np.array([self._predict_sample(sample, self.root) for sample in X])
-
     def _predict_sample(self, sample, node):
         """
         Predicts the class label of a single sample from the data.
@@ -277,91 +263,20 @@ class Tree():
         else:
             return self._predict_sample(sample, node.right_child)
         
-        
-####################################################################################################
-
-
-class RandomTree(Tree):
-    """
-    Inherits from the Tree class to implement a decision tree in which split criterion are randomly 
-    chosen from the input space.
-    
-    NOTE: In order to imitate results from [Galmath, Jia, Polak, Svensson 2021], fit this model on 
-        a dataset of centers or representative points. 
-        
-    Args:
-        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-            Defaults to None.
-            
-        max_depth (int, optional): Optional constraint for maximum depth. 
-            Defaults to None.
-            
-        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-            within a single leaf. Defaults to 1.
-            
-        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
-            used for breaking ties between nodes, or if you are using a RandomTree!
-        
-    Attributes:
-        heap (heapq list): Maintains the heap structure of the tree.
-        leaf_count (int): Number of leaves in the tree.
-        node_count (int): Number of nodes in the tree.
-    
-    """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, random_seed)
-        
-    def _cost(self, X_):
+    def predict(self, X):
         """
-        Assigns a random cost of a subset of data points.
+        Predicts the class labels of an input dataset X by recursing through the tree to 
+        find where data points fall into leaf nodes.
 
         Args:
-            X_ (np.ndarray): Data subset. 
-            
+            X (np.ndarray): Input n x m dataset
+
         Returns:
-            (float): Cost of the given data. 
+            (np.ndarray): Length n array of class labels. 
         """
-        
-        # Costs are given by a uniform random sample, meaning nodes will be chosen randomly 
-        # to split from 
-        return np.random.uniform()
-
-
-    def _find_best_split(self, X_):
-            """
-            Randomly chooses an axis aligned threshold value to split upon 
-            given some input dataset X. The randomly sampled split must separate at least one
-            pair of points from X_.
-
-            Args:
-                X_ (np.ndarray): Input dataset.
-                
-            Returns:
-                Tuple(int, float): A (feature, threshold) split pair. 
-            """
-            
-            found = False
-            split = None
-            while not found:
-                # Randomly sample a feature and a value for an axis aligned split:
-                rand_feature = np.random.choice(range(X_.shape[1]))
-                interval = (np.min(X_[:, rand_feature]), np.max(X_[:, rand_feature]))
-                rand_cut = np.random.uniform(interval[0], interval[1])
-                left_mask = X_[:, rand_feature] <= rand_cut
-                right_mask = ~left_mask
-                
-                # If sampled split separates at least two centers, then accept:
-                left_branch = X_[left_mask]
-                right_branch = X_[right_mask]
-                if len(left_branch[0]) > 0 and len(right_branch[0]) > 0:
-                    found = True
-                    split = (rand_feature, rand_cut)
-
-            return split
-        
+        return np.array([self._predict_sample(sample, self.root) for sample in X])
         
 ####################################################################################################
-            
 
 class KMeansTree(Tree):
     """
@@ -538,5 +453,179 @@ class KMediansTree(Tree):
                         best_split = split
 
             return best_split
+
+####################################################################################################
+
+class RandomTree(Tree):
+    """
+    Inherits from the Tree class to implement a decision tree in which split criterion are randomly 
+    chosen from the input space.
+    
+    This model is a product of work by [Galmath, Jia, Polak, Svensson 2021] in their paper 
+    titled "Nearly-Tight and Oblivious Algorithms for Explainable Clustering."
+    
+    NOTE: In order to imitate results from [Galmath, Jia, Polak, Svensson 2021], fit this model on 
+        a dataset of centers or representative points.
+    """
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None):
+        """ 
+        Args:
+            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+                Defaults to None.
+                
+            max_depth (int, optional): Optional constraint for maximum depth. 
+                Defaults to None.
+                
+            min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+                within a single leaf. Defaults to 1.
+                
+            random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+                used for breaking ties between nodes, or if you are using a RandomTree!
+            
+        Attributes:
+            heap (heapq list): Maintains the heap structure of the tree.
+            leaf_count (int): Number of leaves in the tree.
+            node_count (int): Number of nodes in the tree.
+        
+        """
+        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, random_seed)
+        
+    def _cost(self, X_):
+        """
+        Assigns a random cost of a subset of data points.
+
+        Args:
+            X_ (np.ndarray): Data subset. 
+            
+        Returns:
+            (float): Cost of the given data. 
+        """
+        
+        # Costs are given by a uniform random sample, meaning nodes will be chosen randomly 
+        # to split from 
+        return np.random.uniform()
+
+
+    def _find_best_split(self, X_):
+            """
+            Randomly chooses an axis aligned threshold value to split upon 
+            given some input dataset X. The randomly sampled split must separate at least one
+            pair of points from X_.
+
+            Args:
+                X_ (np.ndarray): Input dataset.
+                
+            Returns:
+                Tuple(int, float): A (feature, threshold) split pair. 
+            """
+            
+            found = False
+            split = None
+            while not found:
+                # Randomly sample a feature and a value for an axis aligned split:
+                rand_feature = np.random.choice(range(X_.shape[1]))
+                interval = (np.min(X_[:, rand_feature]), np.max(X_[:, rand_feature]))
+                rand_cut = np.random.uniform(interval[0], interval[1])
+                left_mask = X_[:, rand_feature] <= rand_cut
+                right_mask = ~left_mask
+                
+                # If sampled split separates at least two centers, then accept:
+                left_branch = X_[left_mask]
+                right_branch = X_[right_mask]
+                if len(left_branch[0]) > 0 and len(right_branch[0]) > 0:
+                    found = True
+                    split = (rand_feature, rand_cut)
+
+            return split
         
 ####################################################################################################
+
+class ConvertExKMC(Tree):
+    """
+    Transforms an ExKMC tree to a Tree object as defined here. 
+    The ExKMC tree is based around work 
+    from work from [Frost, Moshkovitz, Rashtchian '20] in their 
+    paper titled 'ExKMC: Expanding Explainable k-Means Clustering.'
+    The following works by examining the tree created in their implementation, 
+    which may be found at: https://github.com/navefr/ExKMC.
+    
+    NOTE: The fit() method of the parent class will not apply. Any fitting must be done 
+    with the ExKMC code. This class simply builds a Tree object out of the already 
+    fitted tree which output from their code. 
+    """
+    
+    def __init__(self, ExKMC_root, X, feature_labels = None):
+        """
+        Args:
+            ExKMC_root (ExKMC.Tree.Node): Root node of an ExKMC tree.
+            
+            feature_labels(List[str], optional): List of strings corresponding to feature names 
+                in the data. Useful for explaining results in post. 
+        """
+
+        super().__init__()
+        self.exkmc_root = ExKMC_root
+        
+        # Set feature labels:
+        if feature_labels is None:
+            self.feature_labels = [None]*X.shape[1]
+        else:
+            if not len(feature_labels) == X.shape[1]:
+                raise ValueError('Labels must match the shape of the data.')
+            self.feature_labels = feature_labels
+        
+        
+        self.root = Node()
+        self._build_tree(self.exkmc_root, self.root, X)
+        self.node_count += 1
+        
+        
+    def _cost(self, X_):
+        """
+        Assigns cost that rewards data with points all close to their mean
+        (i.e. small variance).
+
+        Args:
+            X_ (np.ndarray): Data subset. 
+            
+        Returns:
+            (float): Cost of the given data. 
+        """
+        
+        if len(X_) == 0:
+            return np.inf
+        else:
+            mu = np.mean(X_, axis = 0)
+            cost = np.sum(np.linalg.norm(X_ - mu, axis = 1)**2) #/len(X_)
+            return cost
+        
+        
+    def _build_tree(self, exkmc_node, node_obj: Node, X_):
+        """
+        Builds the decision tree by traversing the ExKMC tree.
+        
+        Args:
+            exkmc_node (ExKMC.Tree.Node): Node of an ExKMC tree.
+            node_obj (Node): Corresponding Node object to copy conditions into. 
+            X_ (np.ndarray): Data subset associated with the current node. 
+        """
+        
+        if exkmc_node.is_leaf():
+            class_label = self.leaf_count 
+            self.leaf_count += 1
+            node_obj.leaf_node(label = class_label, cost = self._cost(X_), points = len(X_))
+        else:
+            feature, threshold = exkmc_node.feature, exkmc_node.value
+            left_mask = X_[:, feature] <= threshold
+            right_mask = ~left_mask
+            
+            left_node = Node()
+            right_node = Node()
+            
+            node_obj.tree_node(feature, threshold, left_node, right_node, 
+                               self._cost(X_), len(X_), feature_label = self.feature_labels[feature])
+            
+            self._build_tree(exkmc_node.left, left_node, X_[left_mask])
+            self._build_tree(exkmc_node.right, right_node, X_[right_mask])
+            
+            self.node_count += 2

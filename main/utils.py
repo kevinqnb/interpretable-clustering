@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd 
+import matplotlib.pyplot as plt
 import pygraphviz as pgv
 from IPython.display import Image
+from rules import *
 
 ####################################################################################################
 
@@ -51,7 +53,7 @@ def kmedians_cost(X, clustering, centers):
 
 ####################################################################################################
 
-def clustering_to_labels(clustering):
+def clustering_to_labels(clustering, label_array = None):
     """
     Takes an input clustering and returns its associated list of labels.
     NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
@@ -59,13 +61,19 @@ def clustering_to_labels(clustering):
     Args:
         clustering (List[List[int]]): 2d List of integers representing a clustering.
             clustering[i] is a list of indices j for the items within the cluster with label i. 
+            
+        label_array (np.ndarray): Input array to modify. Useful if some items are not clustered,
+            i.e. will have label NaN.  
 
     Returns:
-        labels (List[int]): List of integers where an entry at index i has value j if the 
+        labels (np.ndarray): List of integers where an entry at index i has value j if the 
             item associated with index i is present within cluster j. 
     """
-    lens = [len(i) for i in clustering]
-    labels = [-1]*np.sum(lens)
+    if label_array is None:
+        lens = [len(i) for i in clustering]
+        labels = np.zeros(np.sum(lens)) - 1
+    else:
+        labels = label_array
     
     for i,cluster in enumerate(clustering):
         for j in cluster:
@@ -81,7 +89,7 @@ def labels_to_clustering(labels):
     NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
     
     Args:
-        labels (List[int]): List of integers where an entry at index i has value j if the 
+        labels (np.ndarray): List of integers where an entry at index i has value j if the 
             item associated with index i is present within cluster j. 
 
     Returns:
@@ -90,7 +98,8 @@ def labels_to_clustering(labels):
     """
     clustering = [[] for i in range(int(np.max(labels)) + 1)]
     for i,j in enumerate(labels):
-        clustering[int(j)].append(i)
+        if not np.isnan(j):
+            clustering[int(j)].append(i)
         
     return clustering
 
@@ -129,6 +138,39 @@ def kmeans_plus_plus_initialization(X, k, random_seed = None):
         centers[i,:] = X[next_center_index,:]
 
     return centers
+
+####################################################################################################
+
+def plot_decision_boundaries(model, X, ax = None, resolution = 100):
+    """
+    Plots the decision boundaries of a given model.
+
+    Args:
+        model (Object): Object which requires a predict() method.
+        X (_type_): Dataset fitted to the model. 
+        ax (matplotlib axes, optional): Axes for plotting. 
+        resolution (int, optional): Number of points on the meshgrid, controls the 
+            resolution of the contour lines. Defaults to 100.
+    """
+    # Define the axis boundaries of the plot
+    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
+    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
+    
+    # Create a mesh grid
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, resolution),
+                         np.linspace(y_min, y_max, resolution))
+    
+    # Predict the classification for each point in the mesh
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    
+    # Plot the decision boundaries
+    if ax is None:
+        plt.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
+                    alpha = 0.8, linewidths = 1.5)
+    else:
+        ax.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
+                   alpha = 0.8, linewidths = 1.5)
 
 ####################################################################################################
 
@@ -241,6 +283,59 @@ def visualize_tree(custom_root, output_file='tree.png', feature_labels = None, l
     graph.draw(output_file)
     #return Image(output_file, width = width, height = height)
     return Image(output_file)
+
+####################################################################################################
+
+def rule_grid(X, g):
+    """
+    Builds a g x g grid of rules around a given dataset. 
+
+    Args:
+        data (np.ndarray): Input (n x m) dataset. 
+        g (int): _description_
+
+    Returns:
+        grid (List[Rule]): List of Rule objects describing the grid.
+    """
+    # Step 1: Find the min and max of the dataset along both dimensions
+    x_min, x_max = np.min(X[:, 0]), np.max(X[:, 0])
+    y_min, y_max = np.min(X[:, 1]), np.max(X[:, 1])
+
+    # Step 2: Calculate the step size for both dimensions
+    x_step = (x_max - x_min) / g
+    y_step = (y_max - y_min) / g
+
+    # Step 3: Create the grid cells with logical conditions
+    grid_cells = []
+
+    for i in range(g):
+        for j in range(g):
+            x_start = x_min + i * x_step
+            x_end = x_start + x_step
+            y_start = y_min + j * y_step
+            y_end = y_start + y_step
+            
+            # Logical conditions defining the current cell
+            ineq = ['>', '<', '>', '<']
+            if i == 0:
+                ineq[0] = '>='
+            elif i == g - 1:
+                ineq[1] = '<='
+            if j == 0:
+                ineq[2] = '>='
+            elif j == g - 1:
+                ineq[3] = '<='
+            
+            cell_conditions = [
+                Condition(0, ineq[0], x_start),
+                Condition(0, ineq[1], x_end),
+                Condition(1, ineq[2], y_start),
+                Condition(1, ineq[3], y_end)
+            ]
+            
+            grid_cells.append(Rule([Term(cell_conditions)]))
+
+    return grid_cells
 
 ####################################################################################################
 

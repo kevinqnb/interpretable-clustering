@@ -55,3 +55,47 @@ class tree_to_rules:
     
     
 ####################################################################################################
+
+class ExKMC_tree_to_rules(tree_to_rules):
+    """
+    Transforms an ExKMC tree to a list of Rules by traversing the tree and examining 
+    the conditions required to get to its leaf nodes. This is based around work 
+    from work from [Frost, Moshkovitz, Rashtchian '20] in their 
+    paper titled 'ExKMC: Expanding Explainable k-Means Clustering.'
+    It works by examining the tree created in their implementation, 
+    which may be found at: https://github.com/navefr/ExKMC
+    """
+    
+    def __init__(self):
+        """
+        Args:
+            rule_list (list): Maintained list of rules from the tree. 
+        """
+        super().__init__()
+        self.label_count = 0
+
+    def traverser(self, node, condition_list):
+        """
+        Recursively traverses the tree from an input node, and 
+        builds a rule DNF as it does so.
+
+        Args:
+            node (Node): Current node in the tree.
+            rule_dnf (list): List of (feature, comparison, threshold) 
+                            conjunctive conditions seen so far.
+        """
+        if node.is_leaf():
+            term = Term(condition_list)
+            self.term_list.append(term)
+            self.leaf_node_labels.append(self.label_count)
+            self.label_count += 1
+        else:
+            left_rule = condition_list + [Condition(node.feature, '<=', node.value, 
+                                                    feature_label = None)]
+            self.traverser(node.left, left_rule)
+    
+            right_rule = condition_list + [Condition(node.feature, '>', node.value, 
+                                                     feature_label = None)]
+            self.traverser(node.right, right_rule)
+            
+####################################################################################################

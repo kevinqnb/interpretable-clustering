@@ -69,7 +69,9 @@ class RuleClustering:
                 which are contained within the cluster. 
         """
         self.clustering = C
-        self.labels = clustering_to_labels(self.clustering)
+        new_labels = np.empty(len(self.rule_list))
+        new_labels[:] = np.nan
+        self.labels = clustering_to_labels(self.clustering, new_labels)
         
     def fit_rules(self, X):
         """
@@ -138,7 +140,8 @@ class RuleClustering:
                         data_labels[idx] = i
         
         data_clustering = labels_to_clustering(data_labels)
-        return data_clustering, data_labels
+        #return data_clustering, data_labels
+        return data_labels
 
 ####################################################################################################
 
@@ -146,7 +149,7 @@ class KMeansRuleClustering(RuleClustering):
     """
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
-    def __init__(self, rule_list, k_clusters, init = 'k-means', max_iterations = 1000,
+    def __init__(self, rule_list, k_clusters, init = 'k-means', max_iterations = 500,
                  random_seed = None, cost_tracker = False):
         """
         Args:
@@ -159,7 +162,7 @@ class KMeansRuleClustering(RuleClustering):
                 'k-means++' which uses a randomized k-means++ initialization. 
                 
             max_iterations (int, optional): Maximum number of iterations to run the 
-                clustering step for. Defaults to 1,000.
+                clustering step for. Defaults to 500.
                 
             random_seed (int, optional): Random seed to use for any randomized processes.
                 
@@ -282,7 +285,7 @@ class KMediansRuleClustering(RuleClustering):
     """
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
-    def __init__(self, rule_list, k_clusters, init = 'k-medians', max_iterations = 1000,
+    def __init__(self, rule_list, k_clusters, init = 'k-medians', max_iterations = 500,
                  random_seed = None):
         """
         Args:
@@ -295,7 +298,7 @@ class KMediansRuleClustering(RuleClustering):
                 'k-means++' which uses a randomized k-means++ initialization. 
                 
             max_iterations (int, optional): Maximum number of iterations to run the 
-                clustering step for. Defaults to 1,000.
+                clustering step for. Defaults to 500.
                 
             random_seed (int, optional): Random seed to use for any randomized processes.
                                         
@@ -397,7 +400,7 @@ class KMediansRuleClustering(RuleClustering):
             kmeans = KMeans(n_clusters=self.k_clusters, random_state=self.random_seed, n_init="auto").fit(X)
             self.centers = kmeans.cluster_centers_
         else:
-            self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random.seed)
+            self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
         self.cluster()
         self.update_rules()
         
