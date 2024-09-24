@@ -283,6 +283,10 @@ class KMeansTree(Tree):
     Inherits from the Tree class to implement a decision tree in which split criterion chosen so
     that points in any leaf node are close in distance to their mean. 
     
+    The optimized splitting algorithm is attributed to 
+    work by [Dasgupata, Frost, Moshkovitz, Rashtchian '20]
+    in their paper titled 'Explainable k-means and k-medians clustering.
+    
     Args:
         max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
             Defaults to None.
@@ -337,9 +341,27 @@ class KMeansTree(Tree):
                 Tuple(int, float): A (feature, threshold) split pair. 
             """
             
+            n, d = X_.shape
+            u = np.linalg.norm(X_)**2
+            
             best_split = None
             best_split_val = np.inf
+            for i in range(X_.shape[1]):
+                s = np.zeros(d)
+                r = np.sum(X_, axis = 0)
+                order = np.argsort(X_[:, i])
+                
+                for j, idx in enumerate(order[:-1]):
+                    threshold = X_[idx, i]
+                    s = s + X_[idx, :]
+                    r = r - X_[idx, :]
+                    split_val = u - np.sum(s**2)/(j + 1) - np.sum(r**2)/(n - j - 1)
+                    
+                    if split_val < best_split_val:
+                        best_split_val = split_val
+                        best_split = (i, threshold)
             
+            '''
             for feature in range(X_.shape[1]):
                 unique_vals = np.unique(X_[:,feature])
                 for threshold in unique_vals:
@@ -362,6 +384,7 @@ class KMeansTree(Tree):
                     if split_val < best_split_val:
                         best_split_val = split_val
                         best_split = split
+            '''
 
             return best_split
         
@@ -372,6 +395,8 @@ class KMediansTree(Tree):
     """
     Inherits from the Tree class to implement a decision tree in which split criterion chosen so
     that points in any leaf node are close in distance to their median. 
+    
+    NOTE: This is yet to be optimized and so will run quite slowly. Coming soon. 
     
     Args:
         max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
@@ -426,8 +451,27 @@ class KMediansTree(Tree):
                 Tuple(int, float): A (feature, threshold) split pair. 
             """
             
+            n, d = X_.shape
             best_split = None
             best_split_val = np.inf
+            
+            '''
+            for i in range(X_.shape[1]):
+                eta2 = np.median(X_, axis = 0)
+                split_val = np.sum(np.abs(X_ - eta2))
+                order = np.argsort(X_[:, i])
+                
+                for j, idx in enumerate(order[:-1]):
+                    threshold = X_[idx, i]
+                    eta1 = np.median(X_[:j+1, :], axis = 0)
+                    split_val = (split_val + np.sum(np.abs(X_[j,:] - eta1)) 
+                                 - np.sum(np.abs(X_[j,:] - eta2)))
+                    eta2 = np.median(X_[j+1:, :], axis = 0)
+                    
+                    if split_val < best_split_val:
+                        best_split_val = split_val
+                        best_split = (i, threshold)
+            '''
             
             for feature in range(X_.shape[1]):
                 unique_vals = np.unique(X_[:,feature])

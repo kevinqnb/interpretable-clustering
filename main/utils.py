@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pygraphviz as pgv
 from IPython.display import Image
+import matplotlib.image as mpimg
 from rules import *
 
 ####################################################################################################
@@ -48,7 +49,7 @@ def kmedians_cost(X, clustering, centers):
     cost = 0
     for i, cluster in enumerate(clustering):
         center = centers[i,:]
-        cost += np.sum(np.abs(X[cluster,:] - center, axis = 1))
+        cost += np.sum(np.abs(X[cluster,:] - center))
     return cost
 
 ####################################################################################################
@@ -175,7 +176,7 @@ def plot_decision_boundaries(model, X, ax = None, resolution = 100):
 ####################################################################################################
 
 def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
-                feature_labels = None, leaf_colors = None):
+                feature_labels = None, leaf_colors = None, newline = True):
     """
     Recursively builds a pygraphviz graph for visualization of a decision tree.
     Given a single node (starting with the root), it will recursively parse the 
@@ -216,13 +217,19 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
     # For NON-leaf nodes:
     if custom_node.type == 'node':
         if feature_labels is None:
-            node_label += (f"Feature {custom_node.feature} \n\u2264 {np.round(custom_node.threshold, 3)}")
+            if newline:
+                node_label += (f"Feature {custom_node.feature} \n\u2264 {np.round(custom_node.threshold, 3)}")
+            else:
+                node_label += (f"Feature {custom_node.feature} \u2264 {np.round(custom_node.threshold, 3)}")
         else:
-            node_label += (f"{feature_labels[custom_node.feature]} \n\u2264 {np.round(custom_node.threshold, 3)}")
+            if newline:
+                node_label += (f"{feature_labels[custom_node.feature]} \n\u2264 {np.round(custom_node.threshold, 3)}")
+            else:
+                node_label += (f"{feature_labels[custom_node.feature]} \u2264 {np.round(custom_node.threshold, 3)}")
             
     # For leaf nodes:
     else:
-        node_label += f"# Points: {custom_node.points}"
+        node_label += f"Size: {custom_node.points}"
         node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
 
 
@@ -230,11 +237,11 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
     # For leaf nodes:
     if custom_node.type == 'leaf' and (leaf_colors is not None):
         graph.add_node(node_id, label=node_label, fillcolor = leaf_colors[custom_node.label], 
-                       style = 'filled', penwidth = 5, fontsize = 24, fontname="times-bold")
+                       style = 'filled', penwidth = 5, fontsize = 36, fontname="times-bold")
         
     # For NON-leaf nodes:
     else:
-        graph.add_node(node_id, label=node_label, fontsize = 30, penwidth = 5,
+        graph.add_node(node_id, label=node_label, fontsize = 36, penwidth = 5,
                        fontname="times-bold")
         
     # Add an edge connecting to its parent.
@@ -256,7 +263,8 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
 
 ####################################################################################################
 
-def visualize_tree(custom_root, output_file='tree.png', feature_labels = None, leaf_colors = None):
+def visualize_tree(custom_root, output_file='tree.png', feature_labels = None, leaf_colors = None,
+                   newline = True):
     """
     Wrapper function for visualizing a Tree object by building a pygraphviz decision tree.
 
@@ -277,9 +285,11 @@ def visualize_tree(custom_root, output_file='tree.png', feature_labels = None, l
     Returns:
         _type_: _description_
     """
-    graph = build_graph(custom_root, feature_labels = feature_labels, leaf_colors = leaf_colors)
+    graph = build_graph(custom_root, feature_labels = feature_labels, leaf_colors = leaf_colors, 
+                        newline = newline)
+    graph.graph_attr.update(size="10,10", dpi="300", ratio="0.75")
     graph.layout(prog='dot')
-    #graph.draw(output_file, args='-Gsize=1 -Gratio=1 -Gdpi=200')
+    graph.draw(output_file, args='-Gsize=10 -Gratio=0.9 -Gdpi=300')
     graph.draw(output_file)
     #return Image(output_file, width = width, height = height)
     return Image(output_file)

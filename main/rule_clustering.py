@@ -115,7 +115,7 @@ class RuleClustering:
         """
         pass
     
-    def predict(self, X):
+    def predict(self, X, return_clustering = False):
         """
         Assigns cluster labels to an input dataset.
 
@@ -140,8 +140,11 @@ class RuleClustering:
                         data_labels[idx] = i
         
         data_clustering = labels_to_clustering(data_labels)
-        #return data_clustering, data_labels
-        return data_labels
+        
+        if return_clustering:
+            return data_clustering, data_labels
+        else:
+            return data_labels
 
 ####################################################################################################
 
@@ -149,8 +152,8 @@ class KMeansRuleClustering(RuleClustering):
     """
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
-    def __init__(self, rule_list, k_clusters, init = 'k-means', max_iterations = 500,
-                 random_seed = None, cost_tracker = False):
+    def __init__(self, rule_list, k_clusters, init = 'k-means', n_init = 10, center_init = None, 
+                 max_iterations = 500, random_seed = None):
         """
         Args:
             rule_list (List[Rule]): List of Rule objects to cluster.
@@ -158,39 +161,53 @@ class KMeansRuleClustering(RuleClustering):
             k_clusters (int): Number of clusters.
             
             init (str, optional): Center initialization method. Included options are 
-                'k-means' which runs a k-means algorithm and uses the output centers or 
-                'k-means++' which uses a randomized k-means++ initialization. 
+                'k-means' which runs a k-means algorithm and uses the output centers,
+                'random++' which uses a randomized k-means++ initialization, or 
+                'manual' which assumes an input array of centers. 
+                
+            n_init (int, optional): If using 'random' init, this parameter controls 
+                the number of different initializations to try. The clustering object 
+                retains the clustering with the best cost performance. Defaults to 10.
+                
+            center_init (np.ndarray, optional): (k x m) Array of starting centers 
+                if using 'manual' initialization method.
                 
             max_iterations (int, optional): Maximum number of iterations to run the 
                 clustering step for. Defaults to 500.
                 
             random_seed (int, optional): Random seed to use for any randomized processes.
-                
-            cost_tracker (bool): Boolean variable deciding whether or not to keep track
-                of the clustering cost at each iteration. 
                                         
         Attributes:
             centers (np.ndarray): k x m Array of representative points in the clustering.
             
+            iterations (int): Iteration counter.
+            
             cost_per_iteration (List[float]): List with values at index i describing the cost
                 of the clustering at iteration i of the algorithm. 
-            
-            iterations (int): Iteration counter.
+                
+            cost (float): Clustering cost in the final iteration of the algorithm.
         """
         super().__init__(rule_list, k_clusters)
-        if init in ['k-means', 'k-means++']:
+        if init in ['k-means', 'random++', 'manual']:
             self.init = init
         else:
             raise ValueError('Unsupported initialization method.')
+
+        self.n_init = n_init
         
+        if self.init == 'manual' and (center_init is not None):
+            self.center_init = copy.deepcopy(center_init)
+        elif self.init == 'manual':
+            raise ValueError('Must give an input array of centers for manual initialization.')
+        
+            
         self.random_seed = random_seed
         self.max_iterations = max_iterations
-        self.cost_tracker = cost_tracker
-        if cost_tracker:
-            self.cost_per_iteration = []
-            
+        
         self.centers = None
         self.iterations = 0
+        self.cost_per_iteration = []
+        self.cost = np.inf
             
     
     def cluster_assign(self):
@@ -232,7 +249,7 @@ class KMeansRuleClustering(RuleClustering):
                 new_center = np.zeros(self.centers.shape[1])
                 for j, rule in enumerate(self.rule_list):
                     if j not in reassigns:
-                        assignment = self.labels[j]
+                        assignment = int(self.labels[j])
                         rule_dist = np.sum((rule.satisfied_points - self.centers[assignment,:])**2)
                         if rule_dist > max_dist:
                             max_dist = rule_dist
@@ -246,6 +263,9 @@ class KMeansRuleClustering(RuleClustering):
     def cluster(self, X):
         """
         Performs the iterative k-means clustering process.
+        
+        Args:
+            X (np.ndarray): Dataset to cluster rules upon.
         """
         
         self.cluster_assign()
@@ -258,10 +278,11 @@ class KMeansRuleClustering(RuleClustering):
             
             prev_clustering = new_clustering
             new_clustering = set(frozenset(cluster) for cluster in self.clustering)
-            if self.cost_tracker:
-                data_clustering, data_labels = self.predict(X)
-                self.cost_per_iteration.append(kmeans_cost(X, data_clustering, self.centers))
+            data_clustering, data_labels = self.predict(X, return_clustering = True)
+            self.cost_per_iteration.append(kmeans_cost(X, data_clustering, self.centers))
             self.iterations += 1
+            
+        self.cost = self.cost_per_iteration[-1]
     
     def fit(self, X):
         """
@@ -273,11 +294,53 @@ class KMeansRuleClustering(RuleClustering):
         if self.init == 'k-means':
             kmeans = KMeans(n_clusters=self.k_clusters, random_state=self.random_seed, n_init="auto").fit(X)
             self.centers = kmeans.cluster_centers_
-        else:
-            self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
+            self.cluster(X)
+            self.update_rules()
             
-        self.cluster(X)
-        self.update_rules()
+        elif self.init == 'random++':
+            # Store results from best run
+            best_cost = np.inf
+            best_clustering = None
+            best_labels = None
+            best_clustered_rule_list = None
+            best_iterations = None
+            best_cost_per_iteration = None
+            
+            for init in range(self.n_init):
+                # Reset 
+                self.initialize_clustering()
+                self.clustered_rule_list = None
+                self.iterations = 0
+                self.cost_per_iteration = []
+                
+                # Run clustering with random centers
+                self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
+                self.cluster(X)
+                self.update_rules()
+                
+                # Record if improved
+                if self.cost < best_cost:
+                    best_cost = self.cost
+                    best_clustering = self.clustering
+                    best_labels = self.labels
+                    best_clustered_rule_list = self.clustered_rule_list
+                    best_iterations = self.iterations
+                    best_cost_per_iteration = self.cost_per_iteration
+                    
+            self.cost = best_cost
+            self.clustering = best_clustering
+            self.labels = best_labels
+            self.clustered_rule_list = best_clustered_rule_list
+            self.iterations = best_iterations
+            self.cost_per_iteration = best_cost_per_iteration
+            
+        else:
+            # manual initialization
+            self.centers = self.center_init
+            self.cluster(X)
+            self.update_rules()
+            
+            
     
 ####################################################################################################
 
@@ -285,8 +348,8 @@ class KMediansRuleClustering(RuleClustering):
     """
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
-    def __init__(self, rule_list, k_clusters, init = 'k-medians', max_iterations = 500,
-                 random_seed = None):
+    def __init__(self, rule_list, k_clusters, init = 'k-medians', n_init = 10, center_init = None,
+                 max_iterations = 500, random_seed = None):
         """
         Args:
             rule_list (List[Rule]): List of Rule objects to cluster.
@@ -295,8 +358,15 @@ class KMediansRuleClustering(RuleClustering):
             
             init (str, optional): Center initialization method. Included options are 
                 'k-medians' which runs a k-means algorithm and uses the output centers or 
-                'k-means++' which uses a randomized k-means++ initialization. 
+                'random++' which uses a randomized k-means++ initialization. 
                 
+            n_init (int, optional): If using 'random' init, this parameter controls 
+                the number of different initializations to try. The clustering object 
+                retains the clustering with the best cost performance. Defaults to 10.
+                
+            center_init (np.ndarray, optional): (k x m) Array of starting centers 
+                if using 'manual' initialization method.
+            
             max_iterations (int, optional): Maximum number of iterations to run the 
                 clustering step for. Defaults to 500.
                 
@@ -304,19 +374,32 @@ class KMediansRuleClustering(RuleClustering):
                                         
         Attributes:
             centers (np.ndarray): k x m Array of representative points in the clustering.
+            
+            cost_per_iteration (List[float]): List with values at index i describing the cost
+                of the clustering at iteration i of the algorithm. 
+                
+            cost (float): Clustering cost in the final iteration of the algorithm.
         """
         super().__init__(rule_list, k_clusters)
         
-        if init in ['k-medians', 'k-means++']:
+        if init in ['k-medians', 'random++', 'manual']:
             self.init = init
         else:
             raise ValueError('Unsupported initialization method.')
         
+        self.n_init = n_init
+        
+        if self.init == 'manual' and (center_init is not None):
+            self.centers = copy.deepcopy(center_init)
+        elif self.init == 'manual':
+            raise ValueError('Must give an input array of centers for manual initialization.')
+        
         self.max_iterations = max_iterations
         self.random_seed = random_seed
-        
-        self.iterations = 0
+
         self.centers = None
+        self.iterations = 0
+        self.cost_per_iteration = []
             
     
     def cluster_assign(self):
@@ -359,7 +442,7 @@ class KMediansRuleClustering(RuleClustering):
                 new_center = np.zeros(self.centers.shape[1])
                 for j, rule in enumerate(self.rule_list):
                     if j not in reassigns:
-                        assignment = self.labels[j]
+                        assignment = int(self.labels[j])
                         rule_dist = np.sum(np.abs(rule.satisfied_points - self.centers[assignment,:]))
                         if rule_dist > max_dist:
                             max_dist = rule_dist
@@ -370,9 +453,12 @@ class KMediansRuleClustering(RuleClustering):
                 reassigns.append(max_idx)
     
     
-    def cluster(self):
+    def cluster(self, X):
         """
         Performs the iterative k-means clustering process.
+        
+        Args:
+            X (np.ndarray): Dataset to cluster rules upon.
         """
         self.cluster_assign()
         prev_clustering = set({-1})
@@ -385,7 +471,11 @@ class KMediansRuleClustering(RuleClustering):
             prev_clustering = new_clustering
             new_clustering = set(frozenset(cluster) for cluster in self.clustering)
             
+            data_clustering, data_labels = self.predict(X, return_clustering = True)
+            self.cost_per_iteration.append(kmedians_cost(X, data_clustering, self.centers))
             self.iterations += 1
+            
+        self.cost = self.cost_per_iteration[-1]
             
     
     def fit(self, X):
@@ -399,10 +489,51 @@ class KMediansRuleClustering(RuleClustering):
         if self.init == 'k-means':
             kmeans = KMeans(n_clusters=self.k_clusters, random_state=self.random_seed, n_init="auto").fit(X)
             self.centers = kmeans.cluster_centers_
+            self.cluster(X)
+            self.update_rules()
+               
+        elif self.init == 'random++':
+            # Store results from best run
+            best_cost = np.inf
+            best_clustering = None
+            best_labels = None
+            best_clustered_rule_list = None
+            best_iterations = None
+            best_cost_per_iteration = None
+            
+            for init in range(self.n_init):
+                # Reset 
+                self.initialize_clustering()
+                self.clustered_rule_list = None
+                self.iterations = 0
+                self.cost_per_iteration = []
+                
+                # Run clustering with random centers
+                self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
+                self.cluster(X)
+                self.update_rules()
+                
+                # Record if improved
+                if self.cost < best_cost:
+                    best_cost = self.cost
+                    best_clustering = self.clustering
+                    best_labels = self.labels
+                    best_clustered_rule_list = self.clustered_rule_list
+                    best_iterations = self.iterations
+                    best_cost_per_iteration = self.cost_per_iteration
+                    
+            self.cost = best_cost
+            self.clustering = best_clustering
+            self.labels = best_labels
+            self.clustered_rule_list = best_clustered_rule_list
+            self.iterations = best_iterations
+            self.cost_per_iteration = best_cost_per_iteration
+            
         else:
-            self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
-        self.cluster()
-        self.update_rules()
+            # manual initialization
+            self.centers = self.center_init
+            self.cluster(X)
+            self.update_rules()
         
 ####################################################################################################
 
