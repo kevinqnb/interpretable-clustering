@@ -18,10 +18,10 @@ class RuleClustering:
     overlapping cluster structure. I may fix this in the future.
     """
     
-    def __init__(self, rule_list, k_clusters):
+    def __init__(self, rules, k_clusters):
         """
         Args:
-            rule_list (List[Rule]): List of Rule objects to cluster.
+            rules (Object): Rule Model equipped with fit() and predict() methods.
             k_clusters (int): Number of clusters.
             
         Attributes:
@@ -35,14 +35,16 @@ class RuleClustering:
                 combinations of rules according to the rule clustering.
         """
         
-        self.rule_list = rule_list
+        self.rules = rules
         self.k_clusters = k_clusters
+        self.rule_list = None
         self.clustering = None
         self.labels = None
-        self.clustered_rule_list = None
-        self.initialize_clustering()
+        #self.clustered_rule_list = None
+        #self.initialize_clustering()
         
     
+    '''
     def __str__(self):
         """
         Gives a user-friendly string representation of the clustering boundaries.
@@ -50,8 +52,9 @@ class RuleClustering:
         cluster_str = "\n".join(f"IF:\n{repr(rule)}\nTHEN CLUSTER {i}\n" 
                                 for i,rule in enumerate(self.clustered_rule_list))
         return cluster_str
+    '''
     
-            
+
     def initialize_clustering(self):
         """
         Initializes the clustering by giving every rule its own cluster.
@@ -73,6 +76,7 @@ class RuleClustering:
         new_labels[:] = np.nan
         self.labels = clustering_to_labels(self.clustering, new_labels)
         
+    '''
     def fit_rules(self, X):
         """
         Fits a dataset X to each rule in the given rule list.
@@ -82,7 +86,9 @@ class RuleClustering:
         """
         for r in self.rule_list:
             r.fit(X)
-            
+    '''
+       
+    '''     
     def update_rules(self):
         """
         Updates the clustered_rule_list to fit the current rule clustering.
@@ -98,7 +104,7 @@ class RuleClustering:
             new_rule_list.append(R)
             
         self.clustered_rule_list = new_rule_list
-            
+    '''
             
     def cluster(self):
         """
@@ -129,6 +135,7 @@ class RuleClustering:
                 
             data_labels (List[int]): Length n array of assigned labels for each data point.
         """
+        '''
         data_labels = np.zeros(len(X)) - 1
         for i, cluster in enumerate(self.clustering):
             for j in cluster:
@@ -138,6 +145,9 @@ class RuleClustering:
                     # NOTE: Right now this only supports labeling of non-overlapping clusters. 
                     if data_labels[idx] == -1:
                         data_labels[idx] = i
+        '''
+        rule_model_labels = self.rules.predict(X)
+        data_labels = np.array([self.labels[i] for i in rule_model_labels])
         
         data_clustering = labels_to_clustering(data_labels)
         
@@ -152,11 +162,11 @@ class KMeansRuleClustering(RuleClustering):
     """
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
-    def __init__(self, rule_list, k_clusters, init = 'k-means', n_init = 10, center_init = None, 
+    def __init__(self, rules, k_clusters, init = 'k-means', n_init = 10, center_init = None, 
                  max_iterations = 500, random_seed = None):
         """
         Args:
-            rule_list (List[Rule]): List of Rule objects to cluster.
+            rules (Object): Rule Model equipped with fit() and predict() methods.
             
             k_clusters (int): Number of clusters.
             
@@ -187,7 +197,7 @@ class KMeansRuleClustering(RuleClustering):
                 
             cost (float): Clustering cost in the final iteration of the algorithm.
         """
-        super().__init__(rule_list, k_clusters)
+        super().__init__(rules, k_clusters)
         if init in ['k-means', 'random++', 'manual']:
             self.init = init
         else:
@@ -196,6 +206,9 @@ class KMeansRuleClustering(RuleClustering):
         self.n_init = n_init
         
         if self.init == 'manual' and (center_init is not None):
+            if len(center_init) != self.k_clusters:
+                raise ValueError("Input centers must be an array of size k x m")
+            
             self.center_init = copy.deepcopy(center_init)
         elif self.init == 'manual':
             raise ValueError('Must give an input array of centers for manual initialization.')
@@ -210,16 +223,16 @@ class KMeansRuleClustering(RuleClustering):
         self.cost = np.inf
             
     
-    def cluster_assign(self):
+    def cluster_assign(self, X):
         """
         Computes a rule constrained cluster assignment by assigning all points
         in every rule to a center which is currently closest to the mean of the points belonging to
         the rule.
         """
-        
         new_clustering = [[] for i in range(self.k_clusters)]
         for i, rule in enumerate(self.rule_list):
-            Xi = rule.satisfied_points
+            #Xi = rule.satisfied_points
+            Xi = X[rule, :]
             if len(Xi) != 0:
                 diffs = Xi[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
                 distances = np.sum(diffs ** 2, axis=-1)
@@ -230,7 +243,7 @@ class KMeansRuleClustering(RuleClustering):
         self.update_clustering(new_clustering)
             
         
-    def update_centers(self):
+    def update_centers(self, X):
         """
         Updates the array of representatives by choosing the mean to be the representative of
         each cluster.
@@ -238,7 +251,8 @@ class KMeansRuleClustering(RuleClustering):
         reassigns = []
         for i,cluster in enumerate(self.clustering):
             if len(cluster) > 0:
-                cluster_data = [self.rule_list[j].satisfied_points for j in cluster]
+                #cluster_data = [self.rule_list[j].satisfied_points for j in cluster]
+                cluster_data = [X[self.rule_list[j], :] for j in cluster]
                 Xi = np.vstack(cluster_data)
                 self.centers[i,:] = np.mean(Xi, axis = 0)
             else:
@@ -250,11 +264,13 @@ class KMeansRuleClustering(RuleClustering):
                 for j, rule in enumerate(self.rule_list):
                     if j not in reassigns:
                         assignment = int(self.labels[j])
-                        rule_dist = np.sum((rule.satisfied_points - self.centers[assignment,:])**2)
+                        #rule_dist = np.sum((rule.satisfied_points - self.centers[assignment,:])**2)
+                        rule_dist = np.sum((X[rule,:] - self.centers[assignment,:])**2)
                         if rule_dist > max_dist:
                             max_dist = rule_dist
                             max_idx = j
-                            new_center = np.mean(rule.satisfied_points, axis = 0)
+                            #new_center = np.mean(rule.satisfied_points, axis = 0)
+                            new_center = np.mean(X[rule,:], axis = 0)
                         
                 self.centers[i,:] = new_center
                 reassigns.append(max_idx)
@@ -268,69 +284,86 @@ class KMeansRuleClustering(RuleClustering):
             X (np.ndarray): Dataset to cluster rules upon.
         """
         
-        self.cluster_assign()
-        prev_clustering = set({-1})
-        new_clustering = set(frozenset(cluster) for cluster in self.clustering)
+        self.cluster_assign(X)
         
-        while new_clustering != prev_clustering and self.iterations < self.max_iterations:
-            self.update_centers()
-            self.cluster_assign()
-            
-            prev_clustering = new_clustering
+        if self.update:
+            prev_clustering = set({-1})
             new_clustering = set(frozenset(cluster) for cluster in self.clustering)
+            
+            while new_clustering != prev_clustering and self.iterations < self.max_iterations:
+                self.update_centers(X)
+                self.cluster_assign(X)
+                
+                prev_clustering = new_clustering
+                new_clustering = set(frozenset(cluster) for cluster in self.clustering)
+                data_clustering, data_labels = self.predict(X, return_clustering = True)
+                self.cost_per_iteration.append(kmeans_cost(X, data_clustering, self.centers))
+                self.iterations += 1
+
+        else:
             data_clustering, data_labels = self.predict(X, return_clustering = True)
             self.cost_per_iteration.append(kmeans_cost(X, data_clustering, self.centers))
-            self.iterations += 1
-            
-        self.cost = self.cost_per_iteration[-1]
     
-    def fit(self, X):
+        self.cost = self.cost_per_iteration[-1]
+        
+        
+    def fit(self, X, update = True):
         """
         Fits rules to a given dataset X and runs the clustering process.
         Args:
             X (np.ndarray): Input dataset.
         """
-        self.fit_rules(X)
+        self.update = update
+
+        # Ensure that the rule model is fitted to X
+        self.rules.fit(X)
+        rule_model_labels = self.rules.predict(X)
+        
+        # NEED TO FIGURE OUT HOW TO ACCOUNT FOR OVERLAPS!
+        self.rule_list = labels_to_clustering(rule_model_labels)
+        
+        # Initialize clustering and labels:
+        self.initialize_clustering()
+        
         if self.init == 'k-means':
             kmeans = KMeans(n_clusters=self.k_clusters, random_state=self.random_seed, n_init="auto").fit(X)
             self.centers = kmeans.cluster_centers_
             self.cluster(X)
-            self.update_rules()
+            #self.update_rules()
             
         elif self.init == 'random++':
             # Store results from best run
             best_cost = np.inf
+            best_rule_list = None
             best_clustering = None
             best_labels = None
-            best_clustered_rule_list = None
             best_iterations = None
             best_cost_per_iteration = None
             
             for init in range(self.n_init):
                 # Reset 
                 self.initialize_clustering()
-                self.clustered_rule_list = None
                 self.iterations = 0
                 self.cost_per_iteration = []
                 
                 # Run clustering with random centers
                 self.centers = kmeans_plus_plus_initialization(X, self.k_clusters, self.random_seed)
                 self.cluster(X)
-                self.update_rules()
+                #self.update_rules()
                 
                 # Record if improved
                 if self.cost < best_cost:
                     best_cost = self.cost
+                    best_rule_list = self.rule_list
                     best_clustering = self.clustering
                     best_labels = self.labels
-                    best_clustered_rule_list = self.clustered_rule_list
                     best_iterations = self.iterations
                     best_cost_per_iteration = self.cost_per_iteration
                     
             self.cost = best_cost
+            self.rule_list = best_rule_list
             self.clustering = best_clustering
             self.labels = best_labels
-            self.clustered_rule_list = best_clustered_rule_list
             self.iterations = best_iterations
             self.cost_per_iteration = best_cost_per_iteration
             
@@ -338,7 +371,7 @@ class KMeansRuleClustering(RuleClustering):
             # manual initialization
             self.centers = self.center_init
             self.cluster(X)
-            self.update_rules()
+            #self.update_rules()
             
             
     

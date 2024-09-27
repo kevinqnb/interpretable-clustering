@@ -27,6 +27,7 @@ def kmeans_cost(X, clustering, centers):
     for i, cluster in enumerate(clustering):
         center = centers[i,:]
         cost += np.sum(np.linalg.norm(X[cluster,:] - center, axis = 1)**2)
+        #cost +=  np.sum((X[cluster,:] - center)**2)
     return cost
 
 ####################################################################################################
@@ -218,14 +219,14 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
     if custom_node.type == 'node':
         if feature_labels is None:
             if newline:
-                node_label += (f"Feature {custom_node.feature} \n\u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"Features {custom_node.features} \n Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
             else:
-                node_label += (f"Feature {custom_node.feature} \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
         else:
             if newline:
-                node_label += (f"{feature_labels[custom_node.feature]} \n\u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"{[feature_labels[f] for f in custom_node.features]} \n Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
             else:
-                node_label += (f"{feature_labels[custom_node.feature]} \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"{[feature_labels[f] for f in custom_node.features]} \n Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
             
     # For leaf nodes:
     else:
