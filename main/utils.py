@@ -230,7 +230,7 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
             
     # For leaf nodes:
     else:
-        node_label += f"Size: {custom_node.points}"
+        node_label += f"Size: {custom_node.size}"
         node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
 
 

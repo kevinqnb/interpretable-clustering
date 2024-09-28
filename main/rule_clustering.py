@@ -307,7 +307,7 @@ class KMeansRuleClustering(RuleClustering):
         self.cost = self.cost_per_iteration[-1]
         
         
-    def fit(self, X, update = True):
+    def fit(self, X, fit_rules = True, update = True):
         """
         Fits rules to a given dataset X and runs the clustering process.
         Args:
@@ -315,8 +315,12 @@ class KMeansRuleClustering(RuleClustering):
         """
         self.update = update
 
-        # Ensure that the rule model is fitted to X
-        self.rules.fit(X)
+        # Ensures that the rule model is fitted to X,
+        # But allows the rule model room to breath if it's still in
+        # its fitting process.
+        if fit_rules:
+            self.rules.fit(X)
+            
         rule_model_labels = self.rules.predict(X)
         
         # NEED TO FIGURE OUT HOW TO ACCOUNT FOR OVERLAPS!
