@@ -1,9 +1,12 @@
 import numpy as np
 import heapq
 import itertools
+import copy
+from joblib import Parallel, delayed
 from sklearn.cluster import KMeans
 from rule_clustering import *
 from utils import *
+
 
 
 ####################################################################################################
@@ -127,15 +130,16 @@ class Node():
         self.indices = indices
         self.cost = cost
         self.size = len(indices)
+        
 ####################################################################################################
         
 class Tree():
     """
-    Decision Tree object with simple axis aligned splitting conditions. 
+    Base class for a Tree object. 
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, 
-                 centers = None, center_updates = False, n_centers = None, leaf_cluster = None,
-                 random_seed = None, feature_labels = None):
+    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, norm = 2,
+                 center_init = None, centers = None, cluster_leaves = False, 
+                 clusterer = None, random_seed = None, feature_labels = None):
         """
         Args:
             max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
@@ -147,17 +151,23 @@ class Tree():
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
                 
+            norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
+                1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
+                
+            center_init (str, optional): Center initialization method. Included options are 
+                'k-means' which runs a k-means algorithm and uses the output centers,
+                'random++' which uses a randomized k-means++ initialization, or 
+                'manual' which assumes an input array of centers (in the next parameter). 
+                Defaults to None in which case no centers are initialized.
+                
             centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
                 Defaults to None.
                 
-            center_updates (bool, optional): If True, update the array centers after every 
+            cluster_leaves (bool, optional): If True, update the array centers after every 
                 leaf expansion by clustering leaves. Only performs updates once the 
                 number of leaves is > n_centers.
-                
-            n_centers (int, optional): The number of centers to use for computation of cost 
-                or center updates.
             
-            leaf_cluster (RuleClustering, optional): Clustering object used to cluster leaves 
+            clusterer (RuleClustering, optional): Clustering object used to cluster leaves 
                 and find new centers. Defaults to None, not used if center_updates is False.
                 
             random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
@@ -168,6 +178,8 @@ class Tree():
             
         Attributes:
             X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
+            
+            root (Node): Root node of the tree.
         
             heap (heapq list): Maintains the heap structure of the tree.
             
@@ -175,20 +187,50 @@ class Tree():
             
             node_count (int): Number of nodes in the tree.
             
-            center_dists (np.ndarray): If being fitted to an (n )n x k array of distances 
-                (measured either with squared 2 norm or 1 norm) from every point to every center.
+            n_centers (int): The number of centers to use for computation of cost 
+                or center updates.
                 
-            is_fitting (bool): True if the algorithm is currently fitting data to the tree. Used 
-                when doing tree building and rule clustering simultaneously.
+            depth (int): The maximum depth of the tree.
+            
+            center_dists (np.ndarray): If being fitted to an (n x m) dataset, computes a
+                n x k array of distances (measured either with squared 2 norm or 1 norm) 
+                from every point to every center.
+                
         """
         
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
-        self.centers = centers
-        self.center_updates = center_updates
-        self.n_centers = n_centers
-        self.leaf_cluster = leaf_cluster
+        
+        if norm in [1,2]:
+            self.norm = norm
+        else:
+            raise ValueError('Norm must either be 1 or 2.')
+        
+        if center_init in [None, 'k-means', 'random++', 'manual']:
+            self.center_init = center_init
+        else:
+            raise ValueError('Unsupported initialization method.')
+        
+        
+        if self.center_init == 'manual' and (centers is not None):            
+            self.centers = copy.deepcopy(centers)
+            self.n_centers = len(self.centers)
+            
+        elif self.center_init == 'manual':
+            raise ValueError('Must provide an input array of centers for manual initialization.')
+        
+        else:
+            self.centers = centers
+            self.n_centers = None
+        
+        
+        if cluster_leaves and (clusterer is None):
+            raise ValueError('Must provide clustering object in order to cluster leaves.')
+            
+        self.cluster_leaves = cluster_leaves
+        self.clusterer = clusterer
+        
         self.feature_labels = feature_labels
         
         if random_seed is not None:
@@ -197,11 +239,13 @@ class Tree():
         self.random_seed = random_seed
         
         self.X = None
+        self.root = None
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
+        self.depth = 0
         self.center_dists = None
-        self.is_fitting = False
+        self.indices = None
         
         
     def _update_center_dists(self):
@@ -253,87 +297,94 @@ class Tree():
                 algorithm will first perform the input number of fitting steps, before 
                 defaulting to a manual, iterative fitting process.
         """
-        if self.is_fitting:
-            pass
+        # Create Dataset
+        self.X = X
         
+        # Reset the heap and tree:
+        self.heap = []
+        self.leaf_count = 0
+        self.node_count = 0
+        
+        # Initialize centers:
+        if self.center_init == 'k-means':
+            kmeans = KMeans(n_clusters=self.n_centers, random_state=self.random_seed,
+                            n_init="auto").fit(X)
+            self.centers = kmeans.cluster_centers_
+            self.n_centers = len(self.centers)
+            
+        elif self.center_init == 'random++':
+            self.centers = kmeans_plus_plus_initialization(X, self.n_centers, self.random_seed)
+            self.n_centers = len(self.centers)
+        
+        # If using reference centers, initialize center_dists array:
+        self._update_center_dists()
+        
+        # Set feature labels if not set already:
+        if self.feature_labels is None:
+            self.feature_labels = [None]*X.shape[1]
         else:
-            # Create Dataset
-            self.X = X
-            
-            # Reset
-            self.heap = []
-            self.leaf_count = 0
-            self.node_count = 0
-            
-            # If using reference centers, initialize center_dists array:
-            self._update_center_dists()
-            
-            # Set feature labels if not set already:
-            if self.feature_labels is None:
-                self.feature_labels = [None]*X.shape[1]
-            else:
-                if not len(self.feature_labels) == X.shape[1]:
-                    raise ValueError('Feature labels must match the shape of the data.')
-            
-            # if stopping criteria weren't provided, set to the maximum possible
-            if self.max_leaf_nodes is None:
-                self.max_leaf_nodes = len(X)
-            
-            if self.max_depth is None:
-                self.max_depth = len(X) - 1
-            
-            # Keeping a heap queue for the current leaf nodes in the tree.
-            # It prioritizes splitting the leaves with the largest scores (gain in cost performance).
-            # NOTE: I store -1*scores because heapq pops items with minimum cost by default.
-            # Heap leaf object: (-1*score, Node object, data indices subset, depth, split)
-            # Each split (features, weights, thresholds) is pre-computed,
-            # before placement into the heap.
-            all_indices = np.array(range(len(self.X)))
-            leaf_cost = self._cost(all_indices)
-            self.root = Node()
-            self.root.leaf_node(self.leaf_count, all_indices, leaf_cost)
-            split_cost, split = self._find_best_split(all_indices)
-            score = (leaf_cost - split_cost)
-            heapq.heappush(self.heap, (-1*score, self.root, split, all_indices, 0))
-            self.leaf_count += 1
-            
-            
-            if not iterative:
-                # Fits the tree in one go.
-                while len(self.heap) > 0:
+            if not len(self.feature_labels) == X.shape[1]:
+                raise ValueError('Feature labels must match the shape of the data.')
+        
+        # if stopping criteria weren't provided, set to the maximum possible
+        if self.max_leaf_nodes is None:
+            self.max_leaf_nodes = len(X)
+        
+        if self.max_depth is None:
+            self.max_depth = len(X) - 1
+        
+        # Keeping a heap queue for the current leaf nodes in the tree.
+        # It prioritizes splitting the leaves with the largest scores (gain in cost performance).
+        # NOTE: I store -1*scores because heapq pops items with minimum cost by default.
+        # Heap leaf object: (-1*score, Node object, data indices subset, depth, split)
+        # Each split (features, weights, thresholds) is pre-computed,
+        # before placement into the heap.
+        all_indices = np.array(range(len(self.X)))
+        leaf_cost = self._cost(all_indices)
+        self.root = Node()
+        self.root.leaf_node(self.leaf_count, all_indices, leaf_cost)
+        split_cost, split = self._find_best_split(all_indices)
+        score = (leaf_cost - split_cost)
+        heapq.heappush(self.heap, (-1*score, self.root, split, all_indices, 0))
+        self.leaf_count += 1
+        
+        
+        if not iterative:
+            # Fits the tree in one go.
+            while len(self.heap) > 0:
+                self.fit_step()
+        else:
+            # Fits the tree iteratively
+            if init_steps is not None:
+                # If we need to find n centers before clustering leaves, 
+                # we should do so before anything else.
+                for _ in range(init_steps - 1):
                     self.fit_step()
+                    
             else:
-                # Fits the tree iteratively
-                if init_steps is not None:
-                    # If we need to find n centers before clustering leaves, 
-                    # we should do so before anything else.
-                    for _ in range(init_steps - 1):
-                        self.fit_step()
-                        
-                else:
-                    # Otherwise, allows the user to control the entire fitting process.
-                    pass
+                # Otherwise, allows the user to control the entire fitting process.
+                pass
                                 
             
             
     def fit_step(self):
+        """
+        Performs a single fitting step in which a leaf is split, and depending on the 
+        type of tree being used, the leaves may be clustered and centers may be updated.
+        """
         if len(self.heap) == 0:
             raise ValueError("Empty heap, no more leaves to split or max conditions reached.")
         
         self.split_leaf()
                 
-        if self.center_updates and self.leaf_count >= self.n_centers:
-            if self.centers is not None:
-                clustering = self.leaf_cluster(self, k_clusters = self.n_centers, 
-                                                init = 'manual', center_init = self.centers, 
-                                                random_seed = self.random_seed)
+        if self.cluster_leaves and self.leaf_count >= self.n_centers:
+            clustering = self.clusterer(self, k_clusters = self.n_centers, 
+                                        init = 'manual', center_init = self.centers, 
+                                        random_seed = self.random_seed)
                 
-            else:
-                clustering = self.leaf_cluster(self, k_clusters = self.n_centers, 
-                                                init = 'k-means',
-                                                random_seed = self.random_seed)
             clustering.fit(self.X, fit_rules = False)
             self.centers = clustering.centers
+            self.clustering_cost = clustering.cost
             self._update_center_dists()
         
 
@@ -410,7 +461,10 @@ class Tree():
             node_obj.tree_node(features, weights, threshold, left_node, right_node, 
                                indices_, self._cost(indices_),
                                feature_labels = [self.feature_labels[f] for f in features])
+            
             self.node_count += 1
+            if depth + 1 > self.depth:
+                self.depth = depth + 1
 
 
     def _predict_sample(self, sample, node):
@@ -444,130 +498,93 @@ class Tree():
             (np.ndarray): Length n array of class labels. 
         """
         return np.array([self._predict_sample(sample, self.root) for sample in X])
-
-        
+    
+    
 ####################################################################################################
 
-class KMeansTree(Tree):
+class LinearTree(Tree):
     """
-    Inherits from the Tree class to implement a decision tree in which 
-    axis aligned split criterion are chosen so that points in any leaf node are close
-    in distance to their mean. 
-    
-    The optimized splitting algorithm is attributed to 
-    work by [Dasgupata, Frost, Moshkovitz, Rashtchian '20]
-    in their paper titled 'Explainable k-means and k-medians clustering.
-    
-    Args:
-        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-            Defaults to None.
-            
-        max_depth (int, optional): Optional constraint for maximum depth. 
-            Defaults to None.
-            
-        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-            within a single leaf. Defaults to 1.
-            
-        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-                Defaults to None.
-                
-        center_updates (bool): If True, update the array centers after every leaf expansion
-            by clustering leaves. Only performs updates once the 
-            number of leaves is > n_centers.
-            
-        n_centers (int): The number of centers to use for computation of cost or center updates.
-        
-        leaf_cluster (RuleClustering): Clustering object used to cluster leaves 
-                and find new centers.
-            
-        random_seed (int, optional): Random seed. In the kMeansTree object randomness is only ever 
-            used for breaking ties between nodes which have the same cost.
-            
-        feature_labels (List[str], optional): Iterable object with strings 
-            representing feature names. 
-        
-    Attributes:
-        heap (heapq list): Maintains the heap structure of the tree.
-        
-        leaf_count (int): Number of leaves in the tree.
-        
-        node_count (int): Number of nodes in the tree.
-        
-        center_dists (np.ndarray): If being fitted to an (n )n x k array of distances 
-                (measured either squared 2 norm) from every point to every center.
+    Base class for a Tree object which splits leaf nodes based upon linear conditions. 
+    Allows for a choice between axis aligned splits, or oblique splits.
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1,
-                 centers = None, center_updates = False, n_centers = None, leaf_cluster = None,
-                 random_seed = None, feature_labels = None):
-        
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, centers, 
-                         center_updates, n_centers, leaf_cluster, random_seed, feature_labels)
-        
     
-    def _update_center_dists(self):
+    def __init__(self, splits = 'axis', max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, 
+                 norm = 2,center_init = None, centers = None, 
+                 cluster_leaves = False, clusterer = None, random_seed = None,
+                 feature_labels = None):
         """
-        Updates the center_dists array, which tracks distances from all points in self.X
-        to all centers.
+        New Args:
+            splits (str): May take values 'axis' or 'oblique' that
+                decide on how to compute leaf splits.
         """
-        if self.centers is not None:
-            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum((diffs)**2, axis=-1)
-            self.center_dists = distances.T
+       
+        # Initialize everything according to the base class.
+        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, norm, center_init, centers,
+                        cluster_leaves, clusterer, random_seed, feature_labels)
         
-    def _cost(self, indices):
+        
+        if splits not in ['axis', 'oblique', 'oblique-full']:
+            raise ValueError("Must choose either 'axis' or 'oblique' for split method")
+        else:
+            self.splits = splits
+    
+    
+    def _find_best_split(self, indices):
         """
-        Given input data subset X_ which may be thought of as a subset of points reaching 
-        a given node in the tree, compute a cost for X_.
-        
-        If self.centers is None and no input reference centers have been given, 
-        calculate the cost of a data subset X_ by finding the sum of 
-        squared distances to mean(X_).
-        
-        Otherwise, 
+        Finds the best axis aligned or oblique split by searching through possibilities
+        outputting one with the best cost.
 
         Args:
             indices (np.ndarray[int]): Indices of data points to compute cost with. 
-            
-        Returns:
-            (float): Cost of the given data. 
-        """
-        
-        #print(indices)
-        
-        if len(indices) == 0:
-            return np.inf
-        else:
-            if self.centers is None:
-                try:
-                    X_ = self.X[indices,:]
-                except:
-                    print(indices)
-                mu = np.mean(X_, axis = 0)
-                cost = np.sum(np.linalg.norm(X_ - mu, axis = 1)**2) #/len(X_)
-                return cost
-            else:
-                dists_ = self.center_dists[indices,:]
-                sum_array = np.sum(dists_, axis = 0)
-                
-                #diffs = X_[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-                #distances = np.sum((diffs)**2, axis=-1)
-                #sum_array = np.sum(distances, axis=1)
-                
-                return np.min(sum_array)
 
-    '''
-    def _find_best_split(self, X_):
+        Returns:
+        
+            Tuple(List[int], List[float], float): A (features, weights, threshold) split pair. 
+        """
+        # Reset the indices
+        self.indices = indices
+        
+        X_ = self.X[indices,:]
+        n_, d = X_.shape
+        
+        best_split = None
+        best_split_val = np.inf
+        
+        
+        if self.splits == 'axis' and (self.norm == 1 or self.centers is None):
+            for feature in range(d):
+                unique_vals = np.unique(X_[:,feature])
+                for threshold in unique_vals:
+                    split = ([feature], [1], threshold)
+
+                    left_mask = X_[:, feature] <= threshold
+                    right_mask = ~left_mask
+                    left_indices = indices[left_mask]
+                    right_indices = indices[right_mask]
+                    
+                    if (np.sum(left_mask) < self.min_points_leaf or 
+                        np.sum(right_mask) < self.min_points_leaf):
+                        split_val = np.inf
+                    else:
+                        X1 = X_[left_mask, :]
+                        X1_cost = self._cost(left_indices)
+                        
+                        X2 = X_[right_mask, :]
+                        X2_cost = self._cost(right_indices)
+                        
+                        split_val = X1_cost + X2_cost
+                    
+                    if split_val < best_split_val:
+                        best_split_val = split_val
+                        best_split = split
+        
+                        
+        elif self.splits == 'axis' and self.norm == 2 and self.centers is None:
             """
-            Chooses the axis aligned split (feature, threshold) with smallest 
-            sum of costs between the two branches it creates.
-            
-            Args:
-                X_ (np.ndarray): Input dataset.
-                
-            Returns:
-                Tuple(int, float): A (feature, threshold) split pair. 
+            The following optimized version is attributed to 
+            [Dasgupta, Frost, Moshkovitz, Rashtchian '20] in their paper
+            'Explainable k-Means and k-Medians Clustering' 
             """
-            
             n, d = X_.shape
             u = np.linalg.norm(X_)**2
             
@@ -588,62 +605,98 @@ class KMeansTree(Tree):
                         best_split_val = split_val
                         # Axis aligned split:
                         best_split = ([i], [1], threshold)
+            
+                        
+        elif self.splits == 'oblique':
+            feature_pairs = list(itertools.combinations(list(range(d)), 2))
+            slopes = np.array([[0,1],
+                    [1,2],
+                    [1,1],
+                    [2,1],
+                    [1,0],
+                    [2,-1],
+                    [1,-1],
+                    [1,-2]])
+            
+            for pair in feature_pairs:
+                X_pair = X_[:, pair]
+                for i,x in enumerate(X_pair):
+                    for j, slope in enumerate(slopes):
+                        weights = np.array([slope[1], -slope[0]])
+                        threshold = slope[1]*x[0] - slope[0]*x[1]
+                        split = (list(pair), weights, threshold)
 
-            return best_split_val, best_split
-    '''
-    def _find_best_split(self, indices):
-        """
-        Finds the best axis aligned split by searching through feature, value 
-        pairs and outputting one with the best cost.
-
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with. 
-
-        Returns:
-            Tuple(List[int], List[float], float): A (features, weights, threshold) split pair. 
-        """
-        
-        X_ = self.X[indices,:]
-        n_, d = X_.shape
-        
-        best_split = None
-        best_split_val = np.inf
-        
-        for feature in range(d):
-            unique_vals = np.unique(X_[:,feature])
-            for threshold in unique_vals:
-                split = ([feature], [1], threshold)
-
-                left_mask = X_[:, feature] <= threshold
-                right_mask = ~left_mask
-                left_indices = indices[left_mask]
-                right_indices = indices[right_mask]
-                
-                if np.sum(left_mask) < self.min_points_leaf or np.sum(right_mask) < self.min_points_leaf:
-                    split_val = np.inf
-                else:
-                    X1 = X_[left_mask, :]
-                    X1_cost = self._cost(left_indices)
+                        left_mask = np.dot(X_pair, weights) <= threshold
+                        right_mask = ~left_mask
+                        left_indices = indices[left_mask]
+                        right_indices = indices[right_mask]
+                        
+                        if (np.sum(left_mask) < self.min_points_leaf or
+                            np.sum(right_mask) < self.min_points_leaf):
+                            split_val = np.inf
+                        else:
+                            X1_cost = self._cost(left_indices)
+                            
+                            X2_cost = self._cost(right_indices)
+                            
+                            split_val = X1_cost + X2_cost
+                        
+                        if split_val < best_split_val:
+                            best_split_val = split_val
+                            best_split = split
+                            
+                            
+        elif self.splits == 'oblique-full':
+            feature_pairs = list(itertools.combinations(list(range(d)), 2))
+            for pair in feature_pairs:
+                X_pair = X_[:, pair]
+                # This makes sure axis aligned splits are accounted for:
+                X_pair_ = np.vstack((X_pair, np.array([[1,0], [0,1]])))
+                for i,x in enumerate(X_pair_):
+                    # Draw unit vector through x from origin
+                    unit_vec = x/np.linalg.norm(x)
                     
-                    X2 = X_[right_mask, :]
-                    X2_cost = self._cost(right_indices)
+                    # Find projections onto unit vector:
+                    proj_dists = np.sort(np.dot(X_pair, unit_vec))
+                    proj_dists_idx = np.argsort(np.dot(X_pair, unit_vec))
                     
-                    split_val = X1_cost + X2_cost
-                
-                if split_val < best_split_val:
-                    best_split_val = split_val
-                    best_split = split
-
+                    for j, dist in enumerate(proj_dists[:-1]):
+                        weights = dist*unit_vec
+                        threshold = weights[0]**2 + weights[1]**2
+                        
+                        split = (list(pair), weights, threshold)
+                        
+                        left_indices = indices[proj_dists_idx[:(j + 1)]]
+                        right_indices = indices[proj_dists_idx[(j + 1):]]
+                        
+                        if (len(left_indices) < self.min_points_leaf or
+                            len(right_indices) < self.min_points_leaf):
+                            split_val = np.inf
+                        else:
+                            X1_cost = self._cost(left_indices)
+                            
+                            X2_cost = self._cost(right_indices)
+                            
+                            split_val = X1_cost + X2_cost
+                        
+                        #print(split_val)
+                        if split_val < best_split_val:
+                            best_split_val = split_val
+                            best_split = split
+                            
         return best_split_val, best_split
-
+        
 ####################################################################################################
 
-class KMeansObliqueTree(Tree):
+class UnsupervisedTree(LinearTree):
     """
-    Inherits from the Tree class to implement a decision tree in which split criterion chosen so
-    that points in any leaf node are close in distance to their mean. 
-    
+    Inherits from the Tree class to implement a decision tree in which 
+    split criterion are chosen so that points in any leaf node are close
+    in distance to their means or medians. 
+   
     Args:
+        splits (str): May take values 'axis' or 'oblique' that decide on how to compute leaf splits.
+        
         max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
             Defaults to None.
             
@@ -653,55 +706,43 @@ class KMeansObliqueTree(Tree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-                Defaults to None.
-                
-        center_updates (bool): If True, update the array centers after every leaf expansion
-            by clustering leaves. Only performs updates once the 
-            number of leaves is > n_centers.
+        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
+            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
             
-        n_centers (int): The number of centers to use for computation of cost or center updates.
-        
-        leaf_cluster (RuleClustering): Clustering object used to cluster leaves 
-                and find new centers.
-            
-        random_seed (int, optional): Random seed. In the kMeansTree object randomness is only ever 
-            used for breaking ties between nodes which have the same cost.
+        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+            used for breaking ties between nodes, or if you are using a RandomTree!
             
         feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+            
+        Attributes:
+            X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
+            
+            root (Node): Root node of the tree.
         
-    Attributes:
-        heap (heapq list): Maintains the heap structure of the tree.
-        
-        leaf_count (int): Number of leaves in the tree.
-        
-        node_count (int): Number of nodes in the tree.
-        
-        center_dists (np.ndarray): If being fitted to an (n )n x k array of distances 
-                (measured with squared 2 norm) from every point to every center.
-    """
-    
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1,
-                 centers = None, center_updates = False, n_centers = None, leaf_cluster = None,
-                 random_seed = None, feature_labels = None):
-        
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, centers, center_updates, 
-                         n_centers, leaf_cluster, random_seed, feature_labels)
-        
-    def _update_center_dists(self):
+            heap (heapq list): Maintains the heap structure of the tree.
+            
+            leaf_count (int): Number of leaves in the tree.
+            
+            node_count (int): Number of nodes in the tree.
+                
         """
-        Updates the center_dists array, which tracks distances from all points in self.X
-        to all centers.
-        """
-        if self.centers is not None:
-            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum((diffs)**2, axis=-1)
-            self.center_dists = distances.T
-    
+    def __init__(self, splits = 'axis', max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, 
+                 norm = 2, random_seed = None, feature_labels = None):
+        
+        super().__init__(splits = splits, max_leaf_nodes = max_leaf_nodes, max_depth = max_depth, 
+                         min_points_leaf = min_points_leaf, norm = norm, random_seed = random_seed,
+                         feature_labels = feature_labels)
+        
+        
     def _cost(self, indices):
         """
-        Assigns cost that rewards data with points all close to their mean
-        (i.e. small variance).
+        Given a set of indices defining a data subset X_ --
+        which may be thought of as a subset of points reaching a given node in the tree --
+        compute a cost for X_.
+        
+        In an unsupervised tree this amounts to find the sum of distances to 
+        means or medians (using squared 2 norm or 1 norm respectively).
 
         Args:
             indices (np.ndarray[int]): Indices of data points to compute cost with. 
@@ -713,222 +754,297 @@ class KMeansObliqueTree(Tree):
         if len(indices) == 0:
             return np.inf
         else:
-            if self.centers is None:
-                X_ = self.X[indices, :]
+            if self.norm == 2:
+                X_ = self.X[indices,:]
                 mu = np.mean(X_, axis = 0)
                 cost = np.sum(np.linalg.norm(X_ - mu, axis = 1)**2) #/len(X_)
-                return cost
-            else:
-                dists_ = self.center_dists[indices,:]
-                sum_array = np.sum(dists_, axis = 0)
-                return np.min(sum_array)
-
-
-    def _find_best_split(self, indices):
-        """
-        Chooses the axis aligned split (feature, threshold) with smallest 
-        sum of costs between the two branches it creates.
-        
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with. 
-            
-        Returns:
-            Tuple(int, float): A (feature, threshold) split pair. 
-        """
-        X_ = self.X[indices,:]
-        n_, d = X_.shape
-        
-        feature_pairs = list(itertools.combinations(list(range(d)), 2))
-        slopes = np.array([[0,1],
-                  [1,2],
-                  [1,1],
-                  [2,1],
-                  [1,0],
-                  [2,-1],
-                  [1,-1],
-                  [1,-2]])
-        
-        best_split = None
-        best_split_val = np.inf
-        for pair in feature_pairs:
-            X_pair = X_[:, pair]
-            for i,x in enumerate(X_pair):
-                for j, slope in enumerate(slopes):
-                    weights = np.array([slope[1], -slope[0]])
-                    threshold = slope[1]*x[0] - slope[0]*x[1]
-                    split = (list(pair), weights, threshold)
-
-                    left_mask = np.dot(X_pair, weights) <= threshold
-                    right_mask = ~left_mask
-                    left_indices = indices[left_mask]
-                    right_indices = indices[right_mask]
-                    
-                    if np.sum(left_mask) < self.min_points_leaf or np.sum(right_mask) < self.min_points_leaf:
-                        split_val = np.inf
-                    else:
-                        X1_cost = self._cost(left_indices)
-                        
-                        X2_cost = self._cost(right_indices)
-                        
-                        split_val = X1_cost + X2_cost
-                    
-                    if split_val < best_split_val:
-                        best_split_val = split_val
-                        best_split = split
-
-        return best_split_val, best_split
-        
-        
-####################################################################################################
-
-class KMediansTree(Tree):
-    """
-    Inherits from the Tree class to implement a decision tree in which split criterion chosen so
-    that points in any leaf node are close in distance to their median. 
-    
-    NOTE: This is yet to be optimized and so will run quite slowly. Coming soon. 
-    
-    Args:
-        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-            Defaults to None.
-            
-        max_depth (int, optional): Optional constraint for maximum depth. 
-            Defaults to None.
-            
-        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-            within a single leaf. Defaults to 1.
-            
-        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-                Defaults to None.
                 
-        center_updates (bool): If True, update the array centers after every leaf expansion
-            by clustering leaves. Only performs updates once the 
-            number of leaves is > n_centers.
-            
-        n_centers (int): The number of centers to use for computation of cost or center updates.
-        
-        leaf_cluster (RuleClustering): Clustering object used to cluster leaves 
-                and find new centers.
-            
-        random_seed (int, optional): Random seed. In the kMeansTree object randomness is only ever 
-            used for breaking ties between nodes which have the same cost.
-            
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-        
-    Attributes:
-        heap (heapq list): Maintains the heap structure of the tree.
-        
-        leaf_count (int): Number of leaves in the tree.
-        
-        node_count (int): Number of nodes in the tree.
-        
-        center_dists (np.ndarray): If being fitted to an (n )n x k array of distances 
-                (measured with 1 norm) from every point to every center.
-    """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, 
-                 centers = None, update_centers = False, n_centers = None,
-                 random_seed = None, feature_labels = None):
-        
-        super().__init__(max_leaf_nodes, max_depth, min_points_leaf, 
-                         centers, update_centers, n_centers, random_seed, feature_labels)
-        
-    def _update_center_dists(self):
-        """
-        Updates the center_dists array, which tracks distances from all points in self.X
-        to all centers.
-        """
-        if self.centers is not None:
-            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum(np.abs(diffs), axis=-1)
-            self.center_dists = distances.T
-    
-    def _cost(self, indices):
-        """
-        Assigns cost that rewards data with points all close to their median.
-
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with. 
-            
-        Returns:
-            (float): Cost of the given data. 
-        """
-        
-        if len(indices) == 0:
-            return np.inf
-        else:
-            if self.centers is None:
+            elif self.norm == 1:
                 X_ = self.X[indices, :]
                 eta = np.median(X_, axis = 0)
                 cost = np.sum(np.abs(X_ - eta))
-                return cost
-            
-            else:
-                dists_ = self.center_dists[indices,:]
-                sum_array = np.sum(dists_, axis = 0)
-                return np.min(sum_array)
-
-
-
-    def _find_best_split(self, indices):
-            """
-            Chooses the axis aligned split (feature, threshold) with smallest 
-            sum of costs between the two branches it creates.
-            
-            Args:
-                X_ (np.ndarray): Input dataset.
                 
-            Returns:
-                Tuple(int, float): A (feature, threshold) split pair. 
-            """
-            X_ = self.X[indices, :]
-            n, d = X_.shape
-            best_split = None
-            best_split_val = np.inf
+            return cost
+
+    
+####################################################################################################
+
+class CentroidTree(LinearTree):
+    """
+    Inherits from the Tree class to implement a decision tree in which 
+    axis aligned split criterion are chosen so that points in any leaf node are close
+    in distance to their closest center or centroid, from a set of input centers.
+    
+    When input centers are those from the output of a k-means algorithm, this is 
+    equivalent to the ExKMC algorithm, as designed by [Frost, Moshkovitz, Rashtchian '20]
+    in their paper titled: 'ExKMC: Expanding Explainable k-Means Clustering.'
+    
+    Args:
+        splits (str): May take values 'axis' or 'oblique' that decide on how to compute leaf splits.
+        
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
             
-            '''
-            for i in range(X_.shape[1]):
-                eta2 = np.median(X_, axis = 0)
-                split_val = np.sum(np.abs(X_ - eta2))
-                order = np.argsort(X_[:, i])
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
+            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
+            
+        center_init (str, optional): Center initialization method. Included options are 
+            'k-means' which runs a k-means algorithm and uses the output centers,
+            'random++' which uses a randomized k-means++ initialization, or 
+            'manual' which assumes an input array of centers (in the next parameter). 
+            Defaults to None in which case no centers are initialized.
+            
+        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
+            Defaults to None.
+            
+        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+            used for breaking ties between nodes, or if you are using a RandomTree!
+            
+        feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+            
+    Attributes:
+        X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
+        
+        root (Node): Root node of the tree.
+    
+        heap (heapq list): Maintains the heap structure of the tree.
+        
+        leaf_count (int): Number of leaves in the tree.
+        
+        node_count (int): Number of nodes in the tree.
+        
+        n_centers (int, optional): The number of centers to use for computation of cost 
+            or center updates.
+        
+        center_dists (np.ndarray): If being fitted to an (n x m) dataset, computes a
+            n x k array of distances (measured either with squared 2 norm or 1 norm) 
+            from every point to every center.
                 
-                for j, idx in enumerate(order[:-1]):
-                    threshold = X_[idx, i]
-                    eta1 = np.median(X_[:j+1, :], axis = 0)
-                    split_val = (split_val + np.sum(np.abs(X_[j,:] - eta1)) 
-                                 - np.sum(np.abs(X_[j,:] - eta2)))
-                    eta2 = np.median(X_[j+1:, :], axis = 0)
-                    
-                    if split_val < best_split_val:
-                        best_split_val = split_val
-                        best_split = (i, threshold)
-            '''
+    """
+    
+    def __init__(self, splits = 'axis', max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, norm = 2,
+                 center_init = 'k-means', centers = None, random_seed = None,
+                 feature_labels = None):
+        
+        super().__init__(splits = splits, max_leaf_nodes = max_leaf_nodes, max_depth = max_depth, 
+                         min_points_leaf = min_points_leaf, norm = norm, center_init = center_init,
+                         centers = centers, random_seed = random_seed, 
+                         feature_labels = feature_labels)
+        
+        if center_init is None:
+            raise ValueError('Must provide some method of initializing centers.')
+        
+    
+    def _update_center_dists(self):
+        """
+        Updates the center_dists array, which tracks distances from all points in self.X
+        to all centers. This helps with computational efficiency, since we won't 
+        need to recompute this when searching through splits.
+        """
+        if self.norm == 2:
+            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+            distances = np.sum((diffs)**2, axis=-1)
+            self.center_dists = distances.T
             
-            for feature in range(X_.shape[1]):
-                unique_vals = np.unique(X_[:,feature])
-                for threshold in unique_vals:
-                    split = ([feature], [1], threshold)
+        elif self.norm == 1:
+            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+            distances = np.sum(np.abs(diffs), axis=-1)
+            self.center_dists = distances.T
+            
+        
+    def _cost(self, indices):
+        """
+        Given a set of indices defining a data subset X_ --
+        which may be thought of as a subset of points reaching a given node in the tree --
+        compute a cost for X_.
+        
+        In a centroid tree this amounts to find the sum of distances to 
+        centers (using squared 2 norm or 1 norm respectively).
+        
+        If self.centers is None and no input reference centers have been given, 
+        calculate the cost of a data subset X_ by finding the sum of 
+        squared distances to mean(X_).
+        
+        Otherwise, 
 
-                    left_mask = X_[:, feature] <= threshold
-                    right_mask = ~left_mask
-                    left_indices = indices[left_mask]
-                    right_indices = indices[right_mask]
-                    
-                    if np.sum(left_mask) < self.min_points_leaf or np.sum(right_mask) < self.min_points_leaf:
-                        split_val = np.inf
-                    else:
-                        X1_cost = self._cost(left_indices)
-                        
-                        X2_cost = self._cost(right_indices)
-                        
-                        split_val = X1_cost + X2_cost
-                    
-                    if split_val < best_split_val:
-                        best_split_val = split_val
-                        best_split = split
+        Args:
+            indices (np.ndarray[int]): Indices of data points to compute cost with. 
+            
+        Returns:
+            (float): Cost of the given data. 
+        """
+        
+        if len(indices) == 0:
+            return np.inf
+        else:
+            dists_ = self.center_dists[indices,:]
+            sum_array = np.sum(dists_, axis = 0)
+            return np.min(sum_array)
 
-            return best_split_val, best_split
+    
+####################################################################################################
+    
+class RuleClusteredTree(LinearTree):
+    """
+    Inherits from the Tree class to implement a decision tree in which 
+    axis aligned split criterion are chosen so that points in any leaf node are close
+    in distance to their closest center or centroid, from a set of input centers. 
+    
+    This diverges from the CentroidTree by also performing Rule Clustering 
+    on its leaf nodes after every split, and updating its centers as it goes.
+    
+    Args:
+        splits (str): May take values 'axis' or 'oblique' that decide on how to compute leaf splits.
+        
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
+            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
+            
+        center_init (str, optional): Center initialization method. Included options are 
+            'k-means' which runs a k-means algorithm and uses the output centers,
+            'random++' which uses a randomized k-means++ initialization, or 
+            'manual' which assumes an input array of centers (in the next parameter). 
+            Defaults to None in which case no centers are initialized.
+            
+        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
+            Defaults to None.
+        
+        clusterer (RuleClustering, optional): Clustering object used to cluster leaves 
+            and find new centers. Defaults to None, not used if center_updates is False.
+            
+        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
+            used for breaking ties between nodes, or if you are using a RandomTree!
+            
+        feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+            
+    Attributes:
+        X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
+        
+        root (Node): Root node of the tree.
+    
+        heap (heapq list): Maintains the heap structure of the tree.
+        
+        leaf_count (int): Number of leaves in the tree.
+        
+        node_count (int): Number of nodes in the tree.
+        
+        n_centers (int, optional): The number of centers to use for computation of cost 
+            or center updates.
+        
+        center_dists (np.ndarray): If being fitted to an (n x m) dataset, computes a
+            n x k array of distances (measured either with squared 2 norm or 1 norm) 
+            from every point to every center.
+            
+        cost (float): Clustering cost from latest split.
+                
+    """
+    
+    def __init__(self, splits = 'axis', max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, 
+                 norm = 2, center_init = 'k-means', centers = None, clusterer = None,
+                 random_seed = None, feature_labels = None, start_centers = None):
+        
+        if center_init is None:
+            raise ValueError('Must provide some method of initializing centers.')
+        
+        if clusterer is None:
+            raise ValueError('Must provide some Rule Clustering object to cluster leaves.')
+        
+        super().__init__(splits = splits, max_leaf_nodes = max_leaf_nodes, max_depth = max_depth, 
+                         min_points_leaf = min_points_leaf, norm = norm, center_init = center_init,
+                         centers = centers, cluster_leaves = True, clusterer = clusterer, 
+                         random_seed = random_seed, feature_labels = feature_labels)
+        
+        #self.start_centers = start_centers
+        #self.centers = start_centers
+        #self.n_centers = len(start_centers)
+        self.clustering_cost = None
+        
+    
+    def _update_center_dists(self):
+        """
+        Updates the center_dists array, which tracks distances from all points in self.X
+        to all centers. This helps with computational efficiency, since we won't 
+        need to recompute this when searching through splits.
+        """
+        if self.centers is not None:
+            if self.norm == 2:
+                diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+                distances = np.sum((diffs)**2, axis=-1)
+                self.center_dists = distances.T
+                
+            elif self.norm == 1:
+                diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+                distances = np.sum(np.abs(diffs), axis=-1)
+                self.center_dists = distances.T
+        else:
+            pass
+            
+        
+    def _cost(self, indices):
+        """
+        Given a set of indices defining a data subset X_ --
+        which may be thought of as a subset of points reaching a given node in the tree --
+        compute a cost for X_.
+        
+        In a centroid tree this amounts to find the sum of distances to 
+        centers (using squared 2 norm or 1 norm respectively).
+        
+        If self.centers is None and no input reference centers have been given, 
+        calculate the cost of a data subset X_ by finding the sum of 
+        squared distances to mean(X_).
+        
+        Otherwise, 
+
+        Args:
+            indices (np.ndarray[int]): Indices of data points to compute cost with. 
+            
+        Returns:
+            (float): Cost of the given data. 
+        """
+        
+        if len(indices) == 0:
+            return np.inf
+        
+        #elif self.centers is not None:
+        else:
+            dists_ = self.center_dists[indices,:]
+            sum_array = np.sum(dists_, axis = 0)
+            return np.min(sum_array)
+        '''
+        else:
+            if self.norm == 2:
+                X_ = self.X[indices,:]
+                mu = np.mean(X_, axis = 0)
+                cost = np.sum(np.linalg.norm(X_ - mu, axis = 1)**2)
+                
+            elif self.norm == 1:
+                X_ = self.X[indices, :]
+                eta = np.median(X_, axis = 0)
+                cost = np.sum(np.abs(X_ - eta))
+                
+            return cost
+        '''
+            
+
 
 ####################################################################################################
+
 
 class RandomTree(Tree):
     """
@@ -1060,7 +1176,7 @@ class ConvertExKMC(Tree):
         
         
         self.root = Node()
-        self._build_tree(self.exkmc_root, self.root, np.array(range(len(X))))
+        self._build_tree(self.exkmc_root, self.root, np.array(range(len(X))), 0)
         self.node_count += 1
         
         
@@ -1095,7 +1211,7 @@ class ConvertExKMC(Tree):
     def split_leaf(self):
         pass
         
-    def _build_tree(self, exkmc_node, node_obj: Node, indices):
+    def _build_tree(self, exkmc_node, node_obj: Node, indices, depth):
         """
         Builds the decision tree by traversing the ExKMC tree.
         
@@ -1105,8 +1221,13 @@ class ConvertExKMC(Tree):
             node_obj (Node): Corresponding Node object to copy conditions into. 
             
             indices (np.ndarray[int]): Subset of data indices to build node with. 
+            
+            depth (int): current depth of the tree
         """
         X_ = self.X[indices, :]
+        if depth > self.depth:
+            self.depth = depth
+        
         if exkmc_node.is_leaf():
             class_label = self.leaf_count 
             self.leaf_count += 1
@@ -1123,8 +1244,8 @@ class ConvertExKMC(Tree):
                                indices, self._cost(indices),
                                feature_labels = [self.feature_labels[feature]])
             
-            self._build_tree(exkmc_node.left, left_node, indices[left_mask])
-            self._build_tree(exkmc_node.right, right_node, indices[right_mask])
+            self._build_tree(exkmc_node.left, left_node, indices[left_mask], depth + 1)
+            self._build_tree(exkmc_node.right, right_node, indices[right_mask], depth + 1)
             
             self.node_count += 2
             
@@ -1165,7 +1286,7 @@ class ConvertSklearn(Tree):
         
         # Sklearn Trees start with root 0
         self.root = Node()
-        self._build_tree(0, self.root, np.array(range(len(X))))
+        self._build_tree(0, self.root, np.array(range(len(X))), 0)
         self.node_count += 1
         
         
@@ -1200,7 +1321,7 @@ class ConvertSklearn(Tree):
     def split_leaf(self):
         pass
         
-    def _build_tree(self, node, node_obj, indices):
+    def _build_tree(self, node, node_obj, indices, depth):
         """
         Builds the decision tree by traversing the ExKMC tree.
         
@@ -1212,6 +1333,8 @@ class ConvertSklearn(Tree):
             indices (np.ndarray[int]): Subset of data indices to build node with. 
         """
         X_ = self.X[indices, :]
+        if depth > self.depth:
+            self.depth = depth
         
         if (self.sklearn_tree.children_left[node] < 0 and 
             self.sklearn_tree.children_right[node] < 0):
@@ -1230,14 +1353,73 @@ class ConvertSklearn(Tree):
                                indices, self._cost(indices), 
                                feature_labels = [self.feature_labels[feature]])
             
-            self._build_tree(self.sklearn_tree.children_left[node], left_node, indices[left_mask])
-            self._build_tree(self.sklearn_tree.children_right[node], right_node, indices[right_mask])
+            self._build_tree(self.sklearn_tree.children_left[node], left_node, indices[left_mask], depth + 1)
+            self._build_tree(self.sklearn_tree.children_right[node], right_node, indices[right_mask], depth + 1)
             
             self.node_count += 2
             
 ####################################################################################################
 
-# Older implementations:
+# Older code:
+
+'''
+# Some extra attempt to optimize an unsupervised tree, will maybe add in later.
+#For means / squared 2 norm:
+
+def _find_best_split(self, X_):
+        """
+        Chooses the axis aligned split (feature, threshold) with smallest 
+        sum of costs between the two branches it creates.
+        
+        Args:
+            X_ (np.ndarray): Input dataset.
+            
+        Returns:
+            Tuple(int, float): A (feature, threshold) split pair. 
+        """
+        
+        n, d = X_.shape
+        u = np.linalg.norm(X_)**2
+        
+        best_split = None
+        best_split_val = np.inf
+        for i in range(X_.shape[1]):
+            s = np.zeros(d)
+            r = np.sum(X_, axis = 0)
+            order = np.argsort(X_[:, i])
+            
+            for j, idx in enumerate(order[:-1]):
+                threshold = X_[idx, i]
+                s = s + X_[idx, :]
+                r = r - X_[idx, :]
+                split_val = u - np.sum(s**2)/(j + 1) - np.sum(r**2)/(n - j - 1)
+                
+                if split_val < best_split_val:
+                    best_split_val = split_val
+                    # Axis aligned split:
+                    best_split = ([i], [1], threshold)
+
+        return best_split_val, best_split
+'''
+
+'''
+#For medians / 1 norm:
+for i in range(X_.shape[1]):
+    eta2 = np.median(X_, axis = 0)
+    split_val = np.sum(np.abs(X_ - eta2))
+    order = np.argsort(X_[:, i])
+    
+    for j, idx in enumerate(order[:-1]):
+        threshold = X_[idx, i]
+        eta1 = np.median(X_[:j+1, :], axis = 0)
+        split_val = (split_val + np.sum(np.abs(X_[j,:] - eta1)) 
+                        - np.sum(np.abs(X_[j,:] - eta2)))
+        eta2 = np.median(X_[j+1:, :], axis = 0)
+        
+        if split_val < best_split_val:
+            best_split_val = split_val
+            best_split = (i, threshold)
+'''
 
 '''
 class KMeansObliqueTree1(Tree):

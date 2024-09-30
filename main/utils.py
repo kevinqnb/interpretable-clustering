@@ -223,15 +223,20 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id=0,
             else:
                 node_label += (f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
         else:
-            if newline:
-                node_label += (f"{[feature_labels[f] for f in custom_node.features]} \n Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
+            if all(x == 1 for x in custom_node.weights):
+                sum = ' + \n'.join([f'{feature_labels[f]}' for f in custom_node.features])
             else:
-                node_label += (f"{[feature_labels[f] for f in custom_node.features]} \n Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
+                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(custom_node.weights, custom_node.features)])
+            if newline:
+                node_label += (f"{sum} \n \u2264 {np.round(custom_node.threshold, 3)}")
+            else:
+                node_label += (f"{sum} \u2264 {np.round(custom_node.threshold, 3)}")
             
     # For leaf nodes:
     else:
         node_label += f"Size: {custom_node.size}"
         node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
+        node_label += f"\nLabel: {custom_node.label}"
 
 
     # Add the node to the graph:
