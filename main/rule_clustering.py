@@ -134,7 +134,7 @@ class KMeansRuleClustering(RuleClustering):
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
     def __init__(self, rules, k_clusters, init = 'k-means', n_init = 10, center_init = None, 
-                 max_iterations = 500, random_seed = None):
+                 max_iterations = 100, random_seed = None):
         """
         Args:
             rules (Object): Rule Model equipped with fit() and predict() methods.
@@ -370,7 +370,7 @@ class KMediansRuleClustering(RuleClustering):
     Clusters a set of rules via a rule constrained version of Lloyd's algorithm.
     """
     def __init__(self, rule_list, k_clusters, init = 'k-medians', n_init = 10, center_init = None,
-                 max_iterations = 500, random_seed = None):
+                 max_iterations = 100, random_seed = None):
         """
         Args:
             rule_list (List[Rule]): List of Rule objects to cluster.
