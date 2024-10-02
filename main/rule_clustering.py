@@ -249,7 +249,7 @@ class KMeansRuleClustering(RuleClustering):
                 max_idx = -1
                 new_center = np.zeros(self.centers.shape[1])
                 for j, rule in enumerate(self.rule_list):
-                    if j not in reassigns:
+                    if j not in reassigns and (not np.isnan(self.labels[j])):
                         assignment = int(self.labels[j])
                         rule_dist = np.sum((X[rule,:] - self.centers[assignment,:])**2)
                         if rule_dist > max_dist:

@@ -247,6 +247,7 @@ class Tree():
         self.depth = 0
         self.center_dists = None
         self.indices = None
+        self.clustering_iterations = 0
         
         
     def _update_center_dists(self):
@@ -386,7 +387,7 @@ class Tree():
             clustering.fit(self.X, fit_rules = False)
             self.centers = clustering.centers
             self.clustering_cost = clustering.cost
-            self.iterations = clustering.iterations
+            self.clustering_iterations = clustering.iterations
             self._update_center_dists()
         
 
@@ -737,7 +738,7 @@ class LinearTree(Tree):
             np.copyto(X_shared, self.X)
 
             try:
-                results = Parallel(n_jobs=-1)(
+                results = Parallel(n_jobs=15)(
                     delayed(oblique_pair)(
                         (pair, slopes, indices, self.min_points_leaf, X_shm.name, self.X.shape, self._cost)
                     ) for pair in feature_pairs
@@ -750,21 +751,20 @@ class LinearTree(Tree):
                             
         elif self.splits == 'oblique-full':
             feature_pairs = list(itertools.combinations(list(range(d)), 2))
-            for pair in feature_pairs:
-                X_shm = shared_memory.SharedMemory(create=True, size=self.X.nbytes)
-                X_shared = np.ndarray(self.X.shape, dtype=self.X.dtype, buffer=X_shm.buf)
-                np.copyto(X_shared, self.X)
+            X_shm = shared_memory.SharedMemory(create=True, size=self.X.nbytes)
+            X_shared = np.ndarray(self.X.shape, dtype=self.X.dtype, buffer=X_shm.buf)
+            np.copyto(X_shared, self.X)
 
-                try:
-                    results = Parallel(n_jobs=-1)(
-                        delayed(oblique_pair2)(
-                            (pair, indices, self.min_points_leaf, X_shm.name, self.X.shape, self._cost)
-                        ) for pair in feature_pairs
-                    )
-                    best_split_val, best_split = min(results, key=lambda x: x[0])
-                finally:
-                    X_shm.close()
-                    X_shm.unlink()
+            try:
+                results = Parallel(n_jobs=15)(
+                    delayed(oblique_pair2)(
+                        (pair, indices, self.min_points_leaf, X_shm.name, self.X.shape, self._cost)
+                    ) for pair in feature_pairs
+                )
+                best_split_val, best_split = min(results, key=lambda x: x[0])
+            finally:
+                X_shm.close()
+                X_shm.unlink()
                 
                             
         return best_split_val, best_split
@@ -1214,7 +1214,7 @@ class RandomTree(Tree):
                 # If sampled split separates at least two centers, then accept:
                 left_branch = X_[left_mask]
                 right_branch = X_[right_mask]
-                if len(left_branch[0]) > 0 and len(right_branch[0]) > 0:
+                if len(left_branch) > 0 and len(right_branch) > 0:
                     found = True
                     split = ([rand_feature], [1], rand_cut)
 

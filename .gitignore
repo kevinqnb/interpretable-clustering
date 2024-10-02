@@ -163,3 +163,5 @@ cython_debug/
 
 
 notebooks/tree.png
+data/anuran/
+data/mice_protein/

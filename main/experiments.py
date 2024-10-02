@@ -64,7 +64,7 @@ class Experiment:
         leaves_cost_filename = os.path.join(directory, 'leaves_cost' + str(identifier) + '.csv')
         leaves_depth_filename = os.path.join(directory, 'leaves_depth' + str(identifier) + '.csv')
         leaves_iteration_filename = os.path.join(directory, 'leaves_iteration' + str(identifier) + '.csv')
-        depth_cost_filename = os.path.join(directory, 'depth_cost' + str(identifier) +  '.csv')
+        depth_cost_filename = os.path.join(directory, 'depths_cost' + str(identifier) +  '.csv')
         
         self.leaves_cost_df.to_csv(leaves_cost_filename)
         self.leaves_depth_df.to_csv(leaves_depth_filename)
@@ -116,7 +116,13 @@ class Experiment:
             random_tree_.fit(kmeans.cluster_centers_)
             random_tree_labels_ = random_tree_.predict(self.data)
             random_tree_clustering_ = labels_to_clustering(random_tree_labels_)
-            random_tree_centers_ = np.vstack([self.data[cluster,:].mean(axis = 0) for cluster in random_tree_clustering_])
+            #random_tree_centers_ = np.vstack([self.data[cluster,:].mean(axis = 0) for cluster in random_tree_clustering_])
+            
+            random_tree_centers_ = np.vstack([
+                self.data[cluster, :].mean(axis=0) if len(cluster) > 0 else np.zeros(self.data.shape[1])
+                for cluster in random_tree_clustering_
+            ])
+            
             #rcost = kmeans_cost(self.data, random_tree_clustering_, kmeans.cluster_centers_)
             rcost = kmeans_cost(self.data, random_tree_clustering_, random_tree_centers_)
             if rcost < random_tree_cost:
@@ -176,6 +182,7 @@ class Experiment:
 
 
         # Rule Clustered Tree
+        '''
         clustered_tree_ = RuleClusteredTree(splits = 'axis', max_leaf_nodes = max_leaves, norm = 2, 
                                             center_init = 'manual', 
                                             centers = self.kmeans_centers,
@@ -191,6 +198,7 @@ class Experiment:
                                                     clusterer = clusterer, 
                                                     start_centers = self.kmeans_centers)
         clustered_oblique_tree_.fit(self.data, iterative = True, init_steps = self.n_clusters - 1)
+        '''
         
         
         
@@ -201,8 +209,8 @@ class Experiment:
         rule_unsupervised_oblique_costs = []
         rule_centroid_costs = []
         rule_centroid_oblique_costs = []
-        rule_clustered_costs = []
-        rule_clustered_oblique_costs = []
+        #rule_clustered_costs = []
+        #rule_clustered_oblique_costs = []
 
         # Track depths
         exkmc_depths = []
@@ -211,8 +219,8 @@ class Experiment:
         rule_unsupervised_oblique_depths = []
         rule_centroid_depths = []
         rule_centroid_oblique_depths = []
-        rule_clustered_depths = []
-        rule_clustered_oblique_depths = []
+        #rule_clustered_depths = []
+        #rule_clustered_oblique_depths = []
         
         # Track iterations used for rule clustering
         rule_cart_iterations =[]
@@ -220,8 +228,8 @@ class Experiment:
         rule_unsupervised_oblique_iterations = []
         rule_centroid_iterations = []
         rule_centroid_oblique_iterations = []
-        rule_clustered_iterations = []
-        rule_clustered_oblique_iterations = []
+        #rule_clustered_iterations = []
+        #rule_clustered_oblique_iterations = []
         
         
         # Expand the trees and compute cost:
@@ -293,16 +301,18 @@ class Experiment:
             rule_centroid_oblique_iterations.append(rule_kmeans_.iterations)
             
             # Clustered Tree
+            '''
             clustered_tree_.fit_step()
             rule_clustered_costs.append(clustered_tree_.clustering_cost)
             rule_clustered_depths.append(clustered_tree_.depth)
-            rule_clustered_iterations.append(clustered_tree_.iterations)
+            rule_clustered_iterations.append(clustered_tree_.clustering_iterations)
 
             # Clustered Oblique Tree
             clustered_oblique_tree_.fit_step()
             rule_clustered_oblique_costs.append(clustered_oblique_tree_.clustering_cost)
             rule_clustered_oblique_depths.append(clustered_oblique_tree_.depth)
-            rule_clustered_oblique_iterations.append(clustered_oblique_tree_.iterations)
+            rule_clustered_oblique_iterations.append(clustered_oblique_tree_.clustering_iterations)
+            '''
         
     
         data_frame = {
@@ -314,9 +324,9 @@ class Experiment:
             'Unsupervised': rule_unsupervised_costs,
             'Unsupervised Obl.': rule_unsupervised_oblique_costs,
             'Centroid': rule_centroid_costs,
-            'Centroid Obl.': rule_centroid_oblique_costs,
-            'Hybrid': rule_clustered_costs,
-            'Hybrid Obl.': rule_clustered_oblique_costs
+            'Centroid Obl.': rule_centroid_oblique_costs
+            #'Hybrid': rule_clustered_costs,
+            #'Hybrid Obl.': rule_clustered_oblique_costs
         }
         
         self.leaves_cost_df = pd.DataFrame(data_frame)
@@ -330,9 +340,9 @@ class Experiment:
             'Unsupervised': rule_unsupervised_depths,
             'Unsupervised Obl.': rule_unsupervised_oblique_depths,
             'Centroid': rule_centroid_depths,
-            'Centroid Obl.': rule_centroid_oblique_depths,
-            'Hybrid': rule_clustered_depths,
-            'Hybrid Obl.': rule_clustered_oblique_depths
+            'Centroid Obl.': rule_centroid_oblique_depths
+            #'Hybrid': rule_clustered_depths,
+            #'Hybrid Obl.': rule_clustered_oblique_depths
         }
         
         self.leaves_depth_df = pd.DataFrame(data_frame2)
@@ -343,9 +353,9 @@ class Experiment:
             'Unsupervised': rule_unsupervised_iterations,
             'Unsupervised Obl.': rule_unsupervised_oblique_iterations,
             'Centroid': rule_centroid_iterations,
-            'Centroid Obl.': rule_centroid_oblique_iterations,
-            'Hybrid': rule_clustered_iterations,
-            'Hybrid Obl.': rule_clustered_oblique_iterations
+            'Centroid Obl.': rule_centroid_oblique_iterations
+            #'Hybrid': rule_clustered_iterations,
+            #'Hybrid Obl.': rule_clustered_oblique_iterations
         }
         
         self.leaves_iteration_df = pd.DataFrame(data_frame3)
@@ -381,8 +391,8 @@ class Experiment:
         rule_unsupervised_oblique_costs = []
         rule_centroid_costs = []
         rule_centroid_oblique_costs = []
-        rule_clustered_costs = []
-        rule_clustered_oblique_costs = []
+        #rule_clustered_costs = []
+        #rule_clustered_oblique_costs = []
         
         # Track iterations used for rule clustering
         rule_cart_iterations =[]
@@ -390,8 +400,8 @@ class Experiment:
         rule_unsupervised_oblique_iterations = []
         rule_centroid_iterations = []
         rule_centroid_oblique_iterations = []
-        rule_clustered_iterations = []
-        rule_clustered_oblique_iterations = []
+        #rule_clustered_iterations = []
+        #rule_clustered_oblique_iterations = []
 
         # Expand the trees and compute cost:
         for d in depths:
@@ -457,6 +467,7 @@ class Experiment:
             rule_centroid_oblique_iterations.append(rule_kmeans_.iterations)
             
             # Clustered Tree
+            '''
             clustered_tree_ = RuleClusteredTree(splits = 'axis', max_leaf_nodes = max_leaves, 
                                                 max_depth = d, norm = 2, center_init = 'manual',
                                                 centers = self.kmeans_centers,
@@ -464,7 +475,7 @@ class Experiment:
 
             clustered_tree_.fit(self.data)
             rule_clustered_costs.append(clustered_tree_.clustering_cost)
-            rule_clustered_iterations.append(clustered_tree_.iterations)
+            rule_clustered_iterations.append(clustered_tree_.clustering_iterations)
             
             
             # Clustered Oblique Tree
@@ -476,20 +487,21 @@ class Experiment:
                                                         start_centers = self.kmeans_centers)
             clustered_oblique_tree_.fit(self.data)
             rule_clustered_oblique_costs.append(clustered_oblique_tree_.clustering_cost)
-            rule_clustered_oblique_iterations.append(clustered_oblique_tree_.iterations)
+            rule_clustered_oblique_iterations.append(clustered_oblique_tree_.clustering_iterations)
+            '''
 
 
         data_frame = {
             'IMM': [self.imm_cost if d >= self.imm_depth else np.nan for d in depths],
-            'RandomIMM': ([self.randomized_imm_cost if d < self.randomized_imm_depth
+            'RandomIMM': ([self.randomized_imm_cost if d >= self.randomized_imm_depth
                            else np.nan for d in depths]),
             'CART': rule_cart_costs,
             'Unsupervised': rule_unsupervised_costs,
             'Unsupervised Obl.': rule_unsupervised_oblique_costs,
             'Centroid': rule_centroid_costs,
-            'Centroid Obl.': rule_centroid_oblique_costs,
-            'Hybrid': rule_clustered_costs,
-            'Hybrid Obl.': rule_clustered_oblique_costs
+            'Centroid Obl.': rule_centroid_oblique_costs
+            #'Hybrid': rule_clustered_costs,
+            #'Hybrid Obl.': rule_clustered_oblique_costs
         }
         
         self.depths_cost_df = pd.DataFrame(data_frame)
@@ -501,9 +513,9 @@ class Experiment:
             'Unsupervised': rule_unsupervised_iterations,
             'Unsupervised Obl.': rule_unsupervised_oblique_iterations,
             'Centroid': rule_centroid_iterations,
-            'Centroid Obl.': rule_centroid_oblique_iterations,
-            'Hybrid': rule_clustered_iterations,
-            'Hybrid Obl.': rule_clustered_oblique_iterations
+            'Centroid Obl.': rule_centroid_oblique_iterations
+            #'Hybrid': rule_clustered_iterations,
+            #'Hybrid Obl.': rule_clustered_oblique_iterations
         }
         
         self.depths_iteration_df = pd.DataFrame(data_frame3)
