@@ -232,14 +232,14 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
         
     if custom_node.type == 'leaf' and (leaf_colors is not None):
         graph.node(node_id, label=node_label, fillcolor=leaf_colors[custom_node.label], 
-                   style='filled', penwidth='5', fontsize='36', fontname="times-bold")
+                   style='filled', penwidth='5', fontsize='64', fontname="times-bold")
     else:
-        graph.node(node_id, label=node_label, fontsize='36', penwidth='5', fontname="times-bold")
+        graph.node(node_id, label=node_label, fontsize='64', penwidth='5', fontname="times-bold")
 
     
     # Add an edge from the parent to the current node
     if parent_id is not None:
-        graph.edge(parent_id, node_id)
+        graph.edge(parent_id, node_id, penwidth = '10')
     
     # Recursively add children
     if custom_node.type == 'node':
