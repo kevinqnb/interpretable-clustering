@@ -3,7 +3,8 @@ import heapq
 import itertools
 import copy
 from joblib import Parallel, delayed
-from multiprocessing import Pool, shared_memory
+#from multiprocessing import Pool
+from multiprocessing import shared_memory
 from sklearn.cluster import KMeans
 from rule_clustering import *
 from utils import *

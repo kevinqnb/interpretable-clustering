@@ -4,105 +4,60 @@ import matplotlib.pyplot as plt
 import graphviz as gv
 from IPython.display import Image
 from rules import *
+from collections.abc import Iterable
+
 
 ####################################################################################################
 
-def kmeans_cost(X, clustering, centers):
+def kmeans_cost(X, assignment, centers):
     """
     Computes the squared L2 norm cost of a clustering with an associated set of centers
 
     Args:
         X (np.ndarray): (n x m) Dataset
         
-        clustering (List[List[int]]): 2d List of integers representing a clustering.
-            clustering[i] is a list of indices j for the items within the cluster with label i. 
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. 
             
         centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
 
     Returns:
         cost (float): Total cost of the clustering.
     """
+    
+    k = assignment.shape[1]
     cost = 0
-    for i, cluster in enumerate(clustering):
+    for i in range(k):
+        points = X[assignment[:,i] == 1]
         center = centers[i,:]
-        cost += np.sum(np.linalg.norm(X[cluster,:] - center, axis = 1)**2)
-        #cost +=  np.sum((X[cluster,:] - center)**2)
+        cost += np.sum(np.linalg.norm(points - center, axis = 1)**2)
     return cost
-
+    
 ####################################################################################################
 
-def kmedians_cost(X, clustering, centers):
+def kmedians_cost(X, assignment, centers):
     """
     Computes the L1 norm cost of a clustering with an associated set of centers
 
     Args:
         X (np.ndarray): (n x m) Dataset
         
-        clustering (List[List[int]]): 2d List of integers representing a clustering.
-            clustering[i] is a list of indices j for the items within the cluster with label i. 
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. 
             
         centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
 
     Returns:
         cost (float): Total cost of the clustering.
     """
+    
+    k = assignment.shape[1]
     cost = 0
-    for i, cluster in enumerate(clustering):
+    for i in range(k):
+        points = X[assignment[:,i] == 1]
         center = centers[i,:]
-        cost += np.sum(np.abs(X[cluster,:] - center))
+        cost += np.sum(np.abs(points - center))
     return cost
-
-####################################################################################################
-
-def clustering_to_labels(clustering, label_array = None):
-    """
-    Takes an input clustering and returns its associated list of labels.
-    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
-    
-    Args:
-        clustering (List[List[int]]): 2d List of integers representing a clustering.
-            clustering[i] is a list of indices j for the items within the cluster with label i. 
-            
-        label_array (np.ndarray): Input array to modify. Useful if some items are not clustered,
-            i.e. will have label NaN.  
-
-    Returns:
-        labels (np.ndarray): List of integers where an entry at index i has value j if the 
-            item associated with index i is present within cluster j. 
-    """
-    if label_array is None:
-        lens = [len(i) for i in clustering]
-        labels = np.zeros(np.sum(lens)) - 1
-    else:
-        labels = label_array
-    
-    for i,cluster in enumerate(clustering):
-        for j in cluster:
-            labels[j] = i
-            
-    return labels
-        
-####################################################################################################
-
-def labels_to_clustering(labels):
-    """
-    Takes an input list of labels and returns its associated clustering.
-    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
-    
-    Args:
-        labels (np.ndarray): List of integers where an entry at index i has value j if the 
-            item associated with index i is present within cluster j. 
-
-    Returns:
-        clustering (List[List[int]]): 2d List of integers representing a clustering.
-            clustering[i] is a list of indices j for the items within the cluster with label i. 
-    """
-    clustering = [[] for i in range(int(np.max(labels)) + 1)]
-    for i,j in enumerate(labels):
-        if not np.isnan(j):
-            clustering[int(j)].append(i)
-        
-    return clustering
 
 ####################################################################################################
 
@@ -142,6 +97,159 @@ def kmeans_plus_plus_initialization(X, k, random_seed = None):
 
 ####################################################################################################
 
+'''
+def clustering_to_labels(clustering, n = None):
+    """
+    Takes an input clustering and returns its associated list of labels.
+    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
+    
+    Args:
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i.  
+            
+        n (int, optional): Number of items. Defaults to None, in which case the number of
+            of points is inferred from the given clustering.
+
+    Returns:
+        labels (List[int] OR List[List[int]]): List of integers where an entry at index i has value 
+            j if the item associated with index i is present within cluster j. Alternatively,
+            in a soft clustering where points have multiple labels, labels[i] is a list of 
+            cluster labels j.
+    """
+    if n is None:
+        lens = [len(i) for i in clustering]
+        n = np.sum(lens)
+        
+    labels = [-1 for _ in range(n)]   
+    
+    for i,cluster in enumerate(clustering):
+        for j in cluster:
+            if labels[j] != -1:
+                if isinstance(labels[j], (int, float)):
+                    labels[j] = [labels[j], i]
+                else:
+                    labels[j].append(i)
+            else:
+                labels[j] = i
+            
+    return labels
+        
+####################################################################################################
+
+def labels_to_clustering(labels, k = None):
+    """
+    Takes an input list of labels and returns its associated clustering.
+    NOTE: Assumes clusters are indexed 0 -> (k - 1) and items are indexed 0 -> (n - 1).
+    
+    Args:
+        labels (List[int] OR List[List[int]]): List of integers where an entry at index i has value 
+            j if the item associated with index i is present within cluster j. Alternatively,
+            in a soft clustering where points have multiple labels, labels[i] is a list of 
+            cluster labels j.
+            
+        k (int, optional): Number of clusters. Defaults to None, in which case the number of
+            clusters is inferred from the input labels.
+
+    Returns:
+        clustering (List[List[int]]): 2d List of integers representing a clustering.
+            clustering[i] is a list of indices j for the items within the cluster with label i. 
+    """
+    if k is None:
+        s = -1
+        for l in labels:
+            if np.max(l) > s:
+                s = np.max(l)
+                
+        k = int(s) + 1
+        
+    clustering = [[] for _ in range(k)]
+    for i,j in enumerate(labels):
+        if isinstance(j, (int, float, np.integer)):
+            if not np.isnan(j):
+                clustering[int(j)].append(i)
+        elif isinstance(j, Iterable) and not isinstance(j, (str, bytes)):
+            for l in j:
+                clustering[int(l)].append(i)
+        else:
+            raise ValueError("Invalid label type")
+        
+    return clustering
+'''
+
+####################################################################################################
+
+def labels_to_assignment(labels, k = None):
+    """
+    Takes an input list of labels and returns its associated clustering matrix.
+    NOTE: By convention, clusters are indexed [0,k) and items are indexed [0, n).
+    
+    Args:
+        labels (List[int] OR List[List[int]]): List of integers where an entry at index i has value 
+            j if the item associated with index i is present within cluster j. Alternatively,
+            in a soft clustering where points have multiple labels, labels[i] is a list of 
+            cluster labels j.
+            
+        k (int, optional): Number of clusters. Defaults to None, in which case the number of
+            clusters is inferred from the input labels.
+
+    Returns:
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to cluster j and False otherwise.
+    """
+    # Infer if k is not provided
+    if k is None:
+        s = -1
+        for l in labels:
+            if np.max(l) > s:
+                s = np.max(l) 
+        k = int(s) + 1
+        
+    assignment_matrix = np.zeros((len(labels), k), dtype = bool)
+    for i,j in enumerate(labels):
+        if isinstance(j, (int, float, np.integer)):
+            if not np.isnan(j):
+                assignment_matrix[i, int(j)] = True
+        elif isinstance(j, Iterable) and not isinstance(j, (str, bytes)):
+            for l in j:
+                assignment_matrix[i, int(l)] = True
+        else:
+            raise ValueError("Invalid label type")
+        
+    return assignment_matrix
+
+
+####################################################################################################
+
+def assignment_to_labels(assignment):
+    """
+    Takes an input n x k boolean assignment matrix, and outputs a list of labels for the 
+    datapoints.
+     
+    NOTE: By convention, clusters are indexed [0,k) and items are indexed [0, n).
+    
+    Args:
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to cluster j and False otherwise.
+
+    Returns:
+        labels (List[int] OR List[List[int]]): List of integers where an entry at index i has value 
+            j if the item associated with index i is present within cluster j. Alternatively,
+            in a soft clustering where points have multiple labels, labels[i] is a list of 
+            cluster labels j.
+    """
+    labels = []
+    for i, assign in enumerate(assignment):
+        i_labels = np.where(assign)[0]
+        
+        if len(i_labels) == 1:
+            labels.append(i_labels[0])
+        else:
+            labels.append(list(i_labels))
+            
+    return labels
+
+####################################################################################################
+
 def plot_decision_boundaries(model, X, ax = None, resolution = 100):
     """
     Plots the decision boundaries of a given model.
@@ -175,8 +283,53 @@ def plot_decision_boundaries(model, X, ax = None, resolution = 100):
 
 ####################################################################################################
 
+def plot_multiclass_decision_boundaries(model, X, ax = None, resolution = 100, cmap = None):
+    """
+    Plots the decision boundaries of a given model. In contrast to 
+    plot_decision_boundaries, this function is specifically designed to handle 
+    situations where points may belong to multiple classes. The .predict() method of 
+    the model should return a 0/1 matrix with size n x k (where n is the number of 
+    points and k is the number of classes), indicating the class membership of a point. 
+
+    Args:
+        model (Object): Object which requires a predict() method.
+        X (_type_): Dataset fitted to the model. 
+        ax (matplotlib axes, optional): Axes for plotting. 
+        resolution (int, optional): Number of points on the meshgrid, controls the 
+            resolution of the contour lines. Defaults to 100.
+    """
+    # Define the axis boundaries of the plot
+    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
+    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
+    
+    # Create a mesh grid
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, resolution),
+                         np.linspace(y_min, y_max, resolution))
+    
+    # Predict the classification for each point in the mesh
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    
+    if isinstance(Z, list):
+        Z = labels_to_assignment(Z)
+    
+    # Plot the decision boundaries for each class
+    if ax is None:
+        ax = plt.gca()
+    
+    for i in range(Z.shape[1]):
+        Z_class = Z[:, i].reshape(xx.shape)
+        if cmap is None:
+            ax.contour(xx, yy, Z_class, levels=[0.5], colors='k', linestyles='dashed',
+                    alpha=0.8, linewidths=1.5)
+        else:
+            c = cmap(i)
+            ax.contour(xx, yy, Z_class, levels=[0.5], colors=[c], linestyles='dashed',
+                    alpha=1, linewidths=4)
+
+####################################################################################################
+
 def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_labels=None, 
-                leaf_colors=None, newline=True):
+                leaf_colors=None, newline=True, cost = True):
     """
     Builds a graph representation of the custom_node tree using 
     graphviz.
@@ -226,8 +379,13 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
             
     # For leaf nodes:
     else:
+        node_label += f"Cluster {custom_node.label}\n"
         node_label += f"Size: {custom_node.size}"
-        node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
+        if cost:
+            node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
+        else:
+            #node_label += f"\n Cluster {custom_node.label}"
+            pass
         #node_label += f"\nLabel: {custom_node.label}"
         
     if custom_node.type == 'leaf' and (leaf_colors is not None):
@@ -246,18 +404,18 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
         if custom_node.left_child is not None:
             build_graph(custom_node.left_child, graph, parent_id=node_id, 
                         node_id=str(int(node_id) * 2 + 1),
-                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline)
+                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline, cost = cost)
         if custom_node.right_child is not None:
             build_graph(custom_node.right_child, graph, parent_id=node_id, 
                         node_id=str(int(node_id) * 2 + 2),
-                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline)
+                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline, cost = cost)
     
     return graph
 
 ####################################################################################################
 
 def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_colors=None,
-                   newline=True):
+                   newline=True, cost = True):
     """
     Wrapper function for visualizing a Tree object by building a graphviz decision tree.
 
@@ -279,7 +437,7 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
         IPython.display.Image: The image object for display in Jupyter notebooks.
     """
     graph = build_graph(custom_root, feature_labels=feature_labels, leaf_colors=leaf_colors,
-                        newline=newline)
+                        newline=newline, cost=cost)
     graph.attr(size="10,10", dpi="300", ratio="0.75")
     graph.render(output_file, format='png', cleanup=True)
     return Image(output_file + '.png')

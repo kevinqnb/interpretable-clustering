@@ -14,9 +14,11 @@ from utils import *
 
 
 ####################################################################################################
+
 class Experiment:
     """
-    Performs suite of experiments on a given dataset.
+    Performs suite of experiments on an input dataset which measure clustering cost with parameter 
+    changes.
     """
     def __init__(self, data, n_clusters, random_seed = None, verbose = True):
         """
@@ -84,9 +86,9 @@ class Experiment:
                         init = 'k-means++',
                         random_state=self.seed,
                         n_init="auto").fit(self.data)
-        kmeans_clustering = labels_to_clustering(kmeans.labels_)
         self.kmeans_centers = kmeans.cluster_centers_
-        self.kmeans_cost = kmeans_cost(self.data, kmeans_clustering, self.kmeans_centers)
+        kmeans_assignment = labels_to_assignment(kmeans.labels_)
+        self.kmeans_cost = kmeans_cost(self.data, kmeans_assignment, self.kmeans_centers)
         self.kmeans = kmeans
         
         
@@ -96,9 +98,9 @@ class Experiment:
         IMM_tree = ExTree(self.n_clusters, max_leaves = self.n_clusters, base_tree = "IMM",
                             random_state = self.seed)
         imm_labels = IMM_tree.fit_predict(self.data, kmeans)
-        imm_clustering = labels_to_clustering(imm_labels)
+        imm_assignment = labels_to_assignment(imm_labels)
         imm_centers = IMM_tree.all_centers
-        self.imm_cost = kmeans_cost(self.data, imm_clustering, imm_centers)
+        self.imm_cost = kmeans_cost(self.data, imm_assignment, imm_centers)
         self.imm_tree = ConvertExKMC(IMM_tree.tree, self.data)
         self.imm_depth = self.imm_tree.depth
         
@@ -115,16 +117,17 @@ class Experiment:
             random_tree_ = RandomTree(max_leaf_nodes = self.n_clusters, min_points_leaf = 1)
             random_tree_.fit(kmeans.cluster_centers_)
             random_tree_labels_ = random_tree_.predict(self.data)
-            random_tree_clustering_ = labels_to_clustering(random_tree_labels_)
+            random_tree_assignment_ = labels_to_assignment(random_tree_labels_)
             #random_tree_centers_ = np.vstack([self.data[cluster,:].mean(axis = 0) for cluster in random_tree_clustering_])
             
             random_tree_centers_ = np.vstack([
-                self.data[cluster, :].mean(axis=0) if len(cluster) > 0 else np.zeros(self.data.shape[1])
-                for cluster in random_tree_clustering_
+                self.data[np.where(cluster)[0], :].mean(axis=0) if len(np.where(cluster)[0]) > 0 
+                else np.zeros(self.data.shape[1]) 
+                for i,cluster in enumerate(random_tree_assignment_.T)
             ])
             
             #rcost = kmeans_cost(self.data, random_tree_clustering_, kmeans.cluster_centers_)
-            rcost = kmeans_cost(self.data, random_tree_clustering_, random_tree_centers_)
+            rcost = kmeans_cost(self.data, random_tree_assignment_, random_tree_centers_)
             if rcost < random_tree_cost:
                 random_tree_cost = rcost
                 random_tree = random_tree_
@@ -241,9 +244,9 @@ class Experiment:
             # ExKMC
             ExKMC_tree_ = ExTree(self.n_clusters, max_leaves = l, base_tree = "IMM")
             exkmc_labs_ = ExKMC_tree_.fit_predict(self.data, self.kmeans)
-            exkmc_clustering_ = labels_to_clustering(exkmc_labs_)
+            exkmc_assignment_ = labels_to_assignment(exkmc_labs_)
             exkmc_centers_ = ExKMC_tree_.all_centers
-            exkmc_cost_ = kmeans_cost(self.data, exkmc_clustering_, exkmc_centers_)
+            exkmc_cost_ = kmeans_cost(self.data, exkmc_assignment_, exkmc_centers_)
             exkmc_costs.append(exkmc_cost_)
             exkmc_depths.append(ExKMC_tree_._max_depth())
             
