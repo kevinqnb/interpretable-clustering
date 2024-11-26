@@ -101,16 +101,16 @@ class RuleClustering:
         # ETC... compute clustering ...
         
     
-    def predict(self, X, return_clustering = False):
+    def predict(self, X, cluster_vote = False):
         """
         Assigns cluster labels to an input dataset.
 
         Args:
             X (np.ndarray): Input n x m dataset to predict upon.
             
-            return_clustering (bool): If true, return both the clustering of indices from X,
-                and the label array. Defaults to False, in which case only the label 
-                array is returned.
+            cluster_vote (bool, optional): If False, returns the full point to cluster assignment.
+                If True, returns the cluster assignment for which each point x is assigned to the 
+                cluster that appears most often in the rules which cover x. 
 
         Returns:
             data_clustering (List[List[int]]): 2d List describing cluster assignments 
@@ -122,8 +122,34 @@ class RuleClustering:
         
         rule_model_labels = self.rules.predict(X)
         points_to_rules_matrix = labels_to_assignment(rule_model_labels)
-        # Boolean matrix multiplication to get the clustering of the data
-        point_assignment = np.dot(points_to_rules_matrix, self.rule_assignment)
+        
+        if not cluster_vote:
+            # Boolean matrix multiplication to get the clustering of the data
+            point_assignment = np.dot(points_to_rules_matrix, self.rule_assignment)
+        else:
+            # Standard matrix multiplication to get the voted clustering of the data
+            rule_assignment_int = self.rule_assignment.astype(int)
+            point_assignment = np.dot(points_to_rules_matrix, rule_assignment_int)
+            
+            # Convert the integer point assignment array back to boolean
+            n, m = point_assignment.shape
+            boolean_assignment = np.zeros((n, m), dtype=bool)
+            
+            for i in range(n):
+                # If a data point belongs to multiple clusters, find the cluster
+                # it belongs to most often. 
+                
+                if point_assignment[i,:].max() > 0:
+                    max_indices = np.where(point_assignment[i,:] == point_assignment[i,:].max())[0]
+                    if len(max_indices) > 1:
+                        # In the event of a tie, randomly choose one of the assigned clusters.
+                        max_index = np.random.choice(max_indices)
+                    else:
+                        max_index = max_indices[0]
+                    boolean_assignment[i, max_index] = True
+                
+            point_assignment = boolean_assignment
+            
         return point_assignment
         
         #data_labels = [self.labels[i] for i in rule_model_labels]

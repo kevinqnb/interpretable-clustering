@@ -9,6 +9,7 @@ from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
 from ExKMC.Tree import Tree as ExTree
 from tree import *
+from decision_sets import *
 from rule_clustering import *
 from utils import *
 
@@ -135,6 +136,8 @@ class Experiment:
         self.randomized_imm_cost = random_tree_cost
         self.randomized_imm_tree = random_tree
         self.randomized_imm_depth = random_tree.depth
+            
+        
         
         
     def run_leaves_cost(self, min_leaves, max_leaves, clusterer):
@@ -204,6 +207,23 @@ class Experiment:
         '''
         
         
+        # Need to make feature pairings as a parameter somewhere!
+        feature_pairings = [list(range(12))] + [list(range(12,24))]
+        fd = 3
+        num_trees = 1000
+        
+        unsupervised_forest = DecisionForest(UnsupervisedTree, tree_params = {'splits':'axis', 'max_depth':fd}, 
+                            num_trees = num_trees, num_features = fd, feature_pairings = feature_pairings)
+        
+        unsupervised_forest.fit(self.data)
+        
+        # Centroid Decision Forest:
+        centroid_forest = DecisionForest(CentroidTree, tree_params = {'splits':'axis', 'max_depth':fd}, 
+                            num_trees = num_trees, num_features = fd, feature_pairings = feature_pairings,
+                            center_init='manual', centers = self.kmeans_centers)
+        centroid_forest.fit(self.data)
+        
+        
         
         # Track cost by leaves:
         exkmc_costs = []
@@ -214,6 +234,8 @@ class Experiment:
         rule_centroid_oblique_costs = []
         #rule_clustered_costs = []
         #rule_clustered_oblique_costs = []
+        rule_unsupervised_forest_costs = []
+        rule_centroid_forest_costs = []
 
         # Track depths
         exkmc_depths = []
@@ -224,6 +246,8 @@ class Experiment:
         rule_centroid_oblique_depths = []
         #rule_clustered_depths = []
         #rule_clustered_oblique_depths = []
+        rule_unsupervised_forest_depths = []
+        rule_centroid_forest_depths = []
         
         # Track iterations used for rule clustering
         rule_cart_iterations =[]
@@ -233,7 +257,8 @@ class Experiment:
         rule_centroid_oblique_iterations = []
         #rule_clustered_iterations = []
         #rule_clustered_oblique_iterations = []
-        
+        rule_unsupervised_forest_iterations = []
+        rule_centroid_forest_iterations = []
         
         # Expand the trees and compute cost:
         for l in leaves:
@@ -316,6 +341,31 @@ class Experiment:
             rule_clustered_oblique_depths.append(clustered_oblique_tree_.depth)
             rule_clustered_oblique_iterations.append(clustered_oblique_tree_.clustering_iterations)
             '''
+            
+            # Unsupervised Decision Forest:
+            unsupervised_forest.prune(self.data, l)
+            
+            rule_kmeans_ = clusterer(unsupervised_forest, k_clusters = self.n_clusters,
+                                     init = 'manual', center_init = self.kmeans_centers,
+                                     random_seed = self.seed)
+            rule_kmeans_.fit(self.data, fit_rules = False)
+            rule_unsupervised_forest_costs.append(rule_kmeans_.cost)
+            rule_unsupervised_forest_depths.append(fd)
+            rule_unsupervised_forest_iterations.append(rule_kmeans_.iterations)
+            
+            # Centroid Decision Forest:
+            centroid_forest.prune(self.data, l)
+            
+            rule_kmeans_ = clusterer(centroid_forest, k_clusters = self.n_clusters,
+                                     init = 'manual', center_init = self.kmeans_centers,
+                                     random_seed = self.seed)
+            rule_kmeans_.fit(self.data, fit_rules = False)
+            rule_centroid_forest_costs.append(rule_kmeans_.cost)
+            rule_centroid_forest_depths.append(fd)
+            rule_centroid_forest_iterations.append(rule_kmeans_.iterations)
+            
+            
+            
         
     
         data_frame = {
@@ -327,11 +377,14 @@ class Experiment:
             'Unsupervised': rule_unsupervised_costs,
             'Unsupervised Obl.': rule_unsupervised_oblique_costs,
             'Centroid': rule_centroid_costs,
-            'Centroid Obl.': rule_centroid_oblique_costs
+            'Centroid Obl.': rule_centroid_oblique_costs,
             #'Hybrid': rule_clustered_costs,
             #'Hybrid Obl.': rule_clustered_oblique_costs
+            'Unsupervised Forest': rule_unsupervised_forest_costs,
+            'Centroid Forest': rule_centroid_forest_costs
         }
         
+        self.df = data_frame
         self.leaves_cost_df = pd.DataFrame(data_frame)
         self.leaves_cost_df.index = leaves
         
@@ -343,9 +396,11 @@ class Experiment:
             'Unsupervised': rule_unsupervised_depths,
             'Unsupervised Obl.': rule_unsupervised_oblique_depths,
             'Centroid': rule_centroid_depths,
-            'Centroid Obl.': rule_centroid_oblique_depths
+            'Centroid Obl.': rule_centroid_oblique_depths,
             #'Hybrid': rule_clustered_depths,
             #'Hybrid Obl.': rule_clustered_oblique_depths
+            'Unsupervised Forest': rule_unsupervised_forest_depths,
+            'Centroid Forest': rule_centroid_forest_depths
         }
         
         self.leaves_depth_df = pd.DataFrame(data_frame2)
@@ -356,9 +411,11 @@ class Experiment:
             'Unsupervised': rule_unsupervised_iterations,
             'Unsupervised Obl.': rule_unsupervised_oblique_iterations,
             'Centroid': rule_centroid_iterations,
-            'Centroid Obl.': rule_centroid_oblique_iterations
+            'Centroid Obl.': rule_centroid_oblique_iterations,
             #'Hybrid': rule_clustered_iterations,
             #'Hybrid Obl.': rule_clustered_oblique_iterations
+            'Unsupervised Forest': rule_unsupervised_forest_iterations,
+            'Centroid Forest': rule_centroid_forest_iterations
         }
         
         self.leaves_iteration_df = pd.DataFrame(data_frame3)

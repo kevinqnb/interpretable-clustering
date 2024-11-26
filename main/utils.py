@@ -250,6 +250,57 @@ def assignment_to_labels(assignment):
 
 ####################################################################################################
 
+def traverse(node, path=None):
+    """
+    Traverses a binary tree in a depth-first manner, yielding nodes as they are visited.
+    
+    Args:
+        node (Node): Root node of the tree.
+    
+    Yields:
+        path (List[(Node, str)]): List of node objects visited on the current path.
+            If the path followed a left child, the corresponding string is 'left'.
+            Otherwise, the string is 'right'.
+    """
+    if path is None:
+        path = []
+    
+    path_update = path + [node]
+    
+    yield path_update
+    
+    if node.left_child is not None:
+        left_path = path + [(node, 'left')]
+        yield from traverse(node.left_child, left_path)
+    if node.right_child is not None:
+        right_path = path + [(node, 'right')]
+        yield from traverse(node.right_child, right_path)
+
+####################################################################################################
+
+def find_leaves(root):
+    """
+    Given the root of a tree, finds all leaf nodes in the tree.
+    
+    Args:
+        root (Node): Root of the tree.
+    
+    Returns:
+        leaves (dict[int: List[Node]]): Dictionary where the key is the label of the leaf node,
+            and the value is a list of nodes along the path from root to leaf (inclusive). 
+    """
+    
+    leaves = {}
+    
+    for path in traverse(root):
+        last_node = path[-1]
+        if last_node.type == 'leaf':
+            leaves[last_node.label] = path
+            
+    return leaves
+
+####################################################################################################
+
 def plot_decision_boundaries(model, X, ax = None, resolution = 100):
     """
     Plots the decision boundaries of a given model.
@@ -441,6 +492,35 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
     graph.attr(size="10,10", dpi="300", ratio="0.75")
     graph.render(output_file, format='png', cleanup=True)
     return Image(output_file + '.png')
+
+####################################################################################################
+
+def plot_decision_set(D, feature_labels, rule_labels, cluster_colors):
+    fig,ax = plt.subplots(dpi = 300)
+    ax.axis('off')
+    
+    for i,rule in enumerate(D):
+        rule_string = ''
+        for j, condition in enumerate(rule[:-1]):
+            node = condition[0]
+            rule_string += '(' + str(feature_labels[node.features[0]])
+            if condition[1] == 'left':
+                rule_string += r' $\leq$ '
+            else:
+                rule_string += r' $>$ '
+                
+            rule_string += str(node.threshold) + ')'
+            
+            if j < len(rule) - 2:
+                if j > 0 and j % 2 == 0:
+                    rule_string += r' $\&$ ' + f'\n'
+                else:
+                    rule_string += r' $\&$ '
+        
+        text_color = cluster_colors[rule_labels[i]]
+        ax.text(s = rule_string, x = 0, y = 2*(len(D) - i)/len(D), color = text_color, alpha = 1,  fontweight = 'extra bold')
+        
+    plt.show()
 
 ####################################################################################################
 
