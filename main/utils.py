@@ -495,7 +495,7 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
 
 ####################################################################################################
 
-def plot_decision_set(D, feature_labels, rule_labels, cluster_colors):
+def plot_decision_set(D, feature_labels, rule_labels, cluster_colors, filename = None):
     fig,ax = plt.subplots(dpi = 300)
     ax.axis('off')
     
@@ -520,6 +520,8 @@ def plot_decision_set(D, feature_labels, rule_labels, cluster_colors):
         text_color = cluster_colors[rule_labels[i]]
         ax.text(s = rule_string, x = 0, y = 2*(len(D) - i)/len(D), color = text_color, alpha = 1,  fontweight = 'extra bold')
         
+    if filename is not None:
+        plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
     plt.show()
 
 ####################################################################################################
