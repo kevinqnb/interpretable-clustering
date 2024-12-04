@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import graphviz as gv
 from IPython.display import Image
-from rules import *
+#from rules import *
 from collections.abc import Iterable
 
 

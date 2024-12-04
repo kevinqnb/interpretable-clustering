@@ -6,8 +6,8 @@ from joblib import Parallel, delayed
 #from multiprocessing import Pool
 from multiprocessing import shared_memory
 from sklearn.cluster import KMeans
-from rule_clustering import *
-from utils import *
+from .rule_clustering import *
+from .utils import *
 
 
 

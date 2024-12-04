@@ -8,10 +8,10 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
 from ExKMC.Tree import Tree as ExTree
-from tree import *
-from decision_sets import *
-from rule_clustering import *
-from utils import *
+from .tree import *
+from .decision_sets import *
+from .rule_clustering import *
+from .utils import *
 
 
 ####################################################################################################

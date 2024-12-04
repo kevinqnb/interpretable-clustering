@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ruleclustering"
+version = "0.1.0"
+description = "Explainable Clustering with Rules"
+authors = ["kevin-q2 <quinnk@bu.edu>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9, <=3.10"
+numpy = "1.26.4"
+wheel = "0.45.1"
+pandas = "2.2.3"
+scikit-learn = "^1.5.2"
+matplotlib = "^3.9.3"
+seaborn = "^0.13.2"
+geopandas = "^1.0.1"
+graphviz = "^0.20.3"
+setuptools = "75.1.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

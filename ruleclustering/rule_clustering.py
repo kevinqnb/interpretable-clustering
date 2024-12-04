@@ -1,8 +1,8 @@
 import numpy as np
 from sklearn.cluster import KMeans
 import copy
-from rules import Rule
-from utils import *
+#from rules import Rule
+from .utils import *
 
 
 ####################################################################################################

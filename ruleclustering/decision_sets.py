@@ -1,6 +1,6 @@
-from tree import *
-from utils import *
-from rule_pruning import *
+from .tree import *
+from .utils import *
+from .rule_pruning import *
 
 
 class DecisionSet:
@@ -366,42 +366,9 @@ class DecisionForest(DecisionSet):
             
         return costs
     
-    '''
-    def prune(self, X, q):
-        """
-        Prunes the decision set to q rules.
-        
-        Args:
-            q (int): Number of rules to keep.
-        """
-        n,d = X.shape        
-        search_range = np.linspace(0,10,1000)
-        coverage_threshold = 0.95*n
-        selected_rules = grid_search(q, self.covers, self.costs,
-                                    search_range, coverage_threshold)
-        #selected_rules = greedy_set_cover(n, self.covers, self.costs)
-        self.decision_set = [self.all_rules[i] for i in selected_rules]
-    '''
-        
-        
-    def prune(self, q, data_labels, rule_labels):
-        """
-        Given cluster labels, prunes the decision set to at most 
-        q rules for every cluster.
-        """
-        selected_rules = distorted_greedy2(q, data_labels, rule_labels, self.covers)
-        return selected_rules
     
+        
     
-    def prune2(self, q, data_labels, rule_labels):
-        selected_rules = greedy2(q, data_labels, rule_labels, self.covers)
-        return selected_rules
-    
-    '''
-    def prune3(self, q, data_labels, rule_labels):
-        selected_rules = greedy3(q, data_labels, rule_labels, self.covers)
-        return selected_rules
-    '''
         
 
 
