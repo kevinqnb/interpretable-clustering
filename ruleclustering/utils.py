@@ -5,11 +5,18 @@ import graphviz as gv
 from IPython.display import Image
 #from rules import *
 from collections.abc import Iterable
+from typing import List, Dict, Set
 
 
 ####################################################################################################
 
-def kmeans_cost(X, assignment, centers):
+
+def kmeans_cost(
+    X : np.ndarray,
+    assignment : np.ndarray,
+    centers : np.ndarray,
+    normalize : bool = False
+) -> float:
     """
     Computes the squared L2 norm cost of a clustering with an associated set of centers
 
@@ -20,22 +27,42 @@ def kmeans_cost(X, assignment, centers):
             being True (1) if point i belongs to cluster j and False (0) otherwise. 
             
         centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
+        
+        normalize (bool, optional): Whether to normalize the cost by the number of points
+            covered and the number of overlapping cluster assignments for each point. 
+            Defaults to False.
 
     Returns:
         cost (float): Total cost of the clustering.
     """
-    
-    k = assignment.shape[1]
+        
+    n,_ = X.shape
     cost = 0
-    for i in range(k):
-        points = X[assignment[:,i] == 1]
-        center = centers[i,:]
-        cost += np.sum(np.linalg.norm(points - center, axis = 1)**2)
+    covered = 0
+    for i in range(n):
+        i_centers = centers[assignment[i,:] == 1, :]
+        if len(i_centers) > 0:
+            point_cost = np.sum(np.linalg.norm(i_centers - X[i,:], axis = 1)**2)
+            if normalize:
+                point_cost /= len(i_centers)
+                
+            cost += point_cost
+            covered += 1
+            
+    if normalize:
+        cost /= covered
     return cost
+
     
 ####################################################################################################
 
-def kmedians_cost(X, assignment, centers):
+
+def kmedians_cost(
+    X : np.ndarray,
+    assignment : np.ndarray,
+    centers : np.ndarray,
+    normalize : bool = False
+) -> float:
     """
     Computes the L1 norm cost of a clustering with an associated set of centers
 
@@ -46,18 +73,31 @@ def kmedians_cost(X, assignment, centers):
             being True (1) if point i belongs to cluster j and False (0) otherwise. 
             
         centers (np.ndarray): (k x m) Set of representative centers for each of the k clusters.
+        
+        normalize (bool, optional): Whether to normalize the cost by the number of points
+            covered and the number of overlapping cluster assignments for each point. 
+            Defaults to False.
 
     Returns:
         cost (float): Total cost of the clustering.
     """
-    
-    k = assignment.shape[1]
+    n,_ = X.shape
     cost = 0
-    for i in range(k):
-        points = X[assignment[:,i] == 1]
-        center = centers[i,:]
-        cost += np.sum(np.abs(points - center))
+    covered = 0
+    for i in range(n):
+        i_centers = centers[assignment[i,:] == 1, :]
+        if len(i_centers) > 0:
+            point_cost = np.sum(np.abs(i_centers - X[i,:]))
+            if normalize:
+                point_cost /= len(i_centers)
+                
+            cost += point_cost
+            covered += 1
+            
+    if normalize:
+        cost /= covered
     return cost
+
 
 ####################################################################################################
 
@@ -220,6 +260,7 @@ def labels_to_assignment(labels, k = None):
 
 ####################################################################################################
 
+
 def assignment_to_labels(assignment):
     """
     Takes an input n x k boolean assignment matrix, and outputs a list of labels for the 
@@ -241,12 +282,57 @@ def assignment_to_labels(assignment):
     for i, assign in enumerate(assignment):
         i_labels = np.where(assign)[0]
         
-        if len(i_labels) == 1:
-            labels.append(i_labels[0])
-        else:
-            labels.append(list(i_labels))
+        #if len(i_labels) == 1:
+        #    labels.append(i_labels[0])
+        #else:
+        #    labels.append(list(i_labels))
+        labels.append(list(i_labels))
             
     return labels
+
+
+####################################################################################################
+
+
+def flatten_labels(labels : List[List[int]]) -> List[int]:
+    """
+    Given a 2d labels list, returns a flattened list of labels. 
+    
+    Args:
+        labels (List[List[int]]): 2d list of integers where the inner list at index i 
+            labels of the item with index i.
+            
+    Returns:
+        flattened (List[int]): Flattened list of labels.
+    """
+    flattened = [j for i,labs in enumerate(labels) for j in labs]
+    return flattened
+
+
+####################################################################################################
+
+
+def label_covers_dict(labels : List[List[int]]) -> Dict[int, Set[int]]:
+    """
+    Given a 2d labels list, returns a dictionary where the keys are the unique labels,
+    and the values are the sets of indices for the inner lists which contain the unique label.
+    
+    Args:
+        labels (List[List[int]]): 2d list of integers where the inner list at index i 
+            labels of the item with index i.
+    
+    Returns:
+        covers_dict (Dict[int, Set[int]]): Dictionary where the keys are integers (labels) and 
+            values are the sets of data point indices covered by the label.
+    """
+    unique_labels = np.unique(flatten_labels(labels))
+    covers_dict = {l: set() for l in unique_labels}
+    for i, labs in enumerate(labels):
+        for l in labs:
+            covers_dict[l].add(i)
+            
+    return covers_dict
+
 
 ####################################################################################################
 

@@ -31,6 +31,8 @@ from .utils import (
     kmeans_plus_plus_initialization,
     labels_to_assignment,
     assignment_to_labels,
+    flatten_labels,
+    label_covers_dict,
     traverse,
     find_leaves,
     plot_decision_boundaries,
@@ -41,4 +43,17 @@ from .utils import (
     rule_grid,
     remove_rows_cols,
     add_row_col,
+)
+
+
+from .modules import (
+    KMeansBase,
+    ExKMCMod,
+    CentroidMod,
+    ForestMod,
+)
+
+from .experiments import (
+    RulesExperiment,
+    DepthExperiment,
 )

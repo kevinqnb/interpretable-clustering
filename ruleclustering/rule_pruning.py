@@ -2,7 +2,8 @@ import numpy as np
 import copy
 from sklearn.cluster import KMeans
 from joblib import Parallel, delayed
-from typing import Dict, Callable
+from typing import Dict, Callable, List
+from .utils import *
 
 
 ####################################################################################################
@@ -11,8 +12,8 @@ from typing import Dict, Callable
 def distorted_greedy(
     q : int,
     lambda_val : float,
-    data_labels : np.ndarray[np.int64],
-    rule_labels : np.ndarray[np.int64],
+    data_labels : List[List[int]],
+    rule_labels : List[List[int]],
     rule_covers_dict : Dict[int, np.ndarray[np.int64]]
     ) -> np.ndarray[np.int64]:
     
@@ -32,9 +33,13 @@ def distorted_greedy(
         
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
         
-        data_labels (np.ndarray): An array of integers representing the cluster labels of the data.
+        data_labels (List[List[int]]): A 2d list of integers where the inner list at index i 
+            represents the cluster labels of the data point with index i.
+            NOTE: Each data point can have multiple labels.
         
-        rule_labels (np.ndarray): An array of integers representing the cluster labels of the rules.
+        rule_labels (List[List[int]]): A 2d list of integers where the inner list at index i 
+            represents the cluster labels of the rule with index i.
+            NOTE: Each rule can only have a single label, so each inner list must be length 1.
         
         rule_covers_dict (dict[int: set]): A dictionary where keys are integers (rule labels) and 
             values are the sets of data point indices covered by the rule.
@@ -42,13 +47,19 @@ def distorted_greedy(
     Returns:
         S (np.ndarray): An array of integers representing the selected rules.
     """
+    #unique_labels = np.unique(flattened_rule_labels)
+    #points_to_cover = {l: set(np.where(data_labels == l)[0]) for l in unique_labels}
     
-    unique_labels = np.unique(rule_labels)
-    points_to_cover = {l: set(np.where(data_labels == l)[0]) for l in unique_labels}
-    covered_so_far = {l: set() for l in unique_labels}
+    rule_list = list(rule_covers_dict.keys())
+    flattened_rule_labels = flatten_labels(rule_labels)
+    if len(flattened_rule_labels) != len(rule_labels):
+        raise ValueError("Each rule must have exactly one label.")
+    unique_rule_labels = np.unique(flattened_rule_labels)
+    
+    points_to_cover = label_covers_dict(data_labels)
+    covered_so_far = {l: set() for l in unique_rule_labels}
     
     S = []
-    rule_list = list(rule_covers_dict.keys())
     for i in range(q):
         best_rule = None
         best_rule_label = None
@@ -56,7 +67,7 @@ def distorted_greedy(
         
         for r in rule_list:
             if r not in S:
-                rlabel = rule_labels[r]
+                rlabel = rule_labels[r][0]
                 label_covered = covered_so_far[rlabel]
                 to_cover = points_to_cover[rlabel]
                 r_covers = to_cover.intersection(rule_covers_dict[r])
@@ -117,6 +128,8 @@ def prune_with_grid_search(
     Returns:
         S (np.ndarray): An array of integers representing the selected rules.
     """
+    
+    distorted_greedy(q, 1, data_labels, rule_labels, rule_covers_dict) 
     
     def evaluate_lambda(lambda_val):
         selected = distorted_greedy(q, lambda_val, data_labels, rule_labels, rule_covers_dict)

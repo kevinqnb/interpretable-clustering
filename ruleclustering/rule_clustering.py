@@ -6,16 +6,12 @@ from .utils import *
 
 
 ####################################################################################################
+
+
 class RuleClustering:
     """
     Default class for a set of Rule objects which are intended to be clustered.
     For more info on Rule objects, please see rules.py.
-    
-    NOTE: Although this work was intended to support overlapping Rules, it currently only
-    works with a set that is non-overlapping. While overlapping Rules will still run without 
-    error, it may be the case that during cluster prediction on a given dataset
-    the output clustering and labels will not be reflective of the true 
-    overlapping cluster structure. I may fix this in the future.
     """
     
     def __init__(self, rules, k_clusters):
@@ -101,39 +97,44 @@ class RuleClustering:
         # ETC... compute clustering ...
         
     
-    def predict(self, X, cluster_vote = False):
+    def predict(
+        self,
+        X : np.ndarray,
+        assignment_method : str = None
+    ) -> np.ndarray:
         """
         Assigns cluster labels to an input dataset.
 
         Args:
             X (np.ndarray): Input n x m dataset to predict upon.
             
-            cluster_vote (bool, optional): If False, returns the full point to cluster assignment.
-                If True, returns the cluster assignment for which each point x is assigned to the 
-                cluster that appears most often in the rules which cover x. 
+            assignment_method (str, optional): If None, returns the full point to cluster
+                assignment. Otherwise accepts values 'vote' or 'min.' If 'vote',
+                returns the cluster assignment for which each point x is assigned to the
+                cluster that appears most often in the rules which cover x. If 'min',
+                returns the cluster assignment for which each point x is assigned to the
+                cluster which is closest among the assignments for rules which cover x. 
 
         Returns:
-            data_clustering (List[List[int]]): 2d List describing cluster assignments 
-                for data points. clustering[i] is a list of indices j for the data points
-                within cluster i.
-                
-            data_labels (List[int]): Length n array of assigned labels for each data point.
+            point_assignment (np.ndarray): n x k boolean matrix with entry (i,j) being 1 if point
+                i belongs to cluster j and 0 otherwise.
         """
         
         rule_model_labels = self.rules.predict(X)
         points_to_rules_matrix = labels_to_assignment(rule_model_labels)
         
-        if not cluster_vote:
-            # Boolean matrix multiplication to get the clustering of the data
+        if assignment_method is None:
+            # Boolean matrix multiplication to get the full cluster assignment of the data
             point_assignment = np.dot(points_to_rules_matrix, self.rule_assignment)
-        else:
+            
+        elif assignment_method == 'vote':
             # Standard matrix multiplication to get the voted clustering of the data
             rule_assignment_int = self.rule_assignment.astype(int)
             point_assignment = np.dot(points_to_rules_matrix, rule_assignment_int)
             
             # Convert the integer point assignment array back to boolean
             n, m = point_assignment.shape
-            boolean_assignment = np.zeros((n, m), dtype=bool)
+            voted_assignment = np.zeros((n, m), dtype=bool)
             
             for i in range(n):
                 # If a data point belongs to multiple clusters, find the cluster
@@ -146,9 +147,34 @@ class RuleClustering:
                         max_index = np.random.choice(max_indices)
                     else:
                         max_index = max_indices[0]
-                    boolean_assignment[i, max_index] = True
+                        
+                    voted_assignment[i, max_index] = True
                 
-            point_assignment = boolean_assignment
+            point_assignment = voted_assignment
+            
+            
+        elif assignment_method == 'min':
+            # Boolean matrix multiplication to get the full cluster assignment of the data
+            point_assignment = np.dot(points_to_rules_matrix, self.rule_assignment)
+            
+            n, m = point_assignment.shape
+            min_assignment = np.zeros((n, m), dtype=bool)
+            
+            for i in range(n):
+                min_dist = np.inf
+                min_j = None
+                for j in np.where(point_assignment[i,:] == 1)[0]:
+                    
+                    # THIS SHOULD REALLY ACCOUNT FOR KMEDIANS DISTANCE as well...
+                    dist = np.sum((X[i,:] - self.centers[j,:])**2)
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_j = j
+                        
+                min_assignment[i, min_j] = True
+                
+            point_assignment = min_assignment
+            
             
         return point_assignment
         
