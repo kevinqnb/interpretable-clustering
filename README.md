@@ -1,4 +1,4 @@
-# RuleClustering
+# Interpretable Clustering
 
 To build run `poetry install`
 
