@@ -3,7 +3,7 @@ import copy
 from sklearn.cluster import KMeans
 from joblib import Parallel, delayed
 from typing import Dict, Callable, List
-from .utils import *
+from ..utils import *
 
 
 ####################################################################################################
@@ -56,7 +56,7 @@ def distorted_greedy(
         raise ValueError("Each rule must have exactly one label.")
     unique_rule_labels = np.unique(flattened_rule_labels)
     
-    points_to_cover = label_covers_dict(data_labels)
+    points_to_cover = label_covers_dict(data_labels, unique_rule_labels)
     covered_so_far = {l: set() for l in unique_rule_labels}
     
     S = []
@@ -150,3 +150,5 @@ def prune_with_grid_search(
             
     return distorted_greedy(q, best_val, data_labels, rule_labels, rule_covers_dict) 
 
+
+####################################################################################################
