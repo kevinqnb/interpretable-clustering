@@ -8,7 +8,11 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import geopandas as gpd
 from ExKMC.Tree import Tree as ExTree
-from ruleclustering import *
+from intercluster.clustering import *
+from intercluster.rules import *
+from intercluster import *
+from experiments import *
+from modules import *
 
 
 # REMINDER: The seed should only be initialized here. It should NOT 
@@ -82,6 +86,7 @@ max_depth = 4
 # Base module
 base = KMeansBase(n_clusters)
 A,C = base.assign(X)
+y = base.clustering.labels_
 
 cluster_model = KMeansRuleClustering
 cluster_params = {
@@ -94,6 +99,7 @@ cluster_params = {
 # Modules:
 
 # Tree:
+'''
 tree_params = {
     'splits' : 'axis',
     'max_leaf_nodes' : max_rules,
@@ -102,6 +108,7 @@ tree_params = {
     'center_init' : 'k-means',
     'n_centers' : n_clusters
 }
+
 
 mod1 = TreeMod(
     tree_model = CentroidTree,
@@ -112,7 +119,14 @@ mod1 = TreeMod(
     min_depth = min_depth,
     name = 'Centroid'
 )
+'''
 
+mod1 = ExkmcMod(
+    n_clusters = n_clusters,
+    kmeans_model = base.clustering,
+    base_tree = 'IMM',
+    min_rules = min_rules
+)
 
 # Forest Tree:
 '''
@@ -127,7 +141,6 @@ forest_tree_params = {
 '''
 
 forest_tree_params = {
-    'data_labels' : base.clustering.labels_,
     'max_leaf_nodes' : max_rules,
     'max_depth' : 2
 }
@@ -139,6 +152,7 @@ forest_params = {
     'tree_params' : forest_tree_params,
     'num_trees' : 10000,
     'max_features' : 6,
+    'max_labels' : 1,
     'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
@@ -231,11 +245,12 @@ Ex1 = RulesExperiment(
     module_list = module_list,
     cost_fns = cost_fns,
     cost_fn_params = cost_fn_params,
+    labels = y,
     verbose = True
 )
 
 Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
-Ex1.save_results('../data/experiments/decision_sets/', '_climate_sklearn_d2')
+Ex1.save_results('../data/experiments/decision_sets/', '_climate_exkmc_d2')
 
 
 ####################################################################################################

@@ -1,5 +1,57 @@
 import numpy as np
+import numpy.typing as npt
+from typing import List, Tuple, Callable
+from ._node import Node
+from ._splitter import Splitter
 from ._tree import Tree
+
+class RandomSplitter(Splitter):
+    """
+    Splits leaf nodes randomly by choosing random axis aligned splits. 
+    """
+    def __init__(self):
+        pass
+    
+    def score(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ) -> float:
+        """
+        Computes the score associated with a leaf node as a random number.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None. 
+        
+        Returns:
+            score (float): Cost associated with the leaf node.
+        """
+        return np.random.uniform()
+    
+    
+    def split(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
+        """
+        Computes the cost associated with the optimal split of a leaf node.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None. 
+        
+        Returns:
+            score (float): Cost associated with the leaf node.
+        """
+        features = np.random.choice(range(X.shape[1]))
+        weights = np.array([1])
+        threshold = np.random.uniform()
+        return self.score(X,y), (features, weights, threshold)
+    
 
 class RandomTree(Tree):
     """
@@ -12,10 +64,19 @@ class RandomTree(Tree):
     NOTE: In order to imitate results from [Galmath, Jia, Polak, Svensson 2021], fit this model on 
         a dataset consisting only of centers or representative points.
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, random_seed = None,
-                 feature_labels = None):
-        """ 
+    def __init__(
+        self,
+        base_tree : Node = None,
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1,
+        feature_labels : List[str] = None
+    ):
+        """
         Args:
+            base_tree (Node, optional): Root node of a baseline tree to start from. 
+                Defaults to None, in which case the tree is grown from root.
+            
             max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
                 Defaults to None.
                 
@@ -25,23 +86,32 @@ class RandomTree(Tree):
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
                 
-            random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
-                used for breaking ties between nodes, or if you are using a RandomTree!
-                
             feature_labels (List[str]): Iterable object with strings representing feature names. 
             
-        Attributes:
+            
+        Attributes:            
+            root (Node): Root node of the tree.
+        
             heap (heapq list): Maintains the heap structure of the tree.
             
             leaf_count (int): Number of leaves in the tree.
             
             node_count (int): Number of nodes in the tree.
-        
+                
+            depth (int): The maximum depth of the tree.
+                
         """
-        super().__init__(max_leaf_nodes = max_leaf_nodes, max_depth = max_depth, 
-                         min_points_leaf = min_points_leaf, random_seed = random_seed,
-                         feature_labels = feature_labels)
+        splitter = RandomSplitter()
+        super().__init__(
+            splitter = splitter,
+            base_tree = base_tree, 
+            max_leaf_nodes = max_leaf_nodes,
+            max_depth = max_depth, 
+            min_points_leaf = min_points_leaf,
+            feature_labels = feature_labels
+        )
         
+    '''
     def _cost(self, indices):
         """
         Assigns a random cost of a subset of data points.
@@ -91,5 +161,6 @@ class RandomTree(Tree):
                     split = ([rand_feature], [1], rand_cut)
 
             return split_cost, split
+    '''
         
 ####################################################################################################

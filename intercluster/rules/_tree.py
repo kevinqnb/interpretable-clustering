@@ -1,18 +1,34 @@
 import numpy as np
 import copy
 import heapq
-from sklearn.cluster import KMeans
+import numpy.typing as npt
+from typing import List, Callable
 from ._node import Node
+from .utils import *
+from ..utils import mode
+import pdb
+
 
 class Tree():
     """
     Base class for a Tree object. 
     """
-    def __init__(self, max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, norm = 2,
-                 center_init = None, centers = None, n_centers = None, cluster_leaves = False, 
-                 clusterer = None, random_seed = None, feature_labels = None):
+    def __init__(
+        self,
+        splitter : Callable,
+        base_tree : Node = None,
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1,
+        feature_labels : List[str] = None
+    ):
         """
         Args:
+            splitter (Callable): Function/Object which determines how to split leaf nodes.
+            
+            base_tree (Node, optional): Root node of a baseline tree to start from. 
+                Defaults to None, in which case the tree is grown from root.
+            
             max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
                 Defaults to None.
                 
@@ -22,36 +38,10 @@ class Tree():
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
                 
-            norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
-                1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
-                
-            center_init (str, optional): Center initialization method. Included options are 
-                'k-means' which runs a k-means algorithm and uses the output centers,
-                'random++' which uses a randomized k-means++ initialization, or 
-                'manual' which assumes an input array of centers (in the next parameter). 
-                Defaults to None in which case no centers are initialized.
-                
-            centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-                Defaults to None.
-                
-            n_centers (int, optional): Number of centers to use. Defaults to None. 
-                
-            cluster_leaves (bool, optional): If True, update the array centers after every 
-                leaf expansion by clustering leaves. Only performs updates once the 
-                number of leaves is > n_centers.
-            
-            clusterer (RuleClustering, optional): Clustering object used to cluster leaves 
-                and find new centers. Defaults to None, not used if center_updates is False.
-                
-            random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
-                used for breaking ties between nodes, or if you are using a RandomTree!
-                
             feature_labels (List[str]): Iterable object with strings representing feature names. 
             
             
-        Attributes:
-            X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
-            
+        Attributes:            
             root (Node): Root node of the tree.
         
             heap (heapq list): Maintains the heap structure of the tree.
@@ -59,139 +49,47 @@ class Tree():
             leaf_count (int): Number of leaves in the tree.
             
             node_count (int): Number of nodes in the tree.
-            
-            n_centers (int): The number of centers to use for computation of cost 
-                or center updates.
                 
             depth (int): The maximum depth of the tree.
-            
-            center_dists (np.ndarray): If being fitted to an (n x m) dataset, computes a
-                n x k array of distances (measured either with squared 2 norm or 1 norm) 
-                from every point to every center.
                 
         """
-        
+        self.splitter = splitter
+        self.base_tree = copy.deepcopy(base_tree)
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
-        
-        if norm in [1,2]:
-            self.norm = norm
-        else:
-            raise ValueError('Norm must either be 1 or 2.')
-        
-        if center_init in [None, 'k-means', 'random++', 'manual']:
-            self.center_init = center_init
-        else:
-            raise ValueError('Unsupported initialization method.')
-        
-        
-        if self.center_init == 'manual' and (centers is not None):            
-            self.centers = copy.deepcopy(centers)
-            self.n_centers = len(self.centers)
-            
-        elif self.center_init == 'manual':
-            raise ValueError('Must provide an input array of centers for manual initialization.')
-        
-        else:
-            self.centers = centers
-            self.n_centers = n_centers
-        
-        
-        if cluster_leaves and (clusterer is None):
-            raise ValueError('Must provide clustering object in order to cluster leaves.')
-            
-        self.cluster_leaves = cluster_leaves
-        self.clusterer = clusterer
-        
         self.feature_labels = feature_labels
-        
-        if random_seed is not None:
-            np.random.seed(random_seed)
-        
-        self.random_seed = random_seed
-        
-        self.X = None
+
         self.root = None
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
         self.depth = 0
-        self.center_dists = None
-        self.indices = None
-        self.clustering_iterations = 0
         
-        
-    def _update_center_dists(self):
-        """
-        Updates the center_dists array, which tracks distances from all points in self.X
-        to all centers.
-        """
-        pass
-    
-    def _cost(self, indices):
-        """
-        Calculates the cost of a subset of data points.
 
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with. 
-            
-        Returns:
-            (float): Cost of the given data subset. 
-        """
-        return
-
-
-    def _find_best_split(self, indices):
-        """
-        Chooses features, weights and a threshold to split an input data subset X_, defined by the
-        a list of indices with which to access the dataset X.
-
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with.
-            
-        Returns:
-                Tuple(List[int], List[float], float): A (features, weights, threshold) split pair. 
-        """
-        return
-    
-
-    def fit(self, X, iterative = False, init_steps = None):
+    def fit(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ):
         """
         Initiates and builds a decision tree around a given dataset. 
+        Keeps a heap queue for all current leaf nodes in the tree,
+        which prioritizes splitting the leaves with the largest scores (gain in cost performance).
+        NOTE: I store -1*scores because heapq pops items with minimum cost by default.
+        For example, heap leaf object looks like:
+            (-1*score, random_tiebreaker, node object, split info)
+        Where split info is a tuple of precomputed (features, weights, thresholds) information.
 
         Args:
             X (np.ndarray): Input dataset.
             
-            iterative (bool, optional): If True, allows the user to expand the tree iteratively by 
-                manually calling .fit_step() until maximum conditions have been reached.
-                Defaults to False.
-                
-            init_steps (int, optional): If init_steps is provided and iterative is True, the tree
-                algorithm will first perform the input number of fitting steps, before 
-                defaulting to a manual, iterative fitting process.
+            y (np.ndarray, optional): Target labels. Defaults to None.
         """
-        # Create Dataset
-        self.X = X
-        
         # Reset the heap and tree:
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
-        
-        # Initialize centers:
-        if self.center_init == 'k-means':
-            kmeans = KMeans(n_clusters=self.n_centers, random_state=self.random_seed,
-                            n_init="auto").fit(X)
-            self.centers = kmeans.cluster_centers_
-            self.n_centers = len(self.centers)
-            
-        elif self.center_init == 'random++':
-            self.centers = kmeans_plus_plus_initialization(X, self.n_centers, self.random_seed)
-            self.n_centers = len(self.centers)
-        
-        # If using reference centers, initialize center_dists array:
-        self._update_center_dists()
         
         # Set feature labels if not set already:
         if self.feature_labels is None:
@@ -206,162 +104,213 @@ class Tree():
         
         if self.max_depth is None:
             self.max_depth = len(X) - 1
+            
+        # Initialize splitter
+        self.splitter.fit(X, y)
         
-        # Keeping a heap queue for the current leaf nodes in the tree.
-        # It prioritizes splitting the leaves with the largest scores (gain in cost performance).
-        # NOTE: I store -1*scores because heapq pops items with minimum cost by default.
-        # Heap leaf object: (-1*score, Node object, data indices subset, depth, split)
-        # Each split (features, weights, thresholds) is pre-computed,
-        # before placement into the heap.
-        all_indices = np.array(range(len(self.X)))
-        leaf_cost = self._cost(all_indices)
-        self.root = Node()
-        self.root.leaf_node(self.leaf_count, all_indices, leaf_cost)
-        split_cost, split = self._find_best_split(all_indices)
-        score = (leaf_cost - split_cost)
-        heapq.heappush(self.heap, (-1*score, self.root, split, all_indices, 0))
-        self.leaf_count += 1
-        
-        
-        if not iterative:
-            # Fits the tree in one go.
-            while len(self.heap) > 0:
-                self.fit_step()
-        else:
-            # Fits the tree iteratively
-            if init_steps is not None:
-                # If we need to find n centers before clustering leaves, 
-                # we should do so before anything else.
-                for _ in range(init_steps - 1):
-                    self.fit_step()
-                    
+        if self.base_tree is None:
+            self.root = Node()
+            if y is None:
+                root_label = self.leaf_count
             else:
-                # Otherwise, allows the user to control the entire fitting process.
-                pass
-                                
+                root_label = mode(y)
             
+            root_indices = np.arange(len(X))
+            root_score = self.splitter.score(X, y, root_indices)
+            root_depth = 0
+            self.root.leaf_node(
+                label = root_label,
+                score = root_score,
+                indices = root_indices,
+                depth = root_depth
+            )
             
-    def fit_step(self):
-        """
-        Performs a single fitting step in which a leaf is split, and depending on the 
-        type of tree being used, the leaves may be clustered and centers may be updated.
-        """
-        if len(self.heap) == 0:
-            raise ValueError("Empty heap, no more leaves to split or max conditions reached.")
+            self.add_leaf_node(self.root, X, y)
+            
+        else:
+            decision_paths = get_decision_paths(self.base_tree)
+            for path in decision_paths:
+                l_indices = satisfies_path(X, path)
+                l_node = path[-1][0]
+                l_label = l_node.label
+                l_score = self.splitter.score(X[l_indices], y[l_indices], l_indices)
+                l_depth = l_node.depth
+                
+                l_node.leaf_node(
+                    label = l_label,
+                    score = l_score,
+                    indices = l_indices,
+                    depth = l_depth
+                )
+                self.add_leaf_node(l_node, X, y)   
         
-        self.split_leaf()
-                
-        if self.cluster_leaves and self.leaf_count >= self.n_centers:
-            clustering = self.clusterer(self, k_clusters = self.n_centers, 
-                                        init = 'manual', center_init = self.centers, 
-                                        random_seed = self.random_seed)
-                
-            clustering.fit(self.X, fit_rules = False)
-            self.centers = clustering.centers
-            self.clustering_cost = clustering.cost
-            self.clustering_iterations = clustering.iterations
-            self._update_center_dists()
+        
+        while len(self.heap) > 0:
+            self.grow(X, y)
+            
+            
+    def add_leaf_node(
+        self,
+        node : Node,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ):
+        """
+        Adds a new leaf node to the heap.
+        
+        Args:
+            node (Node): Leaf node to add to the heap.
+            
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
+        """
+        # NOTE: splitter needs to handle the case where len(indices) <= 1!!
+        if y is None:
+            split_score, split_obj = self.splitter.split(
+                X = X[node.indices],
+                y = None,
+                indices = node.indices
+            )
+        else:
+            split_score, split_obj = self.splitter.split(
+                X = X[node.indices], 
+                y = y[node.indices],
+                indices = node.indices
+            )
+            
+        gain = node.score - split_score
+        random_tiebreaker = np.random.rand()
+        leaf_obj = (-1*gain, random_tiebreaker, node, split_obj)
+        heapq.heappush(self.heap, leaf_obj)
+        self.leaf_count += 1
+        if node.depth > self.depth:
+            self.depth = node.depth
+        
+    
+    def branch(
+        self,
+        node : Node,
+        split_info : Tuple[npt.NDArray, npt.NDArray, float],
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ):
+        """
+        Splits a leaf node into two new leaf nodes.
+        
+        Args:
+            node (Node): Leaf node to add to the heap.
+            
+            split_info (Tuple[np.ndarray, np.ndarray, float]): 
+                Precomputed information for the split.
+            
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
+        """
+        features, weights, threshold = split_info
+        
+        X_ = X[node.indices, :]
+        y_ = None
+        if y is not None:
+            y_ = y[node.indices]
+            
+        left_mask = np.dot(X_[:, features], weights) <= threshold
+        left_indices = node.indices[left_mask]
+        right_mask = ~left_mask
+        right_indices = node.indices[right_mask]
+        
+        X_l = X_[left_mask]
+        X_r = X_[right_mask]
+        y_l = None
+        y_r = None
+        if y is not None:
+            y_l = y_[left_mask]
+            y_r = y_[right_mask]
+        
+        # Calculate cost of left and right branches
+        left_score = self.splitter.score(X_l, y_l, left_indices)
+        right_score = self.splitter.score(X_r, y_r, right_indices)
+        left_depth = node.depth + 1
+        right_depth = node.depth + 1
+        
+        if y is None:
+            l_label = node.label
+            r_label = self.leaf_count
+        else:
+            l_label = mode(y_l)
+            r_label = mode(y_r)
+        
+        # Create New leaf nodes
+        left_node = Node()
+        left_node.leaf_node(
+            label = l_label,
+            score = left_score,
+            indices = left_indices,
+            depth = left_depth
+        )
+        right_node = Node()
+        right_node.leaf_node(
+            label = r_label,
+            score = right_score,
+            indices = right_indices,
+            depth = right_depth
+        )
+        
+        # And push them into the heap:
+        self.add_leaf_node(left_node, X, y)
+        self.add_leaf_node(right_node, X, y)
+        
+        # Transform the splitted node from a leaf node to an internal tree node:
+        node.tree_node(
+            left_child=left_node,
+            right_child=right_node,
+            features=features,
+            weights=weights,
+            threshold=threshold,
+            score=node.score,
+            indices=node.indices,
+            depth=node.depth,
+            feature_labels = [self.feature_labels[f] for f in features]
+        )
+        # Adjust counts:
+        self.leaf_count -= 1
+        self.node_count += 1
+        
         
 
-    def split_leaf(self):
+    def grow(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ):
         """
-        Builds the decision tree by iteratively selecting conditions and splitting leaf nodes.
-        """
+        Builds the decision tree by splitting leaf nodes.
         
+        Args:
+            X (np.ndarray): Input dataset.
+                
+            y (np.ndarray, optional): Target labels. Defaults to None.
+        """
         # pop an object from the heap
-        leaf_obj = heapq.heappop(self.heap)
-        node_obj : Node = leaf_obj[1]
-        split = leaf_obj[2]
-        indices_ = leaf_obj[3]
-        depth = leaf_obj[4]
+        heap_leaf_obj = heapq.heappop(self.heap)
+        node = heap_leaf_obj[2]
+        split_info = heap_leaf_obj[3] 
         
-        n_ = len(indices_)
-        X_ = self.X[indices_, :]
-        
-        # If we've reached the max depth or max number of leaf nodes -- stop recursing 
-        if (depth >= self.max_depth) or (self.leaf_count >= (self.max_leaf_nodes)) or (n_ <= 1):
-            #class_label = self.leaf_count 
-            #self.leaf_count += 1
-            #node_obj.leaf_node(class_label, indices_, self._cost(indices_))
+        # If we've reached any of the maximum conditions, stop growth. 
+        # NOTE: This should also stop if the splitter decides there is no more gain to be had.
+        if (
+            (node.depth >= self.max_depth) or 
+            (self.leaf_count >= (self.max_leaf_nodes)) or
+            (len(node.indices) <= self.min_points_leaf)
+        ):
             pass
 
-
-        # Otherwise, find the best split and recurse into left and right branches
         else:
-            features, weights, threshold = split
-            
-            # Find new split
-            left_mask = np.dot(X_[:, features], weights) <= threshold
-            right_mask = ~left_mask
-            left_indices = indices_[left_mask]
-            right_indices = indices_[right_mask]
-            
-            # Calculate cost of left and right branches
-            left_leaf_cost = self._cost(left_indices)
-            right_leaf_cost = self._cost(right_indices)
-            
-            # Create New leaf nodes
-            left_node = Node()
-            left_node.leaf_node(label = node_obj.label, indices = left_indices, 
-                                cost = left_leaf_cost)
-            right_node = Node()
-            right_node.leaf_node(label = self.leaf_count, indices = right_indices, 
-                                cost = right_leaf_cost)
-            self.leaf_count += 1
-            
-            # And push them into the heap:
-            if len(left_indices) > 1:
-                left_split_cost, left_split = self._find_best_split(left_indices)
-            else:
-                left_split_cost = 0
-                left_split = None
-                
-            left_score = left_leaf_cost - left_split_cost
-            left_obj = (-1*left_score, left_node, left_split, left_indices, depth + 1)
-            
-            if len(right_indices) > 1:
-                right_split_cost, right_split = self._find_best_split(right_indices)
-            else:
-                right_split_cost = 0
-                right_split = None
-                
-            right_score = right_leaf_cost - right_split_cost
-            right_obj = (-1*right_score, right_node, right_split, right_indices, depth + 1)
-            
-            heapq.heappush(self.heap, left_obj)
-            heapq.heappush(self.heap, right_obj)
-            
-            
-            # Transform the splitted node into an internal tree node:
-            node_obj.tree_node(features, weights, threshold, left_node, right_node, 
-                               indices_, self._cost(indices_),
-                               feature_labels = [self.feature_labels[f] for f in features])
-            
-            self.node_count += 1
-            if depth + 1 > self.depth:
-                self.depth = depth + 1
+            self.branch(node, split_info, X, y)
 
-
-    def _predict_sample(self, sample, node):
-        """
-        Predicts the class label of a single sample from the data.
-
-        Args:
-            sample (np.ndarray): Single m dimensional data point. 
-            node (Node): Starting node to recurse through the tree with. 
-
-        Returns:
-            (int): Class label for sample.
-        """
-        if node.type == 'leaf':
-            return node.label
         
-        if np.dot(sample[node.features], node.weights) <= node.threshold:
-            return self._predict_sample(sample, node.left_child)
-        else:
-            return self._predict_sample(sample, node.right_child)
-        
-    def predict(self, X):
+    def predict(self, X : npt.NDArray) -> npt.NDArray:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
         find where data points fall into leaf nodes.
@@ -370,6 +319,34 @@ class Tree():
             X (np.ndarray): Input n x m dataset
 
         Returns:
-            (np.ndarray): Length n array of class labels. 
+            labels (np.ndarray): Length n array of class labels. 
         """
-        return np.array([self._predict_sample(sample, self.root) for sample in X])
+        labels = np.zeros(X.shape[0])
+        decision_paths = get_decision_paths(self.root)
+        for path in decision_paths:
+            leaf = path[-1][0]
+            satisfies = satisfies_path(X, path)
+            labels[satisfies] = leaf.label
+            
+        return labels
+    
+    def get_nodes(self) -> List[Node]:
+        """
+        Returns all leaf nodes in the tree.
+        
+        Returns:
+            leaves (List[Node]): List of leaf nodes in the tree.
+        """
+        nodes = collect_nodes(self.root)
+        return nodes
+    
+    def get_leaves(self) -> List[Node]:
+        """
+        Returns all leaf nodes in the tree.
+        
+        Returns:
+            leaves (List[Node]): List of leaf nodes in the tree.
+        """
+        leaves = collect_leaves(self.root)
+        return leaves
+            

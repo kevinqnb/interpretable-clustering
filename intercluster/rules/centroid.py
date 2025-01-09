@@ -1,7 +1,88 @@
 import numpy as np
-from ._linear_tree import LinearTree
+import numpy.typing as npt
+from typing import List
+from ._splitter import AxisAlignedSplitter
+from ._node import Node
+from ._tree import Tree
 
-class CentroidTree(LinearTree):
+
+class CentroidSplitter(AxisAlignedSplitter):
+    """
+    Splits leaf nodes in order to minimize distances to a set of input centers.
+    """
+    def __init__(
+        self,
+        centers : npt.NDArray, 
+        norm : int = 2,
+        min_points_leaf : int = 1
+    ):
+        """
+        Args:
+            centers (npt.NDArray): Array of centroid representatives.
+            
+            norm (int, optional): Norm to use for computing distances. 
+                Takes values 1 or 2. Defaults to 2.
+                
+            min_points_leaf (int, optional): Minimum number of points in a leaf.
+        """
+        self.centers = centers
+        self.norm = norm
+        super().__init__(min_points_leaf = min_points_leaf)
+        
+    def fit(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None
+    ):
+        """
+        Fits the splitter to a dataset X. 
+        
+        Args:
+            X (npt.NDArray): Input dataset.
+            
+            y (npt.NDArray, optional): Target labels. Defaults to None.
+        """
+        if self.norm == 2:
+            diffs = X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+            distances = np.sum((diffs)**2, axis=-1)
+            
+        elif self.norm == 1:
+            diffs = X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
+            distances = np.sum(np.abs(diffs), axis=-1)
+        
+        self.center_dists = distances.T
+        
+    def score(
+        self,
+        X : npt.NDArray,
+        y : npt.NDArray = None,
+        indices : npt.NDArray = None
+    ) -> float:
+        """
+        Given a set of points X, computes the score as the sum of distances to 
+        the closest center.
+        
+        Args:
+            X (npt.NDArray): Array of points to compute score with.
+            
+            y (npt.NDArray, optional): Array of labels. Dummy variable, not used 
+                for this class. Defaults to None.
+                
+            indices (npt.NDArray, optional): Indices of points to compute score with.
+                
+        Returns:
+            (float): Score of the given data.
+        """
+        if len(indices) == 0:
+            return np.inf
+        else:
+            dists_ = self.center_dists[indices,:]
+            sum_array = np.sum(dists_, axis = 0)
+            return np.min(sum_array)
+    
+    
+
+class CentroidTree(Tree):
     """
     Inherits from the Tree class to implement a decision tree in which 
     axis aligned split criterion are chosen so that points in any leaf node are close
@@ -12,8 +93,15 @@ class CentroidTree(LinearTree):
     in their paper titled: 'ExKMC: Expanding Explainable k-Means Clustering.'
     
     Args:
-        splits (str): May take values 'axis' or 'oblique' that decide on how to compute leaf splits.
-        
+        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
+            Defaults to None.
+            
+        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
+            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
+            
+        base_tree (Node, optional): Root node of a baseline tree to start from. 
+                Defaults to None, in which case the tree is grown from root.
+            
         max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
             Defaults to None.
             
@@ -23,99 +111,42 @@ class CentroidTree(LinearTree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
-            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
-            
-        center_init (str, optional): Center initialization method. Included options are 
-            'k-means' which runs a k-means algorithm and uses the output centers,
-            'random++' which uses a randomized k-means++ initialization, or 
-            'manual' which assumes an input array of centers (in the next parameter). 
-            Defaults to None in which case no centers are initialized.
-            
-        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-            Defaults to None.
-            
-        random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
-            used for breaking ties between nodes, or if you are using a RandomTree!
-            
         feature_labels (List[str]): Iterable object with strings representing feature names. 
             
             
     Attributes:
-        X (np.ndarray): Size (n x m) dataset passed as input in the fitting process.
-        
         root (Node): Root node of the tree.
-    
+        
         heap (heapq list): Maintains the heap structure of the tree.
         
         leaf_count (int): Number of leaves in the tree.
         
         node_count (int): Number of nodes in the tree.
-        
-        n_centers (int, optional): The number of centers to use for computation of cost 
-            or center updates.
-        
-        center_dists (np.ndarray): If being fitted to an (n x m) dataset, computes a
-            n x k array of distances (measured either with squared 2 norm or 1 norm) 
-            from every point to every center.
+            
+        depth (int): The maximum depth of the tree.
                 
     """
     
-    def __init__(self, splits = 'axis', max_leaf_nodes=None, max_depth=None, min_points_leaf = 1, norm = 2,
-                 center_init = 'k-means', centers = None, n_centers = None, random_seed = None,
-                 feature_labels = None):
-        
-        super().__init__(splits = splits, max_leaf_nodes = max_leaf_nodes, max_depth = max_depth, 
-                         min_points_leaf = min_points_leaf, norm = norm, center_init = center_init,
-                         centers = centers, n_centers = n_centers, random_seed = random_seed, 
-                         feature_labels = feature_labels)
-        
-        if center_init is None:
-            raise ValueError('Must provide some method of initializing centers.')
-        
-    
-    def _update_center_dists(self):
-        """
-        Updates the center_dists array, which tracks distances from all points in self.X
-        to all centers. This helps with computational efficiency, since we won't 
-        need to recompute this when searching through splits.
-        """
-        if self.norm == 2:
-            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum((diffs)**2, axis=-1)
-            self.center_dists = distances.T
-            
-        elif self.norm == 1:
-            diffs = self.X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum(np.abs(diffs), axis=-1)
-            self.center_dists = distances.T
-            
-        
-    def _cost(self, indices):
-        """
-        Given a set of indices defining a data subset X_ --
-        which may be thought of as a subset of points reaching a given node in the tree --
-        compute a cost for X_.
-        
-        In a centroid tree this amounts to find the sum of distances to 
-        centers (using squared 2 norm or 1 norm respectively).
-        
-        If self.centers is None and no input reference centers have been given, 
-        calculate the cost of a data subset X_ by finding the sum of 
-        squared distances to mean(X_).
-        
-        Otherwise, 
-
-        Args:
-            indices (np.ndarray[int]): Indices of data points to compute cost with. 
-            
-        Returns:
-            (float): Cost of the given data. 
-        """
-        
-        if len(indices) == 0:
-            return np.inf
-        else:
-            dists_ = self.center_dists[indices,:]
-            sum_array = np.sum(dists_, axis = 0)
-            return np.min(sum_array)
+    def __init__(
+        self,
+        centers : npt.NDArray = None,
+        norm : int = 2,
+        base_tree : Node = None,
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1,
+        feature_labels : List[str] = None
+    ):
+        splitter = CentroidSplitter(
+            centers = centers,
+            norm = norm,
+            min_points_leaf = min_points_leaf
+        )  
+        super().__init__(
+            splitter = splitter,
+            base_tree = base_tree, 
+            max_leaf_nodes = max_leaf_nodes,
+            max_depth = max_depth, 
+            min_points_leaf = min_points_leaf,
+            feature_labels = feature_labels
+        )

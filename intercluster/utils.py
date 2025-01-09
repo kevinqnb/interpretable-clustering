@@ -11,6 +11,45 @@ from numpy.typing import NDArray
 ####################################################################################################
 
 
+def tiebreak(scores : NDArray, proxy : NDArray = None) -> NDArray:
+    """
+    Breaks ties in a length m array of scores by:
+    1) (IF given) Comparing values in a same-sized proxy array.
+    2) Otherwise breaking ties randomly. 
+    
+    Args:
+        scores (np.ndarray): Length m array of scores.
+        proxy (np.ndarray, optional): Length m array of proxy values to use for tiebreaking.
+            Defaults to None.
+            
+    Returns:
+        argsort (np.ndarray): Length m argsort of scores with ties broken.
+    """
+    m = len(scores)
+    random_tiebreakers = np.random.rand(m)
+    if proxy is not None:
+        return np.lexsort((random_tiebreakers, proxy, scores))
+    else:
+        return np.lexsort((random_tiebreakers, scores))
+
+
+####################################################################################################
+
+
+def mode(x : NDArray) -> float:
+    """
+    Returns the mode of a list of values.
+    
+    Args:
+        x (np.ndarray): List of values.
+    """
+    unique, counts = np.unique(x, return_counts=True)
+    return unique[tiebreak(counts)[-1]]
+
+
+####################################################################################################
+
+
 def kmeans_cost(
     X : np.ndarray,
     assignment : np.ndarray,
@@ -314,6 +353,7 @@ def find_leaves(root):
             
     return leaves
 
+
 ####################################################################################################
 
 
@@ -423,4 +463,18 @@ def add_row_col(matrix, new_row, new_col):
     
     return matrix
     
+####################################################################################################
+
+
+def mode(x : NDArray) -> float:
+    """
+    Returns the mode of a list of values.
+    
+    Args:
+        x (np.ndarray): List of values.
+    """
+    unique, counts = np.unique(x, return_counts=True)
+    return unique[np.argmax(counts)]
+
+
 ####################################################################################################

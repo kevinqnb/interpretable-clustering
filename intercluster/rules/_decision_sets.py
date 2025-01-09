@@ -10,69 +10,20 @@ class DecisionSet:
     """
     def __init__(
         self,
-        #norm : int = 2,
-        #center_init : str = None,
-        #centers : NDArray = None,
-        random_seed : int = None,
         feature_labels : List[str] = None
     ):
         
         """
-        Args:   
-            norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
-                1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
-                
-            center_init (str, optional): Center initialization method. Included options are 
-                'k-means' which runs a k-means algorithm and uses the output centers,
-                'random++' which uses a randomized k-means++ initialization, or 
-                'manual' which assumes an input array of centers (in the next parameter). 
-                Defaults to None in which case no centers are initialized.
-                
-            centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-                Defaults to None.
-                
-            random_seed (int, optional): Random seed. In the Tree object randomness is only ever 
-                used for breaking ties between nodes, or if you are using a RandomTree!
-                
+        Args:                
             feature_labels (List[str]): Iterable object with strings representing feature names. 
         """
-        '''
-        if norm in [1,2]:
-            self.norm = norm
-        else:
-            raise ValueError('Norm must either be 1 or 2.')
-        
-        if center_init in [None, 'k-means', 'random++', 'manual']:
-            self.center_init = center_init
-        else:
-            raise ValueError('Unsupported initialization method.')
-        
-        
-        if self.center_init == 'manual' and (centers is not None):            
-            self.centers = copy.deepcopy(centers)
-            self.n_centers = len(self.centers)
-            
-        elif self.center_init == 'manual':
-            raise ValueError('Must provide an input array of centers for manual initialization.')
-        
-        else:
-            self.centers = centers
-            self.n_centers = None
-            
-        self.feature_labels = feature_labels
-        '''
-        
-        self.random_seed = random_seed
-        if random_seed is not None:
-            np.random.seed(random_seed)
-            
         self.feature_labels = feature_labels
         
         self.all_rules = None
         self.decision_set = None
         
         
-    def _fitting(self, X : NDArray) -> List[Any]:
+    def _fitting(self, X : NDArray, y : NDArray = None) -> List[Any]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -80,23 +31,26 @@ class DecisionSet:
         Args:
             X (np.ndarray): Input dataset.
             
+            y (np.ndarray, optional): Target labels. Defaults to None.
+            
         returns:
             decision_set (List[Any]): List of rules.
         """
         raise NotImplementedError('Method not implemented.')
         
         
-    def fit(self, X : NDArray):
+    def fit(self, X : NDArray, y : NDArray = None):
         """
         Public fit function. 
         Fits a decision set to an input dataset. 
         
         Args:
             X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
         """
-        self.decision_set = self._fitting(X)
+        self.decision_set = self._fitting(X, y)
         self.covers = self.get_covers(X)
-        #self.costs = self.get_costs(X)
         
         
     def get_covers(self, X : NDArray) -> Dict[int, List[int]]:
@@ -111,20 +65,6 @@ class DecisionSet:
                 as keys and list of data point indices as values.
         """
         raise NotImplementedError('Method not implemented.')
-    
-    '''
-    def get_costs(self, X : NDArray) -> Dict[int, float]:
-        """
-        Finds the cost associated with each rule in the decision set.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-        Returns:
-            covers (dict[rule, float]): Dictionary with rule indices as keys and costs as values
-        """
-        raise NotImplementedError('Method not implemented.')
-    '''
     
     
     def predict(self, X : NDArray) -> List[List[int]]:

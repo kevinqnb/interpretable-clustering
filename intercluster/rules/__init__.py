@@ -1,21 +1,24 @@
 from .unsupervised import (
-    UnsupervisedTree
+    UnsupervisedSplitter,
+    UnsupervisedTree,
 )
 
 from .centroid import (
-    CentroidTree
+    CentroidSplitter,
+    CentroidTree,
 )
 
 from .random import (
-    RandomTree
+    RandomSplitter,
+    RandomTree,
 )
 
 from .exkmc import (
-    ConvertExKMC
+    ExkmcTree,
 )
 
 from .cart import (
-    SklearnTree
+    SklearnTree,
 )
 
 
@@ -26,4 +29,12 @@ from .decision_forest import (
 from .prune import (
     distorted_greedy,
     prune_with_grid_search,
+)
+
+from .utils import (
+    traverse,
+    collect_nodes,
+    collect_leaves,
+    get_decision_paths,
+    satisfies_path,
 )

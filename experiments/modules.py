@@ -3,11 +3,9 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
 from ExKMC.Tree import Tree as ExTree
-from .tree.tree import *
-from .rule_clustering import *
-from .decision_sets import *
-from .rule_pruning import *
-from .utils import *
+from intercluster.clustering import *
+from intercluster.rules import *
+from intercluster import *
 
 from typing import Tuple, List, Dict, Callable, Any
 from numpy.typing import NDArray
@@ -55,8 +53,8 @@ class Module:
     """
     def __init__(
         self, 
-        min_rules : int,
-        min_depth : int,
+        min_rules : int = 1,
+        min_depth : int = 1,
         name : str = None
     ):
         self.min_rules = min_rules
@@ -137,7 +135,7 @@ class KMeansBase(Baseline):
 ####################################################################################################
 
     
-class ExKMCMod(Module):
+class ExkmcMod(Module):
     """
     Experiment module for the ExKMC clustering method. For more information on 
     ExKMC please see the ExKMC package:
@@ -175,22 +173,21 @@ class ExKMCMod(Module):
         kmeans_model : Any,
         base_tree : str,
         min_rules : int,
-        min_depth : int,
-        max_rules : int,
-        max_depth : int,
         name : str = 'ExKMC'
     ):
-        super().__init__(min_rules, max_rules, min_depth, max_depth, name)
+        super().__init__(min_rules = min_rules, name = name)
         self.n_clusters = n_clusters
         self.base_tree = base_tree
         self.kmeans_model = kmeans_model
     
-    def step_num_rules(self, X : NDArray) -> Tuple[NDArray, NDArray]:
+    def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
         Args:
             X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels. Defaults to None.
             
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
@@ -208,7 +205,7 @@ class ExKMCMod(Module):
     
 ####################################################################################################
     
-    
+'''
 class TreeMod(Module):
     """
     Experiment module for the method of rule clustering with unsupervised decision trees.
@@ -264,12 +261,14 @@ class TreeMod(Module):
         self.n_depth = self.min_depth
         self.tree = None
     
-    def step_num_rules(self, X : NDArray) -> Tuple[NDArray, NDArray]:
+    def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
         Args:
             X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels. Defaults to None.
             
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
@@ -330,7 +329,7 @@ class TreeMod(Module):
         centers = clustering.centers
         self.n_depth += 1
         return assignment, centers
-        
+'''
         
 ####################################################################################################
 
@@ -459,12 +458,14 @@ class ForestMod(Module):
         return assignment, self.centers    
     
     
-    def step_num_rules(self, X : NDArray) -> Tuple[NDArray, NDArray]:
+    def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
         Args:
             X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels. Defaults to None.s
         
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
@@ -476,7 +477,7 @@ class ForestMod(Module):
             self.forest = self.forest_model(
                 **self.forest_params
             )
-            self.forest.fit(X)
+            self.forest.fit(X,  y)
             
             self.clustering = self.cluster_model(
                 rules = self.forest,
@@ -493,12 +494,14 @@ class ForestMod(Module):
         return assignment, centers
     
     
-    def step_depth(self, X : NDArray) -> Tuple[NDArray, NDArray]:
+    def step_depth(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
         """
         Increases the depth of rules by one and fits the model.
         
         Args:
             X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels. Defaults to None.
             
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
@@ -515,7 +518,7 @@ class ForestMod(Module):
                 }
             )
         )
-        self.forest.fit(X)
+        self.forest.fit(X, y)
         
         self.clustering = self.cluster_model(
             rules = self.forest,

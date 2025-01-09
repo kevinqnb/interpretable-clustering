@@ -1,14 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
-from .tree.tree import *
-from .decision_sets import *
-from .rule_clustering import *
-from .utils import *
-from .modules import *
-
 from typing import Tuple, List, Dict, Callable, Any
 from numpy.typing import NDArray
+from intercluster.clustering import *
+from intercluster.rules import *
+from intercluster import *
+from modules import *
 
 ####################################################################################################
 
@@ -19,6 +17,8 @@ class Experiment:
     
     Args:
         data (np.ndarray): Input dataset.
+        
+        labels (np.ndarray): Labels for the input dataset.
         
         baseline_list (List[Any]): List of baseline modules to use and record results for. 
         
@@ -45,10 +45,12 @@ class Experiment:
         module_list : List[Any],
         cost_fns : Dict[str, Callable],
         cost_fn_params : Dict[str, Dict[str, Any]],
+        labels : NDArray = None,
         random_seed : int = None,
         verbose : bool = True
     ):
         self.data = data
+        self.labels = labels
         self.baseline_list = baseline_list
         self.module_list = module_list
         
@@ -105,6 +107,8 @@ class RulesExperiment(Experiment):
     Args:
         data (np.ndarray): Input dataset.
         
+        labels (np.ndarray): Labels for the input dataset.
+        
         baseline_list (List[Any]): List of baseline modules to use and record results for. 
         
         module_list (List[Any]): List of modules to use and record results for.
@@ -130,17 +134,19 @@ class RulesExperiment(Experiment):
         module_list,
         cost_fns,
         cost_fn_params,
+        labels = None,
         random_seed = None,
         verbose = True
     ):
         super().__init__(
-            data,
-            baseline_list,
-            module_list,
-            cost_fns,
-            cost_fn_params,
-            random_seed,
-            verbose
+            data = data,
+            baseline_list = baseline_list,
+            module_list = module_list,
+            cost_fns = cost_fns,
+            cost_fn_params = cost_fn_params,
+            labels = labels,
+            random_seed = random_seed,
+            verbose = verbose
         )
             
         
@@ -170,7 +176,7 @@ class RulesExperiment(Experiment):
             if self.verbose:
                 print(f"Running for {i} rules.")
             for m in self.module_list:
-                massign, mcenters = m.step_num_rules(self.data)
+                massign, mcenters = m.step_num_rules(self.data, self.labels)
                 for k in self.cost_fns.keys():
                     cost_fn = self.cost_fns[k]
                     try:
