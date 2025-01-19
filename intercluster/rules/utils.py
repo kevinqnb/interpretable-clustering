@@ -86,9 +86,7 @@ def collect_leaves(root : Node) -> List[Node]:
 
 
 def get_decision_paths(
-    root : Node,
-    y : npt.NDArray = None,
-    labels : npt.NDArray = None
+    root : Node
 ) -> List[List[Tuple[Node, str]]]:
     """
     Given the root of a tree, finds all decision paths 
@@ -98,29 +96,53 @@ def get_decision_paths(
     
     Args:
         root (Node): Root of the tree.
-    
-        y (np.ndarray, optional): Training Data labels. Defaults to None.
-            
-        labels (np.ndarray, optional): Labels to filter by. Defaults to None.
     Returns:
         paths (List[(Node, str)]): List of decision paths in the tree. 
     """
-    if y is not None and labels is None:
-        raise ValueError("If y is provided, labels must also be provided.")
-    if labels is not None and y is None:
-        raise ValueError("If labels are provided, y must also be provided.")
-    
     paths = []
     for path in traverse(root):
         last_node = path[-1][0]
         if last_node.type == 'leaf':
-            if y is not None and labels is not None:
-                if mode(y[last_node.indices[0]]) in labels:
-                    paths.append(path)
-            else:
-                paths.append(path)
+            paths.append(path)
             
     return paths
+
+
+####################################################################################################
+
+
+def get_decision_paths_with_labels(
+    root : Node,
+    y : npt.NDArray,
+    labels : npt.NDArray,
+) -> Tuple[List[List[Tuple[Node, str]]], List[List[int]]]:
+    """
+    Given the root of a tree, finds all decision paths 
+    used to reach leaf nodes in the tree. Optionally, this takes an array y of training data labels
+    AND an array of specific labels to look for. In that case, only paths with leaf nodes
+    which have a majority of a label within the labels array are returned.
+    
+    Args:
+        root (Node): Root of the tree.
+    
+        y (np.ndarray, optional): Training Data labels.
+            
+        labels (np.ndarray, optional): Labels to filter by.
+    Returns:
+        paths (List[(Node, str)]): List of decision paths in the tree. 
+        path_labels (List[List[int]]): List of labels corresponding to each path.
+    """
+    paths = []
+    path_labels = []
+    for path in traverse(root):
+        last_node = path[-1][0]
+        if last_node.type == 'leaf':
+            leaf_label = mode(y[last_node.indices[0]])
+            if leaf_label in labels:
+                paths.append(path)
+                path_labels.append([leaf_label])
+            
+    return paths, path_labels
 
 
 ####################################################################################################

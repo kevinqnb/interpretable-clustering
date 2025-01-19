@@ -67,25 +67,28 @@ def distorted_greedy(
         
         for r in rule_list:
             if r not in S:
-                rlabel = rule_labels[r][0]
-                label_covered = covered_so_far[rlabel]
-                to_cover = points_to_cover[rlabel]
-                r_covers = to_cover.intersection(rule_covers_dict[r])
+                r_label = rule_labels[r][0]
+                label_points_to_cover = points_to_cover[r_label]
+                label_covered_so_far = covered_so_far[r_label]
+                r_covers = label_points_to_cover.intersection(rule_covers_dict[r])
                 
-                g = len(label_covered.union(r_covers)) - len(label_covered)
+                g = len(label_covered_so_far.union(r_covers)) - len(label_covered_so_far)
                 c = len(rule_covers_dict[r]) - len(r_covers)
                 
                 score = (1 - 1/q)**(q - (i + 1)) * g - lambda_val * c
                 
                 if score > best_score:
                     best_rule = r
-                    best_rule_label = rlabel
+                    best_rule_label = r_label
                     best_score = score
                     
         if best_score > 0:
             S.append(best_rule)
-            covered_so_far[best_rule_label] = covered_so_far[best_rule_label].union(
+            best_rule_covers = points_to_cover[best_rule_label].intersection(
                 rule_covers_dict[best_rule]
+            )
+            covered_so_far[best_rule_label] = covered_so_far[best_rule_label].union(
+                best_rule_covers
             )
             
     return np.array(S)

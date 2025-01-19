@@ -84,6 +84,7 @@ class DecisionForest(DecisionSet):
             self.feature_pairings = [list(range(d))]
             
         rules = []
+        rule_labels = []
         tree = None
         for _ in range(self.num_trees):
             rand_pairing = np.random.randint(len(self.feature_pairings))
@@ -132,10 +133,22 @@ class DecisionForest(DecisionSet):
             
             tree.fit(train_data, train_labels)
             
+            new_rules = []
+            new_labels = []
             if y is not None:
-                rules = rules + get_decision_paths(tree.root, train_labels, rand_labels)
+                new_rules, new_labels = get_decision_paths_with_labels(
+                    tree.root,
+                    train_labels,
+                    rand_labels
+                )
             else:
-                rules = rules + get_decision_paths(tree.root)
+                new_rules = get_decision_paths(tree.root)
+                new_labels = [[l] for l in 
+                              range(len(rule_labels), len(rule_labels) + len(new_rules))]
+
+            #import pdb; pdb.set_trace()
+            rules = rules + new_rules
+            rule_labels = rule_labels + new_labels
             
             # translate back to orignal indices
             node_list = tree.get_nodes()
@@ -144,7 +157,7 @@ class DecisionForest(DecisionSet):
                 if node.type == 'internal':
                     node.features = rand_features[node.features]
                 
-        return rules
+        return rules, rule_labels
     
     
     def get_covers(self, X : NDArray) -> Dict[int, List[int]]:

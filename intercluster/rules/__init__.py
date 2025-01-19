@@ -1,3 +1,7 @@
+from ._splitter import (
+    SimpleSplitter,
+)
+
 from .unsupervised import (
     UnsupervisedSplitter,
     UnsupervisedTree,
@@ -6,11 +10,6 @@ from .unsupervised import (
 from .centroid import (
     CentroidSplitter,
     CentroidTree,
-)
-
-from .random import (
-    RandomSplitter,
-    RandomTree,
 )
 
 from .exkmc import (
@@ -36,5 +35,6 @@ from .utils import (
     collect_nodes,
     collect_leaves,
     get_decision_paths,
+    get_decision_paths_with_labels,
     satisfies_path,
 )

@@ -198,7 +198,14 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
 
 ####################################################################################################
 
-def plot_decision_set(D, feature_labels, rule_labels, cluster_colors, filename = None):
+def plot_decision_set(
+    D,
+    feature_labels,
+    rule_labels,
+    cluster_colors,
+    data_scaler = None,
+    filename = None
+):
     fig,ax = plt.subplots(dpi = 300)
     ax.axis('off')
     
@@ -212,7 +219,14 @@ def plot_decision_set(D, feature_labels, rule_labels, cluster_colors, filename =
             else:
                 rule_string += r' $>$ '
                 
-            rule_string += str(node.threshold) + ')'
+            if data_scaler is not None:
+                feature_min = data_scaler.data_min_[node.features[0]]
+                feature_max = data_scaler.data_max_[node.features[0]]
+                threshold = node.threshold * (feature_max - feature_min) + feature_min
+            else:
+                threshold = node.threshold
+                
+            rule_string += str(np.round(threshold, 3)) + ')'
             
             if j < len(rule) - 2:
                 if j > 0 and j % 2 == 0:

@@ -1,12 +1,12 @@
 import numpy as np
 import numpy.typing as npt
 from typing import List, Tuple
-from ._splitter import AxisAlignedSplitter
+from ._splitter import Splitter
 from ._node import Node
 from ._tree import Tree
 
 
-class UnsupervisedSplitter(AxisAlignedSplitter):
+class UnsupervisedSplitter(Splitter):
     """
     Splits leaf nodes in order to minimize distances to a set of input centers.
     """
@@ -25,13 +25,12 @@ class UnsupervisedSplitter(AxisAlignedSplitter):
             min_points_leaf (int, optional): Minimum number of points in a leaf.
         """
         self.norm = norm
-        super().__init__(min_points_leaf = min_points_leaf)
+        self.min_points_leaf = min_points_leaf
+        super().__init__()
         
     def score(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
-        indices : npt.NDArray = None
+        indices : npt.NDArray
     ) -> float:
         """
         Given a set of points X, computes the score as the sum of distances to 
@@ -48,23 +47,21 @@ class UnsupervisedSplitter(AxisAlignedSplitter):
         Returns:
             (float): Score of the given data.
         """
-        if len(X) == 0:
+        if len(self.X) == 0:
             return np.inf
         else:
             if self.norm == 2:
-                mu = np.mean(X, axis = 0)
-                cost = np.sum(np.linalg.norm(X - mu, axis = 1)**2) #/len(X_)
+                mu = np.mean(self.X, axis = 0)
+                cost = np.sum(np.linalg.norm(self.X - mu, axis = 1)**2)
                 
             elif self.norm == 1:
-                eta = np.median(X, axis = 0)
-                cost = np.sum(np.abs(X - eta))
+                eta = np.median(self.X, axis = 0)
+                cost = np.sum(np.abs(self.X - eta))
                 
             return cost
         
     def split(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
         indices : npt.NDArray = None
     ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
         """
@@ -87,35 +84,45 @@ class UnsupervisedSplitter(AxisAlignedSplitter):
                 and threshold of the split.
         """
         if self.norm == 1:
-            return super().split(X, y, indices)
+            # NOTE: still need to optimize for the norm = 1 case.
+            return super().split(self.X, self.y, indices)
         else:
             """
             The following optimized version is attributed to 
             [Dasgupta, Frost, Moshkovitz, Rashtchian '20] in their paper
             'Explainable k-Means and k-Medians Clustering' 
             """
-            n, d = X.shape
-            u = np.linalg.norm(X)**2
+            X_ = self.X[indices, :]
+            n, d = X_.shape
+            u = np.linalg.norm(X_)**2
             
-            best_split = None
+            best_splits = []
             best_split_val = np.inf
-            for i in range(X.shape[1]):
+            for i in range(X_.shape[1]):
                 s = np.zeros(d)
-                r = np.sum(X, axis = 0)
-                order = np.argsort(X[:, i])
+                r = np.sum(X_, axis = 0)
+                order = np.argsort(X_[:, i])
                 
                 for j, idx in enumerate(order[:-1]):
-                    threshold = X[idx, i]
-                    s = s + X[idx, :]
-                    r = r - X[idx, :]
+                    threshold = X_[idx, i]
+                    split = ([i], [1], threshold)
+                    s = s + X_[idx, :]
+                    r = r - X_[idx, :]
                     split_val = u - np.sum(s**2)/(j + 1) - np.sum(r**2)/(n - j - 1)
                     
                     if split_val < best_split_val:
                         best_split_val = split_val
-                        # Axis aligned split:
-                        best_split = ([i], [1], threshold)
+                        best_splits = [split]
                         
+                    elif split_val == best_split_val:
+                        best_splits.append(split)
+            
+            # Randomly break ties if necessary:
+            best_split = best_splits[np.random.randint(len(best_splits))]
             return best_split_val, best_split
+        
+        
+        
 
 class UnsupervisedTree(Tree):
     """

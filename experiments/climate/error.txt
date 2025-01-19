@@ -1,0 +1,50 @@
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/explainable_clustering/repo/experiments/climate/climate.py", line 279, in <module>
+    Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/experiments.py", line 207, in run
+    self.run_modules(n_rules_list)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/experiments.py", line 179, in run_modules
+    massign, mcenters = m.step_num_rules(self.data, self.labels)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/modules.py", line 488, in step_num_rules
+    self.clustering.fit(X, fit_rules = False)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/clustering/rule_kmeans.py", line 243, in fit
+    self.points_to_rules = labels_to_assignment(rule_model_labels)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/utils.py", line 207, in labels_to_assignment
+    if np.max(l) > s:
+  File "/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/numpy/core/fromnumeric.py", line 2810, in max
+    return _wrapreduction(a, np.maximum, 'max', axis, None, out,
+  File "/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/numpy/core/fromnumeric.py", line 88, in _wrapreduction
+    return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+ValueError: zero-size array to reduction operation maximum which has no identity
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/explainable_clustering/repo/experiments/climate/climate.py", line 201, in <module>
+    Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/experiments.py", line 207, in run
+    self.run_modules(n_rules_list)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/experiments.py", line 179, in run_modules
+    massign, mcenters = m.step_num_rules(self.data, self.labels)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/experiments/modules.py", line 476, in step_num_rules
+    data_to_rules_labels = self.forest.predict(X, leaf_labels = True)
+  File "/project/mcnet/kevin/explainable_clustering/repo/intercluster/rules/_decision_sets.py", line 102, in predict
+    labels[j] += i
+TypeError: 'int' object is not iterable
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/explainable_clustering/venv/lib/python3.9/site-packages/pyogrio/raw.py:198: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(

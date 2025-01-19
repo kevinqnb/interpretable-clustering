@@ -16,14 +16,21 @@ class DecisionSet:
         """
         Args:                
             feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+        Attributes:
+            feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+            decision_set (List[Rule]): List of rules in the decision set.
+            
+            decision_set_labels (List[int]): List of labels corresponding to each
+                rule in the decision set.
         """
         self.feature_labels = feature_labels
-        
-        self.all_rules = None
         self.decision_set = None
+        self.decision_set_labels = None
         
         
-    def _fitting(self, X : NDArray, y : NDArray = None) -> List[Any]:
+    def _fitting(self, X : NDArray, y : NDArray = None) -> Tuple[List[Any], List[int]]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -35,6 +42,8 @@ class DecisionSet:
             
         returns:
             decision_set (List[Any]): List of rules.
+            
+            decision_set_labels (List[int]): List of labels corresponding to each rule.
         """
         raise NotImplementedError('Method not implemented.')
         
@@ -49,7 +58,7 @@ class DecisionSet:
             
             y (np.ndarray, optional): Target labels. Defaults to None.
         """
-        self.decision_set = self._fitting(X, y)
+        self.decision_set, self.decision_set_labels = self._fitting(X, y)
         self.covers = self.get_covers(X)
         
         
@@ -61,18 +70,22 @@ class DecisionSet:
             X (np.ndarray): Input dataset.
             
         Returns:
-            covers (dict[rule, List[int]]): Dictionary with rules indices 
+            covers (dict[int, List[int]]): Dictionary with rules indices 
                 as keys and list of data point indices as values.
         """
         raise NotImplementedError('Method not implemented.')
     
     
-    def predict(self, X : NDArray) -> List[List[int]]:
+    def predict(self, X : NDArray, leaf_labels : bool = True) -> List[List[int]]:
         """
         Predicts the label(s) of each data point in X.
         
         Args:
             X (np.ndarray): Input dataset.
+            
+            leaf_labels (bool, optional): If true, gives labels based soley upon 
+                leaf membership. That is, each leaf (rule) is given a unique label. 
+                Otherwise, returns the orignal predictions from the fitted trees. Defaults to True.
             
         Returns:
             labels (List[List[int]]): 2d list of predicted labels, with the internal list 
@@ -85,6 +98,9 @@ class DecisionSet:
         
         for i,r_covers in set_covers.items():
             for j in r_covers:
-                labels[j].append(i)
+                if leaf_labels:
+                    labels[j] += [i]
+                else:
+                    labels[j] += self.decision_set_labels[i]
         
         return labels

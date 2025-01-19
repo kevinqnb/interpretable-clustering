@@ -2,6 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from typing import List, Tuple
 
+
 class Splitter:
     """
     Base class for a Splitting object designed to split leaf nodes 
@@ -24,47 +25,34 @@ class Splitter:
             
             y (npt.NDArray, optional): Target labels. Defaults to None.
         """
-        pass
+        self.X = X
+        self.y = y
     
     def score(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
-        indices : npt.NDArray = None
+        indices : npt.NDArray
     ) -> float:
         """
         Computes the cost associated with a leaf node.
         
-        Args:
-            X (np.ndarray): Input data subset.
-            
-            y (np.ndarray, optional): Data labels. Defaults to None.
-            
-            indices (np.ndarray, optional): Indices of data subset within the full dataset.
-                Defaults to None. 
+        Args:            
+            indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
-            score (float): Cost associated with the leaf node.
+            score (float): Cost associated with given subset.
         """
         pass 
     
     
     def split(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
-        indices : npt.NDArray = None
+        indices : npt.NDArray
     ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
         """
         Computes the best split of a leaf node.
         
         Args:
-            X (np.ndarray): Input data subset.
-            
-            y (np.ndarray, optional): Data labels. Defaults to None.
-            
-            indices (np.ndarray, optional): Indices of data subset within the full dataset.
-                Defaults to None. 
+            indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
             split_info ((np.ndarray, np.ndarray, float)): Features, weights,
@@ -85,35 +73,29 @@ class AxisAlignedSplitter(Splitter):
         
     def split(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
-        indices : npt.NDArray = None
+        indices : npt.NDArray
     ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
         """
         Computes the best split of a leaf node.
         
         Args:
-            X (np.ndarray): Input data subset.
-            
-            y (np.ndarray, optional): Data labels. Defaults to None.
-            
-            indices (np.ndarray, optional): Indices of data subset within the full dataset.
-                Defaults to None. 
+            indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
             split_info ((np.ndarray, np.ndarray, float)): Features, weights,
                 and threshold of the split.
         """
-        n,d = X.shape
+        X_ = self.X[indices, :]
+        n,d = X_.shape
         
         best_split_val = np.inf
-        best_split = None
+        best_splits = []
         for feature in range(d):
-            unique_vals = np.unique(X[:,feature])
+            unique_vals = np.unique(X_[:,feature])
             for threshold in unique_vals:
                 split = ([feature], [1], threshold)
 
-                left_mask = X[:, feature] <= threshold
+                left_mask = X_[:, feature] <= threshold
                 right_mask = ~left_mask
                 left_indices = indices[left_mask]
                 right_indices = indices[right_mask]
@@ -122,18 +104,26 @@ class AxisAlignedSplitter(Splitter):
                     np.sum(right_mask) < self.min_points_leaf):
                     split_val = np.inf
                 else:
-                    X_l = X[left_mask, :]
-                    y_l = y[left_mask] if y is not None else None
-                    X1_cost = self.score(X_l, y_l, left_indices)
+                    X_l_cost = self.score(left_indices)
+                    X_r_cost = self.score(right_indices)
                     
-                    X_r = X[right_mask, :]
-                    y_r = y[right_mask] if y is not None else None
-                    X2_cost = self.score(X_r, y_r, right_indices)
-                    
-                    split_val = X1_cost + X2_cost
+                    split_val = X_l_cost + X_r_cost
                 
                 if split_val < best_split_val:
                     best_split_val = split_val
-                    best_split = split
-                    
+                    best_splits = [split]
+                
+                elif split_val == best_split_val:
+                    best_splits.append(split)
+        
+        # Randomly break ties if necessary:
+        best_split = best_splits[np.random.randint(len(best_splits))]
         return best_split_val, best_split
+
+
+class SimpleSplitter(AxisAlignedSplitter):
+    def __init__(self, min_points_leaf : int = 1):
+        super().__init__(min_points_leaf = min_points_leaf)
+    
+    def score(self, indices : np.ndarray) -> float:
+        return np.max(self.X[indices, :])

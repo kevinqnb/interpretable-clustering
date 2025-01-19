@@ -1,4 +1,6 @@
 from .utils import (
+    tiebreak,
+    mode,
     kmeans_cost,
     kmedians_cost,
     kmeans_plus_plus_initialization,

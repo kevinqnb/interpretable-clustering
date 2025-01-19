@@ -167,4 +167,5 @@ data/anuran/
 data/mice_protein/
 older/
 .python-version
-batch/
+
+experiments/*/*.sh

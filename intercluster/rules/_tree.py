@@ -167,13 +167,13 @@ class Tree():
         """
         # NOTE: splitter needs to handle the case where len(indices) <= 1!!
         if y is None:
-            split_score, split_obj = self.splitter.split(
+            split_score, split_info = self.splitter.split(
                 X = X[node.indices],
                 y = None,
                 indices = node.indices
             )
         else:
-            split_score, split_obj = self.splitter.split(
+            split_score, split_info = self.splitter.split(
                 X = X[node.indices], 
                 y = y[node.indices],
                 indices = node.indices
@@ -181,7 +181,7 @@ class Tree():
             
         gain = node.score - split_score
         random_tiebreaker = np.random.rand()
-        leaf_obj = (-1*gain, random_tiebreaker, node, split_obj)
+        leaf_obj = (-1*gain, random_tiebreaker, node, split_info)
         heapq.heappush(self.heap, leaf_obj)
         self.leaf_count += 1
         if node.depth > self.depth:

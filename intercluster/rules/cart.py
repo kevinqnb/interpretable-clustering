@@ -205,7 +205,8 @@ class SklearnTree(Tree):
             X (np.ndarray): Input dataset.
             
             leaf_labels (bool, optional): If true, gives labels based soley upon 
-                leaf membership. Otherwise, returns the orignal predictions from 
+                leaf membership. That is, each leaf is given a unique label. 
+                Otherwise, returns the orignal predictions from 
                 the fitted tree. Defaults to True.  
 
         """

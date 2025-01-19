@@ -42,6 +42,9 @@ class CentroidSplitter(AxisAlignedSplitter):
             
             y (npt.NDArray, optional): Target labels. Defaults to None.
         """
+        self.X = X
+        self.y = y
+        
         if self.norm == 2:
             diffs = X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
             distances = np.sum((diffs)**2, axis=-1)
@@ -54,20 +57,13 @@ class CentroidSplitter(AxisAlignedSplitter):
         
     def score(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None,
-        indices : npt.NDArray = None
+        indices : npt.NDArray
     ) -> float:
         """
         Given a set of points X, computes the score as the sum of distances to 
         the closest center.
         
-        Args:
-            X (npt.NDArray): Array of points to compute score with.
-            
-            y (npt.NDArray, optional): Array of labels. Dummy variable, not used 
-                for this class. Defaults to None.
-                
+        Args:                
             indices (npt.NDArray, optional): Indices of points to compute score with.
                 
         Returns:
