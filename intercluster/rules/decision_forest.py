@@ -30,7 +30,7 @@ class DecisionForest(DecisionSet):
             num_trees (int): Number of trees to be trained.
             
             max_features (int, optional): Maximum number of features to be used in each tree. 
-                If None, all features are used. Defaults to None.
+                Defaults to None, in which case all features are used.
                 
             max_labels (int, optional): Maximum number of labels for each individual tree 
                 distinguish. Defaults to None, in which case each tree is trained on the 
@@ -136,6 +136,7 @@ class DecisionForest(DecisionSet):
             new_rules = []
             new_labels = []
             if y is not None:
+                # NOTE: Not sure about this here... I think this function is too specific
                 new_rules, new_labels = get_decision_paths_with_labels(
                     tree.root,
                     train_labels,

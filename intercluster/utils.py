@@ -1,8 +1,4 @@
 import numpy as np
-import pandas as pd 
-import matplotlib.pyplot as plt
-import graphviz as gv
-from IPython.display import Image
 from collections.abc import Iterable
 from typing import List, Dict, Set
 from numpy.typing import NDArray
@@ -45,6 +41,49 @@ def mode(x : NDArray) -> float:
     """
     unique, counts = np.unique(x, return_counts=True)
     return unique[tiebreak(counts)[-1]]
+
+
+####################################################################################################
+
+
+def entropy(x : NDArray) -> float:
+    """
+    Returns the entropy of a list of labels.
+    
+    Args:
+        x (np.ndarray): List of labels.
+    """
+    unique, counts = np.unique(x, return_counts=True)
+    p = counts / len(x)
+    return -np.sum(p * np.log2(p))
+
+
+####################################################################################################
+
+
+def center_dists(X : NDArray, centers : NDArray, norm : int = 2) -> NDArray:
+    """
+    Computes the distance of each point in a dataset to a set of centers.
+    
+    Args:
+        X (np.ndarray): (n x d) Dataset.
+        
+        centers (np.ndarray): (k x d) Set of representative centers.
+        
+        norm (int, optional): Norm to use for computing distances. 
+            Takes values 1 or 2. Defaults to 2.
+            
+    Returns:
+        distances (np.ndarray): (n x k) Distance matrix where entry (i,j) is the distance
+            from point i to center j.
+    """
+    if norm == 2:
+        diffs = X[np.newaxis, :, :] - centers[:, np.newaxis, :]
+        distances = np.sum((diffs)**2, axis=-1)
+    elif norm == 1:
+        diffs = X[np.newaxis, :, :] - centers[:, np.newaxis, :]
+        distances = np.sum(np.abs(diffs), axis=-1)
+    return distances.T
 
 
 ####################################################################################################

@@ -1,80 +1,8 @@
-import numpy as np
 import numpy.typing as npt
 from typing import List
-from ._splitter import AxisAlignedSplitter
+from intercluster.splitters import CentroidSplitter
 from ._node import Node
 from ._tree import Tree
-
-
-class CentroidSplitter(AxisAlignedSplitter):
-    """
-    Splits leaf nodes in order to minimize distances to a set of input centers.
-    """
-    def __init__(
-        self,
-        centers : npt.NDArray, 
-        norm : int = 2,
-        min_points_leaf : int = 1
-    ):
-        """
-        Args:
-            centers (npt.NDArray): Array of centroid representatives.
-            
-            norm (int, optional): Norm to use for computing distances. 
-                Takes values 1 or 2. Defaults to 2.
-                
-            min_points_leaf (int, optional): Minimum number of points in a leaf.
-        """
-        self.centers = centers
-        self.norm = norm
-        super().__init__(min_points_leaf = min_points_leaf)
-        
-    def fit(
-        self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
-    ):
-        """
-        Fits the splitter to a dataset X. 
-        
-        Args:
-            X (npt.NDArray): Input dataset.
-            
-            y (npt.NDArray, optional): Target labels. Defaults to None.
-        """
-        self.X = X
-        self.y = y
-        
-        if self.norm == 2:
-            diffs = X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum((diffs)**2, axis=-1)
-            
-        elif self.norm == 1:
-            diffs = X[np.newaxis, :, :] - self.centers[:, np.newaxis, :]
-            distances = np.sum(np.abs(diffs), axis=-1)
-        
-        self.center_dists = distances.T
-        
-    def score(
-        self,
-        indices : npt.NDArray
-    ) -> float:
-        """
-        Given a set of points X, computes the score as the sum of distances to 
-        the closest center.
-        
-        Args:                
-            indices (npt.NDArray, optional): Indices of points to compute score with.
-                
-        Returns:
-            (float): Score of the given data.
-        """
-        if len(indices) == 0:
-            return np.inf
-        else:
-            dists_ = self.center_dists[indices,:]
-            sum_array = np.sum(dists_, axis = 0)
-            return np.min(sum_array)
     
     
 

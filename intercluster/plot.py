@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import graphviz as gv
+from IPython.display import Image
 
 ####################################################################################################
 
@@ -114,7 +116,7 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
     node_label = ""
     
     # For NON-leaf nodes:
-    if custom_node.type == 'node':
+    if custom_node.type == 'internal':
         if feature_labels is None:
             if newline:
                 node_label += (f"Features {custom_node.features} \n Weights {custom_node.weights}\n \u2264 {np.round(custom_node.threshold, 3)}")
@@ -134,7 +136,7 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
     # For leaf nodes:
     else:
         node_label += f"Cluster {custom_node.label}\n"
-        node_label += f"Size: {custom_node.size}"
+        node_label += f"Size: {len(custom_node.indices)}"
         if cost:
             node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
         else:
@@ -154,7 +156,7 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
         graph.edge(parent_id, node_id, penwidth = '10')
     
     # Recursively add children
-    if custom_node.type == 'node':
+    if custom_node.type == 'internal':
         if custom_node.left_child is not None:
             build_graph(custom_node.left_child, graph, parent_id=node_id, 
                         node_id=str(int(node_id) * 2 + 1),

@@ -148,6 +148,25 @@ def get_decision_paths_with_labels(
 ####################################################################################################
 
 
+def get_depth(root : Node) -> int:
+    """
+    Given the root of a tree, finds the maximum depth of the tree.
+    
+    Args:
+        root (Node): Root of the tree.
+    
+    Returns:
+        depth (int): Maximum depth of the tree. 
+    """
+    depths = []
+    for path in traverse(root):
+        depths.append(len(path) - 1)    
+    return max(depths)
+
+
+####################################################################################################
+
+
 def satisfies_path(X, path):
     """
     Given a dataset X and a decision path, determines 

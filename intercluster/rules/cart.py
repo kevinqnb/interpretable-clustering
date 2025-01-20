@@ -1,12 +1,68 @@
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from typing import List, Callable
+from typing import List
 import numpy.typing as npt
+from intercluster.splitters import InformationGainSplitter, DummySplitter
+from intercluster.utils import mode
 from ._node import Node
-from ._splitter import Splitter
 from ._tree import Tree
 from .utils import *
-from ..utils import mode
+
+
+class ID3Tree(Tree):
+    """
+    Inherits from the Tree class to implement a decision tree in which 
+    axis aligned split criterion are chosen so that points in any leaf node 
+    have small entropy with respect to their labels.
+    
+    Args:            
+        base_tree (Node, optional): Root node of a baseline tree to start from. 
+                Defaults to None, in which case the tree is grown from root.
+            
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+        feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
+            
+    Attributes:
+        root (Node): Root node of the tree.
+        
+        heap (heapq list): Maintains the heap structure of the tree.
+        
+        leaf_count (int): Number of leaves in the tree.
+        
+        node_count (int): Number of nodes in the tree.
+            
+        depth (int): The maximum depth of the tree.   
+    """
+    
+    def __init__(
+        self,
+        base_tree : Node = None,
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1,
+        feature_labels : List[str] = None
+    ):
+        splitter = InformationGainSplitter(
+            min_points_leaf = min_points_leaf
+        )  
+        super().__init__(
+            splitter = splitter,
+            base_tree = base_tree, 
+            max_leaf_nodes = max_leaf_nodes,
+            max_depth = max_depth, 
+            min_points_leaf = min_points_leaf,
+            feature_labels = feature_labels
+        )
+    
 
 
 class SklearnTree(Tree):
@@ -53,7 +109,7 @@ class SklearnTree(Tree):
             depth (int): The maximum depth of the tree.
         """
         self.criterion = criterion
-        splitter = Splitter()
+        splitter = DummySplitter()
         super().__init__(
             splitter = splitter,
             max_leaf_nodes=max_leaf_nodes,
@@ -147,7 +203,7 @@ class SklearnTree(Tree):
             self.leaf_count += 1
             node_obj.leaf_node(
                 label = class_label,
-                score = -1,
+                cost = -1,
                 indices = indices,
                 depth = depth
             )
@@ -167,7 +223,7 @@ class SklearnTree(Tree):
                 features = [feature],
                 weights = [1],
                 threshold = threshold,
-                score = -1,
+                cost = -1,
                 indices = indices,
                 depth = depth,
                 feature_labels = [self.feature_labels[feature]]

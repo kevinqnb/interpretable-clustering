@@ -3,10 +3,9 @@ import copy
 import heapq
 import numpy.typing as npt
 from typing import List, Callable
+from intercluster.utils import mode
 from ._node import Node
 from .utils import *
-from ..utils import mode
-import pdb
 
 
 class Tree():
@@ -75,10 +74,10 @@ class Tree():
         """
         Initiates and builds a decision tree around a given dataset. 
         Keeps a heap queue for all current leaf nodes in the tree,
-        which prioritizes splitting the leaves with the largest scores (gain in cost performance).
-        NOTE: I store -1*scores because heapq pops items with minimum cost by default.
+        which prioritizes splitting the leaves with the largest costs (gain in cost performance).
+        NOTE: I store -1*costs because heapq pops items with minimum cost by default.
         For example, heap leaf object looks like:
-            (-1*score, random_tiebreaker, node object, split info)
+            (-1*cost, random_tiebreaker, node object, split info)
         Where split info is a tuple of precomputed (features, weights, thresholds) information.
 
         Args:
@@ -105,7 +104,9 @@ class Tree():
         if self.max_depth is None:
             self.max_depth = len(X) - 1
             
-        # Initialize splitter
+        # Initialize the dataset and splitter
+        self.X = X
+        self.y = y
         self.splitter.fit(X, y)
         
         if self.base_tree is None:
@@ -116,70 +117,51 @@ class Tree():
                 root_label = mode(y)
             
             root_indices = np.arange(len(X))
-            root_score = self.splitter.score(X, y, root_indices)
+            root_cost = self.splitter.cost(root_indices)
             root_depth = 0
             self.root.leaf_node(
                 label = root_label,
-                score = root_score,
+                cost = root_cost,
                 indices = root_indices,
                 depth = root_depth
             )
             
-            self.add_leaf_node(self.root, X, y)
+            self.add_leaf_node(self.root)
             
         else:
+            self.root = self.base_tree
             decision_paths = get_decision_paths(self.base_tree)
             for path in decision_paths:
                 l_indices = satisfies_path(X, path)
                 l_node = path[-1][0]
                 l_label = l_node.label
-                l_score = self.splitter.score(X[l_indices], y[l_indices], l_indices)
+                l_cost = self.splitter.cost(l_indices)
                 l_depth = l_node.depth
                 
                 l_node.leaf_node(
                     label = l_label,
-                    score = l_score,
+                    cost = l_cost,
                     indices = l_indices,
                     depth = l_depth
                 )
-                self.add_leaf_node(l_node, X, y)   
+                self.add_leaf_node(l_node)   
         
         
         while len(self.heap) > 0:
-            self.grow(X, y)
+            self.grow()
             
             
     def add_leaf_node(
         self,
-        node : Node,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        node : Node
     ):
         """
         Adds a new leaf node to the heap.
         
         Args:
             node (Node): Leaf node to add to the heap.
-            
-            X (np.ndarray): Input dataset.
-            
-            y (np.ndarray, optional): Target labels. Defaults to None.
         """
-        # NOTE: splitter needs to handle the case where len(indices) <= 1!!
-        if y is None:
-            split_score, split_info = self.splitter.split(
-                X = X[node.indices],
-                y = None,
-                indices = node.indices
-            )
-        else:
-            split_score, split_info = self.splitter.split(
-                X = X[node.indices], 
-                y = y[node.indices],
-                indices = node.indices
-            )
-            
-        gain = node.score - split_score
+        gain, split_info = self.splitter.split(indices = node.indices)
         random_tiebreaker = np.random.rand()
         leaf_obj = (-1*gain, random_tiebreaker, node, split_info)
         heapq.heappush(self.heap, leaf_obj)
@@ -191,9 +173,7 @@ class Tree():
     def branch(
         self,
         node : Node,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float],
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        split_info : Tuple[npt.NDArray, npt.NDArray, float]
     ):
         """
         Splits a leaf node into two new leaf nodes.
@@ -207,34 +187,22 @@ class Tree():
             X (np.ndarray): Input dataset.
             
             y (np.ndarray, optional): Target labels. Defaults to None.
-        """
-        features, weights, threshold = split_info
+        """            
+        left_indices, right_indices = self.splitter.get_split_indices(node.indices, split_info)
         
-        X_ = X[node.indices, :]
-        y_ = None
-        if y is not None:
-            y_ = y[node.indices]
-            
-        left_mask = np.dot(X_[:, features], weights) <= threshold
-        left_indices = node.indices[left_mask]
-        right_mask = ~left_mask
-        right_indices = node.indices[right_mask]
-        
-        X_l = X_[left_mask]
-        X_r = X_[right_mask]
         y_l = None
         y_r = None
-        if y is not None:
-            y_l = y_[left_mask]
-            y_r = y_[right_mask]
+        if self.y is not None:
+            y_l = self.y[left_indices]
+            y_r = self.y[right_indices]
         
         # Calculate cost of left and right branches
-        left_score = self.splitter.score(X_l, y_l, left_indices)
-        right_score = self.splitter.score(X_r, y_r, right_indices)
+        left_cost = self.splitter.cost(left_indices)
+        right_cost = self.splitter.cost(right_indices)
         left_depth = node.depth + 1
         right_depth = node.depth + 1
         
-        if y is None:
+        if self.y is None:
             l_label = node.label
             r_label = self.leaf_count
         else:
@@ -245,30 +213,31 @@ class Tree():
         left_node = Node()
         left_node.leaf_node(
             label = l_label,
-            score = left_score,
+            cost = left_cost,
             indices = left_indices,
             depth = left_depth
         )
         right_node = Node()
         right_node.leaf_node(
             label = r_label,
-            score = right_score,
+            cost = right_cost,
             indices = right_indices,
             depth = right_depth
         )
         
         # And push them into the heap:
-        self.add_leaf_node(left_node, X, y)
-        self.add_leaf_node(right_node, X, y)
+        self.add_leaf_node(left_node)
+        self.add_leaf_node(right_node)
         
         # Transform the splitted node from a leaf node to an internal tree node:
+        features, weights, threshold = split_info
         node.tree_node(
             left_child=left_node,
             right_child=right_node,
             features=features,
             weights=weights,
             threshold=threshold,
-            score=node.score,
+            cost=node.cost,
             indices=node.indices,
             depth=node.depth,
             feature_labels = [self.feature_labels[f] for f in features]
@@ -280,9 +249,7 @@ class Tree():
         
 
     def grow(
-        self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        self
     ):
         """
         Builds the decision tree by splitting leaf nodes.
@@ -307,7 +274,7 @@ class Tree():
             pass
 
         else:
-            self.branch(node, split_info, X, y)
+            self.branch(node, split_info)
 
         
     def predict(self, X : npt.NDArray) -> npt.NDArray:

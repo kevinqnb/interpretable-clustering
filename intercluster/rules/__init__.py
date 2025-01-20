@@ -1,25 +1,28 @@
-from ._splitter import (
-    SimpleSplitter,
+from ._node import (
+    Node
+)
+
+from ._tree import (
+    Tree
 )
 
 from .unsupervised import (
-    UnsupervisedSplitter,
     UnsupervisedTree,
 )
 
 from .centroid import (
-    CentroidSplitter,
     CentroidTree,
 )
 
 from .exkmc import (
+    ImmTree,
     ExkmcTree,
 )
 
 from .cart import (
+    ID3Tree,
     SklearnTree,
 )
-
 
 from .decision_forest import (
     DecisionForest,
@@ -36,5 +39,6 @@ from .utils import (
     collect_leaves,
     get_decision_paths,
     get_decision_paths_with_labels,
+    get_depth,
     satisfies_path,
 )

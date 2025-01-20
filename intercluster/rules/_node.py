@@ -12,7 +12,7 @@ class Node():
     Attributes:
         random_val (float): Uniform random sample used to split ties / and create
             a relative order of nodes. Note that in the creation of the tree, nodes are chosen
-            based on their score, and this value is simply used to break ties. 
+            based on their cost, and this value is simply used to break ties. 
             
         type (str): Internally set to 'node' or 'leaf' depending on if the node is a
             normal node or a leaf node.
@@ -30,14 +30,16 @@ class Node():
         
         threshold (float): The threshold value to split on.
         
-        score (float): The score associated with points belonging to this node.
+        cost (float): The cost associated with points belonging to this node.
             
         indices (np.ndarray): The subset of data indices from the training set 
             belonging to this node.
         
         depth (int): The depth of the current node in the tree.
         
-        feature_labels (List[str]): Names for the given feature (for printing and display). 
+        feature_labels (List[str]): Names for the given feature (for printing and display).
+        
+        centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
     """
     
     def __init__(self):
@@ -50,10 +52,11 @@ class Node():
         self.feature_labels = None
         self.weights = None
         self.threshold = None
-        self.score = None
+        self.cost = None
         self.indices = None
         self.depth = None
         self.feature_labels = None
+        self.centroid_indices = None
     
     '''
     def __lt__(self, other):
@@ -77,10 +80,11 @@ class Node():
         features : npt.NDArray,
         weights : npt.NDArray,
         threshold : float,
-        score : float, 
+        cost : float, 
         indices : npt.NDArray,
         depth : int,
-        feature_labels : List[str]
+        feature_labels : List[str],
+        centroid_indices : npt.NDArray = None
     ):
         """
         Initializes this as a normal node in the tree.
@@ -96,14 +100,16 @@ class Node():
         
             threshold (float): The threshold value to split on.
             
-            score (float): The score associated with points belonging to this node.
+            cost (float): The cost associated with points belonging to this node.
             
             indices (np.ndarray): The subset of data indices from the training set 
                 belonging to this node.
             
             depth (int): The depth of the current node in the tree.
             
-            feature_labels (List[str]): Names for the given features (for printing and display). 
+            feature_labels (List[str]): Names for the given features (for printing and display).
+            
+            centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'internal'
         self.label = None
@@ -112,18 +118,20 @@ class Node():
         self.features = features
         self.weights = weights
         self.threshold = threshold
-        self.score = score
+        self.cost = cost
         self.indices = indices
         self.depth = depth
         self.feature_labels = feature_labels
+        self.centroid_indices = centroid_indices
         
         
     def leaf_node(
         self,
         label : int,
-        score : float,
+        cost : float,
         indices : npt.NDArray,
-        depth : int
+        depth : int,
+        centroid_indices : npt.NDArray = None
     ):
         """
         Initializes this to be a leaf node in the tree.
@@ -131,15 +139,18 @@ class Node():
         Args:
             label (int): Prediction label to be associated with this node.
             
-            score (float): The score associated with points belonging to this node. 
+            cost (float): The cost associated with points belonging to this node. 
             
             indices (np.ndarray): The subset of data indices from the training set 
                 belonging to this node.
             
             depth (int): The depth of the current node in the tree.
+            
+            centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'leaf'
         self.label = label
-        self.score = score 
+        self.cost = cost 
         self.indices = indices
         self.depth = depth
+        self.centroid_indices = centroid_indices
