@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import combinations
 from collections.abc import Iterable
 from typing import List, Dict, Set
 from numpy.typing import NDArray
@@ -179,6 +180,51 @@ def kmedians_cost(
     if normalize:
         cost /= covered * d
     return cost
+
+
+####################################################################################################
+
+
+def overlap(
+    assignment : np.ndarray
+):
+    """
+    Computes the overlap of a point assignment. 
+    
+    Args:
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to class j and False (0) otherwise. 
+        
+    Returns:
+        overlap (float): Fraction of overlapping cluster assignments for each point.
+    """
+    n,k = assignment.shape
+    overlap = 0
+    class_combinations = list(combinations(range(k), 2))
+    for (i,j) in class_combinations:
+        overlap += np.sum(assignment[:,i] * assignment[:,j])/n
+    return overlap / len(class_combinations)
+
+
+####################################################################################################
+
+
+def coverage(
+    assignment : np.ndarray
+):
+    """
+    Computes the coverage of a point assignment. 
+    
+    Args:
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to class j and False (0) otherwise. 
+        
+    Returns:
+        coverage (float): Fraction of points covered by at least one cluster.
+    """
+    n,k = assignment.shape
+    coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
+    return coverage
 
 
 ####################################################################################################

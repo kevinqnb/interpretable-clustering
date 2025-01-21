@@ -103,13 +103,13 @@ mod1 = ExkmcMod(
     min_rules = min_rules
 )
 
+
+# Forest:
 forest_tree_params = {
     'max_leaf_nodes' : max_rules,
     'max_depth' : 2
 }
 
-
-# Forest:
 forest_params = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params,
@@ -137,6 +137,7 @@ mod2 = ForestMod(
     name = 'Forest'
 )
 
+'''
 mod3 = ForestClusterMod(
     forest_model = DecisionForest,
     forest_params = forest_params,
@@ -167,9 +168,10 @@ mod4 = ForestClusterMod(
     name = 'Forest-Cluster-Min'
 )
 
+'''
 
 baseline_list = [base]
-module_list = [mod1, mod2, mod3, mod4]
+module_list = [mod1, mod2]
 
 
 cost_fns = {

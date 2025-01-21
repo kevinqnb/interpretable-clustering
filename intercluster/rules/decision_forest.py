@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Tuple
-from ._decision_sets import DecisionSet
+from ._decision_set import DecisionSet
 from .utils import *
 from ..utils import *
 
@@ -61,7 +61,111 @@ class DecisionForest(DecisionSet):
         self.covers = {}
         self.costs = {}
         
+    
+    def _random_parameters(
+        self,
+        X : NDArray,
+        y : NDArray = None
+    ):
+        """
+        Randomly selects features, samples, and labels for training.
         
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
+            
+        Returns:
+        """
+        n,d = X.shape
+        
+        # Random labels, choose the clusters to distinguish:
+        rand_labels = None
+        if y is not None:
+            rand_labels = np.random.choice(
+                np.unique(y), 
+                size = min(self.max_labels, len(np.unique(y))),
+                replace = False
+            )
+            
+        # Random samples, choose the data points to train on::
+        rand_samples = np.random.choice(
+            n, 
+            size = int(self.train_size * n),
+            replace = False
+        )
+        
+        # Random features, choose the features to train on:
+        rand_pairing = np.random.randint(len(self.feature_pairings))
+        pairing = self.feature_pairings[rand_pairing]
+        rand_features = np.random.choice(
+            pairing, 
+            size = min(self.max_features, len(pairing)),
+            replace = False
+        )
+            
+        '''
+        # Random depth
+        rand_depth = np.random.randint(2, self.tree_params['max_depth'] + 1)
+        tree = self.tree_model(
+            feature_labels = rand_feature_labels,
+            **dict(self.tree_params, max_depth=rand_depth)
+        )
+        '''
+            
+        return rand_samples, rand_features, rand_labels
+        
+        
+        
+    
+    
+    def _fit_tree(
+        self,
+        X : NDArray,
+        y : NDArray = None
+    ):
+        """
+        Fits dataset to a single tree.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
+            
+        returns:
+            rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
+                a tuple of a node and the direction (left <= or right >) taken on it.
+        """
+        rand_samples, rand_features, rand_labels = self._random_parameters(X, y)
+        
+        train_labels = None
+        if rand_labels is not None:
+            train_labels = np.array([i if i in rand_labels else -1 for i in y])
+            train_labels = train_labels[rand_samples]
+            
+        train_data = X[rand_samples, :]
+        train_data = train_data[:, rand_features]
+        
+        train_feature_labels = None
+        if self.feature_labels is not None:
+            train_feature_labels = [self.feature_labels[i] for i in rand_features]
+            
+        tree = self.tree_model(
+                feature_labels = train_feature_labels,
+                **self.tree_params
+        )
+        tree.fit(train_data, train_labels)
+        
+        # Translate back to orignal indices:
+        node_list = tree.get_nodes()
+        for node in node_list:
+            node.indices = rand_samples[node.indices]
+            if node.type == 'internal':
+                node.features = rand_features[node.features]
+                
+        return tree
+        
+    
         
     def _fitting(
         self,
@@ -75,11 +179,20 @@ class DecisionForest(DecisionSet):
         Args:
             X (np.ndarray): Input dataset.
             
+            y (np.ndarray, optional): Target labels. Defaults to None.
+            
         returns:
             rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
                 a tuple of a node and the direction (left <= or right >) taken on it.
         """
         n,d = X.shape
+        
+        if self.max_features is None:
+            self.max_features = d
+            
+        if (y is not None) and (self.max_labels is None):
+            self.max_labels = len(np.unique(y))
+            
         if self.feature_pairings is None:
             self.feature_pairings = [list(range(d))]
             
@@ -87,60 +200,17 @@ class DecisionForest(DecisionSet):
         rule_labels = []
         tree = None
         for _ in range(self.num_trees):
-            rand_pairing = np.random.randint(len(self.feature_pairings))
-            pairing = self.feature_pairings[rand_pairing]
-            rand_features = np.random.choice(
-                pairing, 
-                size = min(self.max_features, len(pairing)),
-                replace = False
-            )
-            rand_samples = np.random.choice(
-                n, 
-                size = int(self.train_size * n),
-                replace = False
-            )
-            train_data = X[rand_samples, :]
-            train_data = train_data[:, rand_features]
-            
-            train_labels = None
-            rand_labels = None
-            if y is not None:
-                train_labels = y[rand_samples]
-                rand_labels = np.random.choice(
-                    np.unique(train_labels), 
-                    size = min(self.max_labels, len(np.unique(train_labels))),
-                    replace = False
-                )
-                train_labels = np.array([i if i in rand_labels else -1 for i in train_labels])
-            
-            rand_feature_labels = None
-            if self.feature_labels is not None:
-                rand_feature_labels = [self.feature_labels[i] for i in rand_features]
-            
-            
-            tree = self.tree_model(
-                feature_labels = rand_feature_labels,
-                **self.tree_params
-            )
-        
-            '''
-            rand_depth = np.random.randint(2, self.tree_params['max_depth'] + 1)
-            tree = self.tree_model(
-                feature_labels = rand_feature_labels,
-                **dict(self.tree_params, max_depth=rand_depth)
-            )
-            '''
-            
-            tree.fit(train_data, train_labels)
-            
+            tree = self._fit_tree(X, y)   
             new_rules = []
             new_labels = []
             if y is not None:
-                # NOTE: Not sure about this here... I think this function is too specific
+                selected_labels = np.unique(tree.y)
+                selected_labels = selected_labels[selected_labels != -1]
+                y_filter = np.array([i if i in selected_labels else -1 for i in y])
                 new_rules, new_labels = get_decision_paths_with_labels(
                     tree.root,
-                    train_labels,
-                    rand_labels
+                    y_filter,
+                    selected_labels
                 )
             else:
                 new_rules = get_decision_paths(tree.root)
@@ -150,13 +220,6 @@ class DecisionForest(DecisionSet):
             #import pdb; pdb.set_trace()
             rules = rules + new_rules
             rule_labels = rule_labels + new_labels
-            
-            # translate back to orignal indices
-            node_list = tree.get_nodes()
-            for node in node_list:
-                node.indices = rand_samples[node.indices]
-                if node.type == 'internal':
-                    node.features = rand_features[node.features]
                 
         return rules, rule_labels
     

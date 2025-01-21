@@ -77,7 +77,7 @@ class Tree():
         which prioritizes splitting the leaves with the largest costs (gain in cost performance).
         NOTE: I store -1*costs because heapq pops items with minimum cost by default.
         For example, heap leaf object looks like:
-            (-1*cost, random_tiebreaker, node object, split info)
+            (-1*gain, random_tiebreaker, node object, split info)
         Where split info is a tuple of precomputed (features, weights, thresholds) information.
 
         Args:
@@ -183,10 +183,6 @@ class Tree():
             
             split_info (Tuple[np.ndarray, np.ndarray, float]): 
                 Precomputed information for the split.
-            
-            X (np.ndarray): Input dataset.
-            
-            y (np.ndarray, optional): Target labels. Defaults to None.
         """            
         left_indices, right_indices = self.splitter.get_split_indices(node.indices, split_info)
         
@@ -253,20 +249,17 @@ class Tree():
     ):
         """
         Builds the decision tree by splitting leaf nodes.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-                
-            y (np.ndarray, optional): Target labels. Defaults to None.
         """
         # pop an object from the heap
         heap_leaf_obj = heapq.heappop(self.heap)
+        gain = -1*heap_leaf_obj[0]
         node = heap_leaf_obj[2]
         split_info = heap_leaf_obj[3] 
         
         # If we've reached any of the maximum conditions, stop growth. 
         # NOTE: This should also stop if the splitter decides there is no more gain to be had.
         if (
+            (gain == -np.inf) or
             (node.depth >= self.max_depth) or 
             (self.leaf_count >= (self.max_leaf_nodes)) or
             (len(node.indices) <= self.min_points_leaf)

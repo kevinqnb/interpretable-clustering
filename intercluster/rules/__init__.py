@@ -6,22 +6,27 @@ from ._tree import (
     Tree
 )
 
-from .unsupervised import (
+from .unsupervised_tree import (
     UnsupervisedTree,
 )
 
-from .centroid import (
+from .centroid_tree import (
     CentroidTree,
 )
 
-from .exkmc import (
+from .imm_tree import (
     ImmTree,
+    DiffImmTree,
     ExkmcTree,
 )
 
-from .cart import (
+from .decision_tree import (
     ID3Tree,
     SklearnTree,
+)
+
+from .svm_tree import (
+    SVMTree,
 )
 
 from .decision_forest import (

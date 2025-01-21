@@ -122,6 +122,8 @@ def get_decision_paths_with_labels(
     AND an array of specific labels to look for. In that case, only paths with leaf nodes
     which have a majority of a label within the labels array are returned.
     
+    NOTE: This is mainly used as a filtering function, to filter out unwanted paths.
+    
     Args:
         root (Node): Root of the tree.
     

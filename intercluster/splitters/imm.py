@@ -51,8 +51,12 @@ class ImmSplitter(Splitter):
                 following method by assigning each data point to its closest center.
         """
         self.X = X
-        self.center_dists = center_dists(X, self.centers, self.norm)
-        self.y = np.argmin(self.center_dists, axis = 1)
+        
+        if y is None:
+            self.center_dists = center_dists(X, self.centers, self.norm)
+            self.y = np.argmin(self.center_dists, axis = 1)
+        else:
+            self.y = y
         
     def cost(
         self,
@@ -61,8 +65,8 @@ class ImmSplitter(Splitter):
         parent_centroid_indices : npt.NDArray
     ) -> float:
         """
-        Given a set of points X, computes the cost as the sum of distances to 
-        the closest center.
+        Given a set of points X, computes the cost as the number of points separated from 
+        their assigned cluster center.
         
         Args:                
             indices (npt.NDArray, optional): Indices of points to compute cost with.
@@ -130,6 +134,9 @@ class ImmSplitter(Splitter):
         Given features, weights, and threshold, returns the indices of data points 
         which fall to the left and right branches respectively.
         
+        NOTE: This assumes an axis aligned split which is defined by a single feature
+        with weight 1.
+        
         Args:
             indices (np.ndarray): Indices for a subset of the original dataset.
             
@@ -149,14 +156,13 @@ class ImmSplitter(Splitter):
         """
         X_ = self.X[indices, :]
         C_ = self.centers[centroid_indices, :]
-        feature, weight, threshold = split_info
-        feature = feature[0]
-        left_mask = X_[:, feature] <= threshold
+        features, weights, threshold = split_info
+        left_mask = np.dot(X_[:, features], weights) <= threshold
         right_mask = ~left_mask
         left_indices = indices[left_mask]
         right_indices = indices[right_mask]
         
-        left_centroid_mask = C_[:, feature] <= threshold
+        left_centroid_mask = np.dot(C_[:, features], weights) <= threshold
         right_centroid_mask = ~left_centroid_mask
         left_centroid_indices = centroid_indices[left_centroid_mask]
         right_centroid_indices = centroid_indices[right_centroid_mask]
@@ -223,4 +229,4 @@ class ImmSplitter(Splitter):
         
         # Randomly break ties if necessary:
         best_split = best_splits[np.random.randint(len(best_splits))]
-        return best_gain_val, best_split    
+        return best_gain_val, best_split

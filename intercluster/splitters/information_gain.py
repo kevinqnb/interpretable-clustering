@@ -65,7 +65,8 @@ class InformationGainSplitter(AxisAlignedSplitter):
         if parent_cost is None:
             parent_cost = self.cost(parent_indices)
         
-        # This calculates the relative reduction in impurity:
+        # This calculates the relative reduction in impurity, based on the 
+        # definitions used by SKLearn's decision tree model.
         left_cost = len(left_indices)/len(parent_indices) * self.cost(left_indices)
         right_cost = len(right_indices)/len(parent_indices) * self.cost(right_indices)
         return len(parent_indices)/len(self.X) * (parent_cost - (left_cost + right_cost))

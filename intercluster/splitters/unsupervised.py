@@ -57,35 +57,6 @@ class UnsupervisedSplitter(Splitter):
                 
             return cost
         
-    def get_split_indices(
-        self,
-        indices : npt.NDArray,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float]
-    ) -> Tuple[npt.NDArray, npt.NDArray]:
-        """
-        Given features, weights, and threshold, returns the indices of data points 
-        which fall to the left and right branches respectively.
-        
-        Args:
-            indices (np.ndarray): Indices for a subset of the original dataset.
-            
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
-
-        Returns:            
-            left_indices (np.ndarray): Indices for the left child of the split.
-            
-            right_indices (np.ndarray): Indices for the right child of the split.
-        """
-        X_ = self.X[indices, :]
-        feature, weight, threshold = split_info
-        feature = feature[0]
-        left_mask = X_[:, feature] <= threshold
-        right_mask = ~left_mask
-        left_indices = indices[left_mask]
-        right_indices = indices[right_mask]
-    
-        return left_indices, right_indices
         
     def split(
         self,
