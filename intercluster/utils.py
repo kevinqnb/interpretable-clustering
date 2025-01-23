@@ -94,8 +94,7 @@ def kmeans_cost(
     X : np.ndarray,
     assignment : np.ndarray,
     centers : np.ndarray,
-    normalize : bool = False,
-    square : bool = False
+    normalize : bool = False
 ) -> float:
     """
     Computes the squared L2 norm cost of a clustering with an associated set of centers
@@ -130,10 +129,7 @@ def kmeans_cost(
             covered += 1
             
     if normalize:
-        if square:
-            cost /= covered **2
-        else:
-            cost /= covered * d
+        cost /= covered * d
     return cost
 
     

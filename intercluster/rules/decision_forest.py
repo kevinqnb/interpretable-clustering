@@ -60,6 +60,7 @@ class DecisionForest(DecisionSet):
         
         self.covers = {}
         self.costs = {}
+        self.depth = 0
         
     
     def _random_parameters(
@@ -220,6 +221,8 @@ class DecisionForest(DecisionSet):
             #import pdb; pdb.set_trace()
             rules = rules + new_rules
             rule_labels = rule_labels + new_labels
+            if tree.depth > self.depth:
+                self.depth = tree.depth
                 
         return rules, rule_labels
     

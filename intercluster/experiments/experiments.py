@@ -22,29 +22,22 @@ class Experiment:
         
         baseline_list (List[Any]): List of baseline modules to use and record results for. 
         
-        module_list (List[Any]): List of modules to use and record results for.
-        
-        cost_fns (Dict[str, Callable]): Functions to use to calculate cost. Formatted as 
-            a dictionary such as {'cost_function_name': cost_function}.
-        
-        cost_fn_params (Dict[str, Dict[str, Any]]): Parameters to pass to cost function. Formatted 
-            as a dictionary such as {'cost_function_name': {'param1': value1, 'param2': value2}}.
-            Names should be the same as those in cost_fns.
+        measurement_fns (List[Callable]): List of MeasurementFunction objects
+            used to compute results.
         
         random_seed (int, optional): Random seed for experiments. Defaults to None.
         
         verbose (bool, optional): Allows for printing of status. Defaults to True.
     
     Attrs: 
-        cost_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
+        result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
     """
     def __init__(
         self, 
         data : NDArray,
         baseline_list : List[Any],
         module_list : List[Any],
-        cost_fns : Dict[str, Callable],
-        cost_fn_params : Dict[str, Dict[str, Any]],
+        measurement_fns : List[Callable],
         labels : NDArray = None,
         random_seed : int = None,
         verbose : bool = True
@@ -53,23 +46,22 @@ class Experiment:
         self.labels = labels
         self.baseline_list = baseline_list
         self.module_list = module_list
-        
-        if cost_fns.keys() != cost_fn_params.keys():
-            raise ValueError("Cost function names do not match cost function parameters.")
-        
-        self.cost_fns = cost_fns
-        self.cost_fn_params = cost_fn_params
+        self.measurement_fns = measurement_fns
         self.random_seed = random_seed
-        np.random.seed(random_seed)
+        # NOTE: Does this need to be here??
+        #np.random.seed(random_seed)
         self.verbose = verbose
         
-        self.cost_dict = {}
-        for k in self.cost_fns.keys():
-            for b in self.baseline_list:
-                self.cost_dict[(k, b.name)] = []
+        self.result_dict = {}
+        for b in baseline_list:
+            for fn in measurement_fns:
+                self.result_dict[(fn.name, b.name)] = []
                 
-            for m in self.module_list:
-                self.cost_dict[(k, m.name)] = []
+        for m in self.module_list:
+            self.result_dict[("depth", m.name)] = []
+            for fn in measurement_fns:
+                self.result_dict[(fn.name, m.name)] = []
+                
 
     def run_baseline(self):
         """
@@ -113,27 +105,22 @@ class RulesExperiment(Experiment):
         
         module_list (List[Any]): List of modules to use and record results for.
         
-        cost_fns (Dict[str, Callable]): Functions to use to calculate cost. Formatted as 
-            a dictionary such as {'cost_function_name': cost_function}.
-        
-        cost_fn_params (Dict[str, Dict[str, Any]]): Parameters to pass to cost function. Formatted 
-            as a dictionary such as {'cost_function_name': {'param1': value1, 'param2': value2}}.
-            Names should be the same as those in cost_fns.
+        measurement_fns (List[Callable]): List of MeasurementFunction objects
+            used to compute results.
         
         random_seed (int, optional): Random seed for experiments. Defaults to None.
         
         verbose (bool, optional): Allows for printing of status. Defaults to True.
         
     Attrs:
-        cost_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
+        result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
     """
     def __init__(
         self, 
         data,
         baseline_list,
         module_list,
-        cost_fns,
-        cost_fn_params,
+        measurement_fns,
         labels = None,
         random_seed = None,
         verbose = True
@@ -142,8 +129,7 @@ class RulesExperiment(Experiment):
             data = data,
             baseline_list = baseline_list,
             module_list = module_list,
-            cost_fns = cost_fns,
-            cost_fn_params = cost_fn_params,
+            measurement_fns = measurement_fns,
             labels = labels,
             random_seed = random_seed,
             verbose = verbose
@@ -159,10 +145,9 @@ class RulesExperiment(Experiment):
         """
         for b in self.baseline_list:
             bassign, bcenters = b.assign(self.data)
-            for k in self.cost_fns.keys():
-                cost_fn = self.cost_fns[k]
-                self.cost_dict[(k, b.name)] = [
-                    cost_fn(self.data, bassign, bcenters, **self.cost_fn_params[k])
+            for fn in self.measurement_fns:
+                self.result_dict[(fn.name, b.name)] = [
+                    fn(self.data, bassign, bcenters)
                 ] * len(n_rules_list)
         
     def run_modules(self, n_rules_list : List[int]):
@@ -177,14 +162,15 @@ class RulesExperiment(Experiment):
                 print(f"Running for {i} rules.")
             for m in self.module_list:
                 massign, mcenters = m.step_num_rules(self.data, self.labels)
-                for k in self.cost_fns.keys():
-                    cost_fn = self.cost_fns[k]
-                    try:
-                        self.cost_dict[(k, m.name)].append(
-                            cost_fn(self.data, massign, mcenters, **self.cost_fn_params[k])
-                        )
-                    except:
-                        breakpoint()
+                
+                # record depth:
+                self.result_dict[("depth", m.name)].append(m.n_depth)
+                
+                # record results from measurement functions:
+                for fn in self.measurement_fns:
+                    self.result_dict[(fn.name, m.name)].append(
+                        fn(self.data, massign, mcenters)
+                    )
         
     def run(self, min_rules : int, max_rules : int):
         """
@@ -210,7 +196,7 @@ class RulesExperiment(Experiment):
         for m in self.module_list:
             m.reset()
             
-        return pd.DataFrame(self.cost_dict)
+        return pd.DataFrame(self.result_dict)
     
     def save_results(self, path, identifier = ''):
         """
@@ -222,7 +208,7 @@ class RulesExperiment(Experiment):
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
         fname = os.path.join(path, 'rules_cost' + str(identifier) + '.csv')
-        cost_df = pd.DataFrame(self.cost_dict)
+        cost_df = pd.DataFrame(self.result_dict)
         cost_df.to_csv(fname)
         
         
@@ -241,12 +227,8 @@ class DepthExperiment(Experiment):
         
         module_list (List[Any]): List of modules to use and record results for.
         
-        cost_fns (Dict[str, Callable]): Functions to use to calculate cost. Formatted as 
-            a dictionary such as {'cost_function_name': cost_function}.
-        
-        cost_fn_params (Dict[str, Dict[str, Any]]): Parameters to pass to cost function. Formatted 
-            as a dictionary such as {'cost_function_name': {'param1': value1, 'param2': value2}}.
-            Names should be the same as those in cost_fns.
+        measurement_fns (List[Callable]): List of MeasurementFunction objects
+            used to compute results.
         
         random_seed (int, optional): Random seed for experiments. Defaults to None.
         
@@ -257,8 +239,7 @@ class DepthExperiment(Experiment):
         data,
         baseline_list,
         module_list,
-        cost_fns,
-        cost_fn_params,
+        measurement_fns,
         random_seed = None,
         verbose = True
     ):
@@ -266,8 +247,7 @@ class DepthExperiment(Experiment):
             data,
             baseline_list,
             module_list,
-            cost_fns,
-            cost_fn_params,
+            measurement_fns,
             random_seed,
             verbose
         )
@@ -282,10 +262,9 @@ class DepthExperiment(Experiment):
         """
         for b in self.baseline_list:
             bassign, bcenters = b.assign(self.data)
-            for k in self.cost_fns.keys():
-                cost_fn = self.cost_fns[k]
-                self.cost_dict[(k, b.name)] = [
-                    cost_fn(self.data, bassign, bcenters, **self.cost_fn_params[k])
+            for fn in self.measurement_fns:
+                self.result_dict[(fn.name, b.name)] = [
+                    fn(self.data, bassign, bcenters)
                 ] * len(n_depth_list)
         
     def run_modules(self, n_depth_list : List[int]):
@@ -300,10 +279,10 @@ class DepthExperiment(Experiment):
                 print(f"Running for depth {i}.")
             for m in self.module_list:
                 massign, mcenters = m.step_depth(self.data)
-                for k in self.cost_fns.keys():
-                    cost_fn = self.cost_fns[k]
-                    self.cost_dict[(k, m.name)].append(
-                        cost_fn(self.data, massign, mcenters, **self.cost_fn_params[k])
+                for k in self.measurement_fns.keys():
+                    measure_fn = self.measurement_fns[k]
+                    self.result_dict[(k, m.name)].append(
+                        measure_fn(self.data, massign, mcenters, **self.measurement_fn_params[k])
                     )
             
     def run(self, min_depth : int, max_depth : int):
@@ -326,7 +305,7 @@ class DepthExperiment(Experiment):
         for m in self.module_list:
             m.reset()
             
-        return pd.DataFrame(self.cost_dict)
+        return pd.DataFrame(self.result_dict)
         
     
     def save_results(self, path : str, identifier : str = ''):
@@ -339,5 +318,5 @@ class DepthExperiment(Experiment):
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
         fname = os.path.join(path, 'depth_cost' + str(identifier) + '.csv')
-        cost_df = pd.DataFrame(self.cost_dict)
+        cost_df = pd.DataFrame(self.result_dict)
         cost_df.to_csv(fname)

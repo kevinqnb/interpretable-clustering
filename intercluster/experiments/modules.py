@@ -199,6 +199,7 @@ class ExkmcMod(Module):
         assignment = labels_to_assignment(labels)
         centers = tree.all_centers
         self.n_rules += 1
+        self.n_depth = tree._max_depth()
         return assignment, centers
     
     
@@ -472,7 +473,7 @@ class ForestMod(Module):
             )
             self.forest.fit(X,  y)
             
-            data_to_rules_labels = self.forest.predict(X, leaf_labels = True)
+            data_to_rules_labels = self.forest.predict(X, rule_labels = True)
             self.points_to_rules = labels_to_assignment(data_to_rules_labels,
                                                         k = len(self.forest.decision_set))
             self.data_labels = [[l] for l in y]
@@ -481,6 +482,7 @@ class ForestMod(Module):
             self.rule_assignment = labels_to_assignment(self.rule_labels,
                                                         k = self.clustering.n_clusters)
             self.rule_labels = self.forest.decision_set_labels
+            self.n_depth = self.forest.depth
             
         assignment,centers = self.assign(X)
         self.n_rules += 1
