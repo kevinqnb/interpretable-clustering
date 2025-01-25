@@ -1,5 +1,4 @@
-import numpy as np
-import numpy.typing as npt
+from numpy.typing import NDArray
 from typing import List
 
 class Node():
@@ -77,14 +76,14 @@ class Node():
         self,
         left_child,
         right_child,
-        features : npt.NDArray,
-        weights : npt.NDArray,
+        features : NDArray,
+        weights : NDArray,
         threshold : float,
         cost : float, 
-        indices : npt.NDArray,
+        indices : NDArray,
         depth : int,
         feature_labels : List[str],
-        centroid_indices : npt.NDArray = None
+        centroid_indices : NDArray = None
     ):
         """
         Initializes this as a normal node in the tree.
@@ -129,9 +128,9 @@ class Node():
         self,
         label : int,
         cost : float,
-        indices : npt.NDArray,
+        indices : NDArray,
         depth : int,
-        centroid_indices : npt.NDArray = None
+        centroid_indices : NDArray = None
     ):
         """
         Initializes this to be a leaf node in the tree.

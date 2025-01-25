@@ -1,4 +1,3 @@
-import numpy as np
 from numpy.typing import NDArray
 from intercluster.utils import kmeans_cost, overlap, coverage
 

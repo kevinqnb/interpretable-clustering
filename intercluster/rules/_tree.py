@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 import heapq
-import numpy.typing as npt
+from numpy.typing import NDArray
 from typing import List, Callable
 from intercluster.utils import mode
 from ._node import Node
@@ -68,8 +68,8 @@ class Tree():
 
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Initiates and builds a decision tree around a given dataset. 
@@ -173,7 +173,7 @@ class Tree():
     def branch(
         self,
         node : Node,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float]
+        split_info : Tuple[NDArray, NDArray, float]
     ):
         """
         Splits a leaf node into two new leaf nodes.
@@ -270,7 +270,7 @@ class Tree():
             self.branch(node, split_info)
 
         
-    def predict(self, X : npt.NDArray) -> npt.NDArray:
+    def predict(self, X : NDArray) -> NDArray:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
         find where data points fall into leaf nodes.

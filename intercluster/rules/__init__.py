@@ -6,14 +6,6 @@ from ._tree import (
     Tree
 )
 
-from .unsupervised_tree import (
-    UnsupervisedTree,
-)
-
-from .centroid_tree import (
-    CentroidTree,
-)
-
 from .imm_tree import (
     ImmTree,
     DiffImmTree,
@@ -31,11 +23,6 @@ from .svm_tree import (
 
 from .decision_forest import (
     DecisionForest,
-)
-
-from .prune import (
-    distorted_greedy,
-    prune_with_grid_search,
 )
 
 from .utils import (

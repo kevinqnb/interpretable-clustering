@@ -1,5 +1,5 @@
 import numpy as np
-import numpy.typing as npt
+from numpy.typing import NDArray
 from ._splitter import AxisAlignedSplitter
 from ..utils import entropy
 
@@ -20,13 +20,13 @@ class InformationGainSplitter(AxisAlignedSplitter):
         
     def cost(
         self,
-        indices : npt.NDArray
+        indices : NDArray
     ) -> float:
         """
         Given a set of points X, computes the score as the entropy of the labels.
         
         Args:                
-            indices (npt.NDArray, optional): Indices of points to compute score with.
+            indices (NDArray, optional): Indices of points to compute score with.
                 
         Returns:
             (float): Score of the given data.
@@ -40,8 +40,8 @@ class InformationGainSplitter(AxisAlignedSplitter):
         
     def gain(
         self,
-        left_indices : npt.NDArray,
-        right_indices : npt.NDArray,
+        left_indices : NDArray,
+        right_indices : NDArray,
         parent_cost : float = None
     ) -> float:
         """

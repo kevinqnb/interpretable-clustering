@@ -1,7 +1,7 @@
 import numpy as np
-import numpy.typing as npt
+from numpy.typing import NDArray
 from typing import List
-from intercluster.splitters import SVMSplitter
+from .splitters import SVMSplitter
 from ._node import Node
 from ._tree import Tree
     
@@ -66,8 +66,8 @@ class SVMTree(Tree):
         
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray
+        X : NDArray,
+        y : NDArray
     ):
         """
         Initiates and builds a decision tree around a given dataset. 

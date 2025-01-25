@@ -1,7 +1,9 @@
+import numpy as np
+from numpy.typing import NDArray
 from typing import List, Dict, Any, Tuple
+from ._node import Node
 from ._decision_set import DecisionSet
-from .utils import *
-from ..utils import *
+from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_path
 
 class DecisionForest(DecisionSet):
     """

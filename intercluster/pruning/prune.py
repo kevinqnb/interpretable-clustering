@@ -1,9 +1,8 @@
 import numpy as np
-import copy
-from sklearn.cluster import KMeans
 from joblib import Parallel, delayed
 from typing import Dict, Callable, List
-from ..utils import *
+from numpy.typing import NDArray
+from intercluster.utils import flatten_labels, label_covers_dict
 
 
 ####################################################################################################
@@ -14,8 +13,8 @@ def distorted_greedy(
     lambda_val : float,
     data_labels : List[List[int]],
     rule_labels : List[List[int]],
-    rule_covers_dict : Dict[int, np.ndarray[np.int64]]
-    ) -> np.ndarray[np.int64]:
+    rule_covers_dict : Dict[int, NDArray[np.int64]]
+    ) -> NDArray[np.int64]:
     
     """
     Implements a distorted greedy algorithm for rule selection. Uses an 
@@ -45,7 +44,7 @@ def distorted_greedy(
             values are the sets of data point indices covered by the rule.
             
     Returns:
-        S (np.ndarray): An array of integers representing the selected rules.
+        S (NDArray): An array of integers representing the selected rules.
     """
     #unique_labels = np.unique(flattened_rule_labels)
     #points_to_cover = {l: set(np.where(data_labels == l)[0]) for l in unique_labels}
@@ -99,13 +98,13 @@ def distorted_greedy(
 
 def prune_with_grid_search(
     q : int,
-    data_labels : np.ndarray[np.int64],
-    rule_labels : np.ndarray[np.int64],
-    rule_covers_dict : Dict[int, np.ndarray[np.int64]],
+    data_labels : NDArray[np.int64],
+    rule_labels : NDArray[np.int64],
+    rule_covers_dict : Dict[int, NDArray[np.int64]],
     objective : Callable,
-    search_range : np.ndarray[np.float64],
+    search_range : NDArray[np.float64],
     coverage_threshold : float
-    ) -> np.ndarray[np.int64]:
+    ) -> NDArray[np.int64]:
     
     """
     Performs a grid search over normalization values for
@@ -114,22 +113,22 @@ def prune_with_grid_search(
     Args:
         q (int): The number of rules to select.
         
-        data_labels (np.ndarray): An array of integers representing the cluster labels of the data.
+        data_labels (NDArray): An array of integers representing the cluster labels of the data.
         
-        rule_labels (np.ndarray): An array of integers representing the cluster labels of the rules.
+        rule_labels (NDArray): An array of integers representing the cluster labels of the rules.
         
         rule_covers_dict (dict[int: set]): A dictionary where keys are integers (rule labels) and 
             values are the sets of data point indices covered by the rule.
             
         objective (callable): A function that takes the selected rules and returns a score.
         
-        search_range (np.ndarray): A range of lambda values to search over.
+        search_range (NDArray): A range of lambda values to search over.
         
         coverage_threshold (float): The minimum number of data points that must
             be covered by the selected rules.
             
     Returns:
-        S (np.ndarray): An array of integers representing the selected rules.
+        S (NDArray): An array of integers representing the selected rules.
     """
     
     distorted_greedy(q, 1, data_labels, rule_labels, rule_covers_dict) 

@@ -1,5 +1,4 @@
 import numpy as np
-from itertools import combinations
 from collections.abc import Iterable
 from typing import List, Dict, Set
 from numpy.typing import NDArray
@@ -194,12 +193,16 @@ def overlap(
     Returns:
         overlap (float): Fraction of overlapping cluster assignments for each point.
     """
+    '''
     n,k = assignment.shape
     overlap = 0
     class_combinations = list(combinations(range(k), 2))
     for (i,j) in class_combinations:
         overlap += np.sum(assignment[:,i] * assignment[:,j])/n
     return overlap / len(class_combinations)
+    '''
+    covered_mask = np.sum(assignment, axis = 1) > 0
+    return np.mean(np.sum(assignment[covered_mask, :], axis = 1))
 
 
 ####################################################################################################
@@ -383,179 +386,4 @@ def label_covers_dict(
     return covers_dict
 
 
-####################################################################################################
-
-def traverse(node, path=None):
-    """
-    Traverses a binary tree in a depth-first manner, yielding nodes as they are visited.
-    
-    Args:
-        node (Node): Root node of the tree.
-    
-    Yields:
-        path (List[(Node, str)]): List of node objects visited on the current path.
-            If the path followed a left child, the corresponding string is 'left'.
-            Otherwise, the string is 'right'.
-    """
-    if path is None:
-        path = []
-    
-    path_update = path + [node]
-    
-    yield path_update
-    
-    if node.left_child is not None:
-        left_path = path + [(node, 'left')]
-        yield from traverse(node.left_child, left_path)
-    if node.right_child is not None:
-        right_path = path + [(node, 'right')]
-        yield from traverse(node.right_child, right_path)
-
-####################################################################################################
-
-def find_leaves(root):
-    """
-    Given the root of a tree, finds all paths to leaf nodes in the tree.
-    
-    Args:
-        root (Node): Root of the tree.
-    
-    Returns:
-        leaves (dict[int: List[Node]]): Dictionary where the key is the label of the leaf node,
-            and the value is a list of nodes along the path from root to leaf (inclusive). 
-    """
-    
-    leaves = {}
-    
-    for path in traverse(root):
-        last_node = path[-1]
-        if last_node.type == 'leaf':
-            leaves[last_node.label] = path
-            
-    return leaves
-
-
-####################################################################################################
-
-
-def rule_grid(X, g):
-    """
-    Builds a g x g grid of rules around a given dataset. 
-
-    Args:
-        data (np.ndarray): Input (n x m) dataset. 
-        g (int): _description_
-
-    Returns:
-        grid (List[Rule]): List of Rule objects describing the grid.
-    """
-    # Step 1: Find the min and max of the dataset along both dimensions
-    x_min, x_max = np.min(X[:, 0]), np.max(X[:, 0])
-    y_min, y_max = np.min(X[:, 1]), np.max(X[:, 1])
-
-    # Step 2: Calculate the step size for both dimensions
-    x_step = (x_max - x_min) / g
-    y_step = (y_max - y_min) / g
-
-    # Step 3: Create the grid cells with logical conditions
-    grid_cells = []
-
-    for i in range(g):
-        for j in range(g):
-            x_start = x_min + i * x_step
-            x_end = x_start + x_step
-            y_start = y_min + j * y_step
-            y_end = y_start + y_step
-            
-            # Logical conditions defining the current cell
-            ineq = ['>', '<', '>', '<']
-            if i == 0:
-                ineq[0] = '>='
-            elif i == g - 1:
-                ineq[1] = '<='
-            if j == 0:
-                ineq[2] = '>='
-            elif j == g - 1:
-                ineq[3] = '<='
-            
-            cell_conditions = [
-                Condition(0, ineq[0], x_start),
-                Condition(0, ineq[1], x_end),
-                Condition(1, ineq[2], y_start),
-                Condition(1, ineq[3], y_end)
-            ]
-            
-            grid_cells.append(Rule([Term(cell_conditions)]))
-
-    return grid_cells
-
-####################################################################################################
-
-def remove_rows_cols(matrix, indices):
-    """
-    Given a data matrix, and a list of integer valued indices,
-    removes the rows and columns corresponding to the indices.
-
-    Args:
-        matrix (np.ndarray): (n x m) Dataset in the form of a numpy array.
-        indices (_type_): List of indices where each index i corresponds to both a row 
-            and a column to be removed from the matrix.
-
-    Returns:
-        (np.ndarray): Modified dataset with rows/columns removed.
-    """
-    
-    indices = sorted(indices, reverse=True)
-    for idx in indices:
-        # Remove the specified row
-        matrix = np.delete(matrix, idx, axis=0)
-        # Remove the specified column
-        matrix = np.delete(matrix, idx, axis=1)
-    return matrix
-
-####################################################################################################
-
-def add_row_col(matrix, new_row, new_col):
-    """
-    Given a data matrix, add a new row and a new column.
-    The new column/row is added as the last column/row in the matrix.
-
-    Args:
-        matrix (np.ndarray): (n x m) Dataset in the form of a numpy array.
-        new_row (np.ndarray): Length m array to be added as a new row.
-        new_col (np.ndarray): Length n + 1 array to be added as a new column.
-
-    Returns:
-        (np.ndarray): Modified (n + 1 x m + 1) dataset with rows/columns added.
-    """
-    # Ensure the new row is a 1D array of the correct length
-    new_row = np.array(new_row)
-    assert new_row.shape[0] == matrix.shape[1], "New row length must match number of columns in the matrix"
-    
-    # Append the new row to the matrix
-    matrix = np.vstack([matrix, new_row])
-    
-    # Ensure the new column is a 1D array of the correct length
-    new_col = np.array(new_col)
-    assert new_col.shape[0] == matrix.shape[0], "New column length must match number of rows in the updated matrix"
-    
-    # Append the new column to the matrix
-    matrix = np.hstack([matrix, new_col.reshape(-1, 1)])
-    
-    return matrix
-    
-####################################################################################################
-
-
-def mode(x : NDArray) -> float:
-    """
-    Returns the mode of a list of values.
-    
-    Args:
-        x (np.ndarray): List of values.
-    """
-    unique, counts = np.unique(x, return_counts=True)
-    return unique[np.argmax(counts)]
-
-
-####################################################################################################
+###################################################################################################

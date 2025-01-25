@@ -1,2 +1,0 @@
-from .rule_kmeans import KMeansRuleClustering
-from .rule_kmedians import KMediansRuleClustering

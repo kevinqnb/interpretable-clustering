@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.svm import LinearSVC
-import numpy.typing as npt
-from typing import List, Tuple
+from numpy.typing import NDArray
+from typing import Tuple
 from ._splitter import Splitter
 from ..utils import entropy
 
@@ -17,13 +17,13 @@ class SVMSplitter(Splitter):
         
     def cost(
         self,
-        indices : npt.NDArray
+        indices : NDArray
     ) -> float:
         """
         Given a set of points X, computes the score as the entropy of the labels.
         
         Args:                
-            indices (npt.NDArray, optional): Indices of points to compute score with.
+            indices (NDArray, optional): Indices of points to compute score with.
                 
         Returns:
             (float): Score of the given data.
@@ -37,8 +37,8 @@ class SVMSplitter(Splitter):
         
     def gain(
         self,
-        left_indices : npt.NDArray,
-        right_indices : npt.NDArray,
+        left_indices : NDArray,
+        right_indices : NDArray,
         parent_cost : float = None
     ) -> float:
         """
@@ -71,8 +71,8 @@ class SVMSplitter(Splitter):
     
     def split(
         self,
-        indices : npt.NDArray
-    ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
+        indices : NDArray
+    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
         """
         Computes the best split of a leaf node.
         
@@ -95,7 +95,7 @@ class SVMSplitter(Splitter):
             svm = LinearSVC(max_iter = 10000).fit(X_, y_)
             features = np.arange(d)
             weights = np.ndarray.flatten(svm.coef_)
-            threshold = -svm.intercept_
+            threshold = -svm.intercept_[0]
             split = (features, weights, threshold)
             
             left_indices, right_indices = self.get_split_indices(indices, split)

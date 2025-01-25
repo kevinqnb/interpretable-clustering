@@ -1,8 +1,8 @@
 import numpy as np
-import numpy.typing as npt
+from numpy.typing import NDArray
 from typing import Tuple
+from intercluster.utils import center_dists
 from ._splitter import Splitter
-from ..utils import center_dists
  
     
 class ImmSplitter(Splitter):
@@ -18,13 +18,13 @@ class ImmSplitter(Splitter):
     """
     def __init__(
         self,
-        centers : npt.NDArray, 
+        centers : NDArray, 
         norm : int = 2,
         min_points_leaf : int = 1
     ):
         """
         Args:
-            centers (npt.NDArray): Array of centroid representatives.
+            centers (NDArray): Array of centroid representatives.
             
             norm (int, optional): Norm to use for computing distances. 
                 Takes values 1 or 2. Defaults to 2.
@@ -37,16 +37,16 @@ class ImmSplitter(Splitter):
         
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Fits the splitter to a dataset X. 
         
         Args:
-            X (npt.NDArray): Input dataset.
+            X (NDArray): Input dataset.
             
-            y (npt.NDArray, optional): Dummy variable, defaults to None
+            y (NDArray, optional): Dummy variable, defaults to None
                 in which case the labels are manually set within the
                 following method by assigning each data point to its closest center.
         """
@@ -60,20 +60,20 @@ class ImmSplitter(Splitter):
         
     def cost(
         self,
-        indices : npt.NDArray,
-        centroid_indices : npt.NDArray,
-        parent_centroid_indices : npt.NDArray
+        indices : NDArray,
+        centroid_indices : NDArray,
+        parent_centroid_indices : NDArray
     ) -> float:
         """
         Given a set of points X, computes the cost as the number of points separated from 
         their assigned cluster center.
         
         Args:                
-            indices (npt.NDArray, optional): Indices of points to compute cost with.
+            indices (NDArray, optional): Indices of points to compute cost with.
             
-            centroid_indices (npt.NDArray): Indices of the leaf node's cluster centers.
+            centroid_indices (NDArray): Indices of the leaf node's cluster centers.
             
-            parent_centroid_indices (npt.NDArray): Indices of the parent node's cluster centers.
+            parent_centroid_indices (NDArray): Indices of the parent node's cluster centers.
                 
         Returns:
             (float): cost of the given data.
@@ -91,10 +91,10 @@ class ImmSplitter(Splitter):
         
     def gain(
         self,
-        left_indices : npt.NDArray,
-        right_indices : npt.NDArray,
-        left_centroid_indices : npt.NDArray,
-        right_centroid_indices : npt.NDArray
+        left_indices : NDArray,
+        right_indices : NDArray,
+        left_centroid_indices : NDArray,
+        right_centroid_indices : NDArray
     ) -> float:
         """
         Computes the gain associated with a split.
@@ -126,10 +126,10 @@ class ImmSplitter(Splitter):
     
     def get_split_indices(
         self,
-        indices : npt.NDArray,
-        centroid_indices : npt.NDArray,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float]
-    ) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
+        indices : NDArray,
+        centroid_indices : NDArray,
+        split_info : Tuple[NDArray, NDArray, float]
+    ) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
         """
         Given features, weights, and threshold, returns the indices of data points 
         which fall to the left and right branches respectively.
@@ -172,9 +172,9 @@ class ImmSplitter(Splitter):
     
     def split(
         self,
-        indices : npt.NDArray,
-        centroid_indices : npt.NDArray
-    ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
+        indices : NDArray,
+        centroid_indices : NDArray
+    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
         """
         Computes the best split of a leaf node.
         

@@ -1,12 +1,12 @@
 import numpy as np
 import heapq
 from ExKMC.Tree import Tree as ExTree
-from typing import List, Callable
-import numpy.typing as npt
-from intercluster.splitters import ImmSplitter, DummySplitter
+from typing import List, Tuple, Callable
+from numpy.typing import NDArray
+from .splitters import ImmSplitter, DummySplitter
 from ._node import Node
 from ._tree import Tree
-from .utils import *
+from .utils import get_decision_paths, satisfies_path
 
 
 class ImmTree(Tree):
@@ -55,7 +55,7 @@ class ImmTree(Tree):
     
     def __init__(
         self,
-        centers : npt.NDArray = None,
+        centers : NDArray = None,
         norm : int = 2,
         max_leaf_nodes : int = None,
         max_depth : int = None,
@@ -79,8 +79,8 @@ class ImmTree(Tree):
         
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Initiates and builds a decision tree around a given dataset. 
@@ -167,7 +167,7 @@ class ImmTree(Tree):
     def branch(
         self,
         node : Node,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float]
+        split_info : Tuple[NDArray, NDArray, float]
     ):
         """
         Splits a leaf node into two new leaf nodes.
@@ -339,8 +339,8 @@ class DiffImmTree(ImmTree):
     
     def __init__(
         self,
-        target_centers : npt.NDArray = None,
-        centers : npt.NDArray = None,
+        target_centers : NDArray = None,
+        centers : NDArray = None,
         norm : int = 2,
         max_leaf_nodes : int = None,
         max_depth : int = None,
@@ -443,8 +443,8 @@ class ExkmcTree(Tree):
     
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Fits and Exkmc tree to a dataset X. 
@@ -485,8 +485,8 @@ class ExkmcTree(Tree):
         
     def grow(
         self,
-        X : npt.NDArray,
-        indices : npt.NDArray,
+        X : NDArray,
+        indices : NDArray,
         exkmc_node : Callable,
         node_obj: Node,
         depth : int
@@ -557,9 +557,9 @@ class ExkmcTree(Tree):
             
     def predict(
         self,
-        X : npt.NDArray,
+        X : NDArray,
         leaf_labels : bool = True
-    ) -> npt.NDArray:
+    ) -> NDArray:
         """
         Predicts the labels of a dataset X.
         

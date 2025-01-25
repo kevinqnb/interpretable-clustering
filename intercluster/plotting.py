@@ -2,17 +2,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import graphviz as gv
 from IPython.display import Image
+from typing import Callable, List, Dict
+from numpy.typing import NDArray
+from intercluster.rules import Node
+from .utils import labels_to_assignment
+
 
 ####################################################################################################
 
 
-def plot_decision_boundaries(model, X, ax = None, resolution = 100):
+def plot_decision_boundaries(
+    model : Callable,
+    X : NDArray,
+    ax : Callable = None,
+    resolution : int = 100
+):
     """
     Plots the decision boundaries of a given model.
 
     Args:
-        model (Object): Object which requires a predict() method.
-        X (_type_): Dataset fitted to the model. 
+        model (Callable): Prediction object which should have a predict() method.
+        X (NDArray): Dataset fitted to the model. 
         ax (matplotlib axes, optional): Axes for plotting. 
         resolution (int, optional): Number of points on the meshgrid, controls the 
             resolution of the contour lines. Defaults to 100.
@@ -36,10 +46,18 @@ def plot_decision_boundaries(model, X, ax = None, resolution = 100):
     else:
         ax.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
                    alpha = 0.8, linewidths = 1.5)
+        
 
 ####################################################################################################
 
-def plot_multiclass_decision_boundaries(model, X, ax = None, resolution = 100, cmap = None):
+
+def plot_multiclass_decision_boundaries(
+    model : Callable,
+    X : NDArray,
+    ax : Callable = None,
+    resolution : int = 100,
+    cmap : Callable = None
+):
     """
     Plots the decision boundaries of a given model. In contrast to 
     plot_decision_boundaries, this function is specifically designed to handle 
@@ -48,11 +66,12 @@ def plot_multiclass_decision_boundaries(model, X, ax = None, resolution = 100, c
     points and k is the number of classes), indicating the class membership of a point. 
 
     Args:
-        model (Object): Object which requires a predict() method.
-        X (_type_): Dataset fitted to the model. 
+        model (Callable): Prediction object which should have a predict() method.
+        X (NDArray): Dataset fitted to the model. 
         ax (matplotlib axes, optional): Axes for plotting. 
         resolution (int, optional): Number of points on the meshgrid, controls the 
             resolution of the contour lines. Defaults to 100.
+        cmap (Callable, optional): Colormap to use with matplotlib.
     """
     # Define the axis boundaries of the plot
     x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
@@ -81,17 +100,27 @@ def plot_multiclass_decision_boundaries(model, X, ax = None, resolution = 100, c
             c = cmap(i)
             ax.contour(xx, yy, Z_class, levels=[0.5], colors=[c], linestyles='dashed',
                     alpha=1, linewidths=4)
+            
 
 ####################################################################################################
 
-def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_labels=None, 
-                leaf_colors=None, newline=True, cost = True):
+
+def build_graph(
+    custom_node : Node,
+    graph : Callable = None,
+    parent_id : str = None,
+    node_id : str = "0",
+    feature_labels : List[str] = None, 
+    leaf_colors : Dict[int : str] = None,
+    newline : bool = True,
+    cost : bool = True
+):
     """
     Builds a graph representation of the custom_node tree using 
     graphviz.
     
     Args:
-        custom_node (Node): The root node of the tree.
+        custom_node (Node): Node object, which is the root node of the tree.
         graph (gv.Digraph, optional): The graph object to add nodes and edges to. Defaults to None.
         parent_id (str, optional): String identifier for parent. Defaults to None.
         node_id (str, optional): String identifier for the node. Defaults to "0".
@@ -100,6 +129,7 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
         leaf_colors (Dict[int:str], optional): Dictionary specifying colors for leaf nodes. 
             Defaults to None.
         newline (bool, optional): Whether to add newlines in the node labels. Defaults to True.
+        cost (bool, optional): Whether to display the cost in the leaf nodes. Defaults to True.
 
     Returns:
         gv.Digraph: The graph object with the tree structure.
@@ -119,9 +149,15 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
     if custom_node.type == 'internal':
         if feature_labels is None:
             if newline:
-                node_label += (f"Features {custom_node.features} \n Weights {custom_node.weights}\n \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (
+                    f"Features {custom_node.features} \n Weights {custom_node.weights}\n\u2264 
+                    {np.round(custom_node.threshold, 3)}"
+                )
             else:
-                node_label += (f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (
+                    f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264
+                    {np.round(custom_node.threshold, 3)}"
+                )
         else:
             if all(x == 1 for x in custom_node.weights):
                 sum = ' + \n'.join([f'{feature_labels[f]}' for f in custom_node.features])
@@ -158,20 +194,42 @@ def build_graph(custom_node, graph=None, parent_id=None, node_id="0", feature_la
     # Recursively add children
     if custom_node.type == 'internal':
         if custom_node.left_child is not None:
-            build_graph(custom_node.left_child, graph, parent_id=node_id, 
-                        node_id=str(int(node_id) * 2 + 1),
-                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline, cost = cost)
+            build_graph(
+                node = custom_node.left_child,
+                graph = graph,
+                parent_id = node_id, 
+                node_id = str(int(node_id) * 2 + 1),
+                feature_labels = feature_labels,
+                leaf_colors = leaf_colors,
+                newline = newline,
+                cost = cost
+            )
         if custom_node.right_child is not None:
-            build_graph(custom_node.right_child, graph, parent_id=node_id, 
-                        node_id=str(int(node_id) * 2 + 2),
-                        feature_labels=feature_labels, leaf_colors=leaf_colors, newline=newline, cost = cost)
+            build_graph(
+                node = custom_node.right_child,
+                graph = graph,
+                parent_id = node_id, 
+                node_id = str(int(node_id) * 2 + 2),
+                feature_labels = feature_labels,
+                leaf_colors = leaf_colors,
+                newline = newline,
+                cost = cost
+            )
     
     return graph
 
+
 ####################################################################################################
 
-def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_colors=None,
-                   newline=True, cost = True):
+
+def visualize_tree(
+    custom_root : Node,
+    output_file : str = 'tree',
+    feature_labels : List[str] = None,
+    leaf_colors : Dict[int, str] = None,
+    newline : bool = True,
+    cost : bool = True
+):
     """
     Wrapper function for visualizing a Tree object by building a graphviz decision tree.
 
@@ -188,6 +246,10 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
             Each leaf Node object has a integer label attribute which can be used to 
             access the dictionary. Each item in the dictionary should be a 
             RGBA hexadecimal string. Defaults to None.
+            
+        newline (bool, optional): Whether to add newlines in the node labels. Defaults to True.
+        
+        cost (bool, optional): Whether to display the cost in the leaf nodes. Defaults to True.
 
     Returns:
         IPython.display.Image: The image object for display in Jupyter notebooks.
@@ -198,16 +260,34 @@ def visualize_tree(custom_root, output_file='tree', feature_labels=None, leaf_co
     graph.render(output_file, format='png', cleanup=True)
     return Image(output_file + '.png')
 
+
 ####################################################################################################
 
+
 def plot_decision_set(
-    D,
-    feature_labels,
-    rule_labels,
-    cluster_colors,
-    data_scaler = None,
-    filename = None
+    D : List[List[Node]],
+    feature_labels : List[str],
+    rule_labels : List[List[int]],
+    cluster_colors : Dict[int, str],
+    data_scaler : Callable = None,
+    filename : str = None
 ):
+    """
+    Plots a decision set as a list of rules.
+    
+    Args:
+        D (List[List[Node]]): A list of rules, where each rule is a list of Node objects.
+        
+        feature_labels (List[str]): List of feature labels used for display.
+        
+        rule_labels (List[List[int]]): List of rule labels for each rule.
+        
+        cluster_colors (Dict[int:str]): Dictionary specifying colors for leaf nodes.
+        
+        data_scaler (Callable, optional): Scaler object used to scale the data. Defaults to None.
+        
+        filename (str, optional): File to save the resulting image. Defaults to None
+    """
     fig,ax = plt.subplots(dpi = 300)
     ax.axis('off')
     
@@ -215,7 +295,19 @@ def plot_decision_set(
         rule_string = ''
         for j, condition in enumerate(rule[:-1]):
             node = condition[0]
-            rule_string += '(' + str(feature_labels[node.features[0]])
+            rule_string += '('
+            
+            for l,f in enumerate(node.features):
+                if l > 0:
+                    rule_string += ' + '
+                weight_l = np.round(node.weights[l], 2)
+                if weight_l != 1:
+                    rule_string += str(weight_l) + ' * '
+                rule_string += str(feature_labels[f])
+                
+            #str(feature_labels[node.features[0]])
+            #rule_string += '(' + str(feature_labels[node.features[0]])
+            
             if condition[1] == 'left':
                 rule_string += r' $\leq$ '
             else:
@@ -237,10 +329,18 @@ def plot_decision_set(
                     rule_string += r' $\&$ '
         
         text_color = cluster_colors[rule_labels[i]]
-        ax.text(s = rule_string, x = 0, y = 2*(len(D) - i)/len(D), color = text_color, alpha = 1,  fontweight = 'extra bold')
+        ax.text(
+            s = rule_string,
+            x = 0,
+            y = 2*(len(D) - i)/len(D),
+            color = text_color,
+            alpha = 1,
+            fontweight = 'extra bold'
+        )
         
     if filename is not None:
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
     plt.show()
+    
 
 ####################################################################################################

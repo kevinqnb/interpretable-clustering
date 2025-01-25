@@ -1,12 +1,12 @@
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from typing import List
-import numpy.typing as npt
-from intercluster.splitters import InformationGainSplitter, DummySplitter
+from numpy.typing import NDArray
 from intercluster.utils import mode
+from .splitters import InformationGainSplitter, DummySplitter
 from ._node import Node
 from ._tree import Tree
-from .utils import *
+from .utils import traverse, get_decision_paths, satisfies_path
 
 
 class ID3Tree(Tree):
@@ -121,8 +121,8 @@ class SklearnTree(Tree):
             
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Fits a Sklearn tree to a dataset X and labels y.
@@ -171,7 +171,7 @@ class SklearnTree(Tree):
         
     def grow(
         self,
-        indices : npt.NDArray,
+        indices : NDArray,
         sklearn_node : int,
         node_obj : Node, 
         depth : int
@@ -248,9 +248,9 @@ class SklearnTree(Tree):
             
     def predict(
         self,
-        X : npt.NDArray,
+        X : NDArray,
         leaf_labels : bool = True
-    ) -> npt.NDArray:
+    ) -> NDArray:
         """
         Predicts the labels of a dataset X.
         
@@ -276,7 +276,7 @@ class SklearnTree(Tree):
             return self.sklearn_tree.predict(X)
         
     
-    def get_leaves(self, y : npt.NDArray = None, label : int = None) -> List[Node]:
+    def get_leaves(self, y : NDArray = None, label : int = None) -> List[Node]:
         """
         Returns the leaf nodes of the tree. If an array y of training data labels AND a 
         specific label are provided, only the leaf nodes with that specified label are returned.

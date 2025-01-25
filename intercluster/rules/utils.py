@@ -1,8 +1,8 @@
 import numpy as np
-from typing import List, Any, Tuple
-import numpy.typing as npt
+from typing import List, Tuple
+from numpy.typing import NDArray
+from intercluster.utils import mode
 from ._node import Node
-from ..utils import mode
 
 
 ####################################################################################################
@@ -113,8 +113,8 @@ def get_decision_paths(
 
 def get_decision_paths_with_labels(
     root : Node,
-    y : npt.NDArray,
-    labels : npt.NDArray,
+    y : NDArray,
+    labels : NDArray,
 ) -> Tuple[List[List[Tuple[Node, str]]], List[List[int]]]:
     """
     Given the root of a tree, finds all decision paths 

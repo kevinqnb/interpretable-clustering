@@ -1,11 +1,8 @@
 import os
-import numpy as np
 import pandas as pd
-from typing import Tuple, List, Dict, Callable, Any
+from typing import List, Callable, Any
 from numpy.typing import NDArray
-from intercluster.clustering import *
 from intercluster.rules import *
-from intercluster import *
 from .modules import *
 
 ####################################################################################################
@@ -213,110 +210,3 @@ class RulesExperiment(Experiment):
         
         
 ####################################################################################################
-
-        
-class DepthExperiment(Experiment):
-    """
-    Performs suite of experiments on an input dataset which measures clustering cost as the 
-    depth of the rules changes.
-    
-    Args:
-        data (np.ndarray): Input dataset.
-        
-        baseline_list (List[Any]): List of baseline modules to use and record results for. 
-        
-        module_list (List[Any]): List of modules to use and record results for.
-        
-        measurement_fns (List[Callable]): List of MeasurementFunction objects
-            used to compute results.
-        
-        random_seed (int, optional): Random seed for experiments. Defaults to None.
-        
-        verbose (bool, optional): Allows for printing of status. Defaults to True.
-    """
-    def __init__(
-        self, 
-        data,
-        baseline_list,
-        module_list,
-        measurement_fns,
-        random_seed = None,
-        verbose = True
-    ):
-        super().__init__(
-            data,
-            baseline_list,
-            module_list,
-            measurement_fns,
-            random_seed,
-            verbose
-        )
-            
-        
-    def run_baselines(self, n_depth_list : List[int]):
-        """
-        Runs the baseline modules.
-        
-        Args:
-            n_depth_list (List[int]): List with varying depths to run the module for.
-        """
-        for b in self.baseline_list:
-            bassign, bcenters = b.assign(self.data)
-            for fn in self.measurement_fns:
-                self.result_dict[(fn.name, b.name)] = [
-                    fn(self.data, bassign, bcenters)
-                ] * len(n_depth_list)
-        
-    def run_modules(self, n_depth_list : List[int]):
-        """
-        Runs the modules.
-        
-        Args:
-            n_depth_list (List[int]): List with varying depths to run the module for.
-        """
-        for i in n_depth_list:
-            if self.verbose:
-                print(f"Running for depth {i}.")
-            for m in self.module_list:
-                massign, mcenters = m.step_depth(self.data)
-                for k in self.measurement_fns.keys():
-                    measure_fn = self.measurement_fns[k]
-                    self.result_dict[(k, m.name)].append(
-                        measure_fn(self.data, massign, mcenters, **self.measurement_fn_params[k])
-                    )
-            
-    def run(self, min_depth : int, max_depth : int):
-        """
-        Runs the experiment.
-        
-        Args:
-            min_depth (int): Minimum depth to fit with.
-            
-            max_depth (int): Maximum depth to fit with.
-            
-        Returns:
-            cost_df (pd.DataFrame): DataFrame of the results.
-        """
-        n_depth_list = list(range(min_depth, max_depth + 1))
-        self.run_baselines(n_depth_list)
-        self.run_modules(n_depth_list)
-        
-        # reset the modules:
-        for m in self.module_list:
-            m.reset()
-            
-        return pd.DataFrame(self.result_dict)
-        
-    
-    def save_results(self, path : str, identifier : str = ''):
-        """
-        Saves the results of the experiment.
-        
-        Args:
-            path (str): File path to save the results to.
-            
-            identifier (str, optional): Unique identifier for the results. Defaults to blank.
-        """
-        fname = os.path.join(path, 'depth_cost' + str(identifier) + '.csv')
-        cost_df = pd.DataFrame(self.result_dict)
-        cost_df.to_csv(fname)

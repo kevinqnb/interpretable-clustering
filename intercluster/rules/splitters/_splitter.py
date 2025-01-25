@@ -1,6 +1,6 @@
 import numpy as np
-import numpy.typing as npt
-from typing import List, Tuple
+from numpy.typing import NDArray
+from typing import Tuple
 
 
 class Splitter:
@@ -14,23 +14,23 @@ class Splitter:
     
     def fit(
         self,
-        X : npt.NDArray,
-        y : npt.NDArray = None
+        X : NDArray,
+        y : NDArray = None
     ):
         """
         Fits the splitter to a dataset X. 
         
         Args:
-            X (npt.NDArray): Input dataset.
+            X (NDArray): Input dataset.
             
-            y (npt.NDArray, optional): Target labels. Defaults to None.
+            y (NDArray, optional): Target labels. Defaults to None.
         """
         self.X = X
         self.y = y
     
     def cost(
         self,
-        indices : npt.NDArray
+        indices : NDArray
     ) -> float:
         """
         Computes the cost associated with a leaf node.
@@ -46,8 +46,8 @@ class Splitter:
     
     def gain(
         self,
-        left_indices : npt.NDArray,
-        right_indices : npt.NDArray,
+        left_indices : NDArray,
+        right_indices : NDArray,
         parent_cost : float = None
     ) -> float:
         """
@@ -68,9 +68,9 @@ class Splitter:
         
     def get_split_indices(
         self,
-        indices : npt.NDArray,
-        split_info : Tuple[npt.NDArray, npt.NDArray, float]
-    ) -> Tuple[float, npt.NDArray, npt.NDArray]:
+        indices : NDArray,
+        split_info : Tuple[NDArray, NDArray, float]
+    ) -> Tuple[float, NDArray, NDArray]:
         """
         Given features, weights, and threshold, returns the indices of data points 
         which fall to the left and right branches respectively.
@@ -98,8 +98,8 @@ class Splitter:
     
     def split(
         self,
-        indices : npt.NDArray
-    ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
+        indices : NDArray
+    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
         """
         Computes the best split of a leaf node.
         
@@ -126,8 +126,8 @@ class AxisAlignedSplitter(Splitter):
         
     def gain(
         self,
-        left_indices : npt.NDArray,
-        right_indices : npt.NDArray,
+        left_indices : NDArray,
+        right_indices : NDArray,
         parent_cost : float = None
     ) -> float:
         """
@@ -158,8 +158,8 @@ class AxisAlignedSplitter(Splitter):
     
     def split(
         self,
-        indices : npt.NDArray
-    ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray, float]]:
+        indices : NDArray
+    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
         """
         Computes the best split of a leaf node.
         
