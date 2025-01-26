@@ -59,8 +59,6 @@ class DecisionForest(DecisionSet):
             # features in each pairing.')
             
         self.feature_pairings = feature_pairings
-        
-        self.covers = {}
         self.costs = {}
         self.depth = 0
         
@@ -229,7 +227,7 @@ class DecisionForest(DecisionSet):
         return rules, rule_labels
     
     
-    def get_covers(self, X : NDArray) -> Dict[int, List[int]]:
+    def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
         """
         Finds data points of X covered by each rule in the decision set.
         
@@ -237,10 +235,11 @@ class DecisionForest(DecisionSet):
             X (np.ndarray): Input dataset.
             
         Returns:
-            covers (dict[int, List[int]]): Dictionary with rules labels 
-            as keys and arrays of indices of X as values.
+            assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
+                if point i is covered by rule j and False otherwise.
         """
-        covers = {}
+        assignment = np.zeros((X.shape[0], len(self.decision_set)))
         for i, rule in enumerate(self.decision_set):
-            covers[i] = satisfies_path(X, rule)
-        return covers
+            data_points_satisfied = satisfies_path(X, rule)
+            assignment[data_points_satisfied, i] = True
+        return assignment

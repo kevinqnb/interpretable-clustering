@@ -111,7 +111,7 @@ def build_graph(
     parent_id : str = None,
     node_id : str = "0",
     feature_labels : List[str] = None, 
-    leaf_colors : Dict[int : str] = None,
+    leaf_colors : Dict[int, str] = None,
     newline : bool = True,
     cost : bool = True
 ):
@@ -150,12 +150,12 @@ def build_graph(
         if feature_labels is None:
             if newline:
                 node_label += (
-                    f"Features {custom_node.features} \n Weights {custom_node.weights}\n\u2264 
+                    f"Features {custom_node.features} \n Weights {custom_node.weights}\n\u2264 \
                     {np.round(custom_node.threshold, 3)}"
                 )
             else:
                 node_label += (
-                    f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264
+                    f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264 \
                     {np.round(custom_node.threshold, 3)}"
                 )
         else:

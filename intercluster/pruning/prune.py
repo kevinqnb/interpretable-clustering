@@ -1,8 +1,12 @@
 import numpy as np
 from joblib import Parallel, delayed
-from typing import Dict, Callable, List
+from typing import Callable, List
 from numpy.typing import NDArray
-from intercluster.utils import flatten_labels, label_covers_dict
+from intercluster.utils import (
+    labels_to_assignment,
+    flatten_labels,
+    assignment_to_dict
+)
 
 
 ####################################################################################################
@@ -13,7 +17,7 @@ def distorted_greedy(
     lambda_val : float,
     data_labels : List[List[int]],
     rule_labels : List[List[int]],
-    rule_covers_dict : Dict[int, NDArray[np.int64]]
+    data_to_rules_assignment : NDArray[np.bool_]
     ) -> NDArray[np.int64]:
     
     """
@@ -40,23 +44,24 @@ def distorted_greedy(
             represents the cluster labels of the rule with index i.
             NOTE: Each rule can only have a single label, so each inner list must be length 1.
         
-        rule_covers_dict (dict[int: set]): A dictionary where keys are integers (rule labels) and 
-            values are the sets of data point indices covered by the rule.
+        data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is True if 
+            data point i is assigned to rule j.
             
     Returns:
         S (NDArray): An array of integers representing the selected rules.
-    """
-    #unique_labels = np.unique(flattened_rule_labels)
-    #points_to_cover = {l: set(np.where(data_labels == l)[0]) for l in unique_labels}
-    
-    rule_list = list(rule_covers_dict.keys())
+    """    
+    rule_list = list(np.arange(data_to_rules_assignment.shape[1]))
     flattened_rule_labels = flatten_labels(rule_labels)
     if len(flattened_rule_labels) != len(rule_labels):
         raise ValueError("Each rule must have exactly one label.")
-    unique_rule_labels = np.unique(flattened_rule_labels)
     
-    points_to_cover = label_covers_dict(data_labels, unique_rule_labels)
-    covered_so_far = {l: set() for l in unique_rule_labels}
+    unique_cluster_labels = np.unique(flattened_rule_labels)
+    n_labels = len(unique_cluster_labels)
+    
+    rule_covers_dict = assignment_to_dict(data_to_rules_assignment)
+    points_to_cluster_assignment = labels_to_assignment(data_labels, n_labels = n_labels)
+    points_to_cover = assignment_to_dict(points_to_cluster_assignment)
+    covered_so_far = {l: set() for l in unique_cluster_labels}
     
     S = []
     for i in range(q):
@@ -98,12 +103,12 @@ def distorted_greedy(
 
 def prune_with_grid_search(
     q : int,
-    data_labels : NDArray[np.int64],
-    rule_labels : NDArray[np.int64],
-    rule_covers_dict : Dict[int, NDArray[np.int64]],
+    k : int,
+    data_labels : List[List[int]],
+    rule_labels : List[List[int]],
+    data_to_rules_assignment : NDArray[np.bool_],
     objective : Callable,
-    search_range : NDArray[np.float64],
-    coverage_threshold : float
+    search_range : NDArray[np.float64]
     ) -> NDArray[np.int64]:
     
     """
@@ -113,44 +118,44 @@ def prune_with_grid_search(
     Args:
         q (int): The number of rules to select.
         
+        k (int): The desired number of clusters.
+        
         data_labels (NDArray): An array of integers representing the cluster labels of the data.
         
         rule_labels (NDArray): An array of integers representing the cluster labels of the rules.
         
-        rule_covers_dict (dict[int: set]): A dictionary where keys are integers (rule labels) and 
-            values are the sets of data point indices covered by the rule.
+        data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is True if 
+            data point i is assigned to rule j.
             
         objective (callable): A function that takes the selected rules and returns a score.
         
         search_range (NDArray): A range of lambda values to search over.
-        
-        coverage_threshold (float): The minimum number of data points that must
-            be covered by the selected rules.
             
     Returns:
         S (NDArray): An array of integers representing the selected rules.
     """
-    
-    distorted_greedy(q, 1, data_labels, rule_labels, rule_covers_dict) 
+    # This is a dummy call -- used to catch any errors in the input. 
+    distorted_greedy(q, 1, data_labels, rule_labels, data_to_rules_assignment)
+    rule_to_cluster_assignment = labels_to_assignment(rule_labels, n_labels = k)
     
     def evaluate_lambda(lambda_val):
-        selected = distorted_greedy(q, lambda_val, data_labels, rule_labels, rule_covers_dict)
-        
-        covered = set()
-        for r in selected:
-            covered = covered.union(rule_covers_dict[r])
-            
-        if len(covered) < coverage_threshold:
-            return np.inf, lambda_val
-        
-        else:
-            return objective(selected), lambda_val
+        selected = distorted_greedy(
+            q,
+            lambda_val,
+            data_labels,
+            rule_labels,
+            data_to_rules_assignment
+        )
+        A = data_to_rules_assignment[:, selected]
+        B = rule_to_cluster_assignment[selected, :]
+        data_to_cluster_assignment = np.dot(A, B)
+        return objective(data_to_cluster_assignment), lambda_val
                
     search_results = Parallel(n_jobs=-1)(delayed(evaluate_lambda)(s) 
                                             for s in search_range)
     best_score, best_val = min(search_results, key=lambda x: x[0])
             
-    return distorted_greedy(q, best_val, data_labels, rule_labels, rule_covers_dict) 
+    return distorted_greedy(q, best_val, data_labels, rule_labels, data_to_rules_assignment) 
 
 
 ####################################################################################################

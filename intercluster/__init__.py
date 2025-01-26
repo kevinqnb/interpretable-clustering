@@ -1,6 +1,7 @@
 from .utils import (
     tiebreak,
     mode,
+    entropy,
     center_dists,
     kmeans_cost,
     kmedians_cost,
@@ -8,9 +9,10 @@ from .utils import (
     coverage,
     kmeans_plus_plus_initialization,
     labels_to_assignment,
-    assignment_to_labels,
     flatten_labels,
-    label_covers_dict,
+    assignment_to_labels,
+    assignment_to_dict,
+    num_assigned,
 )
 
 

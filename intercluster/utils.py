@@ -266,33 +266,37 @@ def kmeans_plus_plus_initialization(X, k, random_seed = None):
 ####################################################################################################
 
 
-def labels_to_assignment(labels, k = None):
+def labels_to_assignment(labels, n_labels = None):
     """
     Takes an input list of labels and returns its associated clustering matrix.
     NOTE: By convention, clusters are indexed [0,k) and items are indexed [0, n).
     
     Args:
         labels (List[int] OR List[List[int]]): List of integers where an entry at index i has value 
-            j if the item associated with index i is present within cluster j. Alternatively,
-            in a soft clustering where points have multiple labels, labels[i] is a list of 
+            j if the item associated with index i is given label j. Alternatively,
+            in a soft labeling where points have multiple labels, labels[i] is a list of 
             cluster labels j.
             
-        k (int, optional): Number of clusters. Defaults to None, in which case the number of
-            clusters is inferred from the input labels.
+        n_labels (int, optional): Number of unique labels to give to points. Defaults to None,
+            in which case the number of inferred from the input set of data labels.
 
     Returns:
         assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
+            if point i belongs to label j and False otherwise.
     """
-    # Infer if k is not provided
-    if k is None:
-        s = -1
+    # Infer if n_labels is not provided
+    if n_labels is None:
+        unique_labels = set()
         for l in labels:
-            if np.max(l) > s:
-                s = np.max(l) 
-        k = int(s) + 1
+            if isinstance(l, (int, float, np.integer)):
+                unique_labels.add(l)
+            elif isinstance(l, Iterable) and not isinstance(l, (str, bytes)):
+                unique_labels = unique_labels.union(set(l))
+            else:
+                raise ValueError("Invalid label type")         
+        n_labels = len(unique_labels)
         
-    assignment_matrix = np.zeros((len(labels), k), dtype = bool)
+    assignment_matrix = np.zeros((len(labels), n_labels), dtype = bool)
     for i,j in enumerate(labels):
         if isinstance(j, (int, float, np.integer)):
             if not np.isnan(j):
@@ -304,34 +308,6 @@ def labels_to_assignment(labels, k = None):
             raise ValueError("Invalid label type")
         
     return assignment_matrix
-
-
-####################################################################################################
-
-
-def assignment_to_labels(assignment):
-    """
-    Takes an input n x k boolean assignment matrix, and outputs a list of labels for the 
-    datapoints.
-     
-    NOTE: By convention, clusters are indexed [0,k) and items are indexed [0, n).
-    
-    Args:
-        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-
-    Returns:
-        labels (List[List[int]]): List of integers where an entry at index i has value 
-            j if the item associated with index i is present within cluster j. Alternatively,
-            in a soft clustering where points have multiple labels, labels[i] is a list of 
-            cluster labels j.
-    """
-    labels = []
-    for _, assign in enumerate(assignment):
-        l = np.where(assign)[0]
-        labels.append(list(l))
-            
-    return labels
 
 
 ####################################################################################################
@@ -355,35 +331,74 @@ def flatten_labels(labels : List[List[int]]) -> List[int]:
 ####################################################################################################
 
 
-def label_covers_dict(
-    labels : List[List[int]],
-    unique_labels : NDArray = None
+def assignment_to_labels(assignment):
+    """
+    Takes an input n x k boolean assignment matrix, and outputs a list of labels for the 
+    datapoints.
+     
+    NOTE: By convention, labels are indexed [0,k) and items are indexed [0, n).
+    
+    Args:
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to label j and False otherwise.
+
+    Returns:
+        labels (List[List[int]]): List of integers where an entry at index i has value 
+            j if the item associated with index i is present within label j. Alternatively,
+            in a soft labeling where points have multiple labels, labels[i] is a list of 
+            labels j.
+    """
+    labels = []
+    for _, assign in enumerate(assignment):
+        l = np.where(assign)[0]
+        labels.append(list(l))
+            
+    return labels
+
+
+####################################################################################################
+
+
+def assignment_to_dict(
+    assignment_matrix : NDArray
 ) -> Dict[int, Set[int]]:
     """
     Given a 2d labels list, returns a dictionary where the keys are the unique labels,
     and the values are the sets of indices for the inner lists which contain the unique label.
     
     Args:
-        labels (List[List[int]]): 2d list of integers where the inner list at index i 
-            labels of the item with index i.
-            
-        unique_labels (np.ndarray): Array of unique labels that should form the keys of 
-            the label covers dictionary. Useful if certain labels do not show up in 
-            the labels list. If None, the unique labels are inferred from the input.
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to label j and False otherwise.
     
     Returns:
-        covers_dict (Dict[int, Set[int]]): Dictionary where the keys are integers (labels) and 
+        assignment_dict (Dict[int, List[int]]): Dictionary where the keys are integers (labels) and 
             values are the sets of data point indices covered by the label.
+    """        
+    assignment_dict = {l: [] for l in range(assignment_matrix.shape[1])}
+    for i in range(assignment_matrix.shape[1]):
+        points = set(np.where(assignment_matrix[:,i])[0])
+        assignment_dict[i] = points  
+    return assignment_dict
+
+
+####################################################################################################
+
+
+def num_assigned(assignment_matrix : NDArray) -> int:
     """
-    if unique_labels is None:
-        unique_labels = np.unique(flatten_labels(labels))
-        
-    covers_dict = {l: set() for l in unique_labels}
-    for i, labs in enumerate(labels):
-        for l in labs:
-            covers_dict[l].add(i)
-            
-    return covers_dict
+    Given an assignment matrix, returns the total number of data points assigned to 
+    some label.
+    
+    Args:
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to label j and False otherwise.
+    """
+    unique_assigned = set()
+    for i in range(assignment_matrix.shape[1]):
+        points = set(np.where(assignment_matrix[:,i])[0])
+        unique_assigned = unique_assigned.union(points)
+    n_assigned = len(unique_assigned)
+    return n_assigned
 
 
-###################################################################################################
+####################################################################################################

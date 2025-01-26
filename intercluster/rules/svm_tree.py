@@ -48,13 +48,16 @@ class SVMTree(Tree):
         self,
         base_tree : Node = None,
         max_leaf_nodes : int = None,
-        max_depth : int = None,
+        max_depth : int = 1,
         min_points_leaf : int = 1,
         feature_labels : List[str] = None
     ):
+        if max_depth != 1:
+            raise ValueError("SVMTree is only designed to be utilized with max_depth = 1.")
+        
         splitter = SVMSplitter(
             min_points_leaf = min_points_leaf
-        )  
+        )
         super().__init__(
             splitter = splitter,
             base_tree = base_tree, 

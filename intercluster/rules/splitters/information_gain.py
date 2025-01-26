@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
+from intercluster.utils import entropy
 from ._splitter import AxisAlignedSplitter
-from ..utils import entropy
 
 
 class InformationGainSplitter(AxisAlignedSplitter):

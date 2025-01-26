@@ -2,8 +2,8 @@ import numpy as np
 from sklearn.svm import LinearSVC
 from numpy.typing import NDArray
 from typing import Tuple
+from intercluster.utils import entropy
 from ._splitter import Splitter
-from ..utils import entropy
 
 
 class SVMSplitter(Splitter):
