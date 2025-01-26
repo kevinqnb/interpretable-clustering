@@ -21,6 +21,8 @@ class Experiment:
         
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
+            
+        n_samples (int): Number of samples to run each module for.
         
         random_seed (int, optional): Random seed for experiments. Defaults to None.
         
@@ -35,6 +37,7 @@ class Experiment:
         baseline_list : List[Any],
         module_list : List[Any],
         measurement_fns : List[Callable],
+        n_samples : int,
         labels : NDArray = None,
         random_seed : int = None,
         verbose : bool = True
@@ -44,6 +47,7 @@ class Experiment:
         self.baseline_list = baseline_list
         self.module_list = module_list
         self.measurement_fns = measurement_fns
+        self.n_samples = n_samples
         self.random_seed = random_seed
         # NOTE: Does this need to be here??
         #np.random.seed(random_seed)
@@ -52,12 +56,14 @@ class Experiment:
         self.result_dict = {}
         for b in baseline_list:
             for fn in measurement_fns:
-                self.result_dict[(fn.name, b.name)] = []
+                for s in range(n_samples):
+                    self.result_dict[(fn.name, b.name, s)] = []
                 
         for m in self.module_list:
-            self.result_dict[("depth", m.name)] = []
-            for fn in measurement_fns:
-                self.result_dict[(fn.name, m.name)] = []
+            for s in range(n_samples):
+                self.result_dict[("depth", m.name, s)] = []
+                for fn in measurement_fns:
+                    self.result_dict[(fn.name, m.name, s)] = []
                 
 
     def run_baseline(self):
@@ -118,6 +124,7 @@ class RulesExperiment(Experiment):
         baseline_list,
         module_list,
         measurement_fns,
+        n_samples,
         labels = None,
         random_seed = None,
         verbose = True
@@ -127,6 +134,7 @@ class RulesExperiment(Experiment):
             baseline_list = baseline_list,
             module_list = module_list,
             measurement_fns = measurement_fns,
+            n_samples = n_samples,
             labels = labels,
             random_seed = random_seed,
             verbose = verbose
@@ -143,11 +151,12 @@ class RulesExperiment(Experiment):
         for b in self.baseline_list:
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
-                self.result_dict[(fn.name, b.name)] = [
-                    fn(self.data, bassign, bcenters)
-                ] * len(n_rules_list)
-        
-    def run_modules(self, n_rules_list : List[int]):
+                for s in range(self.n_samples):
+                    self.result_dict[(fn.name, b.name, s)] = [
+                        fn(self.data, bassign, bcenters)
+                    ] * len(n_rules_list)
+            
+    def run_modules(self, n_rules_list : List[int], sample_number : int):
         """
         Runs the modules.
         
@@ -161,11 +170,11 @@ class RulesExperiment(Experiment):
                 massign, mcenters = m.step_num_rules(self.data, self.labels)
                 
                 # record depth:
-                self.result_dict[("depth", m.name)].append(m.n_depth)
+                self.result_dict[("depth", m.name, sample_number)].append(m.n_depth)
                 
                 # record results from measurement functions:
                 for fn in self.measurement_fns:
-                    self.result_dict[(fn.name, m.name)].append(
+                    self.result_dict[(fn.name, m.name, sample_number)].append(
                         fn(self.data, massign, mcenters)
                     )
         
@@ -187,11 +196,19 @@ class RulesExperiment(Experiment):
         """
         n_rules_list = list(range(min_rules, max_rules + 1))
         self.run_baselines(n_rules_list)
-        self.run_modules(n_rules_list)
         
-        # reset the modules:
-        for m in self.module_list:
-            m.reset()
+        for s in range(self.n_samples):
+            if self.verbose:
+                print(f"Running for sample {s}.")
+                
+            self.run_modules(n_rules_list, sample_number = s)
+            
+            # reset the modules:
+            for m in self.module_list:
+                m.reset()
+            
+            if self.verbose:
+                print()
             
         return pd.DataFrame(self.result_dict)
     

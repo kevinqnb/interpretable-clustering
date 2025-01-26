@@ -279,47 +279,6 @@ class ForestMod(Module):
         self.forest = None
         self.rule_labels = None
         self.data_labels = None
-        self.centers = None
-        
-    
-    def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
-        """
-        Prunes the model (if necessary) and returns the cluster assignment.
-        
-        Args:
-            X (np.ndarray): Data matrix.
-            
-        Returns:
-            assignment (np.ndarray): Cluster assignment boolean array of size n x k
-                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
-            
-            centers (np.ndarray): Size k x d array of cluster centers.
-        """
-        if self.prune_params is not None:
-            def clustering_objective(S):
-                A = self.points_to_rules[:, S]
-                B = self.rule_assignment[S, :]
-                pruned_assignment = np.dot(A,B)
-                return kmeans_cost(X, pruned_assignment, self.centers, normalize = False)
-                
-            selected_rules = prune_with_grid_search(
-                q = self.n_rules,
-                data_labels = self.data_labels,
-                rule_labels = self.rule_labels,
-                rule_covers_dict = self.forest.covers,
-                objective = clustering_objective,
-                **self.prune_params
-            )
-            
-            A = self.points_to_rules[:, selected_rules]
-            B = self.rule_assignment[selected_rules, :]
-            assignment = np.dot(A,B)
-        else:
-            A = self.points_to_rules
-            B = self.rule_assignment
-            assignment = np.dot(A,B)
-            
-        return assignment, self.centers
     
     
     def step_num_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
@@ -345,18 +304,28 @@ class ForestMod(Module):
             
             data_to_rules_labels = self.forest.predict(X, rule_labels = True)
             self.points_to_rules = labels_to_assignment(data_to_rules_labels,
-                                                        k = len(self.forest.decision_set))
+                                                        n_labels = len(self.forest.decision_set))
             self.data_labels = [[l] for l in y]
             
             self.rule_labels = self.forest.decision_set_labels
             self.rule_assignment = labels_to_assignment(self.rule_labels,
-                                                        k = self.clustering.n_clusters)
+                                                        n_labels = self.clustering.n_clusters)
             self.rule_labels = self.forest.decision_set_labels
             self.n_depth = self.forest.depth
-            
-        assignment,centers = self.assign(X)
+
+        if self.prune_params is not None:
+            self.forest.prune(q = self.n_rules, **self.prune_params)
+            assignment = labels_to_assignment(
+                self.forest.pruned_predict(X, rule_labels = False),
+                n_labels = self.clustering.n_clusters
+            )
+        else:
+            assignment = labels_to_assignment(
+                self.forest.predict(X, rule_labels = False),
+                n_labels = self.clustering.n_clusters
+            )
         self.n_rules += 1
-        return assignment, centers
+        return assignment, self.centers
     
     
 ####################################################################################################
