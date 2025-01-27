@@ -1,15 +1,12 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
-import sys
-import copy
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import geopandas as gpd
 from ExKMC.Tree import Tree as ExTree
-from intercluster.clustering import *
 from intercluster.rules import *
+from intercluster.pruning import *
 from intercluster import *
 from intercluster.experiments import *
 
@@ -76,60 +73,71 @@ X = scaler.fit_transform(data)
 ####################################################################################################
 # Define Parameters and experiment modules:
 
-n_clusters = 7
-min_rules = n_clusters
-max_rules = 2*n_clusters
+# Parameters:
+k = 7
+n_clusters = k
+min_rules = k
+max_rules = 2*k
 min_depth = 3
-max_depth = 4
+max_depth = 6
+n_trees = 1000
 
-# Base module
-base = KMeansBase(n_clusters)
-A,C = base.assign(X)
-y = base.clustering.labels_
+####################################################################################################
+# Baselines:
 
-cluster_model = KMeansRuleClustering
-cluster_params = {
-    'k_clusters' : n_clusters,
-    'init' : 'manual',
-    'center_init' : C,
-    'max_iterations' : 500,
-}
+# KMeans:
+kmeans_base = KMeansBase(n_clusters)
+A,C = kmeans_base.assign(data)
+y = kmeans_base.clustering.labels_
 
-# Modules:
-mod1 = ExkmcMod(
+# Exkmc:
+exkmc_mod = ExkmcMod(
     n_clusters = n_clusters,
-    kmeans_model = base.clustering,
+    kmeans_model = kmeans_base.clustering,
     base_tree = 'IMM',
     min_rules = min_rules
 )
 
+####################################################################################################
 
-# Forest:
-forest_tree_params = {
+# Decision Forest with Sklearn Trees:
+
+# 1) depth 2, 90% coverage:
+forest_tree_params1 = {
     'max_leaf_nodes' : max_rules,
     'max_depth' : 2
 }
 
-forest_params = {
+forest_params1 = {
     'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params,
-    'num_trees' : 1000,
+    'tree_params' : forest_tree_params1,
+    'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
     'feature_pairings' : [list(range(12))] + [list(range(12,24))],
-    'train_size' : 0.5
+    'train_size' : 0.75
 }
 
-prune_params = {
-    'search_range' : np.linspace(0,1,100),
-    'coverage_threshold' : 0.9 * len(X)
+prune_objective1 = KmeansObjective(
+    X = data,
+    centers = C,
+    normalize = True,
+    threshold = 0.9
+)
+
+prune_params1 = {
+    'k' : k,
+    'X' : data,
+    'y' : [[l] for l in y],
+    'objective' : prune_objective1,
+    'lambda_search_range' : np.linspace(0,2,101)
 }
 
-mod2 = ForestMod(
+mod1 = ForestMod(
     forest_model = DecisionForest,
-    forest_params = forest_params,
-    clustering = base,
-    prune_params = prune_params,
+    forest_params = forest_params1,
+    clustering = kmeans_base,
+    prune_params = prune_params1,
     min_rules = min_rules,
     min_depth = min_depth,
     max_rules = max_rules,
@@ -137,87 +145,147 @@ mod2 = ForestMod(
     name = 'Forest'
 )
 
-'''
-mod3 = ForestClusterMod(
+
+# 2) depth 2, full coverage:
+prune_objective2 = KmeansObjective(
+    X = data,
+    centers = C,
+    normalize = True,
+    threshold = 1
+)
+
+prune_params2 = {
+    'k' : k,
+    'X' : data,
+    'y' : [[l] for l in y],
+    'objective' : prune_objective2,
+    'lambda_search_range' : np.linspace(0,2,101)
+}
+
+mod2 = ForestMod(
     forest_model = DecisionForest,
-    forest_params = forest_params,
-    clustering = base,
-    cluster_model = cluster_model,
-    cluster_params = cluster_params,
-    assignment_method = 'vote',
-    prune_params = prune_params,
+    forest_params = forest_params1,
+    clustering = kmeans_base,
+    prune_params = prune_params2,
     min_rules = min_rules,
     min_depth = min_depth,
     max_rules = max_rules,
     max_depth = max_depth,
-    name = 'Forest-Cluster-Vote'
+    name = 'Forest-Full-Cover'
 )
-
-mod4 = ForestClusterMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params,
-    clustering = base,
-    cluster_model = cluster_model,
-    cluster_params = cluster_params,
-    assignment_method = 'min',
-    prune_params = prune_params,
-    min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
-    name = 'Forest-Cluster-Min'
-)
-
-'''
-
-baseline_list = [base]
-module_list = [mod1, mod2]
-
-
-cost_fns = {
-    'standard' : kmeans_cost,
-    'normalized' : kmeans_cost,
-    'normalized_v2' : kmeans_cost
-}
-
-cost_fn_params = {
-    'standard' : {},
-    'normalized' : {'normalize' : True},
-    'normalized_v2' : {'normalize' : True, 'square' : 'True'}
-}
 
 
 ####################################################################################################
-# Changing the number of rules experiment:
+
+# Forests with SVM Trees:
+
+# 1) depth 1, 70% coverage:
+forest_tree_params3 = {
+    'max_leaf_nodes' : max_rules,
+    'max_depth' : 1
+}
+
+forest_params3 = {
+    'tree_model' : SVMTree,
+    'tree_params' : forest_tree_params3,
+    'num_trees' : n_trees,
+    'max_features' : 2,
+    'max_labels' : 1,
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'train_size' : 0.75
+}
+
+prune_objective3 = KmeansObjective(
+    X = data,
+    centers = C,
+    normalize = True,
+    threshold = 0.7
+)
+
+prune_params3 = {
+    'k' : k,
+    'X' : data,
+    'y' : [[l] for l in y],
+    'objective' : prune_objective3,
+    'lambda_search_range' : np.linspace(0,2,101)
+}
+
+
+mod3 = ForestMod(
+    forest_model = DecisionForest,
+    forest_params = forest_params3,
+    clustering = kmeans_base,
+    prune_params = prune_params3,
+    min_rules = min_rules,
+    min_depth = min_depth,
+    max_rules = max_rules,
+    max_depth = max_depth,
+    name = 'SVM-Forest'
+)
+
+# 2) depth 1, full coverage:
+prune_objective4 = KmeansObjective(
+    X = data,
+    centers = C,
+    normalize = True,
+    threshold = 1
+)
+
+prune_params4 = {
+    'k' : k,
+    'X' : data,
+    'y' : [[l] for l in y],
+    'objective' : prune_objective4,
+    'lambda_search_range' : np.linspace(0,2,101)
+}
+
+
+mod4 = ForestMod(
+    forest_model = DecisionForest,
+    forest_params = forest_params3,
+    clustering = kmeans_base,
+    prune_params = prune_params4,
+    min_rules = min_rules,
+    min_depth = min_depth,
+    max_rules = max_rules,
+    max_depth = max_depth,
+    name = 'SVM-Forest-Full-Cover'
+)
+
+####################################################################################################
+
+# List of Modules and Measurements:
+
+baseline_list = [kmeans_base]
+module_list = [exkmc_mod, mod1, mod2, mod3, mod4]
+
+measurement_fns = [
+    ClusteringCost(),
+    ClusteringCost(normalize = True),
+    Overlap(),
+    Coverage(), 
+    OverlapDistance(),
+]
+
+
+####################################################################################################
+# Running the Experiment:
+
+n_samples = 1000
 
 Ex1 = RulesExperiment(
-    data = X,
+    data = data,
     baseline_list = baseline_list,
     module_list = module_list,
-    cost_fns = cost_fns,
-    cost_fn_params = cost_fn_params,
+    measurement_fns = measurement_fns,
+    n_samples = n_samples,
     labels = y,
-    verbose = True
-)
-
-Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
-Ex1.save_results('data/experiments/decision_sets/', '_climate_no_cluster4')
-
-
-####################################################################################################
-# Changing the depth experiment
-
-'''
-Ex2 = DepthExperiment(
-    data = X,
-    baseline_list = baseline_list,
-    module_list = module_list,
-    cost_fns = cost_fns,
-    cost_fn_params = cost_fn_params,
     random_seed = seed,
     verbose = True
 )
 
-Ex2_results = Ex2.run(min_depth = min_depth, max_depth = max_depth)
-Ex2.save_results('../data/experiments/decision_sets/', '_climate_rand_d6')
-'''
+Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
+Ex1.save_results('data/experiments/decision_sets/', '_climate_new')
+
+
+####################################################################################################

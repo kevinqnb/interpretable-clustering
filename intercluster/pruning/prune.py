@@ -49,7 +49,8 @@ def distorted_greedy(
             
     Returns:
         S (NDArray): An array of integers representing the selected rules.
-    """    
+    """
+    n = len(data_labels)
     rule_list = list(np.arange(data_to_rules_assignment.shape[1]))
     flattened_rule_labels = flatten_labels(rule_labels)
     if len(flattened_rule_labels) != len(rule_labels):
@@ -64,7 +65,10 @@ def distorted_greedy(
     covered_so_far = {l: set() for l in unique_cluster_labels}
     
     S = []
-    for i in range(q):
+    points_satisfied_by_rules = set()
+    i = 0
+    # for i in range(q):
+    while i < q and len(points_satisfied_by_rules) < n:
         best_rule = None
         best_rule_label = None
         best_score = -np.inf
@@ -94,6 +98,11 @@ def distorted_greedy(
             covered_so_far[best_rule_label] = covered_so_far[best_rule_label].union(
                 best_rule_covers
             )
+            # Union of all points covered by rules in S. (For now...maybe this should be
+            # more specific to cluster membership??)
+            points_satisfied_by_rules = points_satisfied_by_rules.union(rule_covers_dict[best_rule])
+            
+        i += 1
             
     return np.array(S)
 

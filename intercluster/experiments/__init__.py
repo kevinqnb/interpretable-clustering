@@ -2,6 +2,7 @@ from .measurements import (
     ClusteringCost,
     Overlap,
     Coverage,
+    OverlapDistance,
 )
 
 from .modules import (
