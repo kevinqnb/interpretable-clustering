@@ -169,3 +169,4 @@ older/
 .python-version
 
 experiments/*/*.sh
+experiments/*/*.txt

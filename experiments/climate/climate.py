@@ -281,7 +281,7 @@ Ex1 = RulesExperiment(
     n_samples = n_samples,
     labels = y,
     random_seed = seed,
-    verbose = True
+    verbose = False
 )
 
 Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
