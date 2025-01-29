@@ -170,3 +170,5 @@ older/
 
 experiments/*/*.sh
 experiments/*/*.txt
+
+data/experiments/decision_sets/*.csv
