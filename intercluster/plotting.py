@@ -285,57 +285,88 @@ def plot_decision_set(
         cluster_colors (Dict[int:str]): Dictionary specifying colors for leaf nodes.
         
         data_scaler (Callable, optional): Scaler object used to scale the data. Defaults to None.
+            NOTE: If used, this assumes that the data was scaled to a 0-1 range, and will simply 
+                adjust to undo that specific form of scaling.
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
     fig,ax = plt.subplots(dpi = 300)
     ax.axis('off')
+    ax.set_aspect('equal')
     
-    for i,rule in enumerate(D):
-        rule_string = ''
+    # Order rules by cluster labels
+    ordering = np.ndarray.flatten(np.argsort(rule_labels, axis = 0))
+    for i, idx in enumerate(ordering):
+        rule = D[idx]
+        rule_string = 'If \n'
+        
+        # Every condition except the last node, which should be a leaf
         for j, condition in enumerate(rule[:-1]):
             node = condition[0]
-            rule_string += '('
             
-            for l,f in enumerate(node.features):
+            # Sum of weights and features
+            for l,feature in enumerate(node.features):
                 if l > 0:
                     rule_string += ' + '
-                weight_l = np.round(node.weights[l], 2)
+
+                # Rescale the weights if necessary
+                if data_scaler is not None and len(node.features) > 1:
+                    feature_min = data_scaler.data_min_[feature]
+                    feature_max = data_scaler.data_max_[feature]
+                    weight_l = np.round(node.weights[l] / (feature_max - feature_min), 2)
+                else:
+                    weight_l = np.round(node.weights[l], 2)
+                    
                 if weight_l != 1:
-                    rule_string += str(weight_l) + ' * '
-                rule_string += str(feature_labels[f])
+                    rule_string += str(weight_l) + ' '
+                    
+                rule_string += str(feature_labels[feature])
                 
-            #str(feature_labels[node.features[0]])
-            #rule_string += '(' + str(feature_labels[node.features[0]])
             
+            # Add the threshold
             if condition[1] == 'left':
                 rule_string += r' $\leq$ '
             else:
                 rule_string += r' $>$ '
                 
-            if data_scaler is not None:
-                feature_min = data_scaler.data_min_[node.features[0]]
-                feature_max = data_scaler.data_max_[node.features[0]]
-                threshold = node.threshold * (feature_max - feature_min) + feature_min
-            else:
-                threshold = node.threshold
+            threshold = node.threshold
+            
+            # Rescale if necessary:
+            if data_scaler is not None:                
+                for l,feature in enumerate(node.features):
+                    feature_min = data_scaler.data_min_[feature]
+                    feature_max = data_scaler.data_max_[feature]
+                    threshold += (node.weights[l] * feature_min) / (feature_max - feature_min)
+                    
+                if len(node.features) == 1:
+                    feature_min = data_scaler.data_min_[node.features[0]]
+                    feature_max = data_scaler.data_max_[node.features[0]]
+                    threshold = threshold * (feature_max - feature_min) 
                 
-            rule_string += str(np.round(threshold, 3)) + ')'
+            rule_string += str(np.round(threshold, 3))
             
             if j < len(rule) - 2:
-                if j > 0 and j % 2 == 0:
-                    rule_string += r' $\&$ ' + f'\n'
-                else:
-                    rule_string += r' $\&$ '
-        
-        text_color = cluster_colors[rule_labels[i]]
+                rule_string += r' $\&$ ' + f'\n'
+            elif j == len(rule) - 2:
+                rule_string += f'\n'
+                
+        rule_string += 'Then cluster ' + str(rule_labels[idx][0])
+        rule_color = cluster_colors[rule_labels[idx][0]]
         ax.text(
             s = rule_string,
             x = 0,
-            y = 2*(len(D) - i)/len(D),
-            color = text_color,
+            y = 2*(len(D) - i),
+            color = 'black',
             alpha = 1,
             fontweight = 'extra bold'
+        )
+        ax.scatter(
+            x = 2,
+            y = 2*(len(D) - i),
+            color = rule_color,
+            s = 100, 
+            marker = 's',
+            edgecolors='black'
         )
         
     if filename is not None:
