@@ -334,6 +334,24 @@ def flatten_labels(labels : List[List[int]]) -> List[int]:
 ####################################################################################################
 
 
+def unique_labels(labels : List[List[int]]) -> Set[int]:
+    """
+    Given a 2d labels list, returns a set of unique labels. 
+    
+    Args:
+        labels (List[List[int]]): 2d list of integers where the inner list at index i 
+            labels of the item with index i.
+            
+    Returns:
+        unique_labels (Set[int]): Set of unique labels.
+    """
+    unique_labels = set(flatten_labels(labels))
+    return unique_labels
+
+
+####################################################################################################
+
+
 def assignment_to_labels(assignment):
     """
     Takes an input n x k boolean assignment matrix, and outputs a list of labels for the 

@@ -10,6 +10,7 @@ from .utils import (
     kmeans_plus_plus_initialization,
     labels_to_assignment,
     flatten_labels,
+    unique_labels,
     assignment_to_labels,
     assignment_to_dict,
     num_assigned,

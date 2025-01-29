@@ -5,7 +5,8 @@ from numpy.typing import NDArray
 from intercluster.utils import (
     labels_to_assignment,
     flatten_labels,
-    assignment_to_dict
+    assignment_to_dict,
+    tiebreak,
 )
 
 
@@ -162,9 +163,12 @@ def prune_with_grid_search(
                
     search_results = Parallel(n_jobs=-1)(delayed(evaluate_lambda)(s) 
                                             for s in search_range)
-    best_score, best_val = min(search_results, key=lambda x: x[0])
+    result_vals = [x[0] for x in search_results]
+    best_lambda_idx = tiebreak(result_vals)[0]
+    best_lambda = search_range[best_lambda_idx]
+    #best_score, best_val = min(search_results, key=lambda x: x[0])
             
-    return distorted_greedy(q, best_val, data_labels, rule_labels, data_to_rules_assignment) 
+    return distorted_greedy(q, best_lambda, data_labels, rule_labels, data_to_rules_assignment) 
 
 
 ####################################################################################################

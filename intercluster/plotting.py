@@ -290,9 +290,11 @@ def plot_decision_set(
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
-    fig,ax = plt.subplots(dpi = 300)
+    fig,ax = plt.subplots(figsize = (4, 6), dpi = 300)
+    ax.set_xlim(0, len(D) + 0.1)
+    ax.set_ylim(0.9, len(D) + 0.1)
     ax.axis('off')
-    ax.set_aspect('equal')
+    #ax.set_aspect('equal')
     
     # Order rules by cluster labels
     ordering = np.ndarray.flatten(np.argsort(rule_labels, axis = 0))
@@ -352,21 +354,25 @@ def plot_decision_set(
                 
         rule_string += 'Then cluster ' + str(rule_labels[idx][0])
         rule_color = cluster_colors[rule_labels[idx][0]]
-        ax.text(
-            s = rule_string,
-            x = 0,
-            y = 2*(len(D) - i),
-            color = 'black',
-            alpha = 1,
-            fontweight = 'extra bold'
-        )
         ax.scatter(
-            x = 2,
-            y = 2*(len(D) - i),
+            x = 0.25,
+            y = (len(D) - i),
             color = rule_color,
-            s = 100, 
+            s = 50, 
             marker = 's',
             edgecolors='black'
+        )
+        
+        ax.text(
+            s = rule_string,
+            x = 0.5,
+            y = (len(D) - i) + 0.055,
+            color = 'black',
+            alpha = 1,
+            fontweight = 'extra bold',
+            fontsize = 10,
+            va = 'top',
+            ha = 'left'
         )
         
     if filename is not None:
