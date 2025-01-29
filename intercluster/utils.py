@@ -93,6 +93,7 @@ def kmeans_cost(
     X : np.ndarray,
     assignment : np.ndarray,
     centers : np.ndarray,
+    average : bool = False,
     normalize : bool = False
 ) -> float:
     """
@@ -106,9 +107,11 @@ def kmeans_cost(
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         
+        average (bool, optional): Whether to average the per-point cost by the number of clusters
+            that the point is assigned to. Defaults to False.
+        
         normalize (bool, optional): Whether to normalize the cost by the number of points
-            covered and the number of overlapping cluster assignments for each point. 
-            Defaults to False.
+            covered in the clustering. Defaults to False.
 
     Returns:
         cost (float): Total cost of the clustering.
@@ -121,14 +124,14 @@ def kmeans_cost(
         i_centers = centers[assignment[i,:] == 1, :]
         if len(i_centers) > 0:
             point_cost = np.sum(np.linalg.norm(i_centers - X[i,:], axis = 1)**2)
-            if normalize:
+            if average:
                 point_cost /= len(i_centers) 
                 
             cost += point_cost
             covered += 1
             
     if normalize:
-        cost /= covered * d
+        cost /= covered
     return cost
 
     
@@ -393,11 +396,7 @@ def num_assigned(assignment_matrix : NDArray) -> int:
         assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
             if point i belongs to label j and False otherwise.
     """
-    unique_assigned = set()
-    for i in range(assignment_matrix.shape[1]):
-        points = set(np.where(assignment_matrix[:,i])[0])
-        unique_assigned = unique_assigned.union(points)
-    n_assigned = len(unique_assigned)
+    n_assigned = np.sum(np.sum(assignment_matrix, axis = 1) > 0)
     return n_assigned
 
 

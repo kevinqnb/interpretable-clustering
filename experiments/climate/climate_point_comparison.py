@@ -145,156 +145,15 @@ mod1 = ForestMod(
     name = 'Forest'
 )
 
-
-# 2) depth 2, full coverage:
-prune_objective2 = KmeansObjective(
-    X = data,
-    centers = C,
-    normalize = True,
-    threshold = 1
-)
-
-prune_params2 = {
-    'k' : k,
-    'X' : data,
-    'y' : [[l] for l in y],
-    'objective' : prune_objective2,
-    'lambda_search_range' : np.linspace(0,2,101)
-}
-
-mod2 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params1,
-    clustering = kmeans_base,
-    prune_params = prune_params2,
-    min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
-    name = 'Forest-Full-Cover'
-)
-
-
-forest_tree_params5 = {
-    'max_leaf_nodes' : max_rules,
-    'max_depth' : 5
-}
-
-forest_params5 = {
-    'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params5,
-    'num_trees' : n_trees,
-    'max_features' : 6,
-    'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
-    'train_size' : 0.75
-}
-
-
-mod5 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params5,
-    clustering = kmeans_base,
-    prune_params = prune_params1,
-    min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
-    name = 'Forest'
-)
-
-
-####################################################################################################
-
-# Forests with SVM Trees:
-
-# 1) depth 1, 70% coverage:
-forest_tree_params3 = {
-    'max_leaf_nodes' : max_rules,
-    'max_depth' : 1
-}
-
-forest_params3 = {
-    'tree_model' : SVMTree,
-    'tree_params' : forest_tree_params3,
-    'num_trees' : n_trees,
-    'max_features' : 2,
-    'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
-    'train_size' : 0.75
-}
-
-prune_objective3 = KmeansObjective(
-    X = data,
-    centers = C,
-    normalize = True,
-    threshold = 0.7
-)
-
-prune_params3 = {
-    'k' : k,
-    'X' : data,
-    'y' : [[l] for l in y],
-    'objective' : prune_objective3,
-    'lambda_search_range' : np.linspace(0,2,101)
-}
-
-
-mod3 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params3,
-    clustering = kmeans_base,
-    prune_params = prune_params3,
-    min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
-    name = 'SVM-Forest'
-)
-
-# 2) depth 1, full coverage:
-prune_objective4 = KmeansObjective(
-    X = data,
-    centers = C,
-    normalize = True,
-    threshold = 1
-)
-
-prune_params4 = {
-    'k' : k,
-    'X' : data,
-    'y' : [[l] for l in y],
-    'objective' : prune_objective4,
-    'lambda_search_range' : np.linspace(0,2,101)
-}
-
-
-mod4 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params3,
-    clustering = kmeans_base,
-    prune_params = prune_params4,
-    min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
-    name = 'SVM-Forest-Full-Cover'
-)
-
-
 ####################################################################################################
 
 # List of Modules and Measurements:
-
+comparison_module = mod1
 baseline_list = [kmeans_base]
-module_list = [exkmc_mod, mod1, mod2, mod3, mod4]
+module_list = [exkmc_mod]
 
 measurement_fns = [
-    ClusteringCost(),
-    ClusteringCost(average = True, normalize = True),
-    Overlap(),
-    Coverage(), 
-    OverlapDistance(),
+    ClusteringCost(average = True)
 ]
 
 
@@ -303,8 +162,9 @@ measurement_fns = [
 
 n_samples = 1000
 
-Ex1 = RulesExperiment(
+Ex1 = RulesExperimentV2(
     data = data,
+    comparison_module = comparison_module,
     baseline_list = baseline_list,
     module_list = module_list,
     measurement_fns = measurement_fns,
@@ -315,7 +175,7 @@ Ex1 = RulesExperiment(
 )
 
 Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
-Ex1.save_results('data/experiments/decision_sets/', '_climate_new2')
+Ex1.save_results('data/experiments/decision_sets/', '_climate')
 
 
 ####################################################################################################

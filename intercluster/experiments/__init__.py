@@ -13,4 +13,5 @@ from .modules import (
 
 from .experiments import (
     RulesExperiment,
+    RulesExperimentV2,
 )

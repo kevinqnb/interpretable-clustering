@@ -29,12 +29,16 @@ class ClusteringCost(MeasurementFunction):
     each point and its assigned center.
     
     Args:
+        average (bool, optional): Whether to average the per-point cost by the number of clusters
+                that the point is assigned to. Defaults to False.
         normalize (bool): If True, the cost is normalized to adjust for 
             overlapping clusters and uncovered points. Defaults to False.
     """
-    def __init__(self, normalize : bool = False):        
-        name = 'normalized-clustering-cost' if normalize else 'clustering-cost'
+    def __init__(self, average : bool = False, normalize : bool = False):
+        name = 'point-average-clustering-cost' if average else 'clustering-cost'
+        name = 'normalized-clustering-cost' if normalize else name
         super().__init__(name)
+        self.average = average
         self.normalize = normalize
         
     def __call__(
@@ -51,7 +55,13 @@ class ClusteringCost(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
-        return kmeans_cost(X, assignment, centers, normalize = self.normalize)
+        return kmeans_cost(
+            X,
+            assignment,
+            centers,
+            average = self.average,
+            normalize = self.normalize
+        )
     
     
 class Overlap(MeasurementFunction):
