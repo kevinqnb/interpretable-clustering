@@ -31,11 +31,12 @@ class KmeansObjective(PruningObjective):
     each point and its assigned center(s). If a threshold fraction of points 
     have not been assigned to a cluster, the objective value is manually set to infinity.
     """
-    def __init__(self, X, centers, normalize : bool = True, threshold : float = 1):
+    def __init__(self, X, centers, average : bool = True, normalize : bool = True, threshold : float = 1):
         super().__init__()
         self.X = X
         self.centers = centers
         self.normalize = normalize
+        self.average = average
         
         if threshold < 0 or threshold > 1:
             raise ValueError('Threshold must be between 0 and 1.')
@@ -59,4 +60,10 @@ class KmeansObjective(PruningObjective):
         if n_assigned < self.threshold * len(self.X):
             return float('inf')
         else:
-            return kmeans_cost(self.X, assignment, self.centers, normalize = self.normalize)
+            return kmeans_cost(
+                self.X,
+                assignment,
+                self.centers,
+                average = self.average,
+                normalize = self.normalize
+            )
