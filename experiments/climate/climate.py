@@ -121,7 +121,8 @@ forest_params1 = {
 prune_objective1 = KmeansObjective(
     X = data,
     centers = C,
-    normalize = True,
+    average = False,
+    normalize = False,
     threshold = 0.9
 )
 
@@ -150,7 +151,8 @@ mod1 = ForestMod(
 prune_objective2 = KmeansObjective(
     X = data,
     centers = C,
-    normalize = True,
+    average = False,
+    normalize = False,
     threshold = 1
 )
 
@@ -227,7 +229,8 @@ forest_params3 = {
 prune_objective3 = KmeansObjective(
     X = data,
     centers = C,
-    normalize = True,
+    average = False,
+    normalize = False,
     threshold = 0.7
 )
 
@@ -256,7 +259,8 @@ mod3 = ForestMod(
 prune_objective4 = KmeansObjective(
     X = data,
     centers = C,
-    normalize = True,
+    average = False,
+    normalize = False,
     threshold = 1
 )
 

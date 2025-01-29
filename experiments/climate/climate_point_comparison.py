@@ -121,7 +121,8 @@ forest_params1 = {
 prune_objective1 = KmeansObjective(
     X = data,
     centers = C,
-    normalize = True,
+    average = False,
+    normalize = False,
     threshold = 0.9
 )
 

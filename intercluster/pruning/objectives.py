@@ -31,7 +31,14 @@ class KmeansObjective(PruningObjective):
     each point and its assigned center(s). If a threshold fraction of points 
     have not been assigned to a cluster, the objective value is manually set to infinity.
     """
-    def __init__(self, X, centers, average : bool = True, normalize : bool = True, threshold : float = 1):
+    def __init__(
+        self,
+        X,
+        centers,
+        average : bool = False,
+        normalize : bool = False,
+        threshold : float = 1
+    ):
         super().__init__()
         self.X = X
         self.centers = centers
