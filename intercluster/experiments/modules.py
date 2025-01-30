@@ -123,7 +123,7 @@ class KMeansBase(Baseline):
             centers (np.ndarray): Size k x d array of cluster centers. 
         """
         self.clustering.fit(X)
-        self.assignment = labels_to_assignment(self.clustering.labels_)
+        self.assignment = labels_to_assignment(self.clustering.labels_, n_labels = self.n_clusters)
         self.centers = self.clustering.cluster_centers_
         return self.assignment, self.centers
     
@@ -193,7 +193,7 @@ class ExkmcMod(Module):
         """
         tree = ExTree(self.n_clusters, max_leaves = self.n_rules, base_tree = self.base_tree)
         labels = tree.fit_predict(X, kmeans=self.kmeans_model)
-        assignment = labels_to_assignment(labels)
+        assignment = labels_to_assignment(labels, n_labels = self.n_clusters)
         centers = tree.all_centers
         self.n_rules += 1
         self.n_depth = tree._max_depth()

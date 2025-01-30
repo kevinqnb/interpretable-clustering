@@ -15,7 +15,7 @@ from intercluster.experiments import *
 # within the parameters of any sub-function or class (except for select 
 # baseline experiments like KMeans), since these will 
 # reset the seed each time they are given one. 
-seed = 919817
+seed = 918717
 np.random.seed(seed)
 
 
