@@ -202,7 +202,7 @@ mod5 = ForestMod(
     min_depth = min_depth,
     max_rules = max_rules,
     max_depth = max_depth,
-    name = 'Forest'
+    name = 'Forest-Depth-5'
 )
 
 
@@ -291,10 +291,10 @@ mod4 = ForestMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base]
-module_list = [exkmc_mod, mod1, mod2, mod3, mod4]
+module_list = [exkmc_mod, mod1, mod2, mod3, mod4, mod5]
 
 measurement_fns = [
-    ClusteringCost(),
+    ClusteringCost(average = True, normalize = False),
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(), 
@@ -305,7 +305,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1000
+n_samples = 100
 
 Ex1 = RulesExperiment(
     data = data,
@@ -319,7 +319,7 @@ Ex1 = RulesExperiment(
 )
 
 Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
-Ex1.save_results('data/experiments/decision_sets/', '_climate_new2')
+Ex1.save_results('data/experiments/decision_sets/', '_climate_new3')
 
 
 ####################################################################################################
