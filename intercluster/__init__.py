@@ -23,4 +23,5 @@ from .plotting import (
     build_graph,
     visualize_tree,
     plot_decision_set,
+    experiment_plotter,
 )

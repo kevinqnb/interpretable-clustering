@@ -1,3 +1,5 @@
+import numpy as np
+from typing import Tuple
 from numpy.typing import NDArray
 from intercluster.utils import kmeans_cost, num_assigned
 
@@ -52,7 +54,7 @@ class KmeansObjective(PruningObjective):
     def __call__(
         self,
         assignment : NDArray
-    ) -> float:
+    ) -> Tuple[float, float]:
         """
         Computes the objective value associated with a given clustering assignment.
         
@@ -60,17 +62,25 @@ class KmeansObjective(PruningObjective):
             assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
                 being True (1) if point i belongs to cluster j and False (0) otherwise. 
         Returns:
-            float: The objective value.
+            objective_val, tiebreak-val: The main objective value used for comparison along with a 
+                tiebreak value (if needed, considered as secondary information).
         """
         n_assigned = num_assigned(assignment)
         
+        objective_cost = kmeans_cost(
+            self.X,
+            assignment,
+            self.centers,
+            average = self.average,
+            normalize = self.normalize
+        )
+        
+        
         if n_assigned < self.threshold * len(self.X):
-            return float('inf')
+            # If coverage threshold not met, objective is set to infinity and ties are broken by
+            # by considering the objective cost from the non-fully covered assignment.
+            return float('inf'), objective_cost
         else:
-            return kmeans_cost(
-                self.X,
-                assignment,
-                self.centers,
-                average = self.average,
-                normalize = self.normalize
-            )
+            # If coverage threshold is met, the objective cost is returned 
+            # along with a random tiebreak value.
+            return objective_cost, np.random.uniform()

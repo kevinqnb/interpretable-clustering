@@ -1,7 +1,9 @@
 import numpy as np
+import warnings 
 from joblib import Parallel, delayed
 from typing import Callable, List
 from numpy.typing import NDArray
+import warnings
 from intercluster.utils import (
     labels_to_assignment,
     flatten_labels,
@@ -57,13 +59,21 @@ def distorted_greedy(
     if len(flattened_rule_labels) != len(rule_labels):
         raise ValueError("Each rule must have exactly one label.")
     
-    unique_cluster_labels = np.unique(flattened_rule_labels)
-    n_labels = len(unique_cluster_labels)
+    unique_data_labels = np.unique(flatten_labels(data_labels))
+    unique_rule_labels = np.unique(flattened_rule_labels)
+    if not np.array_equal(unique_data_labels, unique_rule_labels):
+        warnings.warn(
+            "The set of unique data labels and set of unique rule labels do not match. "
+            "This may lead to unexpected behavior."
+        )
+    #n_labels = len(unique_cluster_labels)
+    n_labels = len(unique_data_labels)
     
     rule_covers_dict = assignment_to_dict(data_to_rules_assignment)
     points_to_cluster_assignment = labels_to_assignment(data_labels, n_labels = n_labels)
     points_to_cover = assignment_to_dict(points_to_cluster_assignment)
-    covered_so_far = {l: set() for l in unique_cluster_labels}
+    #covered_so_far = {l: set() for l in unique_cluster_labels}
+    covered_so_far = {l: set() for l in unique_data_labels}
     
     S = []
     points_satisfied_by_rules = set()
@@ -118,7 +128,8 @@ def prune_with_grid_search(
     rule_labels : List[List[int]],
     data_to_rules_assignment : NDArray[np.bool_],
     objective : Callable,
-    search_range : NDArray[np.float64]
+    lambda_search_range : NDArray[np.float64],
+    cpu_count : int = 8
     ) -> NDArray[np.int64]:
     
     """
@@ -140,6 +151,8 @@ def prune_with_grid_search(
         objective (callable): A function that takes the selected rules and returns a score.
         
         search_range (NDArray): A range of lambda values to search over.
+        
+        cpu_count (int): The number of cpu cores to use for parallel processing. Default is 8.
             
     Returns:
         S (NDArray): An array of integers representing the selected rules.
@@ -156,17 +169,29 @@ def prune_with_grid_search(
             rule_labels,
             data_to_rules_assignment
         )
+        
+        # It's possible that nothing was selected, since the cost of selecting 
+        # a rule may outweigh the benefits. In this case, we return infinity.
+        if len(selected) == 0:
+            return (np.inf, np.inf), lambda_val
+        
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
         data_to_cluster_assignment = np.dot(A, B)
         return objective(data_to_cluster_assignment), lambda_val
                
-    search_results = Parallel(n_jobs=-1)(delayed(evaluate_lambda)(s) 
-                                            for s in search_range)
-    result_vals = [x[0] for x in search_results]
-    best_lambda_idx = tiebreak(result_vals)[0]
-    best_lambda = search_range[best_lambda_idx]
-    #best_score, best_val = min(search_results, key=lambda x: x[0])
+    search_results = Parallel(n_jobs=cpu_count)(
+        delayed(evaluate_lambda)(lambd) for lambd in lambda_search_range
+    )
+    objective_vals = [x[0][0] for x in search_results]
+    if np.min(objective_vals) == np.inf:
+        warnings.warn(
+            "Coverage requirements not met. "
+            "Consider adjusting requirements or increasing the search range for lambda."
+        )
+    tiebreak_vals = [x[0][1] for x in search_results]
+    best_lambda_idx = tiebreak(scores = objective_vals, proxy = tiebreak_vals)[0]
+    best_lambda = lambda_search_range[best_lambda_idx]
             
     return distorted_greedy(q, best_lambda, data_labels, rule_labels, data_to_rules_assignment) 
 

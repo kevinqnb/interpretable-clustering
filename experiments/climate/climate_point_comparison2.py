@@ -194,6 +194,8 @@ measurement_fns = [
 
 
 ####################################################################################################
+
+'''
 # Running Experiment 1:
 comparison_module = mod1
 
@@ -213,12 +215,12 @@ Ex1 = RulesExperimentV2(
 
 Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
 Ex1.save_results('data/experiments/decision_sets/', '_climate')
+'''
 
 
 ####################################################################################################
 # Running Experiment 2:
 
-'''
 comparison_module = mod2
 
 n_samples = 1000
@@ -237,7 +239,6 @@ Ex2 = RulesExperimentV2(
 
 Ex2_results = Ex2.run(min_rules = min_rules, max_rules = max_rules)
 Ex2.save_results('data/experiments/decision_sets/', '_climate_depth_5')
-'''
 
 
 ####################################################################################################

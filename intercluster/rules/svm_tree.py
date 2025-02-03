@@ -4,6 +4,7 @@ from typing import List
 from .splitters import SVMSplitter
 from ._node import Node
 from ._tree import Tree
+from .utils import get_decision_paths, satisfies_path
     
 
 class SVMTree(Tree):
@@ -48,12 +49,12 @@ class SVMTree(Tree):
         self,
         base_tree : Node = None,
         max_leaf_nodes : int = None,
-        max_depth : int = 1,
+        max_depth : int = None,
         min_points_leaf : int = 1,
         feature_labels : List[str] = None
     ):
-        if max_depth != 1:
-            raise ValueError("SVMTree is only designed to be utilized with max_depth = 1.")
+        #if max_depth != 1:
+        #    raise ValueError("SVMTree is only designed to be utilized with max_depth = 1.")
         
         splitter = SVMSplitter(
             min_points_leaf = min_points_leaf
@@ -83,7 +84,30 @@ class SVMTree(Tree):
             
             y (np.ndarray, optional): Target labels with two classes.
         """
-        if len(np.unique(y)) > 2:
-            raise ValueError("SVMTree is designed to split two classes only.")
+        #if len(np.unique(y)) > 2:
+        #    raise ValueError("SVMTree is designed to split two classes only.")
+        
+        # Reset if needed:
+        self.heap = []
+        self.leaf_count = 0
+        self.node_count = 0
+        
+        # Set feature labels if not set already:
+        if self.feature_labels is None:
+            self.feature_labels = [None]*X.shape[1]
+        else:
+            if not len(self.feature_labels) == X.shape[1]:
+                raise ValueError('Feature labels must match the shape of the data.')
+            
+        # if stopping criteria weren't provided, set to the maximum possible
+        if self.max_leaf_nodes is None:
+            self.max_leaf_nodes = len(X)
+        
+        if self.max_depth is None:
+            self.max_depth = len(X) - 1
+            
+        # Initialize dataset and fit Sklearn tree:
+        self.X = X
+        self.y = y
 
         super().fit(X, y)

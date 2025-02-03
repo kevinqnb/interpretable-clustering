@@ -468,7 +468,10 @@ class ExkmcTree(Tree):
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
             self.max_leaf_nodes = len(X)
-            
+        
+        self.X = X
+        self.y = y    
+        
         base_tree = 'IMM' if self.imm else 'NONE'
         self.exkmc_tree = ExTree(
             k = self.k,

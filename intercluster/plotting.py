@@ -106,7 +106,7 @@ def plot_multiclass_decision_boundaries(
 
 
 def build_graph(
-    custom_node : Node,
+    node : Node,
     graph : Callable = None,
     parent_id : str = None,
     node_id : str = "0",
@@ -116,11 +116,11 @@ def build_graph(
     cost : bool = True
 ):
     """
-    Builds a graph representation of the custom_node tree using 
+    Builds a graph representation of the node tree using 
     graphviz.
     
     Args:
-        custom_node (Node): Node object, which is the root node of the tree.
+        node (Node): Node object, which is the root node of the tree.
         graph (gv.Digraph, optional): The graph object to add nodes and edges to. Defaults to None.
         parent_id (str, optional): String identifier for parent. Defaults to None.
         node_id (str, optional): String identifier for the node. Defaults to "0".
@@ -146,42 +146,42 @@ def build_graph(
     node_label = ""
     
     # For NON-leaf nodes:
-    if custom_node.type == 'internal':
+    if node.type == 'internal':
         if feature_labels is None:
             if newline:
                 node_label += (
-                    f"Features {custom_node.features} \n Weights {custom_node.weights}\n\u2264 \
-                    {np.round(custom_node.threshold, 3)}"
+                    f"Features {node.features} \n Weights {node.weights}\n\u2264"
+                    "{np.round(node.threshold, 3)}"
                 )
             else:
                 node_label += (
-                    f"Features {custom_node.features} Weights {custom_node.weights} \n \u2264 \
-                    {np.round(custom_node.threshold, 3)}"
+                    f"Features {node.features} Weights {node.weights} \n \u2264" 
+                    "{np.round(node.threshold, 3)}"
                 )
         else:
-            if all(x == 1 for x in custom_node.weights):
-                sum = ' + \n'.join([f'{feature_labels[f]}' for f in custom_node.features])
+            if all(x == 1 for x in node.weights):
+                sum = ' + \n'.join([f'{feature_labels[f]}' for f in node.features])
             else:
-                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(custom_node.weights,
-                                                                             custom_node.features)])
+                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(node.weights,
+                                                                             node.features)])
             if newline:
-                node_label += (f"{sum} \n \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"{sum} \n \u2264 {np.round(node.threshold, 3)}")
             else:
-                node_label += (f"{sum} \u2264 {np.round(custom_node.threshold, 3)}")
+                node_label += (f"{sum} \u2264 {np.round(node.threshold, 3)}")
             
     # For leaf nodes:
     else:
-        node_label += f"Cluster {custom_node.label}\n"
-        node_label += f"Size: {len(custom_node.indices)}"
+        node_label += f"Cluster {node.label}\n"
+        node_label += f"Size: {len(node.indices)}"
         if cost:
-            node_label += f"\nCost: {np.round(custom_node.cost, 3)}"
+            node_label += f"\nCost: {np.round(node.cost, 3)}"
         else:
-            #node_label += f"\n Cluster {custom_node.label}"
+            #node_label += f"\n Cluster {node.label}"
             pass
-        #node_label += f"\nLabel: {custom_node.label}"
+        #node_label += f"\nLabel: {node.label}"
         
-    if custom_node.type == 'leaf' and (leaf_colors is not None):
-        graph.node(node_id, label=node_label, fillcolor=leaf_colors[custom_node.label], 
+    if node.type == 'leaf' and (leaf_colors is not None):
+        graph.node(node_id, label=node_label, fillcolor=leaf_colors[node.label], 
                    style='filled', penwidth='5', fontsize='64', fontname="times-bold")
     else:
         graph.node(node_id, label=node_label, fontsize='64', penwidth='5', fontname="times-bold")
@@ -192,10 +192,10 @@ def build_graph(
         graph.edge(parent_id, node_id, penwidth = '10')
     
     # Recursively add children
-    if custom_node.type == 'internal':
-        if custom_node.left_child is not None:
+    if node.type == 'internal':
+        if node.left_child is not None:
             build_graph(
-                node = custom_node.left_child,
+                node = node.left_child,
                 graph = graph,
                 parent_id = node_id, 
                 node_id = str(int(node_id) * 2 + 1),
@@ -204,9 +204,9 @@ def build_graph(
                 newline = newline,
                 cost = cost
             )
-        if custom_node.right_child is not None:
+        if node.right_child is not None:
             build_graph(
-                node = custom_node.right_child,
+                node = node.right_child,
                 graph = graph,
                 parent_id = node_id, 
                 node_id = str(int(node_id) * 2 + 2),
@@ -223,20 +223,18 @@ def build_graph(
 
 
 def visualize_tree(
-    custom_root : Node,
-    output_file : str = 'tree',
+    root : Node,
     feature_labels : List[str] = None,
     leaf_colors : Dict[int, str] = None,
     newline : bool = True,
-    cost : bool = True
+    cost : bool = True,
+    output_file : str = 'tree',
 ):
     """
     Wrapper function for visualizing a Tree object by building a graphviz decision tree.
 
     Args:
-        custom_root (Node): Root Node object for the tree.
-        
-        output_file (str, optional): File to save the resulting image. Defaults to 'tree.png'.
+        root (Node): Root Node object for the tree.
         
         feature_labels (List[str], optional): List of feature labels used for display.
             Each non-leaf Node object has a feature index attribute, and we use 
@@ -250,11 +248,13 @@ def visualize_tree(
         newline (bool, optional): Whether to add newlines in the node labels. Defaults to True.
         
         cost (bool, optional): Whether to display the cost in the leaf nodes. Defaults to True.
+        
+        output_file (str, optional): File to save the resulting image. Defaults to 'tree.png'.
 
     Returns:
         IPython.display.Image: The image object for display in Jupyter notebooks.
     """
-    graph = build_graph(custom_root, feature_labels=feature_labels, leaf_colors=leaf_colors,
+    graph = build_graph(root, feature_labels=feature_labels, leaf_colors=leaf_colors,
                         newline=newline, cost=cost)
     graph.attr(size="10,10", dpi="300", ratio="0.75")
     graph.render(output_file, format='png', cleanup=True)
@@ -380,4 +380,70 @@ def plot_decision_set(
     plt.show()
     
 
+####################################################################################################
+
+
+def experiment_plotter(
+    mean_df,
+    std_df,
+    xlabel,
+    ylabel,
+    domain,
+    cmap,
+    legend = True,
+    filename = None,
+    baseline_list = None
+):
+    fig,ax = plt.subplots(figsize = (6,4))
+    if baseline_list is None:
+        baseline_list = ['KMeans']
+    baseline_linestyles = ['-']
+    baselines = [_ for _ in mean_df.columns if _ in baseline_list]
+    modules = [_ for _ in mean_df.columns if _ not in baselines]
+    
+    end = -1
+    for i,b in enumerate(baselines):
+        ax.hlines(
+            mean_df[b].iloc[0],
+            xmin = domain[0],
+            xmax = domain[end],
+            color = 'k',
+            label = fr'$\texttt{{{b}}}$',
+            linestyle = baseline_linestyles[i],
+            linewidth = 3,
+            alpha = 0.6
+        )
+    
+    for i,m in enumerate(modules):
+        ax.plot(
+            domain,
+            np.array(mean_df[m]),
+            linewidth = 3,
+            marker='o',
+            markersize = 5,
+            c = cmap(i),
+            label = fr'$\texttt{{{m}}}$'
+        )
+        ax.fill_between(
+            domain, 
+            np.array(mean_df[m]) - np.array(std_df[m]),
+            np.array(mean_df[m]) + np.array(std_df[m]),
+            color= cmap(i),
+            alpha=0.1
+        )
+
+    ticks = np.arange(domain[0], domain[end] + 1, 1) 
+    labels = [str(i) for i in ticks] 
+    plt.xticks(ticks, labels)
+
+    if legend:
+        plt.legend(loc = 'upper right', bbox_to_anchor=(2, 1))
+        
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if filename is not None:
+        plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
+    #plt.show()
+        
+        
 ####################################################################################################

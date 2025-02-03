@@ -145,7 +145,7 @@ class DecisionSet:
             rule_labels = self.decision_set_labels,
             data_to_rules_assignment = data_to_rules_assignment,
             objective = objective,
-            search_range = lambda_search_range,
+            lambda_search_range = lambda_search_range,
         )
         
         self.pruned_indices = selected_rules
