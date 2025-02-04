@@ -138,7 +138,7 @@ def get_decision_paths_with_labels(
     path_labels = []
     for path in traverse(root):
         last_node = path[-1][0]
-        if last_node.type == 'leaf':
+        if last_node.type == 'leaf' and len(last_node.indices) > 0:
             leaf_label = mode(y[last_node.indices[0]])
             if leaf_label in labels:
                 paths.append(path)
