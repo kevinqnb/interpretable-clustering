@@ -62,7 +62,7 @@ class Experiment:
                 
         for m in self.module_list:
             for s in range(n_samples):
-                self.result_dict[("depth", m.name, s)] = []
+                self.result_dict[("rule-length", m.name, s)] = []
                 for fn in measurement_fns:
                     self.result_dict[(fn.name, m.name, s)] = []
                 
@@ -155,6 +155,8 @@ class RulesExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 for s in range(self.n_samples):
+                    self.result_dict[("rule-length", b.name, s)] = [-1]*n_steps
+                    
                     self.result_dict[(fn.name, b.name, s)] = [
                         fn(self.data, bassign, bcenters)
                     ] * n_steps

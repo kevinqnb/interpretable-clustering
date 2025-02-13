@@ -255,6 +255,8 @@ class DecisionSetMod(Module):
                 self.max_rule_length = self.model.max_rule_length
             elif hasattr(self.model, "depth"):
                 self.max_rule_length = self.model.depth
+            elif hasattr(self.model, "num_conditions"):
+                self.max_rule_length = self.model.num_conditions
             else:
                 raise ValueError("Decision set model has no rule length parameter.")
 

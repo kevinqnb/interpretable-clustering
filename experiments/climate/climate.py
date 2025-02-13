@@ -339,7 +339,6 @@ Ex1 = RulesExperiment(
     measurement_fns = measurement_fns,
     n_samples = n_samples,
     labels = y,
-    random_seed = seed,
     verbose = False
 )
 
