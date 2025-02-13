@@ -168,7 +168,7 @@ forest_params_exkmc = {
 voronoi_params = {
     'centers' : C,
     'num_sets' : n_sets,
-    'num_conditions' : 2,
+    'num_conditions' : k-1,
     'feature_pairings' : [list(range(12))] + [list(range(12,24))]
 }
 
@@ -316,7 +316,7 @@ mod7 = DecisionSetMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base]
-module_list = [exkmc_mod, mod1, mod3, mod4, mod6, mod7]
+module_list = [exkmc_mod, mod1, mod3, mod4, mod7]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),
@@ -330,7 +330,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 5
+n_samples = 100
 
 Ex1 = RulesExperiment(
     data = data,
