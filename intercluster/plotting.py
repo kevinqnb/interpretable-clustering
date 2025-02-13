@@ -112,7 +112,7 @@ def build_graph(
     node_id : str = "0",
     feature_labels : List[str] = None, 
     leaf_colors : Dict[int, str] = None,
-    newline : bool = True,
+    data_scaler : Callable = None,
     cost : bool = True
 ):
     """
@@ -147,27 +147,46 @@ def build_graph(
     
     # For NON-leaf nodes:
     if node.type == 'internal':
-        if feature_labels is None:
-            if newline:
-                node_label += (
-                    f"Features {node.features} \n Weights {node.weights}\n\u2264"
-                    "{np.round(node.threshold, 3)}"
-                )
-            else:
-                node_label += (
-                    f"Features {node.features} Weights {node.weights} \n \u2264" 
-                    "{np.round(node.threshold, 3)}"
-                )
+        # Rescale the weights if necessary
+        weights = node.weights
+        if data_scaler is not None and len(node.features) > 1:
+            weights = []
+            for l, feature in enumerate(node.features):
+                feature_min = data_scaler.data_min_[feature]
+                feature_max = data_scaler.data_max_[feature]
+                weight_l = np.round(node.weights[l] / (feature_max - feature_min), 2)
+                weights.append(weight_l)
         else:
-            if all(x == 1 for x in node.weights):
+            weight = np.round(node.weights[0], 2)
+            weights = [weight]
+            
+        # Rescale thresholds if necessary:
+        threshold = node.threshold
+        if data_scaler is not None:
+            if len(node.features) == 1:
+                feature_min = data_scaler.data_min_[node.features[0]]
+                feature_max = data_scaler.data_max_[node.features[0]]
+                threshold = threshold * (feature_max - feature_min) 
+            else:             
+                for l,feature in enumerate(node.features):
+                    feature_min = data_scaler.data_min_[feature]
+                    feature_max = data_scaler.data_max_[feature]
+                    threshold += (node.weights[l] * feature_min) / (feature_max - feature_min)
+                    
+        
+        if feature_labels is None:
+            node_label += (
+                f"Features {node.features} \n Weights {weights}\n\u2264"
+                f"{np.round(threshold, 3)}"
+            )
+        else:
+            if all(x == 1 for x in weights):
                 sum = ' + \n'.join([f'{feature_labels[f]}' for f in node.features])
             else:
-                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(node.weights,
+                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(weights,
                                                                              node.features)])
-            if newline:
-                node_label += (f"{sum} \n \u2264 {np.round(node.threshold, 3)}")
-            else:
-                node_label += (f"{sum} \u2264 {np.round(node.threshold, 3)}")
+            
+            node_label += (f"{sum} \n \u2264 {np.round(threshold, 3)}")
             
     # For leaf nodes:
     else:
@@ -201,7 +220,7 @@ def build_graph(
                 node_id = str(int(node_id) * 2 + 1),
                 feature_labels = feature_labels,
                 leaf_colors = leaf_colors,
-                newline = newline,
+                data_scaler = data_scaler,
                 cost = cost
             )
         if node.right_child is not None:
@@ -212,7 +231,7 @@ def build_graph(
                 node_id = str(int(node_id) * 2 + 2),
                 feature_labels = feature_labels,
                 leaf_colors = leaf_colors,
-                newline = newline,
+                data_scaler = data_scaler,
                 cost = cost
             )
     
@@ -226,7 +245,7 @@ def visualize_tree(
     root : Node,
     feature_labels : List[str] = None,
     leaf_colors : Dict[int, str] = None,
-    newline : bool = True,
+    data_scaler : Callable = None,
     cost : bool = True,
     output_file : str = 'tree',
 ):
@@ -255,7 +274,7 @@ def visualize_tree(
         IPython.display.Image: The image object for display in Jupyter notebooks.
     """
     graph = build_graph(root, feature_labels=feature_labels, leaf_colors=leaf_colors,
-                        newline=newline, cost=cost)
+                        data_scaler=data_scaler, cost=cost)
     graph.attr(size="10,10", dpi="300", ratio="0.75")
     graph.render(output_file, format='png', cleanup=True)
     return Image(output_file + '.png')
@@ -292,7 +311,7 @@ def plot_decision_set(
     """
     fig,ax = plt.subplots(figsize = (4, 6), dpi = 300)
     ax.set_xlim(0, len(D) + 0.1)
-    ax.set_ylim(0.9, len(D) + 0.1)
+    ax.set_ylim(0.9/1.5, len(D) + 0.1)
     ax.axis('off')
     #ax.set_aspect('equal')
     
@@ -300,12 +319,13 @@ def plot_decision_set(
     ordering = np.ndarray.flatten(np.argsort(rule_labels, axis = 0))
     for i, idx in enumerate(ordering):
         rule = D[idx]
-        rule_string = 'If \n'
+        rule_string = 'If '
         
         # Every condition except the last node, which should be a leaf
         for j, condition in enumerate(rule[:-1]):
             node = condition[0]
             
+            rule_string += '('
             # Sum of weights and features
             for l,feature in enumerate(node.features):
                 if l > 0:
@@ -346,17 +366,20 @@ def plot_decision_set(
                     threshold = threshold * (feature_max - feature_min) 
                 
             rule_string += str(np.round(threshold, 3))
+            rule_string += ')'
             
-            if j < len(rule) - 2:
-                rule_string += r' $\&$ ' + f'\n'
-            elif j == len(rule) - 2:
+            if j >= len(rule) - 2:
                 rule_string += f'\n'
+            elif j % 2 == 1:
+                rule_string += r' $\&$ ' + f'\n'
+            else:
+                rule_string += r' $\&$ '
                 
         rule_string += 'Then cluster ' + str(rule_labels[idx][0])
         rule_color = cluster_colors[rule_labels[idx][0]]
         ax.scatter(
             x = 0.25,
-            y = (len(D) - i),
+            y = (len(D) - i)/1.5,
             color = rule_color,
             s = 50, 
             marker = 's',
@@ -366,7 +389,7 @@ def plot_decision_set(
         ax.text(
             s = rule_string,
             x = 0.5,
-            y = (len(D) - i) + 0.055,
+            y = ((len(D) - i) + 0.055)/1.5,
             color = 'black',
             alpha = 1,
             fontweight = 'extra bold',

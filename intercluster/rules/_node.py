@@ -1,5 +1,6 @@
 from numpy.typing import NDArray
 from typing import List
+from ._conditions import Condition
 
 class Node():
     """

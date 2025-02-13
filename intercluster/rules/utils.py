@@ -196,3 +196,31 @@ def satisfies_path(X, path):
     results[results == 0] = -1
     satisfies_mask = np.all(results == directions, axis=1)
     return np.where(satisfies_mask)[0]
+
+
+####################################################################################################
+
+
+def satisfies_conditions(X : NDArray, condition_list : List):
+    """
+    Given a dataset X and a list of conditions, determines 
+    which data indices satisfy them simultaneously.
+    
+    Args:
+        X (np.ndarray): Dataset to evaluate.
+        
+        condition_list (List[Condition]): List of conditions to evaluate with.
+    
+    Returns:
+        (np.ndarray): Integer array of data indices satisfying the decision path. 
+    """
+    satisfies_mask = np.zeros((X.shape[0], len(condition_list)), dtype = bool)
+    for i, cond in enumerate(condition_list):
+        assert (cond.direction is not None), "Condition has no associated inequality direction."
+        
+        satisfies_cond_mask = cond.evaluate(X)
+        satisfies_mask[:,i] = satisfies_cond_mask
+        
+    return np.where(np.all(satisfies_mask, axis = 1))[0]
+        
+    

@@ -25,6 +25,10 @@ from .decision_forest import (
     DecisionForest,
 )
 
+from .voronoi_set import (
+    VoronoiSet
+)
+
 from .utils import (
     traverse,
     collect_nodes,
@@ -33,4 +37,5 @@ from .utils import (
     get_decision_paths_with_labels,
     get_depth,
     satisfies_path,
+    satisfies_conditions
 )

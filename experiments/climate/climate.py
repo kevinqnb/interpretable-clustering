@@ -77,10 +77,8 @@ X = scaler.fit_transform(data)
 k = 7
 n_clusters = k
 min_rules = k
-max_rules = 2*k
-min_depth = 3
-max_depth = 6
 n_trees = 1000
+n_sets = 10000
 
 ####################################################################################################
 # Baselines:
@@ -103,7 +101,6 @@ exkmc_mod = ExkmcMod(
 
 # Depth 2 Forest:
 forest_tree_params_depth_2 = {
-    'max_leaf_nodes' : max_rules,
     'max_depth' : 2
 }
 
@@ -119,7 +116,6 @@ forest_params_depth_2 = {
 
 # Depth 5 Forest:
 forest_tree_params_depth_5 = {
-    'max_leaf_nodes' : max_rules,
     'max_depth' : 5
 }
 
@@ -135,7 +131,6 @@ forest_params_depth_5 = {
 
 # SVM Forest:
 forest_tree_params_svm = {
-    'max_leaf_nodes' : max_rules,
     'max_depth' : 1
 }
 
@@ -165,7 +160,16 @@ forest_params_exkmc = {
     'max_features' : 24,
     'max_labels' : k,
     'feature_pairings' : [list(range(24))],
-    'train_size' : 0.75
+    'train_size' : 1
+}
+
+
+# Voronoi Decision Set:
+voronoi_params = {
+    'centers' : C,
+    'num_sets' : n_sets,
+    'num_conditions' : 2,
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))]
 }
 
 
@@ -220,44 +224,35 @@ prune_params_cover_70 = {
 # Decision Forest with Sklearn Trees:
 
 # 1) depth 2, 90% coverage:
-mod1 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_depth_2,
+mod1 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_2,
     clustering = kmeans_base,
     prune_params = prune_params_cover_90,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'Forest'
 )
 
 
 # 2) depth 2, full coverage:
-mod2 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_depth_2,
+mod2 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_2,
     clustering = kmeans_base,
     prune_params = prune_params_cover_100,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'Forest-Full-Cover'
 )
 
 
 
 # 3) depth 5, 90% coverage:
-mod3 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_depth_5,
+mod3 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_5,
     clustering = kmeans_base,
     prune_params = prune_params_cover_90,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'Forest-Depth-5'
 )
 
@@ -267,28 +262,22 @@ mod3 = ForestMod(
 # Forests with SVM Trees:
 
 # 4) SVM Tree depth 1, 70% coverage:
-mod4 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_svm,
+mod4 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_svm,
     clustering = kmeans_base,
     prune_params = prune_params_cover_70,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'SVM-Forest'
 )
 
 # 5) SVM Tree depth 1, full coverage:
-mod5 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_svm,
+mod5 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_svm,
     clustering = kmeans_base,
     prune_params = prune_params_cover_100,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'SVM-Forest-Full-Cover'
 )
 
@@ -298,18 +287,28 @@ mod5 = ForestMod(
 # Forests with ExKMC Trees:
 
 # 6) ExKMC Tree, 90% coverage:
-mod6 = ForestMod(
-    forest_model = DecisionForest,
-    forest_params = forest_params_exkmc,
+mod6 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_exkmc,
     clustering = kmeans_base,
     prune_params = prune_params_cover_90,
     min_rules = min_rules,
-    min_depth = min_depth,
-    max_rules = max_rules,
-    max_depth = max_depth,
     name = 'ExKMC-Forest'
 )
 
+
+####################################################################################################
+
+
+# 7) Voronoi decision set
+mod7 = DecisionSetMod(
+    decision_set_model = VoronoiSet,
+    decision_set_params = voronoi_params,
+    clustering = kmeans_base,
+    prune_params = prune_params_cover_90,
+    min_rules = min_rules,
+    name = 'Voronoi-Set'
+)
 
 
 ####################################################################################################
@@ -317,21 +316,21 @@ mod6 = ForestMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base]
-module_list = [exkmc_mod, mod1, mod2, mod3, mod4, mod5, mod6]
+module_list = [exkmc_mod, mod1, mod2, mod3, mod4, mod5, mod6, mod7]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(),
-    OverlapDistance(),
+    #OverlapDistance(),
 ]
 
 
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1000
+n_samples = 10
 
 Ex1 = RulesExperiment(
     data = data,
@@ -344,8 +343,8 @@ Ex1 = RulesExperiment(
     verbose = False
 )
 
-Ex1_results = Ex1.run(min_rules = min_rules, max_rules = max_rules)
-Ex1.save_results('data/experiments/decision_sets/', '_climate')
+Ex1_results = Ex1.run(n_steps = k)
+Ex1.save_results('data/experiments/climate/', '_test')
 
 
 ####################################################################################################

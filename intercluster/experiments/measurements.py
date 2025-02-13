@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.utils import kmeans_cost, overlap, coverage, center_dists
+from intercluster.utils import kmeans_cost, update_centers, overlap, coverage, center_dists
 
 class MeasurementFunction:
     def __init__(self, name):
@@ -55,10 +55,11 @@ class ClusteringCost(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
+        updated_centers = update_centers(X, assignment)
         return kmeans_cost(
             X,
             assignment,
-            centers,
+            updated_centers,
             average = self.average,
             normalize = self.normalize
         )

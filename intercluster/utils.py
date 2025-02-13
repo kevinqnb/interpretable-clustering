@@ -183,6 +183,38 @@ def kmedians_cost(
 ####################################################################################################
 
 
+def update_centers(X : NDArray, assignment : NDArray):
+    """
+    Given a dataset and a current assignment to cluster centers, update the centers by finding 
+    the mean of the points assigned to each original center.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        assignment (np.ndarray): Boolean assignment matrix of size (n x k). Entry (i,j) is 
+            `True` if point i is assigned to cluster j and `False` otherwise.
+            
+    Returns:
+        updated_centers (np.ndarray): Size (k x d) array of updated centers.
+    """
+    n,d = X.shape
+    m,k = assignment.shape
+    
+    if n != m:
+        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {m}")
+
+    updated_centers = np.zeros((k,d))
+    for i in range(k):
+        assigned = np.where(assignment[:,i])[0]
+        new_center = np.mean(X[assigned,:], axis = 0)
+        updated_centers[i,:] = new_center
+        
+    return updated_centers
+
+
+####################################################################################################
+
+
 def overlap(
     assignment : np.ndarray
 ):

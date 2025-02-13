@@ -115,9 +115,6 @@ class DecisionForest(DecisionSet):
         '''
             
         return rand_samples, rand_features, rand_labels
-        
-        
-        
     
     
     def _fit_tree(

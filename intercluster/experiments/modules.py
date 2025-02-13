@@ -13,7 +13,7 @@ from intercluster.utils import labels_to_assignment, kmeans_cost
 
 class Baseline:
     """
-    Experiment module for a non-variable baseline method. 
+    Experiment module for a non-variable, baseline method. 
     
     Args:
         name (str, optional): Name of the baseline method. Defaults to Class name.
@@ -30,58 +30,23 @@ class Baseline:
 
 class Module:
     """
-    Experiment module for a clustering method in which the number of rules or 
-    depth of rules may be varied. This is designed to be dynamic in the sense that 
-    the number of rules or depth of rules can be increased in steps. For certain types of 
-    modules, this means we don't have to retrain an entire model for every step in 
-    an experiment.
+    Experiment module for a clustering method run over selected parameter settings.
     
-    Args:
-        min_rules (int): Minimum number of rules.
-        
-        min_depth (int): Minimum depth of rules.
-        
+    Args:        
         name (str, optional): Name of the module. Defaults to Class name.
         
-    Attributes:
-        n_rules (int): Current number of rules.
-        
-        n_depth (int): Current depth of rules.
     """
     def __init__(
         self, 
-        min_rules : int = 1,
-        min_depth : int = 1,
         name : str = None
     ):
-        self.min_rules = min_rules
-        self.min_depth = min_depth
-        self.n_rules = min_rules
-        self.n_depth = min_depth
         self.name = name or self.__class__.__name__
-    
-    def step_num_rules(self):
-        """
-        Increases the number of rules by one and fits the model.
-        """
-        self.n_rules += 1
-        # fit model with new number of rules
-        pass
-    
-    def step_depth(self):
-        """
-        Increases the depth of rules by one and fits the model.
-        """
-        self.n_depth += 1
-        # fit model with new depth
-        pass
     
     def reset(self):
         """
-        Resets the module to its initial state with minimal number of rules and depth.
+        Resets the module to its initial state.
         """
-        self.n_rules = self.min_rules
-        self.n_depth = self.min_depth
+        pass
     
     
 ####################################################################################################
@@ -94,7 +59,7 @@ class KMeansBase(Baseline):
     Args:
         n_clusters (int): Number of clusters.
         
-        random_seed (int): Random seed. Defaults to None.                                            
+        random_seed (int): Random seed. Defaults to None.                                           
         
         name (str, optional): Name of the baseline method. Defaults to 'KMeans'.
     """
@@ -138,7 +103,7 @@ class ExkmcMod(Module):
     (https://github.com/navefr/ExKMC)
     
     NOTE: ExKMC does not allow depth control, so this module only allows for 
-    variability in the number of rules used.
+    variability in the number of rules used... that is until I get my own version of ExKMC working.
     
     Args:
         n_clusters (int): Number of clusters.
@@ -150,18 +115,13 @@ class ExkmcMod(Module):
         
         min_rules (int): Minimum number of rules.
         
-        min_depth (int): Minimum depth of rules.
-        
-        max_rules (int): Maximum number of rules.
-        
-        max_depth (int): Maximum depth of rules.
-        
         name (str, optional): Name of the module. Defaults to 'ExKMC'.
         
     Attributes:
-        n_rules (int): Current number of rules.
+        n_rules (int): Current number of rules. Defaults to min rules before running any experiment.
         
-        n_depth (int): Current depth of rules.
+        max_rule_length (int): Current maximum rule length (equivalent to tree depth). 
+            Defaults to -1 before running any experiment.
     """
     def __init__(
         self,
@@ -171,14 +131,25 @@ class ExkmcMod(Module):
         min_rules : int,
         name : str = 'ExKMC'
     ):
-        super().__init__(min_rules = min_rules, name = name)
+        super().__init__(name = name)
         self.n_clusters = n_clusters
-        self.base_tree = base_tree
         self.kmeans_model = kmeans_model
+        self.base_tree = base_tree
+        self.min_rules = min_rules
+        self.reset()
+        
+        
+    def reset(self):
+        """
+        Resets experiments by returning parametrs to their default values.
+        """
+        self.n_rules = self.min_rules
+        self.max_rule_length = -1
+        
     
     def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
         """
-        Increases the number of rules by one and fits the model.
+        Increases the number of rules by one and re-fits the model.
         
         Args:
             X (np.ndarray): Data matrix.
@@ -196,24 +167,21 @@ class ExkmcMod(Module):
         assignment = labels_to_assignment(labels, n_labels = self.n_clusters)
         centers = tree.all_centers
         self.n_rules += 1
-        self.n_depth = tree._max_depth()
-        return assignment, centers
-    
+        self.max_rule_length = tree._max_depth()
+        return assignment, centers   
     
 
 ####################################################################################################
 
 
-class ForestMod(Module):
+class DecisionSetMod(Module):
     """
-    Experiment module for random decision forests.
-    This method trains a random forest model, and then prunes the set of leaf node rules 
-    found in the forest with the help of an input set of clustering labels. 
+    Experiment module for decision sets.
     
     Args:
-        forest_model (Any): Random forest model.
+        decision_set_model (Any): Decision set model.
         
-        forest_params (dict[str, Any]): Parameters for the random forest model.
+        decision_set_params (dict[str, Any]): Parameters for the decision set model.
         
         clustering (Baseline): Trained Baseline clustering model.
         
@@ -222,63 +190,44 @@ class ForestMod(Module):
         
         min_rules (int): Minimum number of rules.
         
-        min_depth (int): Minimum depth of rules.
-        
-        max_rules (int): Maximum number of rules.
-        
-        name (str, optional): Name of the module. Defaults to 'Forest'.
+        name (str, optional): Name of the module. Defaults to 'Decision-Set'.
         
     Attributes:
+        model (Any): The fitted decision set model.
+        
         n_rules (int): Current number of rules.
         
-        n_depth (int): Current depth of rules.
-        
-        forest (Any): The fitted random forest model.
-        
-        rule_labels (np.ndarray): Array of rule labels.
-        
-        data_labels (np.ndarray): Array of data labels.
+        max_rule_length (int): Current maximum rule length among all collected rules.
         
         centers (np.ndarray): Array of cluster centers.
     """
     def __init__(
         self,
-        forest_model : Any,
-        forest_params : Dict[str, Any],
+        decision_set_model : Any,
+        decision_set_params : Dict[str, Any],
         clustering : Baseline,
         prune_params : Dict[str, Any],
         min_rules : int,
-        min_depth : int,
-        max_rules : int,
-        max_depth : int,
-        name = 'Forest'
+        name = 'Decision-Set'
     ):
-        self.forest_model = forest_model
-        self.forest_params = forest_params
+        self.decision_set_model = decision_set_model
+        self.decision_set_params = decision_set_params
         self.clustering = clustering
         self.prune_params = prune_params
-        super().__init__(min_rules, min_depth, name)
-        self.max_rules = max_rules
-        self.max_depth = max_depth
+        self.min_rules = min_rules
+        super().__init__(name)
         
-        self.forest = None
-        self.points_to_rules = None
-        self.rule_assignment = None
-        self.rule_labels = None
-        self.data_labels = None
+        self.reset()
         self.centers = self.clustering.centers
         
         
     def reset(self):
         """
-        Resets the module to its initial state with minimal number of rules and depth.
-        Also resets the fitted forest model, rule labels, data labels, and centers.
+        Resets experiments by returning parametrs to their default values.
         """
+        self.model = None
         self.n_rules = self.min_rules
-        self.n_depth = self.min_depth
-        self.forest = None
-        self.rule_labels = None
-        self.data_labels = None
+        self.max_rule_length = -1
     
     
     def step_num_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
@@ -296,32 +245,28 @@ class ForestMod(Module):
             
             centers (np.ndarray): Size k x d array of cluster centers.
         """
-        if self.forest is None:
-            self.forest = self.forest_model(
-                **self.forest_params
+        if self.model is None:
+            self.model = self.decision_set_model(
+                **self.decision_set_params
             )
-            self.forest.fit(X,  y)
+            self.model.fit(X,  y)
             
-            data_to_rules_labels = self.forest.predict(X, rule_labels = True)
-            self.points_to_rules = labels_to_assignment(data_to_rules_labels,
-                                                        n_labels = len(self.forest.decision_set))
-            self.data_labels = [[l] for l in y]
-            
-            self.rule_labels = self.forest.decision_set_labels
-            self.rule_assignment = labels_to_assignment(self.rule_labels,
-                                                        n_labels = self.clustering.n_clusters)
-            self.rule_labels = self.forest.decision_set_labels
-            self.n_depth = self.forest.depth
+            if hasattr(self.model, "max_rule_length"):
+                self.max_rule_length = self.model.max_rule_length
+            elif hasattr(self.model, "depth"):
+                self.max_rule_length = self.model.depth
+            else:
+                raise ValueError("Decision set model has no rule length parameter.")
 
         if self.prune_params is not None:
-            self.forest.prune(q = self.n_rules, **self.prune_params)
+            self.model.prune(q = self.n_rules, **self.prune_params)
             assignment = labels_to_assignment(
-                self.forest.pruned_predict(X, rule_labels = False),
+                self.model.pruned_predict(X, rule_labels = False),
                 n_labels = self.clustering.n_clusters
             )
         else:
             assignment = labels_to_assignment(
-                self.forest.predict(X, rule_labels = False),
+                self.model.predict(X, rule_labels = False),
                 n_labels = self.clustering.n_clusters
             )
         self.n_rules += 1

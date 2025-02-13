@@ -8,7 +8,7 @@ from .measurements import (
 from .modules import (
     KMeansBase,
     ExkmcMod,
-    ForestMod,
+    DecisionSetMod,
 )
 
 from .experiments import (

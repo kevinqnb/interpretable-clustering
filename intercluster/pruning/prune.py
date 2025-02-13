@@ -189,6 +189,7 @@ def prune_with_grid_search(
             "Coverage requirements not met. "
             "Consider adjusting requirements or increasing the search range for lambda."
         )
+        print("Coverage requirements not met.")
     tiebreak_vals = [x[0][1] for x in search_results]
     best_lambda_idx = tiebreak(scores = objective_vals, proxy = tiebreak_vals)[0]
     best_lambda = lambda_search_range[best_lambda_idx]

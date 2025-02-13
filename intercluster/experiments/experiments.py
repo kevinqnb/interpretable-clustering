@@ -7,6 +7,7 @@ from .modules import *
 
 ####################################################################################################
 
+
 class Experiment:
     """
     Default class for performing suite of experiments on an input dataset which measure
@@ -22,14 +23,17 @@ class Experiment:
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
             
-        n_samples (int): Number of samples to run each module for.
+        n_samples (int): Number of samples to run the experiment for.
         
-        random_seed (int, optional): Random seed for experiments. Defaults to None.
+        labels (List[List[int]]): Labels for the input dataset (if any).
+            Defaults to None in which case data is taken to be unlabeled.
         
         verbose (bool, optional): Allows for printing of status. Defaults to True.
     
     Attrs: 
-        result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
+        result_dict (Dict[Tuple[str, str, int], List[float]): Dictionary with keys 
+            as tuples of the form (measurement function name, module name, sample number),
+            and values which are lists of measurement results.
     """
     def __init__(
         self, 
@@ -38,8 +42,7 @@ class Experiment:
         module_list : List[Any],
         measurement_fns : List[Callable],
         n_samples : int,
-        labels : NDArray = None,
-        random_seed : int = None,
+        labels : List[List[int]] = None,
         verbose : bool = True
     ):
         self.data = data
@@ -48,11 +51,9 @@ class Experiment:
         self.module_list = module_list
         self.measurement_fns = measurement_fns
         self.n_samples = n_samples
-        self.random_seed = random_seed
-        # NOTE: Does this need to be here??
-        #np.random.seed(random_seed)
         self.verbose = verbose
         
+        # Initializes the result dictionary
         self.result_dict = {}
         for b in baseline_list:
             for fn in measurement_fns:
@@ -97,7 +98,8 @@ class Experiment:
 class RulesExperiment(Experiment):
     """
     Perfroms an experiment on an input dataset which measures clustering cost as the 
-    number of rules changes.
+    number of rules is increased. Every step forward in this experiment should call 
+    a .step_num_rules() method of its modules, which increases the number of rules used by 1.
     
     Args:
         data (np.ndarray): Input dataset.
@@ -110,10 +112,13 @@ class RulesExperiment(Experiment):
         
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
+
+        n_samples (int): Number of sample trials to run the experiment for.
         
-        random_seed (int, optional): Random seed for experiments. Defaults to None.
+        labels (np.ndarray): Labels for the input dataset (if any). Defaults to None in which case
+            data is taken to be unlabeled.
         
-        verbose (bool, optional): Allows for printing of status. Defaults to True.
+        verbose (bool, optional): Allows for optional printing of status. Defaults to False.
         
     Attrs:
         result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
@@ -126,8 +131,7 @@ class RulesExperiment(Experiment):
         measurement_fns,
         n_samples,
         labels = None,
-        random_seed = None,
-        verbose = True
+        verbose = False
     ):
         super().__init__(
             data = data,
@@ -136,17 +140,16 @@ class RulesExperiment(Experiment):
             measurement_fns = measurement_fns,
             n_samples = n_samples,
             labels = labels,
-            random_seed = random_seed,
             verbose = verbose
         )
             
         
-    def run_baselines(self, n_rules_list : List[int]):
+    def run_baselines(self, n_steps : int):
         """
         Runs the baseline modules.
         
         Args:
-            n_rules_list (List[int]): List with varying numbers of rules to run the module for.
+            n_steps (int): Number of steps to run the experiment for.
         """
         for b in self.baseline_list:
             bassign, bcenters = b.assign(self.data)
@@ -154,31 +157,36 @@ class RulesExperiment(Experiment):
                 for s in range(self.n_samples):
                     self.result_dict[(fn.name, b.name, s)] = [
                         fn(self.data, bassign, bcenters)
-                    ] * len(n_rules_list)
+                    ] * n_steps
+                    
             
-    def run_modules(self, n_rules_list : List[int], sample_number : int):
+    def run_modules(self, n_steps : int, sample_number : int):
         """
         Runs the modules.
         
         Args:
-            n_rules_list (List[int]): List with varying numbers of rules to run the module for.
+            n_steps (int): Number of steps to run the experiment for.
+            
+            sample_number (int): Current sample number (helpful for recording results).
         """
-        for i in n_rules_list:
+        for i in range(n_steps):
             if self.verbose:
-                print(f"Running for {i} rules.")
-            for m in self.module_list:
-                massign, mcenters = m.step_num_rules(self.data, self.labels)
+                print(f"Running for step {i}.")
+            for mod in self.module_list:
+                massign, mcenters = mod.step_num_rules(self.data, self.labels)
                 
-                # record depth:
-                self.result_dict[("depth", m.name, sample_number)].append(m.n_depth)
+                # record maximum rule length:
+                self.result_dict[("rule-length", mod.name, sample_number)].append(
+                    mod.max_rule_length
+                )
                 
                 # record results from measurement functions:
                 for fn in self.measurement_fns:
-                    self.result_dict[(fn.name, m.name, sample_number)].append(
+                    self.result_dict[(fn.name, mod.name, sample_number)].append(
                         fn(self.data, massign, mcenters)
                     )
         
-    def run(self, min_rules : int, max_rules : int):
+    def run(self, n_steps):
         """
         Runs the experiment.
         
@@ -187,23 +195,20 @@ class RulesExperiment(Experiment):
             some of the modules to be non-stepwise. 
             
         Args:
-            min_rules (int): Minimum number of rules to fit with.
-            
-            max_rules (int): Maximum number of rules to fit with.
+            n_steps (int): Number of steps to run the experiment for.
             
         Returns:
             cost_df (pd.DataFrame): DataFrame of the results.
         """
-        n_rules_list = list(range(min_rules, max_rules + 1))
-        self.run_baselines(n_rules_list)
+        self.run_baselines(n_steps)
         
         for s in range(self.n_samples):
             if self.verbose:
                 print(f"Running for sample {s}.")
                 
-            self.run_modules(n_rules_list, sample_number = s)
+            self.run_modules(n_steps, s)
             
-            # reset the modules:
+            # Reset the modules in between samples:
             for m in self.module_list:
                 m.reset()
             
@@ -221,7 +226,7 @@ class RulesExperiment(Experiment):
             
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
-        fname = os.path.join(path, 'rules_cost' + str(identifier) + '.csv')
+        fname = os.path.join(path, 'rules_exp' + str(identifier) + '.csv')
         cost_df = pd.DataFrame(self.result_dict)
         cost_df.to_csv(fname)
         
