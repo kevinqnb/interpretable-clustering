@@ -30,6 +30,7 @@ class DecisionSet:
         self.pruned_indices = None
         self.pruned_decision_set = None
         self.pruned_decision_set_labels = None
+        self.prune_status
         
         
     def _fitting(self, X : NDArray, y : NDArray = None) -> Tuple[List[Any], List[int]]:
@@ -110,8 +111,9 @@ class DecisionSet:
     
     def prune(
         self,
-        q : int,
-        k : int,
+        n_rules : int,
+        frac_cover : float,
+        n_clusters : int,
         X : NDArray,
         y : List[List[int]],
         objective : Callable, 
@@ -122,9 +124,11 @@ class DecisionSet:
         coverage objective. 
         
         Args:
-            q (int): The number of rules to select.
+            n_rules (int): The number of rules to select.
             
-            k (int) : The desired number of clusters. 
+            frac_cover (float): Required threshold for coverage of data points.
+            
+            n_clusters (int) : The desired number of clusters. 
             
             X (np.ndarray): Input dataset.
             
@@ -139,8 +143,9 @@ class DecisionSet:
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         
         selected_rules = prune_with_grid_search(
-            q = q,
-            k = k,
+            n_rules = n_rules,
+            frac_cover = frac_cover,
+            n_clusters = n_clusters,
             data_labels = y,
             rule_labels = self.decision_set_labels,
             data_to_rules_assignment = data_to_rules_assignment,
@@ -148,7 +153,11 @@ class DecisionSet:
             lambda_search_range = lambda_search_range,
         )
         
-        self.pruned_indices = selected_rules
+        if selected_rules is None:
+            self.prune_status = False
+        else:
+            self.prune_status = True
+            self.pruned_indices = selected_rules
         
         
     def pruned_predict(self, X : NDArray, rule_labels : bool = True) -> List[List[int]]:

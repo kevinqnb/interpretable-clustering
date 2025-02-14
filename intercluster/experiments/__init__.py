@@ -2,16 +2,18 @@ from .measurements import (
     ClusteringCost,
     Overlap,
     Coverage,
-    OverlapDistance,
+    DistanceRatio,
 )
 
 from .modules import (
     KMeansBase,
+    IMMBase,
     ExkmcMod,
     DecisionSetMod,
 )
 
 from .experiments import (
+    CoverageExperiment,
     RulesExperiment,
     RulesExperimentV2,
 )

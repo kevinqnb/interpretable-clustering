@@ -55,11 +55,13 @@ class ClusteringCost(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
-        updated_centers = update_centers(X, assignment)
+        if (assignment is None) or (centers is None):
+            return np.nan
+        
         return kmeans_cost(
             X,
             assignment,
-            updated_centers,
+            centers,
             average = self.average,
             normalize = self.normalize
         )
@@ -86,6 +88,9 @@ class Overlap(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
+        if (assignment is None) or (centers is None):
+            return np.nan
+        
         return overlap(assignment)
     
     
@@ -110,18 +115,20 @@ class Coverage(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
+        if (assignment is None) or (centers is None):
+            return np.nan
+        
         return coverage(assignment)
     
     
-class OverlapDistance(MeasurementFunction):
+class DistanceRatio(MeasurementFunction):
     """
-    Computes the ratio between
-        - The average distance between points which belong to multiple 
-          clusters to their closest cluster center.
-        - The average distance between all points to their closest cluster center. 
+    For every point computes the ratio between
+        - The distance to its second closest center
+        - The distance to its closest cluster center. 
     """
     def __init__(self):
-        super().__init__('overlap-distance')
+        super().__init__('distance-ratio')
         
     def __call__(
         self,
@@ -137,14 +144,17 @@ class OverlapDistance(MeasurementFunction):
             
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
         """
-        center_dist_matrix = center_dists(X, centers)
-        closest_dist_arr = np.min(center_dist_matrix, axis = 1)
-        overlap_mask = np.sum(assignment, axis = 1) > 1
-        single_mask = np.sum(assignment, axis = 1) == 1
-
-        if np.sum(overlap_mask) > 0 and np.sum(single_mask) > 0:
-            overlap_avg_dist = np.mean(closest_dist_arr[overlap_mask])
-            single_avg_dist = np.mean(closest_dist_arr[single_mask])
-            return overlap_avg_dist / single_avg_dist
-        else:
+        if (assignment is None) or (centers is None):
             return np.nan
+        
+        n,d = X.shape
+        center_dist_matrix = center_dists(X, centers)
+        sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
+        closest_dists = np.array(
+            [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]
+        )
+        second_closest_dists = np.array(
+            [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
+        )
+        return np.mean(second_closest_dists/closest_dists)
+        

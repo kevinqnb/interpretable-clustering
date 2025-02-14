@@ -95,6 +95,149 @@ class Experiment:
 ####################################################################################################
 
 
+class CoverageExperiment(Experiment):
+    """
+    Perfroms an experiment on an input dataset which measures clustering cost as
+    coverage requirements are increased. Every step forward in this experiment should call 
+    a .step_coverage() method of its modules, which increases the number of rules used by 1.
+    
+    Args:
+        data (np.ndarray): Input dataset.
+        
+        labels (np.ndarray): Labels for the input dataset.
+        
+        baseline_list (List[Any]): List of baseline modules to use and record results for. 
+        
+        module_list (List[Any]): List of modules to use and record results for.
+        
+        measurement_fns (List[Callable]): List of MeasurementFunction objects
+            used to compute results.
+
+        n_samples (int): Number of sample trials to run the experiment for.
+        
+        labels (np.ndarray): Labels for the input dataset (if any). Defaults to None in which case
+            data is taken to be unlabeled.
+        
+        verbose (bool, optional): Allows for optional printing of status. Defaults to False.
+        
+    Attrs:
+        result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
+    """
+    def __init__(
+        self, 
+        data,
+        baseline_list,
+        module_list,
+        measurement_fns,
+        n_samples,
+        labels = None,
+        verbose = False
+    ):
+        super().__init__(
+            data = data,
+            baseline_list = baseline_list,
+            module_list = module_list,
+            measurement_fns = measurement_fns,
+            n_samples = n_samples,
+            labels = labels,
+            verbose = verbose
+        )
+            
+        
+    def run_baselines(self, n_steps : int, step_size : float):
+        """
+        Runs the baseline modules.
+        
+        Args:
+            n_steps (int): Number of steps to run the experiment for.
+        """
+        for b in self.baseline_list:
+            bassign, bcenters = b.assign(self.data)
+            for fn in self.measurement_fns:
+                for s in range(self.n_samples):
+                    self.result_dict[("rule-length", b.name, s)] = [-1]*n_steps
+                    
+                    self.result_dict[(fn.name, b.name, s)] = [
+                        fn(self.data, bassign, bcenters)
+                    ] * n_steps
+                    
+            
+    def run_modules(self, n_steps : int, step_size : float, sample_number : int):
+        """
+        Runs the modules.
+        
+        Args:
+            n_steps (int): Number of steps to run the experiment for.
+            
+            step_size (float): Size of coverage to increase by for every step.
+            
+            sample_number (int): Current sample number (helpful for recording results).
+        """
+        for i in range(n_steps):
+            if self.verbose:
+                print(f"Running for step {i}.")
+            for mod in self.module_list:
+                massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
+                
+                # record maximum rule length:
+                self.result_dict[("rule-length", mod.name, sample_number)].append(
+                    mod.max_rule_length
+                )
+                
+                # record results from measurement functions:
+                for fn in self.measurement_fns:
+                    self.result_dict[(fn.name, mod.name, sample_number)].append(
+                        fn(self.data, massign, mcenters)
+                    )
+        
+    def run(self, n_steps : int, step_size : float):
+        """
+        Runs the experiment.
+        
+        NOTE: This should have an increment parameter. Or otherwise 
+            n_rules_list should be the input. This would require changing 
+            some of the modules to be non-stepwise. 
+            
+        Args:
+            n_steps (int): Number of steps to run the experiment for.
+            
+        Returns:
+            cost_df (pd.DataFrame): DataFrame of the results.
+        """
+        self.run_baselines(n_steps, step_size)
+        
+        for s in range(self.n_samples):
+            if self.verbose:
+                print(f"Running for sample {s}.")
+                
+            self.run_modules(n_steps, step_size, s)
+            
+            # Reset the modules in between samples:
+            for m in self.module_list:
+                m.reset()
+            
+            if self.verbose:
+                print()
+            
+        return pd.DataFrame(self.result_dict)
+    
+    def save_results(self, path, identifier = ''):
+        """
+        Saves the results of the experiment.
+        
+        Args:
+            path (str): File path to save the results to.
+            
+            identifier (str, optional): Unique identifier for the results. Defaults to blank.
+        """
+        fname = os.path.join(path, 'rules_exp' + str(identifier) + '.csv')
+        cost_df = pd.DataFrame(self.result_dict)
+        cost_df.to_csv(fname)
+        
+        
+####################################################################################################
+
+
 class RulesExperiment(Experiment):
     """
     Perfroms an experiment on an input dataset which measures clustering cost as the 
