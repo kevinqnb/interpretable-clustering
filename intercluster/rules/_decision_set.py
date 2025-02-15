@@ -30,7 +30,7 @@ class DecisionSet:
         self.pruned_indices = None
         self.pruned_decision_set = None
         self.pruned_decision_set_labels = None
-        self.prune_status
+        self.prune_status = False
         
         
     def _fitting(self, X : NDArray, y : NDArray = None) -> Tuple[List[Any], List[int]]:

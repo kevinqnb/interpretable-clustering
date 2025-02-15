@@ -72,7 +72,7 @@ def distorted_greedy(
     rule_covers_dict = assignment_to_dict(data_to_rules_assignment)
     rule_label_covers_dict = {}
     for rule, covers in rule_covers_dict.items():
-        rule_label = rule_labels[rule][0]
+        rule_label = rule_labels[rule]
         label_points_to_cover = points_to_cover[rule_label]
         rule_label_covers_dict[rule] = label_points_to_cover.intersection(covers)
         
@@ -85,7 +85,7 @@ def distorted_greedy(
         
         for rule in rule_list:
             if rule not in selected_rules:
-                rule_label = rule_labels[rule][0]
+                rule_label = rule_labels[rule]
                 rule_covers = rule_covers_dict[rule]
                 rule_label_covers = rule_label_covers_dict[rule]
                 label_covered_so_far = covered_so_far[rule_label]
@@ -184,11 +184,11 @@ def prune_with_grid_search(
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
-        data_to_cluster_assignment = np.dot(A, B)
-        obj = objective(data_to_cluster_assignment)
+        pruned_data_to_cluster_assignment = np.dot(A, B)
+        obj = objective(pruned_data_to_cluster_assignment)
         
         # If frac_cover points are not covered, return infinity.
-        if coverage(data_to_cluster_assignment) < frac_cover:
+        if coverage(pruned_data_to_cluster_assignment) < frac_cover:
             return (np.inf, np.inf), lambda_val
         
         # Otherwise, return the objective along with a random tiebreak value.        

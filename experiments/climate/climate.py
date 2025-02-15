@@ -277,7 +277,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 5
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -286,7 +286,7 @@ Ex1 = CoverageExperiment(
     measurement_fns = measurement_fns,
     n_samples = n_samples,
     labels = y,
-    verbose = False
+    verbose = True
 )
 
 Ex1_results = Ex1.run(n_steps = k, step_size = 0.05)
