@@ -15,6 +15,14 @@ class InformationGainSplitter(AxisAlignedSplitter):
         """
         Args:
             min_points_leaf (int, optional): Minimum number of points in a leaf.
+            
+        Attrs:
+            X (np.ndarray): Dataset for splitting
+            
+            y (List[Set[int]]): Associated data labels.
+                NOTE: Each data point must have exactly one label.
+                
+            y_array (np.ndarray): Flattened one-dim array of labels.
         """
         super().__init__(min_points_leaf = min_points_leaf)
         
@@ -34,7 +42,7 @@ class InformationGainSplitter(AxisAlignedSplitter):
         if len(indices) == 0:
             return 0
         else:
-            y_ = self.y[indices]
+            y_ = self.y_array[indices]
             entropy_score = entropy(y_) 
             return entropy_score
         

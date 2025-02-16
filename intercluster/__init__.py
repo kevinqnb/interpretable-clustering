@@ -2,18 +2,17 @@ from .utils import (
     tiebreak,
     mode,
     entropy,
-    center_dists,
-    kmeans_cost,
-    kmedians_cost,
     overlap,
     coverage,
-    kmeans_plus_plus_initialization,
-    labels_to_assignment,
+    center_dists,
+    kmeans_cost,
+    labels_format,
+    can_flatten,
     flatten_labels,
     unique_labels,
+    labels_to_assignment,
     assignment_to_labels,
     assignment_to_dict,
-    num_assigned,
 )
 
 

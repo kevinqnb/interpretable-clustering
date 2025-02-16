@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Set
 from ._conditions import Condition, LinearCondition
 from ._decision_set import DecisionSet
 from .utils import satisfies_conditions
@@ -134,7 +134,7 @@ class VoronoiSet(DecisionSet):
         return condition
     
     
-    def _create_rule(self):
+    def _create_rule(self) -> Tuple[List[Condition], int]:
         """
         Finds a new voronoi rule.
         
@@ -159,7 +159,7 @@ class VoronoiSet(DecisionSet):
         
     
     
-    def _fitting(self, X : NDArray, y : NDArray = None) -> Tuple[List[Any], List[int]]:
+    def _fitting(self, X : NDArray, y : List[Set[int]] = None) -> Tuple[List[Any], List[int]]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -167,7 +167,7 @@ class VoronoiSet(DecisionSet):
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
             
         returns:
             decision_set (List[Any]): List of rules.

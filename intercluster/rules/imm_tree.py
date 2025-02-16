@@ -1,9 +1,11 @@
 import numpy as np
 import heapq
 from ExKMC.Tree import Tree as ExTree
-from typing import List, Tuple, Callable
+from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
+from intercluster.utils import labels_format, can_flatten, flatten_labels
 from .splitters import ImmSplitter, DummySplitter
+from ._conditions import Condition, LinearCondition
 from ._node import Node
 from ._tree import Tree
 from .utils import get_decision_paths, satisfies_path
@@ -80,7 +82,7 @@ class ImmTree(Tree):
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Initiates and builds a decision tree around a given dataset. 
@@ -152,12 +154,12 @@ class ImmTree(Tree):
         Args:
             node (Node): Leaf node to add to the heap.
         """
-        gain, split_info = self.splitter.split(
+        gain, condition = self.splitter.split(
             indices = node.indices,
             centroid_indices = node.centroid_indices
         )
         random_tiebreaker = np.random.rand()
-        leaf_obj = (-1*gain, random_tiebreaker, node, split_info)
+        leaf_obj = (-1*gain, random_tiebreaker, node, condition)
         heapq.heappush(self.heap, leaf_obj)
         self.leaf_count += 1
         if node.depth > self.depth:
@@ -167,7 +169,7 @@ class ImmTree(Tree):
     def branch(
         self,
         node : Node,
-        split_info : Tuple[NDArray, NDArray, float]
+        condition : Condition
     ):
         """
         Splits a leaf node into two new leaf nodes.
@@ -178,13 +180,12 @@ class ImmTree(Tree):
             split_info (Tuple[np.ndarray, np.ndarray, float]): 
                 Precomputed information for the split.
         """
-        features, weights, threshold = split_info
         
         (   left_indices,
             right_indices,
             left_centroid_indices,
             right_centroid_indices
-        ) = self.splitter.get_split_indices(node.indices, node.centroid_indices, split_info)
+        ) = self.splitter.get_split_indices(node.indices, node.centroid_indices, condition)
         
         # Calculate cost of left and right branches
         left_cost = self.splitter.cost(
@@ -230,13 +231,11 @@ class ImmTree(Tree):
         node.tree_node(
             left_child=left_node,
             right_child=right_node,
-            features=features,
-            weights=weights,
-            threshold=threshold,
+            condition = condition,
             cost=node.cost,
             indices=node.indices,
             depth=node.depth,
-            feature_labels = [self.feature_labels[f] for f in features],
+            feature_labels = [self.feature_labels[f] for f in condition.features],
             centroid_indices=node.centroid_indices
         )
         # Adjust counts:
@@ -264,7 +263,7 @@ class ImmTree(Tree):
         # pop an object from the heap
         heap_leaf_obj = heapq.heappop(self.heap)
         node = heap_leaf_obj[2]
-        split_info = heap_leaf_obj[3] 
+        condition = heap_leaf_obj[3] 
         
         # If we've reached any of the maximum conditions, stop growth.
         if (
@@ -276,115 +275,9 @@ class ImmTree(Tree):
             pass
 
         else:
-            self.branch(node, split_info)
+            self.branch(node, condition)
         
                     
-####################################################################################################
-
-
-class DiffImmTree(ImmTree):
-    """
-    NOTE: Leaving this for now, the part I didn't figure out was how to tell the decision forest 
-    to pass the target centers as input. I think I need to modify the decision forest to do this.
-    
-    This is an adaptation of the Imm Tree which is designed to simply 
-    differentiate a set of target cluster from the rest of the data. Specifically:
-    
-    1) From an input set of reference cluster centers, a set of target clusters is 
-    separated from the rest.
-    2) The number of points separated from those cluster centers are minimized. 
-    
-    NOTE: To properly use this, fit with a set of labels in which each data point is 
-    assigned to its closest cluster center (if that center is a target cluster), 
-    and is assigned to -1 otherwise.
-    
-    This an adaptation of the following work:
-    "Explainable k-Means and k-Medians Clustering"
-    Dasgupta, Frost, Moshkovitz, Rashtchian, 2020
-    (https://arxiv.org/abs/2002.12538)
-    
-    Args:
-        target_centers (np.ndarray): Indices of the target clusters to separate.
-        
-        centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
-            Defaults to None.
-            
-        norm (int, optional): Takes values 1 or 2. If norm = 1, compute distances using the 
-            1 norm. If 2, compute distances with the squared two norm. Defaults to 2.
-            
-        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-            Defaults to None.
-            
-        max_depth (int, optional): Optional constraint for maximum depth. 
-            Defaults to None.
-            
-        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-            within a single leaf. Defaults to 1.
-            
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
-            
-    Attributes:
-        root (Node): Root node of the tree.
-        
-        heap (heapq list): Maintains the heap structure of the tree.
-        
-        leaf_count (int): Number of leaves in the tree.
-        
-        node_count (int): Number of nodes in the tree.
-            
-        depth (int): The maximum depth of the tree.
-                
-    """
-    
-    def __init__(
-        self,
-        target_centers : NDArray = None,
-        centers : NDArray = None,
-        norm : int = 2,
-        max_leaf_nodes : int = None,
-        max_depth : int = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
-    ):
-        self.target_centers = target_centers
-        super().__init__(
-            centers = centers,
-            norm = norm,
-            max_leaf_nodes = max_leaf_nodes,
-            max_depth = max_depth,
-            min_points_leaf = min_points_leaf,
-            feature_labels = feature_labels
-        )
-        
-    def grow(
-        self
-    ):
-        """
-        Builds the decision tree by splitting leaf nodes.
-        Stops when a the target cluster is separated.
-        """
-        # pop an object from the heap
-        heap_leaf_obj = heapq.heappop(self.heap)
-        gain = -1*heap_leaf_obj[0]
-        node = heap_leaf_obj[2]
-        split_info = heap_leaf_obj[3] 
-        
-        # If we've reached any of the maximum conditions, stop growth.
-        if (
-            (gain == -np.inf) or
-            (node.depth >= self.max_depth) or 
-            (self.leaf_count >= (self.max_leaf_nodes)) or
-            (len(node.indices) <= self.min_points_leaf) or
-            (len(node.centroid_indices) <= 1) or 
-            (np.all(self.is_separated[self.target_centers]))
-        ):
-            pass
-
-        else:
-            self.branch(node, split_info)
-
-
 ####################################################################################################
 
 
@@ -444,7 +337,7 @@ class ExkmcTree(Tree):
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Fits and Exkmc tree to a dataset X. 
@@ -470,7 +363,11 @@ class ExkmcTree(Tree):
             self.max_leaf_nodes = len(X)
         
         self.X = X
-        self.y = y    
+        self.y = y
+        
+        if not can_flatten(y):
+            raise ValueError("Each data point must have exactly one label.")
+        self.y_array = flatten_labels(y)
         
         base_tree = 'IMM' if self.imm else 'NONE'
         self.exkmc_tree = ExTree(
@@ -529,12 +426,17 @@ class ExkmcTree(Tree):
             left_child = Node()
             right_child = Node()
             
+            condition = LinearCondition(
+                features = np.array([feature]),
+                weights = np.array([1]),
+                threshold = threshold,
+                direction = -1
+            )
+            
             node_obj.tree_node(
                 left_child = left_child,
                 right_child = right_child,
-                features = [feature],
-                weights = [1],
-                threshold = threshold,
+                condition = condition,
                 cost = -1,
                 indices = indices,
                 depth = depth,
@@ -562,7 +464,7 @@ class ExkmcTree(Tree):
         self,
         X : NDArray,
         leaf_labels : bool = True
-    ) -> NDArray:
+    ) -> List[Set[int]]:
         """
         Predicts the labels of a dataset X.
         
@@ -572,15 +474,20 @@ class ExkmcTree(Tree):
             leaf_labels (bool, optional): If true, gives labels based soley upon 
                 leaf membership. Otherwise, returns the orignal predictions from 
                 the fitted tree. Defaults to True.  
+                
+        Returns:
+            List[Set[int]]: List of label sets where the set at index i contains class 
+                labels for data point i.
 
         """
         if leaf_labels:
-            labels = np.zeros(X.shape[0])
+            labels = [set() for _ in range(len(X))]
             decision_paths = get_decision_paths(self.root)
             for path in decision_paths:
                 leaf = path[-1][0]
                 satisfies = satisfies_path(X, path)
-                labels[satisfies] = leaf.label
+                for idx in satisfies:
+                    labels[idx].add(leaf.label)
             return labels
         else:
-            return self.exkmc_tree.predict(X)
+            return labels_format(self.exkmc_tree.predict(X))

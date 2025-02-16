@@ -1,10 +1,10 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import List
+from typing import List, Set
+from intercluster.utils import unique_labels
 from .splitters import SVMSplitter
 from ._node import Node
 from ._tree import Tree
-from .utils import get_decision_paths, satisfies_path
     
 
 class SVMTree(Tree):
@@ -71,7 +71,7 @@ class SVMTree(Tree):
     def fit(
         self,
         X : NDArray,
-        y : NDArray
+        y : List[Set[int]]
     ):
         """
         Initiates and builds a decision tree around a given dataset. 
@@ -82,10 +82,10 @@ class SVMTree(Tree):
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels with two classes.
+            y (List[Set[int]], optional): Target labels with two classes.
         """
-        #if len(np.unique(y)) > 2:
-        #    raise ValueError("SVMTree is designed to split two classes only.")
+        if len(unique_labels(y)) > 2:
+            raise ValueError("SVMTree is designed to split two classes only.")
         
         # Reset if needed:
         self.heap = []

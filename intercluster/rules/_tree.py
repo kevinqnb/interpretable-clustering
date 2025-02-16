@@ -2,8 +2,9 @@ import numpy as np
 import copy
 import heapq
 from numpy.typing import NDArray
-from typing import List, Callable
+from typing import List, Set, Callable
 from intercluster.utils import mode
+from ._conditions import Condition
 from ._node import Node
 from .utils import *
 
@@ -69,7 +70,7 @@ class Tree():
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Initiates and builds a decision tree around a given dataset. 
@@ -161,9 +162,9 @@ class Tree():
         Args:
             node (Node): Leaf node to add to the heap.
         """
-        gain, split_info = self.splitter.split(indices = node.indices)
+        gain, condition = self.splitter.split(indices = node.indices)
         random_tiebreaker = np.random.rand()
-        leaf_obj = (-1*gain, random_tiebreaker, node, split_info)
+        leaf_obj = (-1*gain, random_tiebreaker, node, condition)
         heapq.heappush(self.heap, leaf_obj)
         self.leaf_count += 1
         if node.depth > self.depth:
@@ -173,7 +174,7 @@ class Tree():
     def branch(
         self,
         node : Node,
-        split_info : Tuple[NDArray, NDArray, float]
+        condition : Condition
     ):
         """
         Splits a leaf node into two new leaf nodes.
@@ -181,16 +182,16 @@ class Tree():
         Args:
             node (Node): Leaf node to add to the heap.
             
-            split_info (Tuple[np.ndarray, np.ndarray, float]): 
-                Precomputed information for the split.
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         """            
-        left_indices, right_indices = self.splitter.get_split_indices(node.indices, split_info)
+        left_indices, right_indices = self.splitter.get_split_indices(node.indices, condition)
         
         y_l = None
         y_r = None
         if self.y is not None:
-            y_l = self.y[left_indices]
-            y_r = self.y[right_indices]
+            y_l = [self.y[idx] for idx in left_indices]
+            y_r =  [self.y[idx] for idx in right_indices]
         
         # Calculate cost of left and right branches
         left_cost = self.splitter.cost(left_indices)
@@ -202,8 +203,9 @@ class Tree():
             l_label = node.label
             r_label = self.leaf_count
         else:
-            l_label = mode(y_l)
-            r_label = mode(y_r)
+            # NOTE: Potentially some weird stuff could happen here...
+            l_label = mode(flatten_labels(y_l))
+            r_label = mode(flatten_labels(y_r))
         
         # Create New leaf nodes
         left_node = Node()
@@ -226,17 +228,14 @@ class Tree():
         self.add_leaf_node(right_node)
         
         # Transform the splitted node from a leaf node to an internal tree node:
-        features, weights, threshold = split_info
         node.tree_node(
             left_child=left_node,
             right_child=right_node,
-            features=features,
-            weights=weights,
-            threshold=threshold,
+            condition = condition,
             cost=node.cost,
             indices=node.indices,
             depth=node.depth,
-            feature_labels = [self.feature_labels[f] for f in features]
+            feature_labels = [self.feature_labels[f] for f in condition.features]
         )
         # Adjust counts:
         self.leaf_count -= 1
@@ -254,7 +253,7 @@ class Tree():
         heap_leaf_obj = heapq.heappop(self.heap)
         gain = -1*heap_leaf_obj[0]
         node = heap_leaf_obj[2]
-        split_info = heap_leaf_obj[3] 
+        condition = heap_leaf_obj[3] 
         
         # If we've reached any of the maximum conditions, stop growth. 
         # NOTE: This should also stop if the splitter decides there is no more gain to be had.
@@ -267,10 +266,10 @@ class Tree():
             pass
 
         else:
-            self.branch(node, split_info)
+            self.branch(node, condition)
 
         
-    def predict(self, X : NDArray) -> NDArray:
+    def predict(self, X : NDArray) -> List[Set[int]]:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
         find where data points fall into leaf nodes.
@@ -279,14 +278,16 @@ class Tree():
             X (np.ndarray): Input n x m dataset
 
         Returns:
-            labels (np.ndarray): Length n array of class labels. 
+            labels (List[Set[int]]): Length n list of sets where the set at index i 
+                represents the class labels for point i. 
         """
-        labels = np.zeros(X.shape[0])
+        labels = [set() for _ in range(len(X))]
         decision_paths = get_decision_paths(self.root)
         for path in decision_paths:
             leaf = path[-1][0]
             satisfies = satisfies_path(X, path)
-            labels[satisfies] = leaf.label
+            for idx in satisfies:
+                labels[idx].add(leaf.label)
             
         return labels
     

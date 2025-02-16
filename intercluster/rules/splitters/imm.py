@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
-from intercluster.utils import center_dists
+from typing import Tuple, List, Set
+from intercluster.utils import center_dists, flatten_labels
 from ._splitter import Splitter
+from .._conditions import Condition, LinearCondition
  
     
 class ImmSplitter(Splitter):
@@ -30,6 +31,14 @@ class ImmSplitter(Splitter):
                 Takes values 1 or 2. Defaults to 2.
                 
             min_points_leaf (int, optional): Minimum number of points in a leaf.
+            
+        Attrs:
+            X (np.ndarray): Dataset for splitting
+            
+            y (List[Set[int]]): Associated data labels.
+                NOTE: Each data point must have exactly one label.
+                
+            y_array (np.ndarray): Flattened one-dim array of labels.
         """
         self.centers = centers
         self.norm = norm
@@ -38,7 +47,7 @@ class ImmSplitter(Splitter):
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Fits the splitter to a dataset X. 
@@ -46,17 +55,14 @@ class ImmSplitter(Splitter):
         Args:
             X (NDArray): Input dataset.
             
-            y (NDArray, optional): Dummy variable, defaults to None
+            y (List[Set[int]], optional): Dummy variable, defaults to None
                 in which case the labels are manually set within the
                 following method by assigning each data point to its closest center.
         """
         self.X = X
-        
-        if y is None:
-            self.center_dists = center_dists(X, self.centers, self.norm)
-            self.y = np.argmin(self.center_dists, axis = 1)
-        else:
-            self.y = y
+        self.y = y
+        center_dist_array = center_dists(X, self.centers, self.norm, square = False)
+        self.y_array = np.argmin(center_dist_array, axis = 1)
         
     def cost(
         self,
@@ -81,7 +87,7 @@ class ImmSplitter(Splitter):
         if len(indices) == 0:
             return 0
         else:
-            indices_labels = self.y[indices]
+            indices_labels = self.y_array[indices]
             mistakes = (
                 ~np.isin(indices_labels, centroid_indices) &
                 np.isin(indices_labels, parent_centroid_indices)
@@ -128,7 +134,7 @@ class ImmSplitter(Splitter):
         self,
         indices : NDArray,
         centroid_indices : NDArray,
-        split_info : Tuple[NDArray, NDArray, float]
+        condition : Condition,
     ) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
         """
         Given features, weights, and threshold, returns the indices of data points 
@@ -142,9 +148,9 @@ class ImmSplitter(Splitter):
             
             centroid_indices (np.ndarray): Indices of the node's cluster centers.
             
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
-
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
+                
         Returns:            
             left_indices (np.ndarray): Indices for the left child of the split.
             
@@ -155,17 +161,16 @@ class ImmSplitter(Splitter):
             right_centroid_indices (np.ndarray): Indices of the right child's cluster centers.
         """
         X_ = self.X[indices, :]
-        C_ = self.centers[centroid_indices, :]
-        features, weights, threshold = split_info
-        left_mask = np.dot(X_[:, features], weights) <= threshold
-        right_mask = ~left_mask
-        left_indices = indices[left_mask]
-        right_indices = indices[right_mask]
+        split_left_mask = condition.evaluate(X_)
+        split_right_mask = ~split_left_mask
+        left_indices = indices[split_left_mask]
+        right_indices = indices[split_right_mask]
         
-        left_centroid_mask = np.dot(C_[:, features], weights) <= threshold
-        right_centroid_mask = ~left_centroid_mask
-        left_centroid_indices = centroid_indices[left_centroid_mask]
-        right_centroid_indices = centroid_indices[right_centroid_mask]
+        C_ = self.centers[centroid_indices, :]
+        split_left_centroid_mask = condition.evaluate(C_)
+        split_right_centroid_mask = ~split_left_centroid_mask
+        left_centroid_indices = centroid_indices[split_left_centroid_mask]
+        right_centroid_indices = centroid_indices[split_right_centroid_mask]
         
         return left_indices, right_indices, left_centroid_indices, right_centroid_indices
     
@@ -174,7 +179,7 @@ class ImmSplitter(Splitter):
         self,
         indices : NDArray,
         centroid_indices : NDArray
-    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
+    ) -> Tuple[float, Condition]:
         """
         Computes the best split of a leaf node.
         
@@ -184,24 +189,29 @@ class ImmSplitter(Splitter):
             centroid_indices (np.ndarray): Indices of the node's cluster centers.
         
         Returns:
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         """
         X_ = self.X[indices, :]
         C_ = self.centers[centroid_indices, :]
         n,d = X_.shape
         
         best_gain_val = -np.inf
-        best_splits = []
+        best_conditions = []
         for feature in range(d):
             unique_vals = np.unique(X_[:,feature])
             for threshold in unique_vals:
-                split = ([feature], [1], threshold)
+                condition = LinearCondition(
+                    features = np.array([feature]),
+                    weights = np.array([1]),
+                    threshold = threshold,
+                    direction = -1
+                )
                 (   left_indices,
                     right_indices,
                     left_centroid_indices,
                     right_centroid_indices
-                ) = self.get_split_indices(indices, centroid_indices, split)
+                ) = self.get_split_indices(indices, centroid_indices, condition)
                 
                 # Must separate at least one pair of cluster centers
                 if (len(left_indices) < self.min_points_leaf or 
@@ -222,11 +232,11 @@ class ImmSplitter(Splitter):
                 
                 if gain_val > best_gain_val:
                     best_gain_val = gain_val
-                    best_splits = [split]
+                    best_conditions = [condition]
                 
                 elif gain_val == best_gain_val:
-                    best_splits.append(split)
+                    best_conditions.append(condition)
         
         # Randomly break ties if necessary:
-        best_split = best_splits[np.random.randint(len(best_splits))]
+        best_split = best_conditions[np.random.randint(len(best_conditions))]
         return best_gain_val, best_split

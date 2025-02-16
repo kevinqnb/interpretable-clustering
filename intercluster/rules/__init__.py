@@ -1,3 +1,7 @@
+from ._conditions import (
+    LinearCondition
+)
+
 from ._node import (
     Node
 )

@@ -1,7 +1,7 @@
 import numpy as np
 import warnings 
 from joblib import Parallel, delayed
-from typing import Callable, List
+from typing import Callable, List, Set
 from numpy.typing import NDArray
 import warnings
 from intercluster.utils import (
@@ -117,8 +117,8 @@ def prune_with_grid_search(
     n_rules : int,
     frac_cover : float,
     n_clusters : int,
-    data_labels : List[List[int]],
-    rule_labels : List[List[int]],
+    data_labels : List[Set[int]],
+    rule_labels : List[Set[int]],
     data_to_rules_assignment : NDArray[np.bool_],
     objective : Callable,
     lambda_search_range : NDArray[np.float64],
@@ -137,9 +137,9 @@ def prune_with_grid_search(
         
         n_clusters (int): The desired number of clusters.
         
-        data_labels (NDArray): An array of integers representing the cluster labels of the data.
+        data_labels (List[Set[int]]): Labeling of the data points.
         
-        rule_labels (NDArray): An array of integers representing the cluster labels of the rules.
+        rule_labels (List[Set[int]]): Labeling of the rules.
         
         data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is True if 
             data point i is assigned to rule j.

@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple
 from numpy.typing import NDArray
-from intercluster.utils import mode
+from intercluster.utils import flatten_labels, mode
 from ._node import Node
 
 
@@ -113,16 +113,15 @@ def get_decision_paths(
 
 def get_decision_paths_with_labels(
     root : Node,
-    y : NDArray,
-    labels : NDArray,
+    labels : List[List[int]],
+    select_labels : NDArray,
 ) -> Tuple[List[List[Tuple[Node, str]]], List[List[int]]]:
     """
     Given the root of a tree, finds all decision paths 
-    used to reach leaf nodes in the tree. Optionally, this takes an array y of training data labels
-    AND an array of specific labels to look for. In that case, only paths with leaf nodes
-    which have a majority of a label within the labels array are returned.
-    
-    NOTE: This is mainly used as a filtering function, to filter out unwanted paths.
+    used to reach leaf nodes in the tree. Optionally, this takes an input set of data labels
+    AND an array of selected labels to look for. In that case, whenever a leaf 
+    node is found, consider the data points associated with it. If there is a majority 
+    for a selected label, keep that path. Otherwise discard it.
     
     Args:
         root (Node): Root of the tree.
@@ -139,10 +138,12 @@ def get_decision_paths_with_labels(
     for path in traverse(root):
         last_node = path[-1][0]
         if last_node.type == 'leaf' and len(last_node.indices) > 0:
-            leaf_label = mode(y[last_node.indices[0]])
-            if leaf_label in labels:
+            indices_labels = [labels[i] for i in last_node.indices]
+            indices_labels = flatten_labels(indices_labels)
+            majority_label = mode(indices_labels)
+            if majority_label in select_labels:
                 paths.append(path)
-                path_labels.append([leaf_label])
+                path_labels.append([majority_label])
             
     return paths, path_labels
 
@@ -169,39 +170,7 @@ def get_depth(root : Node) -> int:
 ####################################################################################################
 
 
-def satisfies_path(X, path):
-    """
-    Given a dataset X and a decision path, determines 
-    which data indices satisfy the path.
-    
-    Args:
-        X (np.ndarray): Dataset to evaluate.
-        
-        path (List[(Node, str)]): Decision path to evaluate.
-    
-    Returns:
-        (np.ndarray): Integer array of data indices satisfying the decision path. 
-    """
-    weights = np.zeros((X.shape[1], len(path) - 1))
-    thresholds = np.zeros(len(path) - 1)
-    directions = np.ones(len(path) - 1)
-    
-    for i, (node, direction) in enumerate(path[:-1]):
-        weights[node.features, i] = node.weights
-        thresholds[i] = node.threshold
-        if direction == 'left':
-            directions[i] = -1
-
-    results = np.sign(np.dot(X, weights) - thresholds)
-    results[results == 0] = -1
-    satisfies_mask = np.all(results == directions, axis=1)
-    return np.where(satisfies_mask)[0]
-
-
-####################################################################################################
-
-
-def satisfies_conditions(X : NDArray, condition_list : List):
+def satisfies_conditions(X : NDArray, condition_list : List) -> NDArray:
     """
     Given a dataset X and a list of conditions, determines 
     which data indices satisfy them simultaneously.
@@ -222,5 +191,42 @@ def satisfies_conditions(X : NDArray, condition_list : List):
         satisfies_mask[:,i] = satisfies_cond_mask
         
     return np.where(np.all(satisfies_mask, axis = 1))[0]
+
+
+####################################################################################################
         
+
+def satisfies_path(X : NDArray, path : List) -> NDArray:
+    """
+    Given a dataset X and a decision path, determines 
+    which data indices satisfy the path.
     
+    Args:
+        X (np.ndarray): Dataset to evaluate.
+        
+        path (List[(Node, str)]): Decision path to evaluate.
+    
+    Returns:
+        (np.ndarray): Integer array of data indices satisfying the decision path. 
+    """
+    condition_list = [node.condition for node in path[:-1]]
+    return satisfies_conditions(X, condition_list)
+    '''
+    weights = np.zeros((X.shape[1], len(path) - 1))
+    thresholds = np.zeros(len(path) - 1)
+    directions = np.ones(len(path) - 1)
+    
+    for i, (node, direction) in enumerate(path[:-1]):
+        weights[node.features, i] = node.weights
+        thresholds[i] = node.threshold
+        if direction == 'left':
+            directions[i] = -1
+
+    results = np.sign(np.dot(X, weights) - thresholds)
+    results[results == 0] = -1
+    satisfies_mask = np.all(results == directions, axis=1)
+    return np.where(satisfies_mask)[0]
+    '''
+
+
+####################################################################################################

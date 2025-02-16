@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any, Tuple, Callable
+from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
 from intercluster.pruning import prune_with_grid_search
 
@@ -21,19 +21,22 @@ class DecisionSet:
             
             decision_set (List[Rule]): List of rules in the decision set.
             
-            decision_set_labels (List[int]): List of labels corresponding to each
-                rule in the decision set.
+            decision_set_labels (List[Set[int]]): List of labels corresponding to each
+                rule in the decision set. 
+                
+            pruned_indices (np.ndarray): Indices for rules selected in the pruning process.
+            
+            pruned_status (bool): `True` if the pruning was successful and `False` otherwise. 
+            
         """
         self.feature_labels = feature_labels
         self.decision_set = None
         self.decision_set_labels = None
         self.pruned_indices = None
-        self.pruned_decision_set = None
-        self.pruned_decision_set_labels = None
         self.prune_status = False
         
         
-    def _fitting(self, X : NDArray, y : NDArray = None) -> Tuple[List[Any], List[int]]:
+    def _fitting(self, X : NDArray, y : List[Set[int]] = None) -> Tuple[List[Any], List[Set[int]]]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -41,7 +44,7 @@ class DecisionSet:
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
             
         returns:
             decision_set (List[Any]): List of rules.
@@ -51,7 +54,7 @@ class DecisionSet:
         raise NotImplementedError('Method not implemented.')
         
         
-    def fit(self, X : NDArray, y : NDArray = None):
+    def fit(self, X : NDArray, y : List[Set[int]] = None):
         """
         Public fit function. 
         Fits a decision set to an input dataset. 
@@ -59,7 +62,7 @@ class DecisionSet:
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         self.decision_set, self.decision_set_labels = self._fitting(X, y)
     
@@ -78,7 +81,7 @@ class DecisionSet:
         raise NotImplementedError('Method not implemented.')
     
     
-    def predict(self, X : NDArray, rule_labels : bool = True) -> List[List[int]]:
+    def predict(self, X : NDArray, rule_labels : bool = True) -> List[Set[int]]:
         """
         Predicts the label(s) of each data point in X.
         
@@ -91,20 +94,20 @@ class DecisionSet:
                 whatever label is given to the rule. Defaults to True.
             
         Returns:
-            labels (List[List[int]]): 2d list of predicted labels, with the internal list 
+            labels (List[Set[int]]): 2d list of predicted labels, with the internal list 
                 at index i representing the group of decision rules which satisfy X[i,:].
         """
         
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         
-        labels = [[] for _ in range(len(X))]
+        labels = [set() for _ in range(len(X))]
         for i in range(len(self.decision_set)):
             r_covers = np.where(data_to_rules_assignment[:,i])[0]
             for j in r_covers:
                 if rule_labels:
-                    labels[j] += [i]
+                    labels[j].add(i)
                 else:
-                    labels[j] += self.decision_set_labels[i]
+                    labels[j] = labels[j].union(self.decision_set_labels[i])
         
         return labels
     
@@ -115,7 +118,7 @@ class DecisionSet:
         frac_cover : float,
         n_clusters : int,
         X : NDArray,
-        y : List[List[int]],
+        y : List[Set[int]],
         objective : Callable, 
         lambda_search_range : NDArray = np.linspace(0,1,10)
     ):
@@ -132,7 +135,7 @@ class DecisionSet:
             
             X (np.ndarray): Input dataset.
             
-            y (List[List[int]]): Labeling of the data points.
+            y (List[Set[int]]): Labeling of the data points.
             
             objective (Callable): A function that takes an assignment matrix of data points 
                 to clusters and returns a score.
@@ -160,7 +163,7 @@ class DecisionSet:
             self.pruned_indices = selected_rules
         
         
-    def pruned_predict(self, X : NDArray, rule_labels : bool = True) -> List[List[int]]:
+    def pruned_predict(self, X : NDArray, rule_labels : bool = True) -> List[Set[int]]:
         """
         Predicts the label(s) of each data point in X.
         
@@ -173,7 +176,7 @@ class DecisionSet:
                 whatever label is given to the rule. Defaults to True.
             
         Returns:
-            labels (List[List[int]]): 2d list of predicted labels, with the internal list 
+            labels (List[Set[int]]): 2d list of predicted labels, with the internal set 
                 at index i representing the group of decision rules which satisfy X[i,:].
         """
         if self.pruned_indices is None:
@@ -185,14 +188,14 @@ class DecisionSet:
         pruned_decision_set_labels = [self.decision_set_labels[i] for i in self.pruned_indices]
         #pruned_feature_labels = [self.feature_labels[i] for i in self.pruned_indices]
         
-        labels = [[] for _ in range(len(X))]
+        labels = [set() for _ in range(len(X))]
         for i in range(len(pruned_decision_set)):
             r_covers = np.where(pruned_data_to_rules_assignment[:,i])[0]
             for j in r_covers:
                 if rule_labels:
-                    labels[j] += [i]
+                    labels[j].add(i)
                 else:
-                    labels[j] += pruned_decision_set_labels[i]
+                    labels[j] = labels[j].union(pruned_decision_set_labels[i])
         return labels
         
     

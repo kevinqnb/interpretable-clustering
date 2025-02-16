@@ -24,11 +24,8 @@ class Node():
         right_child (Node): (For non-leaf nodes only) Pointer to the right branch of the 
             current node. 
         
-        features (np.ndarray): The axis aligned feature to split on. 
-        
-        weights (np.ndarray): Weights for each of the splitting features
-        
-        threshold (float): The threshold value to split on.
+        condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         
         cost (float): The cost associated with points belonging to this node.
             
@@ -48,38 +45,18 @@ class Node():
         self.label = None
         self.left_child = None
         self.right_child = None
-        self.features = None
-        self.feature_labels = None
-        self.weights = None
-        self.threshold = None
+        self.condition = None
         self.cost = None
         self.indices = None
         self.depth = None
         self.feature_labels = None
         self.centroid_indices = None
     
-    '''
-    def __lt__(self, other):
-        """
-        Creates an ordering of nodes by defining a < comparison. 
-        This simply order nodes randomly via randomly sampled values. 
-
-        Args:
-            other (Node): Another node to compare with.
-
-        Returns:
-            (bool): Evaluation of the comparison. 
-        """
-        return self.random_val < other.random_val
-    '''
-    
     def tree_node(
         self,
         left_child,
         right_child,
-        features : NDArray,
-        weights : NDArray,
-        threshold : float,
+        condition : Condition,
         cost : float, 
         indices : NDArray,
         depth : int,
@@ -94,11 +71,8 @@ class Node():
             
             right_child (Node): Pointer to the right child of the current node. 
             
-            features (np.ndarray): The features to use for splitting. 
-        
-            weights (np.ndarray): Weights for each of the splitting features.
-        
-            threshold (float): The threshold value to split on.
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
             
             cost (float): The cost associated with points belonging to this node.
             
@@ -115,9 +89,7 @@ class Node():
         self.label = None
         self.left_child = left_child 
         self.right_child = right_child
-        self.features = features
-        self.weights = weights
-        self.threshold = threshold
+        self.condition = condition
         self.cost = cost
         self.indices = indices
         self.depth = depth

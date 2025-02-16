@@ -1,12 +1,22 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Tuple, List, Set
+from intercluster.utils import can_flatten, flatten_labels
+from .._conditions import Condition, LinearCondition
 
 
 class Splitter:
     """
     Base class for a Splitting object designed to split leaf nodes 
     in a decision tree.
+    
+    Attrs:
+        X (np.ndarray): Dataset for splitting
+        
+        y (List[Set[int]]): Associated data labels.
+            NOTE: Each data point must have exactly one label.
+            
+        y_array (np.ndarray): Flattened one-dim array of labels.
     """
     def __init__(self):
         pass
@@ -15,7 +25,7 @@ class Splitter:
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Fits the splitter to a dataset X. 
@@ -23,10 +33,13 @@ class Splitter:
         Args:
             X (NDArray): Input dataset.
             
-            y (NDArray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         self.X = X
         self.y = y
+        if not can_flatten(y):
+            raise ValueError("Data points must each have a single label.")
+        self.y_array = flatten_labels(y)
     
     def cost(
         self,
@@ -69,15 +82,17 @@ class Splitter:
     def get_split_indices(
         self,
         indices : NDArray,
-        split_info : Tuple[NDArray, NDArray, float]
+        condition : Condition
     ) -> Tuple[float, NDArray, NDArray]:
         """
-        Given features, weights, and threshold, returns the indices of data points 
+        Given an evaluation condtion returns the indices of data points 
         which fall to the left and right branches respectively.
         
         Args:
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
+            indices (np.ndarray): Original array of data point indices to be split.
+            
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
 
         Returns:
             cost (float): Cost associated with the split.
@@ -87,19 +102,17 @@ class Splitter:
             right_indices (np.ndarray): Indices for the right child of the split.
         """
         X_ = self.X[indices, :]
-        features, weights, threshold = split_info
-        left_mask = np.dot(X_[:, features], weights) <= threshold
-        right_mask = ~left_mask
-        left_indices = indices[left_mask]
-        right_indices = indices[right_mask]
-        
+        split_left_mask = condition.evaluate(X_)
+        split_right_mask = ~split_left_mask
+        left_indices = indices[split_left_mask]
+        right_indices = indices[split_right_mask]
         return left_indices, right_indices
     
     
     def split(
         self,
         indices : NDArray
-    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
+    ) -> Tuple[float, Condition]:
         """
         Computes the best split of a leaf node.
         
@@ -107,8 +120,10 @@ class Splitter:
             indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
+            gain (float): The gain associated with the split.
+            
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         """
         pass
     
@@ -120,6 +135,14 @@ class AxisAlignedSplitter(Splitter):
         Args:
             min_points_leaf (int, optional): Minimum number of points in a leaf node. 
                 Defaults to 1.
+                
+        Attrs:
+            X (np.ndarray): Dataset for splitting
+            
+            y (List[Set[int]]): Associated data labels.
+                NOTE: Each data point must have exactly one label.
+                
+            y_array (np.ndarray): Flattened one-dim array of labels.
         """
         self.min_points_leaf = min_points_leaf
         
@@ -159,7 +182,7 @@ class AxisAlignedSplitter(Splitter):
     def split(
         self,
         indices : NDArray
-    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
+    ) -> Tuple[float, Condition]:
         """
         Computes the best split of a leaf node.
         
@@ -167,20 +190,27 @@ class AxisAlignedSplitter(Splitter):
             indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
+            gain (float): The gain associated with the split.
+            
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         """
         X_ = self.X[indices, :]
         n,d = X_.shape
         parent_cost = self.cost(indices)
         
         best_gain_val = -np.inf
-        best_splits = []
+        best_conditions = []
         for feature in range(d):
             unique_vals = np.unique(X_[:,feature])
             for threshold in unique_vals:
-                split = ([feature], [1], threshold)
-                left_indices, right_indices = self.get_split_indices(indices, split)
+                condition = LinearCondition(
+                    features = np.array([feature]),
+                    weights = np.array([1]),
+                    threshold = threshold,
+                    direction = -1
+                )
+                left_indices, right_indices = self.get_split_indices(indices, condition)
                 
                 if (len(left_indices) < self.min_points_leaf or 
                     len(right_indices) < self.min_points_leaf):
@@ -190,11 +220,11 @@ class AxisAlignedSplitter(Splitter):
                 
                 if gain_val > best_gain_val:
                     best_gain_val = gain_val
-                    best_splits = [split]
+                    best_conditions = [condition]
                 
                 elif gain_val == best_gain_val:
-                    best_splits.append(split)
+                    best_conditions.append(condition)
         
         # Randomly break ties if necessary:
-        best_split = best_splits[np.random.randint(len(best_splits))]
-        return best_gain_val, best_split
+        best_condition = best_conditions[np.random.randint(len(best_conditions))]
+        return best_gain_val, best_condition

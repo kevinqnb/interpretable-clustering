@@ -4,6 +4,8 @@ from numpy.typing import NDArray
 from typing import Tuple
 from intercluster.utils import entropy
 from ._splitter import Splitter
+from .._conditions import Condition, LinearCondition
+ 
 
 
 class SVMSplitter(Splitter):
@@ -12,6 +14,14 @@ class SVMSplitter(Splitter):
         Args:
             min_points_leaf (int, optional): Minimum number of points in a leaf node. 
                 Defaults to 1.
+                
+        Attrs:
+            X (np.ndarray): Dataset for splitting
+            
+            y (List[Set[int]]): Associated data labels.
+                NOTE: Each data point must have exactly one label.
+                
+            y_array (np.ndarray): Flattened one-dim array of labels.
         """
         self.min_points_leaf = min_points_leaf
         
@@ -31,7 +41,7 @@ class SVMSplitter(Splitter):
         if len(indices) == 0:
             return 0
         else:
-            y_ = self.y[indices]
+            y_ = self.y_array[indices]
             entropy_score = entropy(y_) 
             return entropy_score
         
@@ -72,7 +82,7 @@ class SVMSplitter(Splitter):
     def split(
         self,
         indices : NDArray
-    ) -> Tuple[float, Tuple[NDArray, NDArray, float]]:
+    ) -> Tuple[float, Condition]:
         """
         Computes the best split of a leaf node.
         
@@ -80,25 +90,30 @@ class SVMSplitter(Splitter):
             indices (np.ndarray, optional): Indices for a subset of the original dataset.
         
         Returns:
-            split_info ((np.ndarray, np.ndarray, float)): Features, weights,
-                and threshold of the split.
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
         """
         n,d = self.X.shape
         X_ = self.X[indices, :]
-        y_ = self.y[indices]
+        y_ = self.y_array[indices]
         parent_cost = self.cost(indices)
         
         if len(np.unique(y_)) == 1:
             gain_val = -np.inf
-            split = (None, None, None)
+            condition = None
         else:
-            svm = LinearSVC(max_iter = 10000).fit(X_, y_)
+            svm = LinearSVC(max_iter = 1000).fit(X_, y_)
             features = np.arange(d)
             weights = np.ndarray.flatten(svm.coef_)
             threshold = -svm.intercept_[0]
-            split = (features, weights, threshold)
+            condition = LinearCondition(
+                    features = features,
+                    weights = weights,
+                    threshold = threshold,
+                    direction = -1
+                )
             
-            left_indices, right_indices = self.get_split_indices(indices, split)
+            left_indices, right_indices = self.get_split_indices(indices, condition)
                     
             if (len(left_indices) < self.min_points_leaf or 
                 len(right_indices) < self.min_points_leaf):
@@ -106,4 +121,4 @@ class SVMSplitter(Splitter):
             else:
                 gain_val = self.gain(left_indices, right_indices, parent_cost)
         
-        return gain_val, split
+        return gain_val, condition

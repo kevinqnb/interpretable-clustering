@@ -1,9 +1,10 @@
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from typing import List
+from typing import List,Set
 from numpy.typing import NDArray
-from intercluster.utils import mode
+from intercluster.utils import mode, labels_format, can_flatten, flatten_labels
 from .splitters import InformationGainSplitter, DummySplitter
+from ._conditions import Condition, LinearCondition
 from ._node import Node
 from ._tree import Tree
 from .utils import traverse, get_decision_paths, satisfies_path
@@ -122,7 +123,7 @@ class SklearnTree(Tree):
     def fit(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Fits a Sklearn tree to a dataset X and labels y.
@@ -130,7 +131,7 @@ class SklearnTree(Tree):
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
         """        
         # Reset if needed:
         self.heap = []
@@ -155,13 +156,18 @@ class SklearnTree(Tree):
         self.X = X
         self.y = y
         
+        if not can_flatten(y):
+            raise ValueError("Each data point must have exactly one label.")
+        self.y_array = flatten_labels(y)
+        
+        
         self.sklearn_tree = DecisionTreeClassifier(
             criterion = self.criterion,
             max_depth = self.max_depth,
             min_samples_leaf = self.min_points_leaf,
             max_leaf_nodes = self.max_leaf_nodes
         )
-        self.sklearn_tree.fit(X, y)
+        self.sklearn_tree.fit(X, self.y_array)
         self.tree_info = self.sklearn_tree.tree_
         self.root = Node()
         indices = np.arange(len(X))
@@ -193,7 +199,7 @@ class SklearnTree(Tree):
             depth (int): current depth of the tree
         """
         X_ = self.X[indices, :]
-        y_ = self.y[indices]
+        y_ = self.y_array[indices]
         
         if depth > self.depth:
             self.depth = depth
@@ -218,12 +224,17 @@ class SklearnTree(Tree):
             left_child = Node()
             right_child = Node()
             
+            condition = LinearCondition(
+                features = np.array([feature]),
+                weights = np.array([1]),
+                threshold = threshold,
+                direction = -1
+            )
+            
             node_obj.tree_node(
                 left_child = left_child,
                 right_child = right_child,
-                features = [feature],
-                weights = [1],
-                threshold = threshold,
+                condition = condition,
                 cost = -1,
                 indices = indices,
                 depth = depth,
@@ -250,7 +261,7 @@ class SklearnTree(Tree):
         self,
         X : NDArray,
         leaf_labels : bool = True
-    ) -> NDArray:
+    ) -> List[Set[int]]:
         """
         Predicts the labels of a dataset X.
         
@@ -262,18 +273,23 @@ class SklearnTree(Tree):
                 Otherwise, returns the orignal predictions from 
                 the fitted tree. Defaults to True.  
 
+        Returns:
+            labels (List[Set[int]]): List of label sets where the set at index i represents 
+                the class labels of data point i.
         """
         if leaf_labels:
-            labels = np.zeros(X.shape[0])
+            labels = [set() for _ in range(X.shape[0])]
             decision_paths = get_decision_paths(self.root)
             for path in decision_paths:
                 leaf = path[-1][0]
                 satisfies = satisfies_path(X, path)
-                labels[satisfies] = leaf.label
-                
+                for idx in satisfies:
+                    labels[idx].add(leaf.label)
+                    
             return labels
+        
         else:
-            return self.sklearn_tree.predict(X)
+            return labels_format(self.sklearn_tree.predict(X))
         
     
     def get_leaves(self, y : NDArray = None, label : int = None) -> List[Node]:

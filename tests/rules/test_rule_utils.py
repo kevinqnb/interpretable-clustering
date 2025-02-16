@@ -1,5 +1,5 @@
 import numpy as np
-from intercluster.rules import Node
+from intercluster.rules import LinearCondition, Node
 from intercluster.rules.utils import *
 
 ####################################################################################################
@@ -8,28 +8,28 @@ leaf1 = Node()
 leaf1.leaf_node(
     label = 1,
     cost = 0,
-    indices = np.array([]),
+    indices = np.array([0,1,2]),
     depth = 2
 )
 leaf2 = Node()
 leaf2.leaf_node(
     label = 2,
     cost = 0,
-    indices = np.array([]),
+    indices = np.array([3,4,5]),
     depth = 3
 )
 leaf3 = Node()
 leaf3.leaf_node(
     label = 3,
     cost = 0,
-    indices = np.array([]),
+    indices = np.array([6,7,8]),
     depth = 3
 )
 leaf4 = Node()
 leaf4.leaf_node(
     label = 4,
     cost = 0,
-    indices = np.array([]),
+    indices = np.array([9,10,11]),
     depth = 1
 )
 
@@ -141,6 +141,37 @@ def test_get_decision_paths():
     assert paths[3] == [(root_node, 'right'), (leaf4, None)]
     
     
+def test_get_decision_paths_with_labels():
+    labels = [[0], [0], [0], [1], [1], [1], [2], [2], [2], [3], [3], [3]]
+    full_paths = get_decision_paths(root_node)
+    labeled_paths, path_labels = get_decision_paths_with_labels(
+        root_node,
+        labels = labels,
+        select_labels = [0,3]
+    )
+    assert len(labeled_paths) == 2
+    assert labeled_paths[0] == full_paths[0]
+    assert labeled_paths[1] == full_paths[3]
+    
+    
+    labeled_paths, path_labels = get_decision_paths_with_labels(
+        root_node,
+        labels = labels,
+        select_labels = [4]
+    )
+    assert len(labeled_paths) == 0
+    
+    labels = [[0,1,2], [0], [0], [1], [1], [], [2,1], [2], [2], [], [3], [3]]
+    labeled_paths, path_labels = get_decision_paths_with_labels(
+        root_node,
+        labels = labels,
+        select_labels = [1,2]
+    )
+    assert len(labeled_paths) == 2
+    assert labeled_paths[0] == full_paths[1]
+    assert labeled_paths[1] == full_paths[2]
+    
+    
 def test_get_depth():
     assert get_depth(root_node) == 3
     
@@ -152,6 +183,32 @@ def test_satisfies_path(satisfies_dataset):
     assert np.array_equal(satisfies_path(X, paths[1]), np.array([2, 3]))
     assert np.array_equal(satisfies_path(X, paths[2]), np.array([4, 5]))
     assert np.array_equal(satisfies_path(X, paths[3]), np.array([6, 7]))
+    
+    
+def test_satisfies_conditions():
+    cond1 = LinearCondition(
+        features = np.array([1]),
+        weights = np.array([1]),
+        threshold = 2,
+        direction = -1
+    )
+    cond2 = LinearCondition(
+        features = np.array([0,1]),
+        weights = np.array([1/2, 3]),
+        threshold = 5,
+        direction = 1
+    )
+    cond_list = [cond1, cond2]
+    
+    X = np.array([
+        [0, 3],
+        [np.inf, 0],
+        [1,1],
+        [3,4]
+    ])
+    
+    assert np.array_equal(satisfies_conditions(X, cond_list), np.array([1]))
+    
     
     
     

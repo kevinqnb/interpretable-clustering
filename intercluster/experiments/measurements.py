@@ -148,7 +148,7 @@ class DistanceRatio(MeasurementFunction):
             return np.nan
         
         n,d = X.shape
-        center_dist_matrix = center_dists(X, centers)
+        center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
         sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
         closest_dists = np.array(
             [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]

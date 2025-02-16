@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Set
+from intercluster.utils import labels_format,unique_labels
 from ._node import Node
 from ._decision_set import DecisionSet
 from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_path
@@ -66,7 +67,7 @@ class DecisionForest(DecisionSet):
     def _random_parameters(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Randomly selects features, samples, and labels for training.
@@ -81,11 +82,12 @@ class DecisionForest(DecisionSet):
         n,d = X.shape
         
         # Random labels, choose the clusters to distinguish:
-        rand_labels = None
+        rand_label_array = None
         if y is not None:
-            rand_labels = np.random.choice(
-                np.unique(y), 
-                size = min(self.max_labels, len(np.unique(y))),
+            unique = unique_labels(y)
+            rand_label_array = np.random.choice(
+                unique, 
+                size = min(self.max_labels, len(unique)),
                 replace = False
             )
             
@@ -114,13 +116,13 @@ class DecisionForest(DecisionSet):
         )
         '''
             
-        return rand_samples, rand_features, rand_labels
+        return rand_samples, rand_features, rand_label_array
     
     
     def _fit_tree(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ):
         """
         Fits dataset to a single tree.
@@ -128,18 +130,18 @@ class DecisionForest(DecisionSet):
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
             
         returns:
             rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
                 a tuple of a node and the direction (left <= or right >) taken on it.
         """
-        rand_samples, rand_features, rand_labels = self._random_parameters(X, y)
+        rand_samples, rand_features, rand_label_array = self._random_parameters(X, y)
         
         train_labels = None
-        if rand_labels is not None:
-            train_labels = np.array([i if i in rand_labels else -1 for i in y])
-            train_labels = train_labels[rand_samples]
+        if rand_label_array is not None:
+            train_labels = np.array([i if i in rand_label_array else -1 for i in y])
+            train_labels = labels_format(train_labels[rand_samples])
             
         train_data = X[rand_samples, :]
         train_data = train_data[:, rand_features]
@@ -168,7 +170,7 @@ class DecisionForest(DecisionSet):
     def _fitting(
         self,
         X : NDArray,
-        y : NDArray = None
+        y : List[Set[int]] = None
     ) -> List[List[Tuple[Node, str]]]:
         """
         Fits a decision set by training a forest of decision trees, 
@@ -189,7 +191,7 @@ class DecisionForest(DecisionSet):
             self.max_features = d
             
         if (y is not None) and (self.max_labels is None):
-            self.max_labels = len(np.unique(y))
+            self.max_labels = len(unique_labels(y))
             
         if self.feature_pairings is None:
             self.feature_pairings = [list(range(d))]
@@ -202,13 +204,14 @@ class DecisionForest(DecisionSet):
             new_rules = []
             new_labels = []
             if y is not None:
-                selected_labels = np.unique(tree.y)
-                selected_labels = selected_labels[selected_labels != -1]
-                y_filter = np.array([i if i in selected_labels else -1 for i in y])
+                select_labels = unique_labels(tree.y)
+                select_labels = {_ for _ in select_labels if _ != -1}
+                filter_labels = [{i} if i in select_labels else {-1} for i in y]
+                # NOTE: I think something will go wrong here...
                 new_rules, new_labels = get_decision_paths_with_labels(
-                    tree.root,
-                    y_filter,
-                    selected_labels
+                    root = tree.root,
+                    labels = filter_labels,
+                    select_labels = select_labels
                 )
             else:
                 new_rules = get_decision_paths(tree.root)
