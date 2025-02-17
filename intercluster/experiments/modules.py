@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from intercluster.rules import *
 from intercluster.pruning import *
-from intercluster.utils import labels_to_assignment, update_centers
+from intercluster.utils import labels_format, labels_to_assignment, update_centers
 
 
 ####################################################################################################
@@ -88,7 +88,8 @@ class KMeansBase(Baseline):
             centers (np.ndarray): Size k x d array of cluster centers. 
         """
         self.clustering.fit(X)
-        self.assignment = labels_to_assignment(self.clustering.labels_, n_labels = self.n_clusters)
+        clustering_labels = labels_format(self.clustering.labels_)
+        self.assignment = labels_to_assignment(clustering_labels, n_labels = self.n_clusters)
         self.centers = self.clustering.cluster_centers_
         self.max_rule_length = np.nan
         return self.assignment, self.centers
@@ -133,6 +134,7 @@ class IMMBase(Baseline):
         """
         tree = ExTree(self.n_clusters, max_leaves = self.n_clusters, base_tree = 'IMM')
         exkmc_labels = tree.fit_predict(X, kmeans=self.kmeans_model)
+        exkmc_labels = labels_format(exkmc_labels.astype(int))
         assignment = labels_to_assignment(exkmc_labels, n_labels = self.n_clusters)
         #centers = tree.all_centers
         updated_centers = update_centers(X, assignment)

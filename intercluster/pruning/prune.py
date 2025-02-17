@@ -188,13 +188,13 @@ def prune_with_grid_search(
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
         pruned_data_to_cluster_assignment = np.dot(A, B)
-        obj = objective(pruned_data_to_cluster_assignment)
         
         # If frac_cover points are not covered, return infinity.
         if coverage(pruned_data_to_cluster_assignment) < frac_cover:
             return (np.inf, np.inf), lambda_val
         
-        # Otherwise, return the objective along with a random tiebreak value.        
+        # Otherwise, return the objective along with a random tiebreak value.
+        obj = objective(pruned_data_to_cluster_assignment)   
         return (obj, np.random.uniform()), lambda_val
                
     search_results = Parallel(n_jobs=cpu_count)(

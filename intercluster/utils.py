@@ -240,7 +240,11 @@ def update_centers(X : NDArray, assignment : NDArray) -> NDArray:
     updated_centers = np.zeros((k,d))
     for i in range(k):
         assigned = np.where(assignment[:,i])[0]
-        new_center = np.mean(X[assigned,:], axis = 0)
+        if len(assigned) > 0:
+            new_center = np.mean(X[assigned,:], axis = 0)
+        else:
+            new_center = np.nan
+            
         updated_centers[i,:] = new_center
         
     return updated_centers

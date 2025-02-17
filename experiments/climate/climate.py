@@ -10,6 +10,7 @@ from intercluster.pruning import *
 from intercluster import *
 from intercluster.experiments import *
 
+np.seterr(all='raise')
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -87,7 +88,7 @@ n_sets = 1000
 # KMeans:
 kmeans_base = KMeansBase(n_clusters)
 A,C = kmeans_base.assign(data)
-y = kmeans_base.clustering.labels_
+y = labels_format(kmeans_base.clustering.labels_.astype(int))
 
 # IMM:
 imm_base = IMMBase(
@@ -183,7 +184,7 @@ prune_params = {
     'n_rules' : n_rules,
     'n_clusters' : n_clusters,
     'X' : data,
-    'y' : [[l] for l in y],
+    'y' : y,
     'objective' : prune_objective,
     'lambda_search_range' : np.linspace(0,2,101)
 }
@@ -193,7 +194,7 @@ prune_params = {
 
 # Decision Forest with Sklearn Trees:
 
-# 1) depth 2, 90% coverage:
+# 1) depth 2:
 mod1 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_depth_2,
@@ -204,7 +205,7 @@ mod1 = DecisionSetMod(
 )
 
 
-# 2) depth 5, 90% coverage:
+# 2) depth 5:
 mod2 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_depth_5,
@@ -219,7 +220,7 @@ mod2 = DecisionSetMod(
 
 # Forests with SVM Trees:
 
-# 3) SVM Tree depth 1, 70% coverage:
+# 3) SVM Tree depth 1:
 mod3 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_svm,
@@ -233,7 +234,7 @@ mod3 = DecisionSetMod(
 
 # Forests with ExKMC Trees:
 
-# 4) ExKMC Tree, 90% coverage:
+# 4) ExKMC Tree:
 mod4 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_exkmc,
@@ -277,7 +278,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 5
+n_samples = 1
 
 Ex1 = CoverageExperiment(
     data = data,

@@ -60,8 +60,8 @@ class ClusteringCost(MeasurementFunction):
         
         return kmeans_cost(
             X,
-            assignment,
             centers,
+            assignment,
             average = self.average,
             normalize = self.normalize
         )

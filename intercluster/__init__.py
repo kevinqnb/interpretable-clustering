@@ -18,7 +18,6 @@ from .utils import (
 
 from .plotting import (
     plot_decision_boundaries,
-    plot_multiclass_decision_boundaries,
     build_graph,
     visualize_tree,
     plot_decision_set,
