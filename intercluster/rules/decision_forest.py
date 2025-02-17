@@ -2,9 +2,9 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import List, Dict, Any, Tuple, Set
 from intercluster.utils import labels_format,unique_labels
-from ._node import Node
+from ._conditions import Condition
 from ._decision_set import DecisionSet
-from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_path
+from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_conditions
 
 class DecisionForest(DecisionSet):
     """
@@ -82,11 +82,11 @@ class DecisionForest(DecisionSet):
         n,d = X.shape
         
         # Random labels, choose the clusters to distinguish:
-        rand_label_array = None
+        rand_label_selects = None
         if y is not None:
             unique = unique_labels(y)
-            rand_label_array = np.random.choice(
-                unique, 
+            rand_label_selects = np.random.choice(
+                list(unique), 
                 size = min(self.max_labels, len(unique)),
                 replace = False
             )
@@ -116,7 +116,7 @@ class DecisionForest(DecisionSet):
         )
         '''
             
-        return rand_samples, rand_features, rand_label_array
+        return rand_samples, rand_features, rand_label_selects
     
     
     def _fit_tree(
@@ -136,12 +136,18 @@ class DecisionForest(DecisionSet):
             rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
                 a tuple of a node and the direction (left <= or right >) taken on it.
         """
-        rand_samples, rand_features, rand_label_array = self._random_parameters(X, y)
+        rand_samples, rand_features, rand_label_selects = self._random_parameters(X, y)
         
         train_labels = None
-        if rand_label_array is not None:
-            train_labels = np.array([i if i in rand_label_array else -1 for i in y])
-            train_labels = labels_format(train_labels[rand_samples])
+        if rand_label_selects is not None:
+            train_labels = [set() for _ in range(len(y))]
+            for i, label_set in enumerate(y):
+                for l in label_set:
+                    if l in rand_label_selects:
+                        train_labels[i].add(l)
+                    else:
+                        train_labels[i].add(-1)
+            train_labels = [train_labels[i] for i in rand_samples]
             
         train_data = X[rand_samples, :]
         train_data = train_data[:, rand_features]
@@ -161,7 +167,7 @@ class DecisionForest(DecisionSet):
         for node in node_list:
             node.indices = rand_samples[node.indices]
             if node.type == 'internal':
-                node.features = rand_features[node.features]
+                node.condition.features = rand_features[node.condition.features]
                 
         return tree
         
@@ -171,7 +177,7 @@ class DecisionForest(DecisionSet):
         self,
         X : NDArray,
         y : List[Set[int]] = None
-    ) -> List[List[Tuple[Node, str]]]:
+    ) -> List[List[Condition]]:
         """
         Fits a decision set by training a forest of decision trees, 
         and using collecting their leaf nodes as rules.
@@ -182,8 +188,9 @@ class DecisionForest(DecisionSet):
             y (np.ndarray, optional): Target labels. Defaults to None.
             
         returns:
-            rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
-                a tuple of a node and the direction (left <= or right >) taken on it.
+            rules (List[List[Condition]]): List where each item is a list of logical conditions. 
+                In this case, each inner list represents a series of logical conditions used 
+                within a certain path of the decision tree.
         """
         n,d = X.shape
         
@@ -205,9 +212,11 @@ class DecisionForest(DecisionSet):
             new_labels = []
             if y is not None:
                 select_labels = unique_labels(tree.y)
-                select_labels = {_ for _ in select_labels if _ != -1}
-                filter_labels = [{i} if i in select_labels else {-1} for i in y]
-                # NOTE: I think something will go wrong here...
+                select_labels = {l for l in select_labels if l != -1}
+                filter_labels = [select_labels.intersection(label_set)
+                                 if len(select_labels.intersection(label_set)) > 0
+                                 else {-1} for label_set in y]
+                
                 new_rules, new_labels = get_decision_paths_with_labels(
                     root = tree.root,
                     labels = filter_labels,
@@ -217,8 +226,9 @@ class DecisionForest(DecisionSet):
                 new_rules = get_decision_paths(tree.root)
                 new_labels = [[l] for l in 
                               range(len(rule_labels), len(rule_labels) + len(new_rules))]
-
-            #import pdb; pdb.set_trace()
+                
+            # Take only the conditions from each node.
+            new_rules = [[node.condition for node in rule[:-1]] for rule in new_rules]
             rules = rules + new_rules
             rule_labels = rule_labels + new_labels
             if tree.depth > self.depth:
@@ -239,7 +249,7 @@ class DecisionForest(DecisionSet):
                 if point i is covered by rule j and False otherwise.
         """
         assignment = np.zeros((X.shape[0], len(self.decision_set)))
-        for i, rule in enumerate(self.decision_set):
-            data_points_satisfied = satisfies_path(X, rule)
+        for i, condition_list in enumerate(self.decision_set):
+            data_points_satisfied = satisfies_conditions(X, condition_list)
             assignment[data_points_satisfied, i] = True
         return assignment

@@ -365,9 +365,12 @@ class ExkmcTree(Tree):
         self.X = X
         self.y = y
         
-        if not can_flatten(y):
+        if (y is not None) and can_flatten(y):
+            self.y_array = flatten_labels(y)
+        elif y is not None:
             raise ValueError("Each data point must have exactly one label.")
-        self.y_array = flatten_labels(y)
+        else:
+            self.y_array = None
         
         base_tree = 'IMM' if self.imm else 'NONE'
         self.exkmc_tree = ExTree(
@@ -484,10 +487,10 @@ class ExkmcTree(Tree):
             labels = [set() for _ in range(len(X))]
             decision_paths = get_decision_paths(self.root)
             for path in decision_paths:
-                leaf = path[-1][0]
+                leaf = path[-1]
                 satisfies = satisfies_path(X, path)
                 for idx in satisfies:
-                    labels[idx].add(leaf.label)
+                    labels[idx].add(int(leaf.label))
             return labels
         else:
             return labels_format(self.exkmc_tree.predict(X))

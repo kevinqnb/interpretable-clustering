@@ -51,7 +51,16 @@ class LinearCondition(Condition):
         self.features = features
         self.weights = weights
         self.threshold = threshold
+        self.set_direction(direction)
         
+        
+    def set_direction(self, direction : int):
+        """
+        Sets the direction for the inequality.
+        
+        direction (int): Specifies the direction for the inequality. 
+            Use -1 for less than or equal (<=) or 1 for greater (>). 
+        """
         if direction not in {1, -1}:
             raise ValueError("Invalid inequality direction, must be -1 (<=) or 1 (>).")
         self.direction = direction

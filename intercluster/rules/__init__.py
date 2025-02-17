@@ -12,7 +12,6 @@ from ._tree import (
 
 from .imm_tree import (
     ImmTree,
-    DiffImmTree,
     ExkmcTree,
 )
 

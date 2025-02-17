@@ -63,8 +63,8 @@ class KmeansObjective(PruningObjective):
         updated_centers = update_centers(self.X, assignment)
         objective_cost = kmeans_cost(
             self.X,
-            assignment,
             updated_centers,
+            assignment,
             average = self.average,
             normalize = self.normalize
         )

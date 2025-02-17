@@ -33,40 +33,55 @@ leaf4.leaf_node(
     depth = 1
 )
 
+condition1 = LinearCondition(
+    features = np.array([1]),
+    weights = np.array([1]),
+    threshold = 2,
+    direction = -1
+)
+cost1 = 1.215
 internal_node1 = Node()
 internal_node1.tree_node(
     left_child = leaf2,
     right_child = leaf3,
-    features = np.array([1]),
-    weights = np.array([1]),
-    threshold = 2,
-    cost = 0,
+    condition = condition1,
+    cost = cost1,
     indices = np.array([]),
     depth = 2,
     feature_labels = []
 )
 
+condition2 = LinearCondition(
+    features = np.array([0]),
+    weights = np.array([1]),
+    threshold = 0,
+    direction = -1
+)
+cost2 = 2.326
 internal_node2 = Node()
 internal_node2.tree_node(
     left_child = leaf1,
     right_child = internal_node1,
-    features = np.array([0]),
-    weights = np.array([1]),
-    threshold = 0,
-    cost = 0,
+    condition = condition2,
+    cost = cost2,
     indices = np.array([]),
     depth = 1,
     feature_labels = []
 )
 
+root_condition = LinearCondition(
+    features = np.array([0]),
+    weights = np.array([1]),
+    threshold = 1,
+    direction = -1
+)
+root_cost = 3.217
 root_node = Node()
 root_node.tree_node(
     left_child = internal_node2,
     right_child = leaf4,
-    features = np.array([0]),
-    weights = np.array([1]),
-    threshold = 1,
-    cost = 0,
+    condition = root_condition,
+    cost = root_cost,
     indices = np.array([]),
     depth = 0,
     feature_labels = []
@@ -76,37 +91,37 @@ root_node.tree_node(
 
 
 def test_traverse():
+    # NOTE: I am using cost as an identifier for some of these nodes, since they are copies 
+    #   when returned from the traversal.
     for i,path in enumerate(traverse(root_node, [])):
         if i == 0:
-            assert path[0][0] == root_node
+            assert path[0].cost == root_node.cost
         else:
-            assert path[0][0] == root_node
+            assert path[0].cost == root_node.cost
             if i == 1:
-                assert path[1][0] == internal_node2
+                assert path[1].cost == internal_node2.cost
             if i == 2:
-                assert path[1][0] == internal_node2
-                assert path[2][0] == leaf1
+                assert path[1].cost == internal_node2.cost
+                assert path[2] == leaf1
             if i == 3:
-                assert path[1][0] == internal_node2
-                assert path[2][0] == internal_node1
+                assert path[1].cost == internal_node2.cost
+                assert path[2].cost == internal_node1.cost
             if i == 4:
-                assert path[1][0] == internal_node2
-                assert path[2][0] == internal_node1
-                assert path[3][0] == leaf2
+                assert path[1].cost == internal_node2.cost
+                assert path[2].cost == internal_node1.cost
+                assert path[3] == leaf2
             if i == 5:
-                assert path[1][0] == internal_node2
-                assert path[2][0] == internal_node1
-                assert path[3][0] == leaf3
+                assert path[1].cost == internal_node2.cost
+                assert path[2].cost == internal_node1.cost
+                assert path[3] == leaf3
             if i == 6:
-                assert path[1][0] == leaf4
+                assert path[1] == leaf4
                 
                 
 def test_collect_nodes():
     nodes = collect_nodes(root_node)
     assert len(nodes) == 7
     assert root_node in nodes
-    assert internal_node1 in nodes
-    assert internal_node2 in nodes
     assert leaf1 in nodes
     assert leaf2 in nodes
     assert leaf3 in nodes
@@ -125,24 +140,31 @@ def test_collect_leaves():
 def test_get_decision_paths():
     paths = get_decision_paths(root_node)
     assert len(paths) == 4
-    assert paths[0] == [(root_node, 'left'), (internal_node2, 'left'), (leaf1, None)]
-    assert paths[1] == [
-        (root_node, 'left'),
-        (internal_node2, 'right'),
-        (internal_node1, 'left'),
-        (leaf2, None)
-    ]
-    assert paths[2] == [
-        (root_node, 'left'),
-        (internal_node2, 'right'),
-        (internal_node1, 'right'),
-        (leaf3, None)
-    ]
-    assert paths[3] == [(root_node, 'right'), (leaf4, None)]
+    
+    assert len(paths[0]) == 3
+    assert paths[0][0].cost == root_node.cost
+    assert paths[0][1].cost == internal_node2.cost
+    assert paths[0][2] == leaf1
+    
+    assert len(paths[1]) == 4
+    assert paths[1][0].cost == root_node.cost
+    assert paths[1][1].cost == internal_node2.cost
+    assert paths[1][2].cost == internal_node1.cost
+    assert paths[1][3] == leaf2
+    
+    assert len(paths[2]) == 4
+    assert paths[2][0].cost == root_node.cost
+    assert paths[2][1].cost == internal_node2.cost
+    assert paths[2][2].cost == internal_node1.cost
+    assert paths[2][3] == leaf3
+    
+    assert len(paths[3]) == 2
+    assert paths[3][0].cost == root_node.cost
+    assert paths[3][1] == leaf4
     
     
 def test_get_decision_paths_with_labels():
-    labels = [[0], [0], [0], [1], [1], [1], [2], [2], [2], [3], [3], [3]]
+    labels = [{0}, {0}, {0}, {1}, {1}, {1}, {2}, {2}, {2}, {3}, {3}, {3}]
     full_paths = get_decision_paths(root_node)
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
@@ -150,26 +172,43 @@ def test_get_decision_paths_with_labels():
         select_labels = [0,3]
     )
     assert len(labeled_paths) == 2
-    assert labeled_paths[0] == full_paths[0]
-    assert labeled_paths[1] == full_paths[3]
+    
+    assert len(labeled_paths[0]) == 3
+    assert labeled_paths[0][0].cost == root_node.cost
+    assert labeled_paths[0][1].cost == internal_node2.cost
+    assert labeled_paths[0][2] == leaf1
+    
+    assert len(labeled_paths[1]) == 2
+    assert labeled_paths[1][0].cost == root_node.cost
+    assert labeled_paths[1][1] == leaf4
     
     
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
         labels = labels,
-        select_labels = [4]
+        select_labels = np.array([4])
     )
     assert len(labeled_paths) == 0
     
-    labels = [[0,1,2], [0], [0], [1], [1], [], [2,1], [2], [2], [], [3], [3]]
+    
+    labels = [{0,1,2}, {0}, {0}, {1}, {1}, set(), {2,1}, {2}, {2}, set(), {3}, {3}]
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
         labels = labels,
-        select_labels = [1,2]
+        select_labels = np.array([1,2])
     )
     assert len(labeled_paths) == 2
-    assert labeled_paths[0] == full_paths[1]
-    assert labeled_paths[1] == full_paths[2]
+    assert len(labeled_paths[0]) == 4
+    assert labeled_paths[0][0].cost == root_node.cost
+    assert labeled_paths[0][1].cost == internal_node2.cost
+    assert labeled_paths[0][2].cost == internal_node1.cost
+    assert labeled_paths[0][3] == leaf2
+    
+    assert len(labeled_paths[1]) == 4
+    assert labeled_paths[1][0].cost == root_node.cost
+    assert labeled_paths[1][1].cost == internal_node2.cost
+    assert labeled_paths[1][2].cost == internal_node1.cost
+    assert labeled_paths[1][3] == leaf3
     
     
 def test_get_depth():

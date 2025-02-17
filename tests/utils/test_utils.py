@@ -304,4 +304,4 @@ def test_assignment_to_dict():
     
     assignment_dict = assignment_to_dict(test_assignment)
     for i in range(5):
-        assert np.array_equal(assignment_dict[i], np.where(test_assignment[:,i])[0])
+        assert assignment_dict[i] == set(np.where(test_assignment[:,i])[0])

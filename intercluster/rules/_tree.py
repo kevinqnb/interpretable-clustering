@@ -284,7 +284,7 @@ class Tree():
         labels = [set() for _ in range(len(X))]
         decision_paths = get_decision_paths(self.root)
         for path in decision_paths:
-            leaf = path[-1][0]
+            leaf = path[-1]
             satisfies = satisfies_path(X, path)
             for idx in satisfies:
                 labels[idx].add(leaf.label)

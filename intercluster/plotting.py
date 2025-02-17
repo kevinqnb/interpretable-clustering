@@ -5,7 +5,7 @@ from IPython.display import Image
 from typing import Callable, List, Dict
 from numpy.typing import NDArray
 from intercluster.rules import Node
-from .utils import labels_to_assignment
+from intercluster.utils import flatten_labels, labels_to_assignment
 
 
 ####################################################################################################
@@ -15,7 +15,8 @@ def plot_decision_boundaries(
     model : Callable,
     X : NDArray,
     ax : Callable = None,
-    resolution : int = 100
+    resolution : int = 100,
+    label_array = False
 ):
     """
     Plots the decision boundaries of a given model.
@@ -26,6 +27,9 @@ def plot_decision_boundaries(
         ax (matplotlib axes, optional): Axes for plotting. 
         resolution (int, optional): Number of points on the meshgrid, controls the 
             resolution of the contour lines. Defaults to 100.
+        label_array (bool, optional): `True` if the output of the model's prediction is a set of 
+            labels represented as as 1d array. `False` if the labels should instead be a 2 label
+            set. Defaults to False.
     """
     # Define the axis boundaries of the plot
     x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
@@ -37,6 +41,8 @@ def plot_decision_boundaries(
     
     # Predict the classification for each point in the mesh
     Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    if not label_array:
+        Z = flatten_labels(Z)
     Z = Z.reshape(xx.shape)
     
     # Plot the decision boundaries
@@ -47,60 +53,6 @@ def plot_decision_boundaries(
         ax.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
                    alpha = 0.8, linewidths = 1.5)
         
-
-####################################################################################################
-
-
-def plot_multiclass_decision_boundaries(
-    model : Callable,
-    X : NDArray,
-    ax : Callable = None,
-    resolution : int = 100,
-    cmap : Callable = None
-):
-    """
-    Plots the decision boundaries of a given model. In contrast to 
-    plot_decision_boundaries, this function is specifically designed to handle 
-    situations where points may belong to multiple classes. The .predict() method of 
-    the model should return a 0/1 matrix with size n x k (where n is the number of 
-    points and k is the number of classes), indicating the class membership of a point. 
-
-    Args:
-        model (Callable): Prediction object which should have a predict() method.
-        X (NDArray): Dataset fitted to the model. 
-        ax (matplotlib axes, optional): Axes for plotting. 
-        resolution (int, optional): Number of points on the meshgrid, controls the 
-            resolution of the contour lines. Defaults to 100.
-        cmap (Callable, optional): Colormap to use with matplotlib.
-    """
-    # Define the axis boundaries of the plot
-    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
-    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
-    
-    # Create a mesh grid
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, resolution),
-                         np.linspace(y_min, y_max, resolution))
-    
-    # Predict the classification for each point in the mesh
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    
-    if isinstance(Z, list):
-        Z = labels_to_assignment(Z)
-    
-    # Plot the decision boundaries for each class
-    if ax is None:
-        ax = plt.gca()
-    
-    for i in range(Z.shape[1]):
-        Z_class = Z[:, i].reshape(xx.shape)
-        if cmap is None:
-            ax.contour(xx, yy, Z_class, levels=[0.5], colors='k', linestyles='dashed',
-                    alpha=0.8, linewidths=1.5)
-        else:
-            c = cmap(i)
-            ax.contour(xx, yy, Z_class, levels=[0.5], colors=[c], linestyles='dashed',
-                    alpha=1, linewidths=4)
-            
 
 ####################################################################################################
 
@@ -148,43 +100,43 @@ def build_graph(
     # For NON-leaf nodes:
     if node.type == 'internal':
         # Rescale the weights if necessary
-        weights = node.weights
-        if data_scaler is not None and len(node.features) > 1:
+        weights = node.condition.weights
+        if data_scaler is not None and len(node.condition.features) > 1:
             weights = []
-            for l, feature in enumerate(node.features):
+            for l, feature in enumerate(node.condition.features):
                 feature_min = data_scaler.data_min_[feature]
                 feature_max = data_scaler.data_max_[feature]
-                weight_l = np.round(node.weights[l] / (feature_max - feature_min), 2)
+                weight_l = np.round(node.condition.weights[l] / (feature_max - feature_min), 2)
                 weights.append(weight_l)
         else:
-            weight = np.round(node.weights[0], 2)
+            weight = np.round(node.condition.weights[0], 2)
             weights = [weight]
             
         # Rescale thresholds if necessary:
-        threshold = node.threshold
+        threshold = node.condition.threshold
         if data_scaler is not None:
-            if len(node.features) == 1:
-                feature_min = data_scaler.data_min_[node.features[0]]
-                feature_max = data_scaler.data_max_[node.features[0]]
+            if len(node.condition.features) == 1:
+                feature_min = data_scaler.data_min_[node.condition.features[0]]
+                feature_max = data_scaler.data_max_[node.condition.features[0]]
                 threshold = threshold * (feature_max - feature_min) 
             else:             
-                for l,feature in enumerate(node.features):
+                for l,feature in enumerate(node.condition.features):
                     feature_min = data_scaler.data_min_[feature]
                     feature_max = data_scaler.data_max_[feature]
-                    threshold += (node.weights[l] * feature_min) / (feature_max - feature_min)
+                    threshold += (node.condition.weights[l] * feature_min) / (feature_max - feature_min)
                     
         
         if feature_labels is None:
             node_label += (
-                f"Features {node.features} \n Weights {weights}\n\u2264"
+                f"Features {node.condition.features} \n Weights {weights}\n\u2264"
                 f"{np.round(threshold, 3)}"
             )
         else:
             if all(x == 1 for x in weights):
-                sum = ' + \n'.join([f'{feature_labels[f]}' for f in node.features])
+                sum = ' + \n'.join([f'{feature_labels[f]}' for f in node.condition.features])
             else:
                 sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(weights,
-                                                                             node.features)])
+                                                                             node.condition.features)])
             
             node_label += (f"{sum} \n \u2264 {np.round(threshold, 3)}")
             
@@ -295,7 +247,7 @@ def plot_decision_set(
     Plots a decision set as a list of rules.
     
     Args:
-        D (List[List[Node]]): A list of rules, where each rule is a list of Node objects.
+        D (List[List[Condition]]): A list of rules, where each rule is a list of Condition objects.
         
         feature_labels (List[str]): List of feature labels used for display.
         
@@ -322,22 +274,20 @@ def plot_decision_set(
         rule_string = 'If '
         
         # Every condition except the last node, which should be a leaf
-        for j, condition in enumerate(rule[:-1]):
-            node = condition[0]
-            
+        for j, condition in enumerate(rule):            
             rule_string += '('
             # Sum of weights and features
-            for l,feature in enumerate(node.features):
+            for l,feature in enumerate(condition.features):
                 if l > 0:
                     rule_string += ' + '
 
                 # Rescale the weights if necessary
-                if data_scaler is not None and len(node.features) > 1:
+                if data_scaler is not None and len(condition.features) > 1:
                     feature_min = data_scaler.data_min_[feature]
                     feature_max = data_scaler.data_max_[feature]
-                    weight_l = np.round(node.weights[l] / (feature_max - feature_min), 2)
+                    weight_l = np.round(condition.weights[l] / (feature_max - feature_min), 2)
                 else:
-                    weight_l = np.round(node.weights[l], 2)
+                    weight_l = np.round(condition.weights[l], 2)
                     
                 if weight_l != 1:
                     rule_string += str(weight_l) + ' '
@@ -346,23 +296,23 @@ def plot_decision_set(
                 
             
             # Add the threshold
-            if condition[1] == 'left':
+            if condition.direction == -1:
                 rule_string += r' $\leq$ '
             else:
                 rule_string += r' $>$ '
                 
-            threshold = node.threshold
+            threshold = condition.threshold
             
             # Rescale if necessary:
             if data_scaler is not None:                
-                for l,feature in enumerate(node.features):
+                for l,feature in enumerate(condition.features):
                     feature_min = data_scaler.data_min_[feature]
                     feature_max = data_scaler.data_max_[feature]
-                    threshold += (node.weights[l] * feature_min) / (feature_max - feature_min)
+                    threshold += (condition.weights[l] * feature_min) / (feature_max - feature_min)
                     
-                if len(node.features) == 1:
-                    feature_min = data_scaler.data_min_[node.features[0]]
-                    feature_max = data_scaler.data_max_[node.features[0]]
+                if len(condition.features) == 1:
+                    feature_min = data_scaler.data_min_[condition.features[0]]
+                    feature_max = data_scaler.data_max_[condition.features[0]]
                     threshold = threshold * (feature_max - feature_min) 
                 
             rule_string += str(np.round(threshold, 3))
@@ -375,8 +325,8 @@ def plot_decision_set(
             else:
                 rule_string += r' $\&$ '
                 
-        rule_string += 'Then cluster ' + str(rule_labels[idx][0])
-        rule_color = cluster_colors[rule_labels[idx][0]]
+        rule_string += 'Then cluster ' + str(list(rule_labels[idx]))
+        rule_color = cluster_colors[list(rule_labels[idx])[0]]
         ax.scatter(
             x = 0.25,
             y = (len(D) - i)/1.5,

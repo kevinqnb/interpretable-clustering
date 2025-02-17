@@ -57,10 +57,8 @@ def distorted_greedy(
     n,k = data_to_cluster_assignment.shape
     r,k2 = rule_to_cluster_assignment.shape
     assert k == k2, "Data and Rule assignment arrays do not match in shape along axis 1."
-    assert (
-        np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), 
-        "Rules must be assigned to exactly one cluster."
-    )
+    assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Rules must be assigned "
+                                                                       "to exactly one cluster.")
     
     rule_list = list(np.arange(r))
     rule_labels = np.array(
@@ -122,7 +120,7 @@ def prune_with_grid_search(
     data_to_rules_assignment : NDArray[np.bool_],
     objective : Callable,
     lambda_search_range : NDArray[np.float64],
-    cpu_count : int = 8
+    cpu_count : int = 1
 ) -> NDArray[np.int64]:
     
     """
@@ -160,14 +158,19 @@ def prune_with_grid_search(
     rule_to_cluster_assignment = labels_to_assignment(rule_labels, n_labels = n_clusters)
     
     # Dummy call, used for more precise feedback if any errors are found.
-    distorted_greedy(
+    selected = distorted_greedy(
         n_rules, 
         1,
         data_to_cluster_assignment,
         rule_to_cluster_assignment,
         data_to_rules_assignment
     )
-    
+    A = data_to_rules_assignment[:, selected]
+    B = rule_to_cluster_assignment[selected, :]
+    pruned_data_to_cluster_assignment = np.dot(A, B)
+    objective(pruned_data_to_cluster_assignment)
+
+
     def evaluate_lambda(lambda_val):
         selected = distorted_greedy(
             n_rules,

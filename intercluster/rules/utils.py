@@ -1,5 +1,6 @@
+import copy
 import numpy as np
-from typing import List, Tuple
+from typing import List, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from intercluster.utils import flatten_labels, mode
 from ._node import Node
@@ -8,32 +9,52 @@ from ._node import Node
 ####################################################################################################
 
 
-def traverse(node : Node, path : List[Tuple[Node, str]] = None):
+def traverse(node : Node, path : List[Node] = None) -> Iterator[List[Node]]:
     """
-    Traverses a binary tree in a depth-first manner, yielding nodes as they are visited.
+    Traverses a binary tree in a depth-first manner, yielding paths as as they are discovered.
+    The function itself utilizes an iterative, yield from approach. For example, the following 
+    command creates an iterator object over the set of all paths. Iterating through it 
+    with a loop then prints all paths in a depth first manner:
+    
+    ```
+    for path in traverse(root):
+        print(path)
+    ```
+    
     
     Args:
         node (Node): Root node of the subtree to recurse into.
         
-        path (List[(Node, str)], optional): List of node objects visited so far.
+        path (List[Node], optional): List of node objects visited so far. Defaults to None 
+            which starts a new traversal.
     
     Yields:
-        path (List[(Node, str)]): List of node objects visited on the current path.
+        path (List[Node]): List of node objects visited on the current path.
             If the path followed a left child, the corresponding string is 'left'.
             Otherwise, the string is 'right'.
     """
     if path is None:
         path = []
     
-    path_update = path + [(node, None)]
-    
+    # Yield the path up to and including the current node.
+    path_update = path + [node]
     yield path_update
     
+    # Yield paths with children
     if node.left_child is not None:
-        left_path = path + [(node, 'left')]
+        left_condition_node = copy.deepcopy(node)
+        left_condition_node.condition.set_direction(-1)
+        left_path = path + [left_condition_node]
         yield from traverse(node.left_child, left_path)
+        
+    # NOTE: This creates a copy of the nodes added to the path, 
+    # and depending on the direction taken in the tree, switches the node's logical condition to 
+    # the correct direction. By default tree nodes will have direction -1 (<= condition), which is 
+    # intended to move left if True, so switching is especially helpful for paths moving right.
     if node.right_child is not None:
-        right_path = path + [(node, 'right')]
+        right_condition_node = copy.deepcopy(node)
+        right_condition_node.condition.set_direction(1)
+        right_path = path + [right_condition_node]
         yield from traverse(node.right_child, right_path)
         
 
@@ -53,7 +74,7 @@ def collect_nodes(root : Node) -> List[Node]:
     
     nodes = []
     for path in traverse(root):
-        last_node = path[-1][0]
+        last_node = path[-1]
         nodes.append(last_node)
             
     return nodes
@@ -75,7 +96,7 @@ def collect_leaves(root : Node) -> List[Node]:
     
     leaves = []
     for path in traverse(root):
-        last_node = path[-1][0]
+        last_node = path[-1]
         if last_node.type == 'leaf':
             leaves.append(last_node)
             
@@ -87,7 +108,7 @@ def collect_leaves(root : Node) -> List[Node]:
 
 def get_decision_paths(
     root : Node
-) -> List[List[Tuple[Node, str]]]:
+) -> List[List[Node]]:
     """
     Given the root of a tree, finds all decision paths 
     used to reach leaf nodes in the tree. Optionally, this takes an array y of training data labels
@@ -97,11 +118,12 @@ def get_decision_paths(
     Args:
         root (Node): Root of the tree.
     Returns:
-        paths (List[(Node, str)]): List of decision paths in the tree. 
+        paths (List[List[Node]]): List of decision paths in the tree, where each decision path 
+            is represented as a list of Node objects. 
     """
     paths = []
     for path in traverse(root):
-        last_node = path[-1][0]
+        last_node = path[-1]
         if last_node.type == 'leaf':
             paths.append(path)
             
@@ -113,9 +135,9 @@ def get_decision_paths(
 
 def get_decision_paths_with_labels(
     root : Node,
-    labels : List[List[int]],
+    labels : List[Set[int]],
     select_labels : NDArray,
-) -> Tuple[List[List[Tuple[Node, str]]], List[List[int]]]:
+) -> Tuple[List[List[Node]], List[Set[int]]]:
     """
     Given the root of a tree, finds all decision paths 
     used to reach leaf nodes in the tree. Optionally, this takes an input set of data labels
@@ -126,24 +148,25 @@ def get_decision_paths_with_labels(
     Args:
         root (Node): Root of the tree.
     
-        y (np.ndarray, optional): Training Data labels.
+        labels (List[Set[int]]): Training Data labels.
             
-        labels (np.ndarray, optional): Labels to filter by.
+        select_labels (np.ndarray): Labels to filter by.
     Returns:
-        paths (List[(Node, str)]): List of decision paths in the tree. 
-        path_labels (List[List[int]]): List of labels corresponding to each path.
+        paths (List[List[Node]]): List of decision paths in the tree, where each decision path 
+            is represented as a list of Node objects. 
+        path_labels (List[Set[int]]): List of labels corresponding to each path.
     """
     paths = []
     path_labels = []
     for path in traverse(root):
-        last_node = path[-1][0]
+        last_node = path[-1]
         if last_node.type == 'leaf' and len(last_node.indices) > 0:
             indices_labels = [labels[i] for i in last_node.indices]
             indices_labels = flatten_labels(indices_labels)
             majority_label = mode(indices_labels)
             if majority_label in select_labels:
                 paths.append(path)
-                path_labels.append([majority_label])
+                path_labels.append({majority_label})
             
     return paths, path_labels
 

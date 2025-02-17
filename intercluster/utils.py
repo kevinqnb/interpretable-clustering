@@ -293,7 +293,7 @@ def flatten_labels(labels : List[Set[int]]) -> NDArray:
     Returns:
         flattened (List[int]): Flattened list of labels.
     """
-    flattened = [j for _,labs in enumerate(labels) for j in labs]
+    flattened = np.array([j for _,labs in enumerate(labels) for j in labs])
     return flattened
 
 
@@ -402,12 +402,12 @@ def assignment_to_dict(
             if point i belongs to label j and False otherwise.
     
     Returns:
-        assignment_dict (Dict[int, List[int]]): Dictionary where the keys are integers (labels) and 
+        assignment_dict (Dict[int, set[int]]): Dictionary where the keys are integers (labels) and 
             values are the sets of data point indices covered by the label.
     """        
     assignment_dict = {l: np.array([]) for l in range(assignment_matrix.shape[1])}
     for i in range(assignment_matrix.shape[1]):
-        assignment_dict[i] = np.where(assignment_matrix[:,i])[0]  
+        assignment_dict[i] = set(np.where(assignment_matrix[:,i])[0])  
     return assignment_dict
 
 

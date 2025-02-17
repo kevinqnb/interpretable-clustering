@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
 from intercluster.pruning import prune_with_grid_search
+from ._conditions import Condition
 
 class DecisionSet:
     """
@@ -19,7 +20,7 @@ class DecisionSet:
         Attributes:
             feature_labels (List[str]): Iterable object with strings representing feature names. 
             
-            decision_set (List[Rule]): List of rules in the decision set.
+            decision_set (List[Condition]): List of rules in the decision set.
             
             decision_set_labels (List[Set[int]]): List of labels corresponding to each
                 rule in the decision set. 
@@ -36,7 +37,11 @@ class DecisionSet:
         self.prune_status = False
         
         
-    def _fitting(self, X : NDArray, y : List[Set[int]] = None) -> Tuple[List[Any], List[Set[int]]]:
+    def _fitting(
+        self,
+        X : NDArray,
+        y : List[Set[int]] = None
+    ) -> Tuple[List[Condition], List[Set[int]]]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -47,7 +52,7 @@ class DecisionSet:
             y (List[Set[int]], optional): Target labels. Defaults to None.
             
         returns:
-            decision_set (List[Any]): List of rules.
+            decision_set (List[Condition]): List of rules.
             
             decision_set_labels (List[int]): List of labels corresponding to each rule.
         """
@@ -180,7 +185,8 @@ class DecisionSet:
                 at index i representing the group of decision rules which satisfy X[i,:].
         """
         if self.pruned_indices is None:
-            raise ValueError('Decision set has not been pruned!')
+            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
+                             'likely because coverage requirements were not met.')
         
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         pruned_data_to_rules_assignment = data_to_rules_assignment[:,self.pruned_indices]
