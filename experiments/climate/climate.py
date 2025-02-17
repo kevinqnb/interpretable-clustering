@@ -149,14 +149,14 @@ forest_params_svm = {
 forest_tree_params_exkmc = {
     'k' : k,
     'kmeans' : kmeans_base.clustering,
-    'max_leaf_nodes' : k,
+    'max_leaf_nodes' : 2*k,
     'imm' : True
 }
 
 forest_params_exkmc = {
     'tree_model' : ExkmcTree,
     'tree_params' : forest_tree_params_exkmc,
-    'num_trees' : n_trees,
+    'num_trees' : 1,
     'max_features' : 24,
     'max_labels' : k,
     'feature_pairings' : [list(range(24))],

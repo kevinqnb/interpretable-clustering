@@ -1,6 +1,8 @@
+from itertools import combinations
 import numpy as np
 from numpy.typing import NDArray
 from typing import List, Any, Tuple, Set
+from intercluster.utils import tiebreak, entropy, can_flatten, flatten_labels
 from ._conditions import Condition, LinearCondition
 from ._decision_set import DecisionSet
 from .utils import satisfies_conditions
@@ -86,13 +88,15 @@ class VoronoiSet(DecisionSet):
         )
         
         # Group of other centroids to compare against:
+        '''
         rand_others = np.random.choice(
             [i for i in range(k) if i != rand_center],
             self.num_conditions,
             replace = False
         )
+        '''
             
-        return rand_center, rand_features, rand_others
+        return rand_center, rand_features
     
     
     def _create_condition(
@@ -134,9 +138,35 @@ class VoronoiSet(DecisionSet):
         return condition
     
     
+    def _gain(self, center_idx : int, condition_list : Condition) -> float:
+        """
+        Given a condition, evaluate the information gain received by including it in the 
+        decision set. 
+        
+        Args:
+            center_idx (int): Center for separation.
+            condition (Condition): Linear condition for the perpendicular bisector.
+        """
+        center_labels = (self.y_array == center_idx).astype(int)
+        satisfied_mask = np.zeros(len(self.X), dtype = bool)
+        satisfied = satisfies_conditions(self.X, condition_list)
+        satisfied_mask[satisfied] = True
+        not_satisfied_mask = ~satisfied_mask
+        not_satisfied = np.where(not_satisfied_mask)[0]
+        gain = (entropy(center_labels) -
+                (len(satisfied)/len(center_labels) * entropy(center_labels[satisfied]) +
+                 len(not_satisfied)/len(center_labels) * entropy(center_labels[not_satisfied])))
+        return gain
+    
+    
     def _create_rule(self) -> Tuple[List[Condition], int]:
         """
         Finds a new voronoi rule.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (List[Set[int]], optional): Target labels.
         
         Returns:
             conditions (List[Condition]): List of linear conditions for the rule. 
@@ -144,18 +174,29 @@ class VoronoiSet(DecisionSet):
             center (int): Associated label of the center.
         """
         k,d = self.centers.shape
-        rand_center, rand_features, rand_others = self._random_parameters()
+        rand_center, rand_features = self._random_parameters()
         
+        # Collect conditions
         conditions = []
-        for j in rand_others:
-            cond = self._create_condition(
-                self.centers[rand_center,:],
-                self.centers[j, :],
-                features = rand_features
-            )
-            conditions.append(cond)
-                
-        return conditions, rand_center
+        for j in range(k):
+            if j != rand_center:
+                cond = self._create_condition(
+                    self.centers[rand_center,:],
+                    self.centers[j, :],
+                    features = rand_features
+                )
+                conditions.append(cond)
+        
+        # Evaluate all combinations:
+        condition_combos = list(combinations(range(k - 1), self.num_conditions))
+        condition_combo_gains = []
+        for combo in condition_combos:
+            combo_gain = self._gain(rand_center, [conditions[i] for i in combo])
+            condition_combo_gains.append(combo_gain)
+            
+        best_combo = condition_combos[tiebreak(condition_combo_gains)[-1]]
+        condition_subset = [conditions[i] for i in best_combo]
+        return condition_subset, rand_center
         
     
     
@@ -174,6 +215,12 @@ class VoronoiSet(DecisionSet):
             
             decision_set_labels (List[int]): List of labels corresponding to each rule.
         """
+        if not can_flatten(y):
+            raise ValueError("Each data point must have exactly one label.")
+        
+        self.X = X
+        self.y_array = flatten_labels(y)
+        
         decision_sets = [None for _ in range(self.num_sets)]
         decision_set_labels = [None for _ in range(self.num_sets)]
         for i in range(self.num_sets):

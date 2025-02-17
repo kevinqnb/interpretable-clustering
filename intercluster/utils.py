@@ -217,13 +217,15 @@ def kmeans_cost(
 ####################################################################################################
 
 
-def update_centers(X : NDArray, assignment : NDArray) -> NDArray:
+def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray) -> NDArray:
     """
     Given a dataset and a current assignment to cluster centers, update the centers by finding 
     the mean of the points assigned to each original center.
     
     Args:
         X (np.ndarray): Input (n x d) dataset.
+        
+        current_centers (np.ndarray): Current set of cluster centers represented as a (k x d) array.
         
         assignment (np.ndarray): Boolean assignment matrix of size (n x k). Entry (i,j) is 
             `True` if point i is assigned to cluster j and `False` otherwise.
@@ -232,10 +234,12 @@ def update_centers(X : NDArray, assignment : NDArray) -> NDArray:
         updated_centers (np.ndarray): Size (k x d) array of updated centers.
     """
     n,d = X.shape
-    n2,k = assignment.shape
+    k,d_ = current_centers.shape
+    n_,k_ = assignment.shape
     
-    if n != n2:
-        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n2}.")
+    assert d == d_, f"Dimensionality of data {d} and cluster centers {d_} do not match."
+    assert n == n_, f"Shape of data {n} does not match shape of shape of assignment {n_}."
+    assert k == k_, f"Shape of current centers {k} doesn't match shape of shape of assignment {k_}."
 
     updated_centers = np.zeros((k,d))
     for i in range(k):
@@ -243,7 +247,7 @@ def update_centers(X : NDArray, assignment : NDArray) -> NDArray:
         if len(assigned) > 0:
             new_center = np.mean(X[assigned,:], axis = 0)
         else:
-            new_center = np.nan
+            new_center = current_centers[i,:]
             
         updated_centers[i,:] = new_center
         
