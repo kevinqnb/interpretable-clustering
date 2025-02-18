@@ -197,7 +197,7 @@ def prune_with_grid_search(
         obj = objective(pruned_data_to_cluster_assignment)   
         return (obj, np.random.uniform()), lambda_val
                
-    search_results = Parallel(n_jobs=cpu_count)(
+    search_results = Parallel(n_jobs=cpu_count, backend = 'loky')(
         delayed(evaluate_lambda)(lambd) for lambd in lambda_search_range
     )
     

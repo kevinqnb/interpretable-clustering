@@ -125,7 +125,8 @@ class DecisionSet:
         X : NDArray,
         y : List[Set[int]],
         objective : Callable, 
-        lambda_search_range : NDArray = np.linspace(0,1,10)
+        lambda_search_range : NDArray = np.linspace(0,1,10),
+        cpu_count : int = 1
     ):
         """
         Prunes the decision set using a distorted greedy algorithm for a submodular 
@@ -147,6 +148,8 @@ class DecisionSet:
             
             lambda_search_range (np.ndarray, optional): A range of lambda values to search over. 
                 Defaults to np.linspace(0,1,10).
+
+            cpu_count (int): Number of cores to use for a parallelized grid search.
         """
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         
@@ -159,6 +162,7 @@ class DecisionSet:
             data_to_rules_assignment = data_to_rules_assignment,
             objective = objective,
             lambda_search_range = lambda_search_range,
+            cpu_count = cpu_count
         )
         
         if selected_rules is None:
