@@ -137,7 +137,11 @@ class IMMBase(Baseline):
         exkmc_labels = labels_format(exkmc_labels.astype(int))
         assignment = labels_to_assignment(exkmc_labels, n_labels = self.n_clusters)
         #centers = tree.all_centers
-        updated_centers = update_centers(X, assignment)
+        updated_centers = update_centers(
+            X = X,
+            current_centers = tree.all_centers,
+            assignment = assignment
+        )
         self.max_rule_length = tree._max_depth()
         return assignment, updated_centers
     
@@ -215,7 +219,11 @@ class ExkmcMod(Module):
         labels = tree.fit_predict(X, kmeans=self.kmeans_model)
         assignment = labels_to_assignment(labels, n_labels = self.n_clusters)
         #centers = tree.all_centers
-        updated_centers = update_centers(X, assignment)
+        updated_centers = update_centers(
+            X = X,
+            current_centers = tree.all_centers,
+            assignment = assignment
+        )
         self.n_rules += 1
         self.max_rule_length = tree._max_depth()
         return assignment, updated_centers   
@@ -333,7 +341,12 @@ class DecisionSetMod(Module):
                 self.model.predict(X, rule_labels = False),
                 n_labels = self.clustering.n_clusters
             )
-        updated_centers = update_centers(X, assignment)
+
+        updated_centers = update_centers(
+            X = X,
+            current_centers = self.clustering.centers,
+            assignment = assignment
+        )
         
         self.n_rules += step_size
         return assignment, updated_centers
@@ -359,6 +372,9 @@ class DecisionSetMod(Module):
             
             centers (np.ndarray): Size k x d array of cluster centers.
         """
+        if self.frac_cover > 1:
+            raise ValueError("Stepped beyond 100 percent coverage.")
+        
         if self.model is None:
             self.model = self.decision_set_model(
                 **self.decision_set_params
@@ -383,17 +399,25 @@ class DecisionSetMod(Module):
                     self.model.pruned_predict(X, rule_labels = False),
                     n_labels = self.clustering.n_clusters
                 )
-                updated_centers = update_centers(X, assignment)
+                updated_centers = update_centers(
+                    X = X,
+                    current_centers = self.clustering.centers,
+                    assignment = assignment
+                )
+            else:
+                print('Failed pruning!')
         else:
             assignment = labels_to_assignment(
                 self.model.predict(X, rule_labels = False),
                 n_labels = self.clustering.n_clusters
             )
-            updated_centers = update_centers(X, assignment)
+            updated_centers = update_centers(
+                X = X,
+                current_centers = self.clustering.centers,
+                assignment = assignment
+            )
         
-        self.frac_cover += step_size
-        if self.frac_cover > 1:
-            raise ValueError("Stepped beyond 100 percent coverage.")
+        self.frac_cover = np.round(self.frac_cover + step_size,5)
         return assignment, updated_centers
     
     

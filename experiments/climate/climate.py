@@ -186,7 +186,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,2,101)
+    'lambda_search_range' : np.linspace(0,100,1001)
 }
 
 
@@ -278,7 +278,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 100
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -290,7 +290,7 @@ Ex1 = CoverageExperiment(
     verbose = True
 )
 
-Ex1_results = Ex1.run(n_steps = k, step_size = 0.05)
+Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
 Ex1.save_results('data/experiments/climate/', '_test')
 
 

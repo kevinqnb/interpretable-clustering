@@ -60,7 +60,7 @@ class KmeansObjective(PruningObjective):
             objective_val, tiebreak-val: The main objective value used for comparison along with a 
                 tiebreak value (if needed, considered as secondary information).
         """
-        updated_centers = update_centers(self.X, assignment)
+        updated_centers = update_centers(self.X, self.centers, assignment)
         objective_cost = kmeans_cost(
             self.X,
             updated_centers,

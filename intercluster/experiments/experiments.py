@@ -177,6 +177,7 @@ class CoverageExperiment(Experiment):
             if self.verbose:
                 print(f"Running for step {i}.")
             for mod in self.module_list:
+                print(mod.frac_cover)
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
                 
                 # record maximum rule length:
