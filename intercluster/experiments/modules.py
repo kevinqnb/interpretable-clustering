@@ -404,8 +404,7 @@ class DecisionSetMod(Module):
                     current_centers = self.clustering.centers,
                     assignment = assignment
                 )
-            else:
-                print('Failed pruning!')
+                
         else:
             assignment = labels_to_assignment(
                 self.model.predict(X, rule_labels = False),

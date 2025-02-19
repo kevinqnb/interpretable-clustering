@@ -177,7 +177,6 @@ class CoverageExperiment(Experiment):
             if self.verbose:
                 print(f"Running for step {i}.")
             for mod in self.module_list:
-                print(mod.frac_cover)
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
                 
                 # record maximum rule length:
@@ -190,6 +189,7 @@ class CoverageExperiment(Experiment):
                     self.result_dict[(fn.name, mod.name, sample_number)].append(
                         fn(self.data, massign, mcenters)
                     )
+                    
         
     def run(self, n_steps : int, step_size : float):
         """

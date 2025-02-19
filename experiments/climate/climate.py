@@ -10,8 +10,8 @@ from intercluster.pruning import *
 from intercluster import *
 from intercluster.experiments import *
 
-np.seterr(all='raise')
-cpu_count = 16
+#np.seterr(all='raise')
+cpu_count = 8
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -187,7 +187,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,100,1001),
+    'lambda_search_range' : np.linspace(0,10,101),
     'cpu_count' : cpu_count
 }
 
@@ -280,7 +280,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 100
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -292,8 +292,11 @@ Ex1 = CoverageExperiment(
     verbose = True
 )
 
+import time 
+start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
 Ex1.save_results('data/experiments/climate/', '_test')
-
+end = time.time()
+print(end - start)
 
 ####################################################################################################

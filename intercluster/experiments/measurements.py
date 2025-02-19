@@ -123,7 +123,7 @@ class Coverage(MeasurementFunction):
     
 class DistanceRatio(MeasurementFunction):
     """
-    For every point computes the ratio between
+    For every point which is assigned to exactly one cluster, computes the ratio between
         - The distance to its second closest center
         - The distance to its closest cluster center. 
     """
@@ -148,6 +148,10 @@ class DistanceRatio(MeasurementFunction):
             return np.nan
         
         n,d = X.shape
+        single_cover_mask = np.sum(assignment, axis = 1) == 1
+        if np.sum(single_cover_mask) == 0:
+            return np.nan
+
         center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
         sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
         closest_dists = np.array(
@@ -156,5 +160,10 @@ class DistanceRatio(MeasurementFunction):
         second_closest_dists = np.array(
             [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
         )
-        return np.mean(second_closest_dists/closest_dists)
+
+        closest_dists = closest_dists[single_cover_mask]
+        second_closest_dists = second_closest_dists[single_cover_mask]
+        out = np.zeros(len(second_closest_dists)) + np.inf
+        np.divide(second_closest_dists, closest_dists, where = closest_dists != 0, out = out)
+        return np.mean(out)
         
