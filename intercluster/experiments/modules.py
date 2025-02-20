@@ -73,6 +73,7 @@ class KMeansBase(Baseline):
         self.clustering = KMeans(
             n_clusters=n_clusters
         )
+        self.centers = None
         
     def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
         """
@@ -117,6 +118,7 @@ class IMMBase(Baseline):
     ):
         self.n_clusters = n_clusters
         self.kmeans_model = kmeans_model
+        self.centers = kmeans_model.cluster_centers_
         super().__init__(name)
         
     def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
@@ -139,7 +141,7 @@ class IMMBase(Baseline):
         #centers = tree.all_centers
         updated_centers = update_centers(
             X = X,
-            current_centers = tree.all_centers,
+            current_centers = self.centers,
             assignment = assignment
         )
         self.max_rule_length = tree._max_depth()
@@ -189,6 +191,7 @@ class ExkmcMod(Module):
         self.kmeans_model = kmeans_model
         self.base_tree = base_tree
         self.min_rules = min_rules
+        self.centers = kmeans_model.cluster_centers_
         self.reset()
         
         
@@ -221,7 +224,7 @@ class ExkmcMod(Module):
         #centers = tree.all_centers
         updated_centers = update_centers(
             X = X,
-            current_centers = tree.all_centers,
+            current_centers = self.centers,
             assignment = assignment
         )
         self.n_rules += 1
@@ -279,10 +282,10 @@ class DecisionSetMod(Module):
         self.prune_params = prune_params
         self.min_rules = min_rules
         self.min_frac_cover = min_frac_cover
+        self.centers = self.clustering.centers
         super().__init__(name)
         
         self.reset()
-        self.centers = self.clustering.centers
         
         
     def reset(self):
@@ -344,7 +347,7 @@ class DecisionSetMod(Module):
 
         updated_centers = update_centers(
             X = X,
-            current_centers = self.clustering.centers,
+            current_centers = self.centers,
             assignment = assignment
         )
         

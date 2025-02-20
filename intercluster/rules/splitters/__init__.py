@@ -4,6 +4,7 @@ from .imm import (
 
 from .information_gain import (
     InformationGainSplitter,
+    ObliqueInformationGainSplitter
 )
 
 from .svm import (

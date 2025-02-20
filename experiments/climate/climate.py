@@ -130,10 +130,24 @@ forest_params_depth_5 = {
     'train_size' : 0.75
 }
 
-# SVM Forest:
-forest_tree_params_svm = {
-    'max_depth' : 1
+# Oblique Forest:
+oblique_forest_tree_params = {
+    'max_depth' : 2
 }
+
+oblique_forest_params = {
+    'tree_model' : ObliqueTree,
+    'tree_params' : oblique_forest_tree_params,
+    'num_trees' : n_trees,
+    'max_features' : 2,
+    'max_labels' : 1,
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'train_size' : 0.75
+}
+
+
+# SVM Forest:
+forest_tree_params_svm = {}
 
 forest_params_svm = {
     'tree_model' : SVMTree,
@@ -194,7 +208,7 @@ prune_params = {
 
 ####################################################################################################
 
-# Decision Forest with Sklearn Trees:
+# Decision forest with axis aligned trees:
 
 # 1) depth 2:
 mod1 = DecisionSetMod(
@@ -220,24 +234,45 @@ mod2 = DecisionSetMod(
 
 ####################################################################################################
 
-# Forests with SVM Trees:
+# Oblique rule sets:
 
-# 3) SVM Tree depth 1:
+# 3) Forest with simple oblique trees depth 2:
 mod3 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = oblique_forest_params,
+    clustering = kmeans_base,
+    prune_params = prune_params,
+    min_frac_cover = min_frac_cover,
+    name = 'Oblique-Forest'
+)
+
+# 4) SVM decision set
+mod4 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_svm,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'SVM-Forest'
+    name = 'SVM'
 )
+
+# 5) Voronoi decision set
+mod5 = DecisionSetMod(
+    decision_set_model = VoronoiSet,
+    decision_set_params = voronoi_params,
+    clustering = kmeans_base,
+    prune_params = prune_params,
+    min_frac_cover = min_frac_cover,
+    name = 'Voronoi'
+)
+
 
 ####################################################################################################
 
 # Forests with ExKMC Trees:
 
-# 4) ExKMC Tree:
-mod4 = DecisionSetMod(
+# 6) ExKMC Tree:
+mod6 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_exkmc,
     clustering = kmeans_base,
@@ -249,24 +284,10 @@ mod4 = DecisionSetMod(
 
 ####################################################################################################
 
-
-# 5) Voronoi decision set
-mod5 = DecisionSetMod(
-    decision_set_model = VoronoiSet,
-    decision_set_params = voronoi_params,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'Voronoi-Set'
-)
-
-
-####################################################################################################
-
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod3, mod4, mod5]
+module_list = [mod1, mod2, mod3, mod4, mod5, mod6]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),
@@ -280,7 +301,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = CoverageExperiment(
     data = data,

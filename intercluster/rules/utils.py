@@ -234,22 +234,6 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
     """
     condition_list = [node.condition for node in path[:-1]]
     return satisfies_conditions(X, condition_list)
-    '''
-    weights = np.zeros((X.shape[1], len(path) - 1))
-    thresholds = np.zeros(len(path) - 1)
-    directions = np.ones(len(path) - 1)
-    
-    for i, (node, direction) in enumerate(path[:-1]):
-        weights[node.features, i] = node.weights
-        thresholds[i] = node.threshold
-        if direction == 'left':
-            directions[i] = -1
-
-    results = np.sign(np.dot(X, weights) - thresholds)
-    results[results == 0] = -1
-    satisfies_mask = np.all(results == directions, axis=1)
-    return np.where(satisfies_mask)[0]
-    '''
 
 
 ####################################################################################################

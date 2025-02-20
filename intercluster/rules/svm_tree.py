@@ -9,12 +9,13 @@ from ._tree import Tree
 
 class SVMTree(Tree):
     """
-    Inherits from the Tree class to implement a decision tree in which 
-    linear split criterion are chosen with SVM to separate data. 
+    Inherits from the Tree class to implement a decision tree in which a single
+    linear splitting condition is chosen with SVM to separate data. 
     
     NOTE: For now this is really just designed to split one class from another.
     Attempting to fit datasets with more than two classes will throw an error.
-    I also think it is best utilized with max_depth = 1.
+    Since this is is only desinged to produce
+    a single split it defaults to max_leaf_nodes =2, max_depth = 1.
     
     Args:            
         base_tree (Node, optional): Root node of a baseline tree to start from. 
@@ -48,13 +49,11 @@ class SVMTree(Tree):
     def __init__(
         self,
         base_tree : Node = None,
-        max_leaf_nodes : int = None,
-        max_depth : int = None,
         min_points_leaf : int = 1,
         feature_labels : List[str] = None
-    ):
-        #if max_depth != 1:
-        #    raise ValueError("SVMTree is only designed to be utilized with max_depth = 1.")
+    ):  
+        max_leaf_nodes = 2
+        max_depth = 1
         
         splitter = SVMSplitter(
             min_points_leaf = min_points_leaf

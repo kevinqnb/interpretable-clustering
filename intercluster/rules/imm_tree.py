@@ -493,4 +493,4 @@ class ExkmcTree(Tree):
                     labels[idx].add(int(leaf.label))
             return labels
         else:
-            return labels_format(self.exkmc_tree.predict(X))
+            return labels_format(self.exkmc_tree.predict(X).astype(int))

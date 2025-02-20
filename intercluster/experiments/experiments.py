@@ -186,9 +186,14 @@ class CoverageExperiment(Experiment):
                 
                 # record results from measurement functions:
                 for fn in self.measurement_fns:
-                    self.result_dict[(fn.name, mod.name, sample_number)].append(
-                        fn(self.data, massign, mcenters)
-                    )
+                    if fn.name == 'distance-ratio':
+                        self.result_dict[(fn.name, mod.name, sample_number)].append(
+                            fn(self.data, massign, mod.centers)
+                        )
+                    else:
+                        self.result_dict[(fn.name, mod.name, sample_number)].append(
+                            fn(self.data, massign, mcenters)
+                        )
                     
         
     def run(self, n_steps : int, step_size : float):

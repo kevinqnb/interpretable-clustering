@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.utils import kmeans_cost, update_centers, overlap, coverage, center_dists
+from intercluster.utils import divide_with_zeros, kmeans_cost, overlap, coverage, center_dists
 
 class MeasurementFunction:
     def __init__(self, name):
@@ -149,7 +149,8 @@ class DistanceRatio(MeasurementFunction):
         
         n,d = X.shape
         single_cover_mask = np.sum(assignment, axis = 1) == 1
-        if np.sum(single_cover_mask) == 0:
+        overlap_uncover_mask = ~single_cover_mask
+        if np.sum(overlap_uncover_mask) == 0:
             return np.nan
 
         center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
@@ -161,9 +162,18 @@ class DistanceRatio(MeasurementFunction):
             [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
         )
 
-        closest_dists = closest_dists[single_cover_mask]
-        second_closest_dists = second_closest_dists[single_cover_mask]
-        out = np.zeros(len(second_closest_dists)) + np.inf
-        np.divide(second_closest_dists, closest_dists, where = closest_dists != 0, out = out)
-        return np.mean(out)
+        # Calculate mean of distribution for all points:
+        out1 = divide_with_zeros(second_closest_dists, closest_dists)
+        all_points_mean = np.mean(out1)
+
+        # Calculate mean of distribution for ONLY overlapped and uncovered points:
+        overlap_uncover_closest_dists = closest_dists[overlap_uncover_mask]
+        overlap_uncover_second_closest_dists = second_closest_dists[overlap_uncover_mask]
+        out2 = divide_with_zeros(
+            overlap_uncover_second_closest_dists,
+            overlap_uncover_closest_dists
+        )
+        overlap_uncover_points_mean = np.mean(out2)
+
+        return all_points_mean / overlap_uncover_points_mean
         

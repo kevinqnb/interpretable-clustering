@@ -47,6 +47,17 @@ def test_mode():
     
 
 
+def test_divide_with_zeros():
+    x = np.array([0., 1., 3., 0., 4., 5.])
+    y = np.array([1., 0., 3., 0., 2., 4.])
+    assert np.array_equal(divide_with_zeros(x,y), np.array([0, np.inf, 1, 1, 2, 5/4]))
+
+    X = np.array([[0., 1., 3.], [0., 4., 5.]])
+    Y = np.array([[1., 0., 3.], [0., 2., 4.]])
+    assert np.array_equal(divide_with_zeros(X,Y), np.array([[0, np.inf, 1], [1, 2, 5/4]]))
+
+
+
 def test_entropy():
     assert np.isclose(entropy(np.array([1, 1, 1, 1, 1, 1])), 0, atol = 1e-5)
     assert np.isclose(entropy(np.array([1, 0, 1, 0, 1, 0])), 1, atol = 1e-5)
@@ -212,7 +223,8 @@ def test_update_centers():
         [9,10],
         [11,12]
     ])
-    
+    current_centers = np.zeros((3,2))
+
     assignment = np.array([
         [1,0,0],
         [1,0,0],
@@ -222,7 +234,7 @@ def test_update_centers():
         [0,0,1]
     ])
     
-    centers = update_centers(X, assignment)
+    centers = update_centers(X, current_centers, assignment)
     test_centers = np.array([
         [2,3],
         [6,7],

@@ -109,8 +109,8 @@ def build_graph(
                 weight_l = np.round(node.condition.weights[l] / (feature_max - feature_min), 2)
                 weights.append(weight_l)
         else:
-            weight = np.round(node.condition.weights[0], 2)
-            weights = [weight]
+            weights = np.round(node.condition.weights, 2)
+            #weights = [weight]
             
         # Rescale thresholds if necessary:
         threshold = node.condition.threshold
@@ -370,7 +370,7 @@ def experiment_plotter(
     fig,ax = plt.subplots(figsize = (6,4))
     if baseline_list is None:
         baseline_list = ['KMeans']
-    baseline_linestyles = ['-']
+    baseline_linestyles = ['-', 'dashed']
     baselines = [_ for _ in mean_df.columns if _ in baseline_list]
     modules = [_ for _ in mean_df.columns if _ not in baselines]
     
@@ -378,8 +378,8 @@ def experiment_plotter(
     for i,b in enumerate(baselines):
         ax.hlines(
             mean_df[b].iloc[0],
-            xmin = domain[0],
-            xmax = domain[end],
+            xmin = domain.min().min(),
+            xmax = domain.max().max(),
             color = 'k',
             label = fr'$\texttt{{{b}}}$',
             linestyle = baseline_linestyles[i],
@@ -389,7 +389,7 @@ def experiment_plotter(
     
     for i,m in enumerate(modules):
         ax.plot(
-            domain,
+            np.array(domain[m]),
             np.array(mean_df[m]),
             linewidth = 3,
             marker='o',
@@ -398,16 +398,16 @@ def experiment_plotter(
             label = fr'$\texttt{{{m}}}$'
         )
         ax.fill_between(
-            domain, 
+            np.array(domain[m]), 
             np.array(mean_df[m]) - np.array(std_df[m]),
             np.array(mean_df[m]) + np.array(std_df[m]),
             color= cmap(i),
             alpha=0.1
         )
 
-    ticks = np.arange(domain[0], domain[end] + 1, 1) 
-    labels = [str(i) for i in ticks] 
-    plt.xticks(ticks, labels)
+    #ticks = domain[::2]
+    #labels = [str(i) for i in ticks] 
+    #plt.xticks(ticks, labels)
 
     if legend:
         plt.legend(loc = 'upper right', bbox_to_anchor=(2, 1))

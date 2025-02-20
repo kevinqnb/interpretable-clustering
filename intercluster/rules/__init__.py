@@ -18,6 +18,7 @@ from .imm_tree import (
 from .decision_tree import (
     ID3Tree,
     SklearnTree,
+    ObliqueTree,
 )
 
 from .svm_tree import (

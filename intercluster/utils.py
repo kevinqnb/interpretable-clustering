@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from collections.abc import Iterable
 from typing import List, Dict, Set
 from numpy.typing import NDArray
@@ -41,6 +42,38 @@ def mode(x : NDArray) -> float:
     """
     unique, counts = np.unique(x, return_counts=True)
     return unique[tiebreak(counts)[-1]]
+
+
+####################################################################################################
+
+
+def divide_with_zeros(x : NDArray, y : NDArray) -> NDArray:
+    """
+    Given two arrays, divide element-wise with the convention that 0/0 = 1 and 1/0 = infty. 
+
+    Args:
+        x (np.ndarray): Numerator array.
+        y (np.ndarray): Denominator array.
+
+    Returns:
+        (np.ndarray): New array with element-wise divisions. 
+    """
+    assert x.shape == y.shape, "Input arrays do not match in size."
+
+    ones_mask = np.zeros(x.shape, dtype = bool)
+    ones_mask = (x == 0) & (y == 0)
+
+    infty_mask = np.zeros(x.shape, dtype = bool)
+    infty_mask = (x != 0) & (y == 0)
+
+    xcopy = copy.deepcopy(x)
+    ycopy = copy.deepcopy(y)
+    xcopy[ones_mask] = 1
+    ycopy[ones_mask] = 1
+    xcopy[infty_mask] = np.inf
+    ycopy[infty_mask] = 1
+
+    return np.divide(xcopy, ycopy)
 
 
 ####################################################################################################
