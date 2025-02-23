@@ -1,5 +1,7 @@
 import os
 import pandas as pd
+import copy
+from joblib import Parallel, delayed
 from typing import List, Callable, Any
 from numpy.typing import NDArray
 from intercluster.rules import *
@@ -43,6 +45,7 @@ class Experiment:
         measurement_fns : List[Callable],
         n_samples : int,
         labels : List[List[int]] = None,
+        cpu_count : int = 1,
         verbose : bool = True
     ):
         self.data = data
@@ -51,6 +54,7 @@ class Experiment:
         self.module_list = module_list
         self.measurement_fns = measurement_fns
         self.n_samples = n_samples
+        self.cpu_count = cpu_count
         self.verbose = verbose
         
         # Initializes the result dictionary
@@ -131,6 +135,7 @@ class CoverageExperiment(Experiment):
         measurement_fns,
         n_samples,
         labels = None,
+        cpu_count = 1,
         verbose = False
     ):
         super().__init__(
@@ -140,6 +145,7 @@ class CoverageExperiment(Experiment):
             measurement_fns = measurement_fns,
             n_samples = n_samples,
             labels = labels,
+            cpu_count = cpu_count,
             verbose = verbose
         )
             
@@ -162,23 +168,42 @@ class CoverageExperiment(Experiment):
                     ] * n_steps
                     
             
-    def run_modules(self, n_steps : int, step_size : float, sample_number : int):
+    def run_modules(
+            self,
+            module_list : List[Module],
+            n_steps : int,
+            step_size : float,
+            #sample_number : int
+        ) -> Dict[Tuple[str, str], List[float]]:
         """
         Runs the modules.
         
         Args:
+            module_list (List[Module]): List of experiment modules to run the experiment with. 
+
             n_steps (int): Number of steps to run the experiment for.
             
             step_size (float): Size of coverage to increase by for every step.
             
             sample_number (int): Current sample number (helpful for recording results).
+
+        Returns:
+            module_result_dict (Dict[Tuple[str, str], List[float]]): Dictionary of results 
+                in the form  {(measurement name, module name): List of measurement results}
         """
+        module_result_dict = {}
+        for m in self.module_list:
+            module_result_dict[("rule-length", m.name)] = []
+            for fn in self.measurement_fns:
+                module_result_dict[(fn.name, m.name)] = []
+
         for i in range(n_steps):
-            if self.verbose:
-                print(f"Running for step {i}.")
-            for mod in self.module_list:
+            #if self.verbose:
+            #    print(f"Running for step {i}.")
+            for mod in module_list:
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
                 
+                '''
                 # record maximum rule length:
                 self.result_dict[("rule-length", mod.name, sample_number)].append(
                     mod.max_rule_length
@@ -194,6 +219,24 @@ class CoverageExperiment(Experiment):
                         self.result_dict[(fn.name, mod.name, sample_number)].append(
                             fn(self.data, massign, mcenters)
                         )
+                '''
+                # record maximum rule length:
+                module_result_dict[("rule-length", mod.name)].append(
+                    mod.max_rule_length
+                )
+                
+                # record results from measurement functions:
+                for fn in self.measurement_fns:
+                    if fn.name == 'distance-ratio':
+                        module_result_dict[(fn.name, mod.name)].append(
+                            fn(self.data, massign, mod.centers)
+                        )
+                    else:
+                        module_result_dict[(fn.name, mod.name)].append(
+                            fn(self.data, massign, mcenters)
+                        )
+                        
+        return module_result_dict
                     
         
     def run(self, n_steps : int, step_size : float):
@@ -211,10 +254,27 @@ class CoverageExperiment(Experiment):
             cost_df (pd.DataFrame): DataFrame of the results.
         """
         self.run_baselines(n_steps, step_size)
-        
+
+        module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+
+        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                delayed(self.run_modules)(mod_list, n_steps, step_size)
+                for mod_list in module_lists
+        )
+
+        self.result_dict = {}
+        for i, module_result_dict in enumerate(module_results):
+            for key,value in module_result_dict.items():
+                self.result_dict[key + (i,)] = value
+        '''
         for s in range(self.n_samples):
             if self.verbose:
                 print(f"Running for sample {s}.")
+
+
+            module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                delayed(self.run_modules)(lambd) for lambd in lambda_search_range
+            )
                 
             self.run_modules(n_steps, step_size, s)
             
@@ -224,6 +284,7 @@ class CoverageExperiment(Experiment):
             
             if self.verbose:
                 print()
+        '''
             
         return pd.DataFrame(self.result_dict)
     
@@ -236,7 +297,7 @@ class CoverageExperiment(Experiment):
             
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
-        fname = os.path.join(path, 'rules_exp' + str(identifier) + '.csv')
+        fname = os.path.join(path, 'coverage_exp' + str(identifier) + '.csv')
         cost_df = pd.DataFrame(self.result_dict)
         cost_df.to_csv(fname)
         

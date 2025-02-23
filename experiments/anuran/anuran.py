@@ -14,7 +14,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 4
+experiment_cpu_count = 16
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -26,10 +26,10 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
 
 # Parameters:
-k = 6
+k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -62,9 +62,9 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : data.shape[1]//4,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(data.shape[1]))],
     'train_size' : 0.75
 }
 
@@ -77,9 +77,9 @@ forest_params_depth_5 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_5,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : data.shape[1]//4,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(data.shape[1]))],
     'train_size' : 0.75
 }
 
@@ -94,7 +94,7 @@ oblique_forest_params = {
     'num_trees' : n_trees,
     'max_features' : 2,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(data.shape[1]))],
     'train_size' : 0.75
 }
 
@@ -108,7 +108,7 @@ forest_params_svm = {
     'num_trees' : n_trees,
     'max_features' : 2,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(data.shape[1]))],
     'train_size' : 0.75
 }
 
@@ -125,9 +125,9 @@ forest_params_exkmc = {
     'tree_model' : ExkmcTree,
     'tree_params' : forest_tree_params_exkmc,
     'num_trees' : 1,
-    'max_features' : 24,
+    'max_features' : data.shape[1],
     'max_labels' : k,
-    'feature_pairings' : [list(range(24))],
+    'feature_pairings' : [list(range(data.shape[1]))],
     'train_size' : 1
 }
 
@@ -137,7 +137,7 @@ voronoi_params = {
     'centers' : C,
     'num_sets' : n_sets,
     'num_conditions' : k-1,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))]
+    'feature_pairings' : [list(range(data.shape[1]))]
 }
 
 
@@ -154,7 +154,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,100,101),
     'cpu_count' : prune_cpu_count
 }
 
@@ -254,7 +254,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 4
+n_samples = 32
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -264,14 +264,10 @@ Ex1 = CoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
-    verbose = True
+    verbose = False
 )
 
-import time 
-start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '_test')
-end = time.time()
-print(end - start)
+Ex1.save_results('data/experiments/anuran/', '')
 
 ####################################################################################################
