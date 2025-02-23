@@ -254,7 +254,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 32
+n_samples = 16
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -268,7 +268,7 @@ Ex1 = CoverageExperiment(
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/digits/', '')
+Ex1.save_results('data/experiments/newsgroups/', '')
 
 ####################################################################################################
 
