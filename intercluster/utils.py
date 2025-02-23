@@ -290,6 +290,35 @@ def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray)
 ####################################################################################################
 
 
+def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
+    """
+    For each data point, computes the ratio of the distance to its second closest cluster center
+    and the distance to its closest cluster center.
+
+    Args:
+        X (np.ndarray): (n x d) Dataset.
+        
+        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+
+    Returns:
+        (np.ndarray): Length n distance ratio array.
+    """
+    n,d = X.shape
+    center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
+    sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
+    closest_dists = np.array(
+        [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]
+    )
+    second_closest_dists = np.array(
+        [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
+    )
+    return divide_with_zeros(second_closest_dists, closest_dists)
+
+
+
+####################################################################################################
+
+
 def labels_format(labels : NDArray) -> List[Set[int]]:
     """
     Takes a 1 dimensional array of labels and forms it into a 2d label list, which is the 

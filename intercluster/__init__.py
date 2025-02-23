@@ -7,6 +7,8 @@ from .utils import (
     coverage,
     center_dists,
     kmeans_cost,
+    update_centers,
+    distance_ratio,
     labels_format,
     can_flatten,
     flatten_labels,

@@ -1,6 +1,10 @@
 import numpy as np
 from intercluster.utils import *
 
+
+####################################################################################################
+
+
 def test_tiebreak():
     # Test proxy tiebreak
     scores = np.array([1, 1, 1, 1, 1])
@@ -28,7 +32,9 @@ def test_tiebreak():
     assert len(counts_with_proxy) == 2
     assert np.allclose(counts_with_proxy[0]/samples, 1/2, atol = 0.05, rtol = 0)
     assert np.allclose(counts_with_proxy[1]/samples, 1/2, atol = 0.05, rtol = 0)
-    
+
+
+####################################################################################################
     
 
 def test_mode():
@@ -68,7 +74,9 @@ def test_entropy():
     multiclass = np.array([1,1,2,2,3,3,4,4,5,5])
     assert np.isclose(entropy(multiclass),  -np.log2(1/5), atol = 0.05, rtol = 0)
     
-    
+
+####################################################################################################
+
     
 def test_coverage():
     assignment1 = np.ones((4,4))
@@ -84,7 +92,9 @@ def test_coverage():
     assert coverage(assignment2) == 0
     assert coverage(assignment3) == 3/4
     
-    
+
+####################################################################################################
+
     
 def test_overlap():
     assignment1 = np.ones((4,4))
@@ -99,6 +109,9 @@ def test_overlap():
     assert overlap(assignment1) == 4
     assert np.isnan(overlap(assignment2))
     assert overlap(assignment3) == 7/3
+
+
+####################################################################################################
     
     
 def test_center_dists():
@@ -154,7 +167,9 @@ def test_center_dists():
         [3,3,3]
     ])
     assert np.all(center_dist_arr_square == test_arr)
-    
+
+
+####################################################################################################
     
 
 def test_kmeans_cost():
@@ -212,7 +227,9 @@ def test_kmeans_cost():
     cost8 = kmeans_cost(X, centers, assignment3, average = True, normalize = True, norm = 2)
     assert cost8 == np.inf
     
-    
+
+####################################################################################################
+
 
 def test_update_centers():
     X = np.array([
@@ -241,8 +258,43 @@ def test_update_centers():
         [10,11]
     ])
     assert np.array_equal(centers, test_centers)
+
+
+####################################################################################################
+
+
+def test_distance_ratio():
+    X = np.zeros((4, 2))
+    centers = np.array([
+        [3, 4],
+        [6, 8],
+        [5, 12],
+        [9, 12]
+    ])
+    center_dist_arr = np.array([
+        [5, 5, 5, 5],
+        [10, 10, 10, 10],
+        [13, 13, 13, 13],
+        [15, 15, 15, 15]
+    ]).T
+
+    assert np.array_equal(distance_ratio(X, centers), np.array([2.,2.,2.,2.]))
+
+
+    # Test for a point which lies directly upon a cluster. 
+    X = np.zeros((4, 2))
+    X[0,:] = [9, 12]
+    X[1,:] = [20, 12]
+    assert np.allclose(
+        distance_ratio(X, centers),
+          np.array([np.inf,14.56022/11,2.,2.]),
+        atol = 1e-5,
+        rtol = 0
+    )
+
     
-    
+####################################################################################################
+
     
 def test_label_formatting():
     labels = np.array([1,2,1,1,3,3,3])
@@ -255,7 +307,10 @@ def test_label_formatting():
     
     assert unique_labels(test_labels2) == {1,2,3,4}
         
-        
+
+####################################################################################################
+
+
 def test_can_flatten():
     labels = [{1}, {2}, {1}, {1}, {3}, {3}, {3}]
     assert can_flatten(labels) == True
@@ -269,7 +324,10 @@ def test_can_flatten():
     labels = [{1}, {2}, set(), {1,2}, {3}, {3}, {3}]
     assert can_flatten(labels) == False
 
-    
+
+####################################################################################################
+
+
 def test_labels_to_assignment():
     labels = [{1,3}, {2}, {1}, set(), {3}, {1,3,4}, {3}]
     
@@ -285,7 +343,10 @@ def test_labels_to_assignment():
     
     assert np.array_equal(labels_to_assignment(labels, n_labels = 5), test_assignment)
 
-    
+
+####################################################################################################
+
+
 def test_assignment_to_labels():
     labels = [{1,3}, {2}, {1}, set(), {3}, {1,3,4}, {3}]
     
@@ -301,7 +362,9 @@ def test_assignment_to_labels():
     
     assert assignment_to_labels(test_assignment) == labels
     
-    
+
+####################################################################################################
+
 
 def test_assignment_to_dict():
     test_assignment = np.array([
@@ -317,3 +380,6 @@ def test_assignment_to_dict():
     assignment_dict = assignment_to_dict(test_assignment)
     for i in range(5):
         assert assignment_dict[i] == set(np.where(test_assignment[:,i])[0])
+
+
+####################################################################################################
