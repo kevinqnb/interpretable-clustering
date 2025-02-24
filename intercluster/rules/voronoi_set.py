@@ -121,19 +121,18 @@ class VoronoiSet(DecisionSet):
         c2 = other_center[features]
 
         midpoint = np.array([(c1[0] + c2[0])/2, (c1[1] + c2[1])/2])
-        if c1[0] != c1[0]:
-            slope = (c2[1] - c1[1])/(c2[0] - c1[0])
-        elif c2[1] == c1[1]:
+        if c2[1] == c1[1]:
             slope = 0
-        else:
+        elif c2[0] == c1[0]:
             slope = np.inf
+        else:
+            slope = (c2[1] - c1[1])/(c2[0] - c1[0])
 
         # NEED to test this stuff!
         condition = None
         if slope == 0:
-            perpendicular_slope = np.inf
             threshold = midpoint[0]
-            inequality_direction = np.sign(c1[0] - threshold)
+            inequality_direction = -1 if c1[0] <= threshold else 1
             condition = LinearCondition(
                 features = np.array([features[0]]),
                 weights = np.array([1]),
@@ -142,9 +141,8 @@ class VoronoiSet(DecisionSet):
             )
 
         elif slope == np.inf:
-            perpendicular_slope = 0
             threshold = midpoint[1]
-            inequality_direction = np.sign(c1[1] - threshold)
+            inequality_direction = -1 if c1[1] <= threshold else 1
             condition = LinearCondition(
                 features = np.array([features[1]]),
                 weights = np.array([1]),

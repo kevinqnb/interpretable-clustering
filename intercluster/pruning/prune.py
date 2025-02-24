@@ -165,10 +165,11 @@ def prune_with_grid_search(
         rule_to_cluster_assignment,
         data_to_rules_assignment
     )
-    A = data_to_rules_assignment[:, selected]
-    B = rule_to_cluster_assignment[selected, :]
-    pruned_data_to_cluster_assignment = np.dot(A, B)
-    objective(pruned_data_to_cluster_assignment)
+    if len(selected) != 0:
+        A = data_to_rules_assignment[:, selected]
+        B = rule_to_cluster_assignment[selected, :]
+        pruned_data_to_cluster_assignment = np.dot(A, B)
+        objective(pruned_data_to_cluster_assignment)
 
 
     def evaluate_lambda(lambda_val):

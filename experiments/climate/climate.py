@@ -254,7 +254,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 16
+n_samples = 100
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -270,7 +270,7 @@ Ex1 = CoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '_test')
+Ex1.save_results('data/experiments/climate/', '')
 end = time.time()
 print(end - start)
 
