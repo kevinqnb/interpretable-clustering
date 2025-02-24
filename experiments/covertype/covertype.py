@@ -26,10 +26,10 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_covtype()
 
 # Parameters:
-k = 10
+k = 7
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -264,10 +264,10 @@ Ex1 = CoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
-    verbose = False
+    verbose = True
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/anuran/', '')
+Ex1.save_results('data/experiments/covertype/', '')
 
 ####################################################################################################

@@ -26,7 +26,7 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 
 # Parameters:
 k = 10
@@ -264,10 +264,10 @@ Ex1 = CoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
-    verbose = False
+    verbose = True
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/anuran/', '')
+Ex1.save_results('data/experiments/fashion/', '')
 
 ####################################################################################################

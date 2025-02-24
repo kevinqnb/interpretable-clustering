@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import sklearn.datasets as datasets
+from mnist1d.data import make_dataset, get_dataset_args
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from typing import List
 
@@ -16,7 +17,7 @@ def load_preprocessed_climate(filepath):
     set into a historical period (from years 1900-1999) and a recent period (2013-2023),
     and take climate change to be the percent difference between historical and 
     recent values in each of 24 features. Finally, percent change values are 
-    normalized to the range [0,1].
+    normalized with standard scaling.
 
     Args:
         filepath (str): This should be the filepath to the common folder in which the 
@@ -94,9 +95,10 @@ def load_preprocessed_climate(filepath):
 ####################################################################################################
 
 
-def load_preprocessed_digits():
+def load_preprocessed_mnist():
     """
-    Loads a preprocessed MNIST digits dataset. Values are normalized to the range [0,1].
+    Loads a preprocessed MNIST digits dataset. Values are normalized to the range 
+    with standard scaling.
 
     Args:
 
@@ -112,16 +114,86 @@ def load_preprocessed_digits():
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-
-    digits, digit_labels = datasets.load_digits(return_X_y=True)
+    defaults = get_dataset_args()
+    dataset = make_dataset(defaults)
+    data, data_labels, transformations = dataset['x'], dataset['y'], dataset['t']
 
     scaler = StandardScaler()
 
-    scaled_data = scaler.fit_transform(digits)
+    scaled_data = scaler.fit_transform(data)
 
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
-    return scaled_data, digit_labels, feature_labels, scaler
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_fashion():
+    """
+    Loads a preprocessed Fashion MNIST dataset. Values are normalized to the range [0,1].
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data, data_labels = datasets.fetch_openml(
+        name = 'Fashion-MNIST',
+        return_X_y=True,
+        as_frame=False
+    )
+    data_labels = data_labels.astype(int)
+
+    scaler = MinMaxScaler()
+
+    scaled_data = scaler.fit_transform(data.toarray())
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_covtype():
+    """
+    Loads a preprocessed Forest Cover type dataset. Values are normalized with standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data, data_labels = datasets.fetch_covtype(return_X_y=True)
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(data.toarray())
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
 
 
 ####################################################################################################
@@ -130,7 +202,7 @@ def load_preprocessed_digits():
 def load_preprocessed_protein(filepath):
     """
     Loads a preprocessed protein dataset. Features and samples 
-    with null data points are removed and values are normalized to the range [0,1].
+    with null data points are removed and values are normalized with standard scaling.
 
     Args:
         filepath (str): This should be the filepath to the common folder in which the 
@@ -178,7 +250,7 @@ def load_preprocessed_protein(filepath):
 
 def load_preprocessed_anuran(filepath):
     """
-    Loads a preprocessed anuran dataset. Values are normalized to the range [0,1].
+    Loads a preprocessed anuran dataset. Values are normalized via standard scaling.
 
     Args:
         filepath (str): This should be the filepath to the common folder in which the 
