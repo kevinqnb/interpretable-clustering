@@ -155,9 +155,9 @@ def load_preprocessed_fashion():
     )
     data_labels = data_labels.astype(int)
 
-    scaler = MinMaxScaler()
+    scaler = StandardScaler()
 
-    scaled_data = scaler.fit_transform(data.toarray())
+    scaled_data = scaler.fit_transform(data)
 
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
@@ -189,7 +189,7 @@ def load_preprocessed_covtype():
 
     scaler = StandardScaler()
 
-    scaled_data = scaler.fit_transform(data.toarray())
+    scaled_data = scaler.fit_transform(data)
 
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
