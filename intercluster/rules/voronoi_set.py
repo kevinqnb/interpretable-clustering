@@ -119,21 +119,50 @@ class VoronoiSet(DecisionSet):
         """
         c1 = target_center[features]
         c2 = other_center[features]
-        slope = (c2[1] - c1[1])/(c2[0] - c1[0])
-        midpoint = np.array([(c1[0] + c2[0])/2, (c1[1] + c2[1])/2])
-        
-        perpendicular_slope = -1/slope
-        threshold = midpoint[1] - perpendicular_slope * midpoint[0]
 
-        # -1 implies less than or equal to b, 1 implies greater than or equal to.
-        inequality_direction = np.sign(c1[1] - perpendicular_slope*c1[0] - threshold)
-        
-        condition = LinearCondition(
-            features = features,
-            weights = np.array([-perpendicular_slope, 1]),
-            threshold = threshold,
-            direction=inequality_direction
-        )
+        midpoint = np.array([(c1[0] + c2[0])/2, (c1[1] + c2[1])/2])
+        if c1[0] != c1[0]:
+            slope = (c2[1] - c1[1])/(c2[0] - c1[0])
+        elif c2[1] == c1[1]:
+            slope = 0
+        else:
+            slope = np.inf
+
+        # NEED to test this stuff!
+        condition = None
+        if slope == 0:
+            perpendicular_slope = np.inf
+            threshold = midpoint[0]
+            inequality_direction = np.sign(c1[0] - threshold)
+            condition = LinearCondition(
+                features = np.array([features[0]]),
+                weights = np.array([1]),
+                threshold = threshold,
+                direction=inequality_direction
+            )
+
+        elif slope == np.inf:
+            perpendicular_slope = 0
+            threshold = midpoint[1]
+            inequality_direction = np.sign(c1[1] - threshold)
+            condition = LinearCondition(
+                features = np.array([features[1]]),
+                weights = np.array([1]),
+                threshold = threshold,
+                direction=inequality_direction
+            )
+
+        else:
+            perpendicular_slope = -1/slope
+            threshold = midpoint[1] - perpendicular_slope * midpoint[0]
+            # -1 implies less than or equal to b, 1 implies greater than or equal to.
+            inequality_direction = np.sign(c1[1] - perpendicular_slope*c1[0] - threshold)
+            condition = LinearCondition(
+                features = features,
+                weights = np.array([-perpendicular_slope, 1]),
+                threshold = threshold,
+                direction=inequality_direction
+            )
         
         return condition
     
