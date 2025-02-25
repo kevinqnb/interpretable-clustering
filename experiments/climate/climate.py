@@ -33,8 +33,8 @@ k = 6
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 1000
-n_sets = 1000
+n_trees = 500
+n_sets = 500
 
 ####################################################################################################
 # Baselines:
@@ -270,7 +270,7 @@ Ex1 = CoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '')
+Ex1.save_results('data/experiments/climate/', '_500')
 end = time.time()
 print(end - start)
 
