@@ -13,6 +13,8 @@ def tiebreak(scores : NDArray, proxy : NDArray = None) -> NDArray:
     Breaks ties in a length m array of scores by:
     1) (IF given) Comparing values in a same-sized proxy array.
     2) Otherwise breaking ties randomly. 
+
+    NOTE: By default preferences are taken in ascending order.
     
     Args:
         scores (np.ndarray): Length m array of scores.

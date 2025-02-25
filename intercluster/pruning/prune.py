@@ -1,7 +1,7 @@
 import numpy as np
 import warnings 
 from joblib import Parallel, delayed
-from typing import Callable, List, Set
+from typing import Callable, List, Set, Tuple
 from numpy.typing import NDArray
 import warnings
 from intercluster.utils import (
@@ -120,8 +120,9 @@ def prune_with_grid_search(
     data_to_rules_assignment : NDArray[np.bool_],
     objective : Callable,
     lambda_search_range : NDArray[np.float64],
-    cpu_count : int = 1
-) -> NDArray[np.int64]:
+    cpu_count : int = 1,
+    return_full : bool = False
+) -> Tuple[NDArray[np.int64], NDArray[np.float64]]:
     
     """
     Performs a grid search over parameter values for
@@ -144,12 +145,22 @@ def prune_with_grid_search(
             
         objective (callable): A function that takes the selected rules and returns a score.
         
-        search_range (NDArray): A range of lambda values to search over.
+        lambda_search_range (NDArray): A range of lambda values to search over.
         
         cpu_count (int): The number of cpu cores to use for parallel processing. Default is 8.
+
+        return_full (bool): If True returns the arrays of objective values and 
+            coverage values associated with each lambda value in the search range.
+            Defaults to False.
             
     Returns:
         S (NDArray): An array of integers representing the selected rules.
+
+        objective_vals (NDArray, optional): Array of objective values where the
+            value at index i corresponds to the lambda parameter at index i in search_range.
+
+        coverage_vals (NDArray, optional): Array of coverage values where the
+            value at index i corresponds to the lambda parameter at index i in search_range.
     """
     if frac_cover < 0 or frac_cover > 1:
             raise ValueError('Coverage threshold must be between 0 and 1.')
@@ -184,25 +195,27 @@ def prune_with_grid_search(
         # It's possible that nothing was selected, since the cost of selecting 
         # a rule may outweigh the benefits. In this case, we return infinity.
         if len(selected) == 0:
-            return (np.inf, np.inf), lambda_val
+            return (np.inf, 0), lambda_val
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
         pruned_data_to_cluster_assignment = np.dot(A, B)
         
-        # If frac_cover points are not covered, return infinity.
-        if coverage(pruned_data_to_cluster_assignment) < frac_cover:
-            return (np.inf, np.inf), lambda_val
-        
-        # Otherwise, return the objective along with a random tiebreak value.
-        obj = objective(pruned_data_to_cluster_assignment)   
-        return (obj, np.random.uniform()), lambda_val
+        cover = coverage(pruned_data_to_cluster_assignment)
+        if cover < frac_cover:
+            obj = np.inf
+        else:
+            obj = objective(pruned_data_to_cluster_assignment)
+
+        return obj, cover
                
     search_results = Parallel(n_jobs=cpu_count, backend = 'loky')(
         delayed(evaluate_lambda)(lambd) for lambd in lambda_search_range
     )
     
-    objective_vals = [x[0][0] for x in search_results]
+    objective_vals = np.array([x[0] for x in search_results])
+    cover_vals = np.array([x[1] for x in search_results])
+
     if np.min(objective_vals) == np.inf:
         warnings.warn(
             "Coverage requirements not met. "
@@ -211,16 +224,122 @@ def prune_with_grid_search(
         )
         return None
     
-    tiebreak_vals = [x[0][1] for x in search_results]
-    best_lambda_idx = tiebreak(scores = objective_vals, proxy = tiebreak_vals)[0]
+    # Find the lambda value with the smallest objective, breaking ties by preferring 
+    # solutions with larger coverage.
+    best_lambda_idx = tiebreak(scores = objective_vals, proxy = -1*cover_vals)[0]
     best_lambda = lambda_search_range[best_lambda_idx]
-    return distorted_greedy(
+
+    prune_selection = distorted_greedy(
         n_rules, 
         best_lambda,
         data_to_cluster_assignment,
         rule_to_cluster_assignment,
         data_to_rules_assignment
     )
+
+    if return_full:
+        return prune_selection, objective_vals, cover_vals
+    
+    return prune_selection
+
+
+####################################################################################################
+
+
+def prune_with_binary_search(
+    n_rules : int,
+    frac_cover : float,
+    n_clusters : int,
+    data_labels : List[Set[int]],
+    rule_labels : List[Set[int]],
+    data_to_rules_assignment : NDArray[np.bool_],
+    objective : Callable,
+    lambda_search_range : NDArray[np.float64]
+) -> NDArray[np.int64]:
+    
+    """
+    Performs a binary search over lambda parameter values for
+    the distorted greedy objective. More specifically, this searches for the largest lambda value 
+    for which the solution still satisfies the coverage requirements. 
+    
+    Args:
+        n_rules (int): The number of rules to select.
+        
+        frac_cover (float): Threshold fraction of the data points required for coverage.
+        
+        n_clusters (int): The desired number of clusters.
+        
+        data_labels (List[Set[int]]): Labeling of the data points.
+        
+        rule_labels (List[Set[int]]): Labeling of the rules.
+        
+        data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is True if 
+            data point i is assigned to rule j.
+            
+        objective (callable): A function that takes the selected rules and returns a score.
+        
+        lambda_search_range (NDArray): A range of lambda values to search over.
+        
+        cpu_count (int): The number of cpu cores to use for parallel processing. Default is 8.
+            
+    Returns:
+        S (NDArray): An array of integers representing the selected rules.
+    """
+    if frac_cover < 0 or frac_cover > 1:
+            raise ValueError('Coverage threshold must be between 0 and 1.')
+    
+    data_to_cluster_assignment = labels_to_assignment(data_labels, n_labels = n_clusters)
+    rule_to_cluster_assignment = labels_to_assignment(rule_labels, n_labels = n_clusters)
+
+
+    def evaluate_lambda(lambda_val):
+        selected = distorted_greedy(
+            n_rules,
+            lambda_val,
+            data_to_cluster_assignment,
+            rule_to_cluster_assignment,
+            data_to_rules_assignment
+        )
+        
+        # It's possible that nothing was selected, since the cost of selecting 
+        # a rule may outweigh the benefits. In this case, we return infinity.
+        if len(selected) == 0:
+            return (np.inf, 0), lambda_val
+        
+        A = data_to_rules_assignment[:, selected]
+        B = rule_to_cluster_assignment[selected, :]
+        pruned_data_to_cluster_assignment = np.dot(A, B)
+        
+        obj = objective(pruned_data_to_cluster_assignment)
+        cover = coverage(pruned_data_to_cluster_assignment)
+        return obj, cover
+    
+
+    sorted_search_range = np.sort(lambda_search_range)
+    n = len(sorted_search_range)
+    left_index = 0
+    right_index = n - 1
+    best_lambda = sorted_search_range[0]
+
+    while left_index <= right_index:
+        midpoint = (left_index + right_index) // 2
+        lambd = sorted_search_range[midpoint]
+        obj,cover = evaluate_lambda(lambd)
+        if cover < frac_cover:
+            right_index = midpoint - 1
+        else:
+            left_index = midpoint + 1
+
+    best_lambda = sorted_search_range[midpoint]
+
+    prune_selection = distorted_greedy(
+        n_rules, 
+        best_lambda,
+        data_to_cluster_assignment,
+        rule_to_cluster_assignment,
+        data_to_rules_assignment
+    )
+    return prune_selection
 
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.pruning import prune_with_grid_search
+from intercluster.pruning import prune_with_grid_search, prune_with_binary_search
 from ._conditions import Condition
 
 class DecisionSet:
@@ -122,6 +122,7 @@ class DecisionSet:
         y : List[Set[int]],
         objective : Callable, 
         lambda_search_range : NDArray = np.linspace(0,1,10),
+        full_search : bool = True,
         cpu_count : int = 1
     ):
         """
@@ -145,21 +146,38 @@ class DecisionSet:
             lambda_search_range (np.ndarray, optional): A range of lambda values to search over. 
                 Defaults to np.linspace(0,1,10).
 
+            full_search (bool): If true, performs a grid search over the entire search range.
+                Otherwise, performs a binary search to find the largest lambda value for which 
+                coverage requirements are satisfied.
+
             cpu_count (int): Number of cores to use for a parallelized grid search.
         """
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         
-        selected_rules = prune_with_grid_search(
-            n_rules = n_rules,
-            frac_cover = frac_cover,
-            n_clusters = n_clusters,
-            data_labels = y,
-            rule_labels = self.decision_set_labels,
-            data_to_rules_assignment = data_to_rules_assignment,
-            objective = objective,
-            lambda_search_range = lambda_search_range,
-            cpu_count = cpu_count
-        )
+        selected_rules = None
+        if full_search:
+            selected_rules = prune_with_grid_search(
+                n_rules = n_rules,
+                frac_cover = frac_cover,
+                n_clusters = n_clusters,
+                data_labels = y,
+                rule_labels = self.decision_set_labels,
+                data_to_rules_assignment = data_to_rules_assignment,
+                objective = objective,
+                lambda_search_range = lambda_search_range,
+                cpu_count = cpu_count
+            )
+        else:
+            selected_rules = prune_with_binary_search(
+                n_rules = n_rules,
+                frac_cover = frac_cover,
+                n_clusters = n_clusters,
+                data_labels = y,
+                rule_labels = self.decision_set_labels,
+                data_to_rules_assignment = data_to_rules_assignment,
+                objective = objective,
+                lambda_search_range = lambda_search_range
+            )
         
         if selected_rules is None:
             self.prune_status = False

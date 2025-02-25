@@ -1,9 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-import geopandas as gpd
-from ExKMC.Tree import Tree as ExTree
 from intercluster.rules import *
 from intercluster.pruning import *
 from intercluster import *
@@ -33,8 +29,8 @@ k = 6
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 500
-n_sets = 500
+n_trees = 1000
+n_sets = 1000
 
 ####################################################################################################
 # Baselines:
@@ -136,7 +132,7 @@ forest_params_exkmc = {
 voronoi_params = {
     'centers' : C,
     'num_sets' : n_sets,
-    'num_conditions' : k-1,
+    'num_conditions' : 2,
     'feature_pairings' : [list(range(12))] + [list(range(12,24))]
 }
 
@@ -155,6 +151,7 @@ prune_params = {
     'y' : y,
     'objective' : prune_objective,
     'lambda_search_range' : np.linspace(0,10,101),
+    'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
 
@@ -270,7 +267,7 @@ Ex1 = CoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '_500')
+Ex1.save_results('data/experiments/climate/', '_bsearch')
 end = time.time()
 print(end - start)
 

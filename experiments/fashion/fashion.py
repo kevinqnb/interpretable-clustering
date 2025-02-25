@@ -1,9 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-import geopandas as gpd
-from ExKMC.Tree import Tree as ExTree
 from intercluster.rules import *
 from intercluster.pruning import *
 from intercluster import *
@@ -14,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 2
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -33,8 +29,8 @@ k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 500
-n_sets = 500
+n_trees = 1000
+n_sets = 1000
 
 ####################################################################################################
 # Baselines:
@@ -136,7 +132,7 @@ forest_params_exkmc = {
 voronoi_params = {
     'centers' : C,
     'num_sets' : n_sets,
-    'num_conditions' : k-1,
+    'num_conditions' : 2,
     'feature_pairings' : [list(range(data.shape[1]))]
 }
 
@@ -154,7 +150,8 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,100,101),
+    'lambda_search_range' : np.linspace(0,100,1001),
+    'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
 
@@ -240,7 +237,7 @@ mod6 = DecisionSetMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod4]
+module_list = [mod1, mod2, mod4, mod6]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),
@@ -254,7 +251,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 2
+n_samples = 1
 
 Ex1 = CoverageExperiment(
     data = data,
