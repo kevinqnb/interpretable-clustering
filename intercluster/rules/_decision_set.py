@@ -179,7 +179,7 @@ class DecisionSet:
                 lambda_search_range = lambda_search_range
             )
         
-        if selected_rules is None or len(selected_rules) == 0:
+        if selected_rules is None: #or len(selected_rules) == 0:
             self.prune_status = False
         else:
             self.prune_status = True
