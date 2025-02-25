@@ -135,7 +135,7 @@ def get_decision_paths(
 
 def get_decision_paths_with_labels(
     root : Node,
-    labels : List[Set[int]],
+    #labels : List[Set[int]],
     select_labels : NDArray,
 ) -> Tuple[List[List[Node]], List[Set[int]]]:
     """
@@ -145,6 +145,8 @@ def get_decision_paths_with_labels(
     node is found, consider the data points associated with it. If there is a majority 
     for a selected label, keep that path. Otherwise discard it.
     
+    NOTE: Perhaps this should take the trained node's class label instead...
+
     Args:
         root (Node): Root of the tree.
     
@@ -161,12 +163,17 @@ def get_decision_paths_with_labels(
     for path in traverse(root):
         last_node = path[-1]
         if last_node.type == 'leaf' and len(last_node.indices) > 0:
+            '''
             indices_labels = [labels[i] for i in last_node.indices]
             indices_labels = flatten_labels(indices_labels)
             majority_label = mode(indices_labels)
             if majority_label in select_labels:
                 paths.append(path)
                 path_labels.append({majority_label})
+            '''
+            if last_node.label in select_labels:
+                paths.append(path)
+                path_labels.append({last_node.label})
             
     return paths, path_labels
 

@@ -6,6 +6,7 @@ from intercluster.rules.utils import *
 # Custom Tree:
 leaf1 = Node()
 leaf1.leaf_node(
+    leaf_num = 0,
     label = 1,
     cost = 0,
     indices = np.array([0,1,2]),
@@ -13,21 +14,24 @@ leaf1.leaf_node(
 )
 leaf2 = Node()
 leaf2.leaf_node(
-    label = 2,
+    leaf_num = 1,
+    label = 0,
     cost = 0,
     indices = np.array([3,4,5]),
     depth = 3
 )
 leaf3 = Node()
 leaf3.leaf_node(
-    label = 3,
+    leaf_num = 2,
+    label = 0,
     cost = 0,
     indices = np.array([6,7,8]),
     depth = 3
 )
 leaf4 = Node()
 leaf4.leaf_node(
-    label = 4,
+    leaf_num = 3,
+    label = 1,
     cost = 0,
     indices = np.array([9,10,11]),
     depth = 1
@@ -47,8 +51,7 @@ internal_node1.tree_node(
     condition = condition1,
     cost = cost1,
     indices = np.array([]),
-    depth = 2,
-    feature_labels = []
+    depth = 2
 )
 
 condition2 = LinearCondition(
@@ -65,8 +68,7 @@ internal_node2.tree_node(
     condition = condition2,
     cost = cost2,
     indices = np.array([]),
-    depth = 1,
-    feature_labels = []
+    depth = 1
 )
 
 root_condition = LinearCondition(
@@ -83,8 +85,7 @@ root_node.tree_node(
     condition = root_condition,
     cost = root_cost,
     indices = np.array([]),
-    depth = 0,
-    feature_labels = []
+    depth = 0
 )
 
 ####################################################################################################
@@ -164,12 +165,10 @@ def test_get_decision_paths():
     
     
 def test_get_decision_paths_with_labels():
-    labels = [{0}, {0}, {0}, {1}, {1}, {1}, {2}, {2}, {2}, {3}, {3}, {3}]
     full_paths = get_decision_paths(root_node)
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
-        labels = labels,
-        select_labels = [0,3]
+        select_labels = {1}
     )
     assert len(labeled_paths) == 2
     
@@ -185,17 +184,13 @@ def test_get_decision_paths_with_labels():
     
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
-        labels = labels,
-        select_labels = np.array([4])
+        select_labels = {2}
     )
     assert len(labeled_paths) == 0
     
-    
-    labels = [{0,1,2}, {0}, {0}, {1}, {1}, set(), {2,1}, {2}, {2}, set(), {3}, {3}]
     labeled_paths, path_labels = get_decision_paths_with_labels(
         root_node,
-        labels = labels,
-        select_labels = np.array([1,2])
+        select_labels = {0}
     )
     assert len(labeled_paths) == 2
     assert len(labeled_paths[0]) == 4

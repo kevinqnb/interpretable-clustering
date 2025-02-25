@@ -1,10 +1,8 @@
 import numpy as np
-from intercluster.splitters import (
-    CentroidSplitter,
+from intercluster.rules.splitters import (
     ImmSplitter,
     InformationGainSplitter,
-    SimpleSplitter,
-    UnsupervisedSplitter,
+    SimpleSplitter
 )
 
 

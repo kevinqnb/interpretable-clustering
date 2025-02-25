@@ -1,5 +1,5 @@
 import numpy as np
-from intercluster.splitters import (
+from intercluster.rules.splitters import (
     CentroidSplitter,
     ImmSplitter,
     InformationGainSplitter,

@@ -75,7 +75,8 @@ class SklearnTree(Tree):
         criterion : str = 'entropy',
         max_leaf_nodes=None,
         max_depth=None,
-        min_points_leaf=1
+        min_points_leaf=1,
+        random_state = None
     ):
         """
          Args:
@@ -103,6 +104,7 @@ class SklearnTree(Tree):
             depth (int): The maximum depth of the tree.
         """
         self.criterion = criterion
+        self.random_state = random_state
         splitter = DummySplitter()
         super().__init__(
             splitter = splitter,
@@ -145,14 +147,15 @@ class SklearnTree(Tree):
             raise ValueError("Each data point must have exactly one label.")
         self.y_array = flatten_labels(y)
         
-        
         self.sklearn_tree = DecisionTreeClassifier(
             criterion = self.criterion,
             max_depth = self.max_depth,
             min_samples_leaf = self.min_points_leaf,
-            max_leaf_nodes = self.max_leaf_nodes
+            max_leaf_nodes = self.max_leaf_nodes,
+            random_state = self.random_state
         )
         self.sklearn_tree.fit(X, self.y_array)
+        self.classes = self.sklearn_tree.classes_
         self.tree_info = self.sklearn_tree.tree_
         self.root = Node()
         indices = np.arange(len(X))
@@ -191,7 +194,8 @@ class SklearnTree(Tree):
         
         if (self.tree_info.children_left[sklearn_node] < 0 and 
             self.tree_info.children_right[sklearn_node] < 0):
-            class_label = np.argmax(self.tree_info.value[sklearn_node])
+            class_label = self.classes[np.argmax(self.tree_info.value[sklearn_node])]
+            #class_label = mode(y_)
             node_obj.leaf_node(
                 leaf_num = self.leaf_count,
                 label = class_label,

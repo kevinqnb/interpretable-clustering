@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 from typing import List, Dict, Any, Tuple, Set
-from intercluster.utils import labels_format,unique_labels
+from intercluster.utils import labels_format,unique_labels, can_flatten
 from ._conditions import Condition
 from ._decision_set import DecisionSet
 from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_conditions
@@ -186,6 +186,9 @@ class DecisionForest(DecisionSet):
                 within a certain path of the decision tree.
         """
         n,d = X.shape
+
+        if not can_flatten(y):
+            raise ValueError("Each data point must have exactly one label.")
         
         if self.max_features is None:
             self.max_features = d
@@ -212,7 +215,7 @@ class DecisionForest(DecisionSet):
                 
                 new_rules, new_labels = get_decision_paths_with_labels(
                     root = tree.root,
-                    labels = filter_labels,
+                    #labels = filter_labels,
                     select_labels = select_labels
                 )
             else:

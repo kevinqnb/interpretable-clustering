@@ -179,7 +179,7 @@ def visualize_tree(
     data_scaler : Callable = None,
     leaf_colors : Dict[int, str] = None,
     display_node_info : bool = True,
-    output_file : str = 'tree',
+    output_file : str = 'tree.png',
 ):
     """
     Wrapper function for visualizing a Tree object by building a graphviz decision tree.

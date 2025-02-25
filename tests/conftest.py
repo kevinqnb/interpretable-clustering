@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn import cluster, datasets, preprocessing
 import pytest
+from intercluster.utils import labels_format
     
 @pytest.fixture
 def simple_dataset():
@@ -50,7 +51,7 @@ def example_dataset():
     data = preprocessing.MinMaxScaler().fit_transform(data)
     kmeans = cluster.KMeans(n_clusters=k, random_state=random_state).fit(data)
     
-    return data, kmeans.labels_
+    return data, labels_format(kmeans.labels_)
 
 
 @pytest.fixture
