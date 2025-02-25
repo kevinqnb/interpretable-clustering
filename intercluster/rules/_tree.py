@@ -3,7 +3,7 @@ import copy
 import heapq
 from numpy.typing import NDArray
 from typing import List, Set, Callable
-from intercluster.utils import mode
+from intercluster.utils import mode, can_flatten
 from ._conditions import Condition
 from ._node import Node
 from .utils import *
@@ -19,8 +19,7 @@ class Tree():
         base_tree : Node = None,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
+        min_points_leaf : int = 1
     ):
         """
         Args:
@@ -37,8 +36,6 @@ class Tree():
                 
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
-                
-            feature_labels (List[str]): Iterable object with strings representing feature names. 
             
             
         Attributes:            
@@ -58,7 +55,6 @@ class Tree():
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
-        self.feature_labels = feature_labels
 
         self.root = None
         self.heap = []
@@ -91,13 +87,6 @@ class Tree():
         self.leaf_count = 0
         self.node_count = 0
         
-        # Set feature labels if not set already:
-        if self.feature_labels is None:
-            self.feature_labels = [None]*X.shape[1]
-        else:
-            if not len(self.feature_labels) == X.shape[1]:
-                raise ValueError('Feature labels must match the shape of the data.')
-        
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
             self.max_leaf_nodes = len(X)
@@ -106,6 +95,9 @@ class Tree():
             self.max_depth = len(X) - 1
             
         # Initialize the dataset and splitter
+        if not can_flatten(y):
+            raise ValueError("Each data point must have exactly one label.")
+
         self.X = X
         self.y = y
         self.splitter.fit(X, y)
@@ -113,14 +105,15 @@ class Tree():
         if self.base_tree is None:
             self.root = Node()
             if y is None:
-                root_label = self.leaf_count
+                root_label = None
             else:
-                root_label = mode(y)
+                root_label = mode(flatten_labels(y))
             
             root_indices = np.arange(len(X))
             root_cost = self.splitter.cost(root_indices)
             root_depth = 0
             self.root.leaf_node(
+                leaf_num = self.leaf_count,
                 label = root_label,
                 cost = root_cost,
                 indices = root_indices,
@@ -135,11 +128,13 @@ class Tree():
             for path in decision_paths:
                 l_indices = satisfies_path(X, path)
                 l_node = path[-1][0]
+                l_num = l_node.leaf_num
                 l_label = l_node.label
                 l_cost = self.splitter.cost(l_indices)
                 l_depth = l_node.depth
                 
                 l_node.leaf_node(
+                    leaf_num = l_num,
                     label = l_label,
                     cost = l_cost,
                     indices = l_indices,
@@ -198,18 +193,20 @@ class Tree():
         right_cost = self.splitter.cost(right_indices)
         left_depth = node.depth + 1
         right_depth = node.depth + 1
-        
+        l_leaf_num = node.leaf_num
+        r_leaf_num = self.leaf_count
+
         if self.y is None:
-            l_label = node.label
-            r_label = self.leaf_count
+            l_label = None
+            r_label = None
         else:
-            # NOTE: Potentially some weird stuff could happen here...
             l_label = mode(flatten_labels(y_l))
             r_label = mode(flatten_labels(y_r))
         
         # Create New leaf nodes
         left_node = Node()
         left_node.leaf_node(
+            leaf_num = l_leaf_num,
             label = l_label,
             cost = left_cost,
             indices = left_indices,
@@ -217,6 +214,7 @@ class Tree():
         )
         right_node = Node()
         right_node.leaf_node(
+            leaf_num = r_leaf_num,
             label = r_label,
             cost = right_cost,
             indices = right_indices,
@@ -234,8 +232,7 @@ class Tree():
             condition = condition,
             cost=node.cost,
             indices=node.indices,
-            depth=node.depth,
-            feature_labels = [self.feature_labels[f] for f in condition.features]
+            depth=node.depth
         )
         # Adjust counts:
         self.leaf_count -= 1
@@ -269,13 +266,17 @@ class Tree():
             self.branch(node, condition)
 
         
-    def predict(self, X : NDArray) -> List[Set[int]]:
+    def predict(self, X : NDArray, leaf_labels = False) -> List[Set[int]]:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
         find where data points fall into leaf nodes.
 
         Args:
             X (np.ndarray): Input n x m dataset
+
+            leaf_labels (bool, optional): If true, gives labels based soley upon 
+                leaf membership. Otherwise, returns the orignal class label predictions from 
+                the fitted tree. Defaults to False.  
 
         Returns:
             labels (List[Set[int]]): Length n list of sets where the set at index i 
@@ -287,7 +288,10 @@ class Tree():
             leaf = path[-1]
             satisfies = satisfies_path(X, path)
             for idx in satisfies:
-                labels[idx].add(leaf.label)
+                if leaf_labels:
+                    labels[idx].add(leaf.leaf_num)
+                else:
+                    labels[idx].add(leaf.label)
             
         return labels
     

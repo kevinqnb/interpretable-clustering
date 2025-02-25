@@ -9,17 +9,14 @@ class DecisionSet:
     Base class for a decision set.
     """
     def __init__(
-        self,
-        feature_labels : List[str] = None
+        self
     ):
         
         """
         Args:                
-            feature_labels (List[str]): Iterable object with strings representing feature names. 
+            
             
         Attributes:
-            feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
             decision_set (List[Condition]): List of rules in the decision set.
             
             decision_set_labels (List[Set[int]]): List of labels corresponding to each
@@ -30,7 +27,6 @@ class DecisionSet:
             pruned_status (bool): `True` if the pruning was successful and `False` otherwise. 
             
         """
-        self.feature_labels = feature_labels
         self.decision_set = None
         self.decision_set_labels = None
         self.pruned_indices = None
@@ -86,7 +82,7 @@ class DecisionSet:
         raise NotImplementedError('Method not implemented.')
     
     
-    def predict(self, X : NDArray, rule_labels : bool = True) -> List[Set[int]]:
+    def predict(self, X : NDArray, rule_labels : bool = False) -> List[Set[int]]:
         """
         Predicts the label(s) of each data point in X.
         
@@ -96,7 +92,7 @@ class DecisionSet:
             rule_labels (bool, optional): If true, gives labels based soley upon 
                 rule membership. That is, each rule is given a unique label. 
                 Otherwise, returns the orignal predictions from the fitted rule models -- 
-                whatever label is given to the rule. Defaults to True.
+                whatever label is given to the rule. Defaults to False.
             
         Returns:
             labels (List[Set[int]]): 2d list of predicted labels, with the internal list 
@@ -172,7 +168,7 @@ class DecisionSet:
             self.pruned_indices = selected_rules
         
         
-    def pruned_predict(self, X : NDArray, rule_labels : bool = True) -> List[Set[int]]:
+    def pruned_predict(self, X : NDArray, rule_labels : bool = False) -> List[Set[int]]:
         """
         Predicts the label(s) of each data point in X.
         
@@ -182,7 +178,7 @@ class DecisionSet:
             rule_labels (bool, optional): If true, gives labels based soley upon 
                 rule membership. That is, each rule is given a unique label. 
                 Otherwise, returns the orignal predictions from the fitted rule models -- 
-                whatever label is given to the rule. Defaults to True.
+                whatever label is given to the rule. Defaults to False.
             
         Returns:
             labels (List[Set[int]]): 2d list of predicted labels, with the internal set 
@@ -196,7 +192,6 @@ class DecisionSet:
         pruned_data_to_rules_assignment = data_to_rules_assignment[:,self.pruned_indices]
         pruned_decision_set = [self.decision_set[i] for i in self.pruned_indices]
         pruned_decision_set_labels = [self.decision_set_labels[i] for i in self.pruned_indices]
-        #pruned_feature_labels = [self.feature_labels[i] for i in self.pruned_indices]
         
         labels = [set() for _ in range(len(X))]
         for i in range(len(pruned_decision_set)):

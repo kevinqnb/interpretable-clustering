@@ -30,8 +30,6 @@ class SVMTree(Tree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
             
     Attributes:
         root (Node): Root node of the tree.
@@ -49,8 +47,7 @@ class SVMTree(Tree):
     def __init__(
         self,
         base_tree : Node = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
+        min_points_leaf : int = 1
     ):  
         max_leaf_nodes = 2
         max_depth = 1
@@ -63,8 +60,7 @@ class SVMTree(Tree):
             base_tree = base_tree, 
             max_leaf_nodes = max_leaf_nodes,
             max_depth = max_depth, 
-            min_points_leaf = min_points_leaf,
-            feature_labels = feature_labels
+            min_points_leaf = min_points_leaf
         )
         
     def fit(
@@ -90,13 +86,6 @@ class SVMTree(Tree):
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
-        
-        # Set feature labels if not set already:
-        if self.feature_labels is None:
-            self.feature_labels = [None]*X.shape[1]
-        else:
-            if not len(self.feature_labels) == X.shape[1]:
-                raise ValueError('Feature labels must match the shape of the data.')
             
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:

@@ -29,8 +29,6 @@ class ID3Tree(Tree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
             
     Attributes:
         root (Node): Root node of the tree.
@@ -49,8 +47,7 @@ class ID3Tree(Tree):
         base_tree : Node = None,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
+        min_points_leaf : int = 1
     ):
         splitter = InformationGainSplitter(
             min_points_leaf = min_points_leaf
@@ -60,8 +57,7 @@ class ID3Tree(Tree):
             base_tree = base_tree, 
             max_leaf_nodes = max_leaf_nodes,
             max_depth = max_depth, 
-            min_points_leaf = min_points_leaf,
-            feature_labels = feature_labels
+            min_points_leaf = min_points_leaf
         )
     
 
@@ -79,8 +75,7 @@ class SklearnTree(Tree):
         criterion : str = 'entropy',
         max_leaf_nodes=None,
         max_depth=None,
-        min_points_leaf=1,
-        feature_labels=None 
+        min_points_leaf=1
     ):
         """
          Args:
@@ -95,8 +90,6 @@ class SklearnTree(Tree):
                 
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
-                
-            feature_labels (List[str]): Iterable object with strings representing feature names. 
             
         Attributes:
             root (Node): Root node of the tree.
@@ -115,8 +108,7 @@ class SklearnTree(Tree):
             splitter = splitter,
             max_leaf_nodes=max_leaf_nodes,
             max_depth=max_depth,
-            min_points_leaf=min_points_leaf,
-            feature_labels=feature_labels
+            min_points_leaf=min_points_leaf
         )
         
             
@@ -137,13 +129,6 @@ class SklearnTree(Tree):
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
-        
-        # Set feature labels if not set already:
-        if self.feature_labels is None:
-            self.feature_labels = [None]*X.shape[1]
-        else:
-            if not len(self.feature_labels) == X.shape[1]:
-                raise ValueError('Feature labels must match the shape of the data.')
         
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
@@ -206,14 +191,15 @@ class SklearnTree(Tree):
         
         if (self.tree_info.children_left[sklearn_node] < 0 and 
             self.tree_info.children_right[sklearn_node] < 0):
-            class_label = self.leaf_count # This may be important...might need to change...
-            self.leaf_count += 1
+            class_label = np.argmax(self.tree_info.value[sklearn_node])
             node_obj.leaf_node(
+                leaf_num = self.leaf_count,
                 label = class_label,
                 cost = -1,
                 indices = indices,
                 depth = depth
             )
+            self.leaf_count += 1
 
         else:
             feature = self.tree_info.feature[sklearn_node]
@@ -237,8 +223,7 @@ class SklearnTree(Tree):
                 condition = condition,
                 cost = -1,
                 indices = indices,
-                depth = depth,
-                feature_labels = [self.feature_labels[feature]]
+                depth = depth
             )
             
             self.grow(
@@ -260,7 +245,7 @@ class SklearnTree(Tree):
     def predict(
         self,
         X : NDArray,
-        leaf_labels : bool = True
+        leaf_labels : bool = False
     ) -> List[Set[int]]:
         """
         Predicts the labels of a dataset X.
@@ -284,7 +269,7 @@ class SklearnTree(Tree):
                 leaf = path[-1][0]
                 satisfies = satisfies_path(X, path)
                 for idx in satisfies:
-                    labels[idx].add(leaf.label)
+                    labels[idx].add(leaf.leaf_num)
                     
             return labels
         
@@ -338,8 +323,6 @@ class ObliqueTree(Tree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
             
     Attributes:
         root (Node): Root node of the tree.
@@ -358,8 +341,7 @@ class ObliqueTree(Tree):
         base_tree : Node = None,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
+        min_points_leaf : int = 1
     ):
         splitter = ObliqueInformationGainSplitter(
             min_points_leaf = min_points_leaf
@@ -369,6 +351,5 @@ class ObliqueTree(Tree):
             base_tree = base_tree, 
             max_leaf_nodes = max_leaf_nodes,
             max_depth = max_depth, 
-            min_points_leaf = min_points_leaf,
-            feature_labels = feature_labels
+            min_points_leaf = min_points_leaf
         )

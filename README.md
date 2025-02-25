@@ -29,5 +29,20 @@ Likewise for MacOS:
 Windows users will need to download from the [source](https://graphviz.org/download/), taking care
 to ensure that the appropriate folders are added to the path.
 
+Reminders for myself:
+Plotting python with latex requires some minimal installation of latex. For linux 
+this may be installed as:
+
+```
+sudo apt-get install texlive-latex-extra texlive-fonts-recommended dvipng cm-super
+```
+
+On Mac OS a working installation can be built with:
+
+```
+brew install --cask basictex
+sudo tlmgr install type1cm dvipng cm-super
+```
+
 The packages and python version have been set 
 mainly to work with requirements for ExKMC.

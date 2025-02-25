@@ -16,6 +16,8 @@ class Node():
             
         type (str): Internally set to 'node' or 'leaf' depending on if the node is a
             normal node or a leaf node.
+
+        leaf_num (int): (For leaf nodes only) Leaf identifying number.
             
         label (int): (For leaf nodes only) Prediction label to be associated with this node.
         
@@ -34,14 +36,13 @@ class Node():
         
         depth (int): The depth of the current node in the tree.
         
-        feature_labels (List[str]): Names for the given feature (for printing and display).
-        
         centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
     """
     
     def __init__(self):
         #self.random_val = np.random.uniform()
         self.type = None
+        self.leaf_num = None
         self.label = None
         self.left_child = None
         self.right_child = None
@@ -49,7 +50,6 @@ class Node():
         self.cost = None
         self.indices = None
         self.depth = None
-        self.feature_labels = None
         self.centroid_indices = None
     
     def tree_node(
@@ -60,7 +60,6 @@ class Node():
         cost : float, 
         indices : NDArray,
         depth : int,
-        feature_labels : List[str],
         centroid_indices : NDArray = None
     ):
         """
@@ -81,11 +80,10 @@ class Node():
             
             depth (int): The depth of the current node in the tree.
             
-            feature_labels (List[str]): Names for the given features (for printing and display).
-            
             centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'internal'
+        self.leaf_num = None
         self.label = None
         self.left_child = left_child 
         self.right_child = right_child
@@ -93,12 +91,12 @@ class Node():
         self.cost = cost
         self.indices = indices
         self.depth = depth
-        self.feature_labels = feature_labels
         self.centroid_indices = centroid_indices
         
         
     def leaf_node(
         self,
+        leaf_num : int,
         label : int,
         cost : float,
         indices : NDArray,
@@ -109,6 +107,8 @@ class Node():
         Initializes this to be a leaf node in the tree.
 
         Args:
+            leaf_num (int): Leaf identifying number.
+
             label (int): Prediction label to be associated with this node.
             
             cost (float): The cost associated with points belonging to this node. 
@@ -121,6 +121,7 @@ class Node():
             centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'leaf'
+        self.leaf_num = leaf_num
         self.label = label
         self.cost = cost 
         self.indices = indices

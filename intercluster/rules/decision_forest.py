@@ -19,8 +19,7 @@ class DecisionForest(DecisionSet):
         max_features : int = None,
         max_labels : int = None,
         feature_pairings : List[List[int]] = None,
-        train_size : float = 1.0,
-        feature_labels : List[str] = None
+        train_size : float = 1.0
     ):
         """
         Args:
@@ -43,7 +42,7 @@ class DecisionForest(DecisionSet):
                 features which can be used together in a decision tree. 
 
         """
-        super().__init__(feature_labels = feature_labels)
+        super().__init__()
         self.tree_model = tree_model
         self.tree_params = tree_params
         self.num_trees = num_trees
@@ -111,7 +110,6 @@ class DecisionForest(DecisionSet):
         # Random depth
         rand_depth = np.random.randint(2, self.tree_params['max_depth'] + 1)
         tree = self.tree_model(
-            feature_labels = rand_feature_labels,
             **dict(self.tree_params, max_depth=rand_depth)
         )
         '''
@@ -151,13 +149,8 @@ class DecisionForest(DecisionSet):
             
         train_data = X[rand_samples, :]
         train_data = train_data[:, rand_features]
-        
-        train_feature_labels = None
-        if self.feature_labels is not None:
-            train_feature_labels = [self.feature_labels[i] for i in rand_features]
             
         tree = self.tree_model(
-                feature_labels = train_feature_labels,
                 **self.tree_params
         )
         tree.fit(train_data, train_labels)

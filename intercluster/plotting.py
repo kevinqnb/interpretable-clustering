@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import graphviz as gv
@@ -58,136 +59,115 @@ def plot_decision_boundaries(
 
 
 def build_graph(
+    graph_obj : Callable,
     node : Node,
-    graph : Callable = None,
     parent_id : str = None,
     node_id : str = "0",
     feature_labels : List[str] = None, 
-    leaf_colors : Dict[int, str] = None,
     data_scaler : Callable = None,
-    cost : bool = True
+    leaf_colors : Dict[int, str] = None,
+    display_node_info : bool = True
 ):
     """
-    Builds a graph representation of the node tree using 
-    graphviz.
+    Builds a visual representation of a tree using graphviz.
     
     Args:
-        node (Node): Node object, which is the root node of the tree.
-        graph (gv.Digraph, optional): The graph object to add nodes and edges to. Defaults to None.
-        parent_id (str, optional): String identifier for parent. Defaults to None.
-        node_id (str, optional): String identifier for the node. Defaults to "0".
+        graph (gv.Digraph, optional): The graph object to add nodes and edges to. 
+
+        node (Node): Current Node object to add to the tree.
+
+        parent_id (str, optional): String identifier for the current 
+            node's parent. Defaults to None.
+
+        node_id (str, optional): String identifier for the current node. Defaults to "0".
+
         feature_labels (List[str], optional): List of feature labels used for display. 
-            Defaults to None.
+            Defaults to None which displays basic feature information. 
+
+        data_scaler (Callable): Sklearn data scaler, which will be used to convert
+            thresholds, conditions back to their unscaled versions (better interpretability).
+            This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
+            in which case values are left as is. 
+
         leaf_colors (Dict[int:str], optional): Dictionary specifying colors for leaf nodes. 
             Defaults to None.
-        newline (bool, optional): Whether to add newlines in the node labels. Defaults to True.
-        cost (bool, optional): Whether to display the cost in the leaf nodes. Defaults to True.
+
+        display_node_info (bool): Boolean for deciding whether to display 
+            additional node information (size, cost, etc.).        
 
     Returns:
         gv.Digraph: The graph object with the tree structure.
     """
-    if graph is None:
-        graph = gv.Digraph(format='png')
     
     # Ensure node_id and parent_id are strings
     node_id = str(node_id)
     if parent_id is not None:
         parent_id = str(parent_id)
     
-    # Build the node's label (depending upon what's given as input).
-    node_label = ""
-    
+    # Build the node's string:
+    node_str = ""
     # For NON-leaf nodes:
     if node.type == 'internal':
-        # Rescale the weights if necessary
-        weights = node.condition.weights
-        if data_scaler is not None and len(node.condition.features) > 1:
-            weights = []
-            for l, feature in enumerate(node.condition.features):
-                feature_min = data_scaler.data_min_[feature]
-                feature_max = data_scaler.data_max_[feature]
-                weight_l = np.round(node.condition.weights[l] / (feature_max - feature_min), 2)
-                weights.append(weight_l)
-        else:
-            weights = np.round(node.condition.weights, 2)
-            #weights = [weight]
-            
-        # Rescale thresholds if necessary:
-        threshold = node.condition.threshold
-        if data_scaler is not None:
-            if len(node.condition.features) == 1:
-                feature_min = data_scaler.data_min_[node.condition.features[0]]
-                feature_max = data_scaler.data_max_[node.condition.features[0]]
-                threshold = threshold * (feature_max - feature_min) 
-            else:             
-                for l,feature in enumerate(node.condition.features):
-                    feature_min = data_scaler.data_min_[feature]
-                    feature_max = data_scaler.data_max_[feature]
-                    threshold += (node.condition.weights[l] * feature_min) / (feature_max - feature_min)
-                    
-        
-        if feature_labels is None:
-            node_label += (
-                f"Features {node.condition.features} \n Weights {weights}\n\u2264"
-                f"{np.round(threshold, 3)}"
-            )
-        else:
-            if all(x == 1 for x in weights):
-                sum = ' + \n'.join([f'{feature_labels[f]}' for f in node.condition.features])
-            else:
-                sum = ' + '.join([f'{w}*{feature_labels[f]}' for w, f in zip(weights,
-                                                                             node.condition.features)])
-            
-            node_label += (f"{sum} \n \u2264 {np.round(threshold, 3)}")
+        node_str = node.condition.display(scaler = data_scaler, feature_labels = feature_labels)
             
     # For leaf nodes:
     else:
-        node_label += f"Cluster {node.label}\n"
-        node_label += f"Size: {len(node.indices)}"
-        if cost:
-            node_label += f"\nCost: {np.round(node.cost, 3)}"
-        else:
-            #node_label += f"\n Cluster {node.label}"
-            pass
-        #node_label += f"\nLabel: {node.label}"
-        
+        node_str += f"Cluster {node.label}"
+        if display_node_info:
+            node_str += "\n"
+            node_str += f"Size: {len(node.indices)}\n"
+            node_str += f"Cost: {np.round(node.cost, 3)}"
+
+    
+    # Create the graphviz node object:
     if node.type == 'leaf' and (leaf_colors is not None):
-        graph.node(node_id, label=node_label, fillcolor=leaf_colors[node.label], 
-                   style='filled', penwidth='5', fontsize='64', fontname="times-bold")
+        graph_obj.node(
+            node_id,
+            label=node_str,
+            fillcolor=leaf_colors[node.label], 
+            style='filled',
+            penwidth='1',
+            fontsize='18',
+            fontname="times-bold"
+        )
     else:
-        graph.node(node_id, label=node_label, fontsize='64', penwidth='5', fontname="times-bold")
+        graph_obj.node(
+            node_id,
+            label=node_str,
+            fontsize='18',
+            penwidth='1',
+            fontname="times-bold"
+        )
 
     
     # Add an edge from the parent to the current node
     if parent_id is not None:
-        graph.edge(parent_id, node_id, penwidth = '10')
+        graph_obj.edge(parent_id, node_id, penwidth = '2')
     
     # Recursively add children
     if node.type == 'internal':
         if node.left_child is not None:
             build_graph(
+                graph_obj = graph_obj,
                 node = node.left_child,
-                graph = graph,
                 parent_id = node_id, 
                 node_id = str(int(node_id) * 2 + 1),
                 feature_labels = feature_labels,
-                leaf_colors = leaf_colors,
                 data_scaler = data_scaler,
-                cost = cost
+                leaf_colors = leaf_colors,
+                display_node_info=display_node_info
             )
         if node.right_child is not None:
             build_graph(
+                graph_obj = graph_obj,
                 node = node.right_child,
-                graph = graph,
                 parent_id = node_id, 
                 node_id = str(int(node_id) * 2 + 2),
                 feature_labels = feature_labels,
-                leaf_colors = leaf_colors,
                 data_scaler = data_scaler,
-                cost = cost
+                leaf_colors = leaf_colors,
+                display_node_info=display_node_info
             )
-    
-    return graph
 
 
 ####################################################################################################
@@ -196,9 +176,9 @@ def build_graph(
 def visualize_tree(
     root : Node,
     feature_labels : List[str] = None,
-    leaf_colors : Dict[int, str] = None,
     data_scaler : Callable = None,
-    cost : bool = True,
+    leaf_colors : Dict[int, str] = None,
+    display_node_info : bool = True,
     output_file : str = 'tree',
 ):
     """
@@ -209,148 +189,139 @@ def visualize_tree(
         
         feature_labels (List[str], optional): List of feature labels used for display.
             Each non-leaf Node object has a feature index attribute, and we use 
-            feature_labels[index] to print the label associated with the index. Defaults to None.
+            feature_labels[index] to print the label associated with the index. Defaults to None
+            which displays basic feature information. 
+
+        data_scaler (Callable): Sklearn data scaler, which will be used to convert
+            thresholds, conditions back to their unscaled versions (better interpretability).
+            This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
+            in which case values are left as is. 
             
         leaf_colors (Dict[int:str], optional): Dictionary specifying colors for leaf nodes.
             Each leaf Node object has a integer label attribute which can be used to 
             access the dictionary. Each item in the dictionary should be a 
             RGBA hexadecimal string. Defaults to None.
-            
-        newline (bool, optional): Whether to add newlines in the node labels. Defaults to True.
-        
-        cost (bool, optional): Whether to display the cost in the leaf nodes. Defaults to True.
+
+        display_node_info (bool): Boolean for deciding whether to display 
+            additional node information (size, cost, etc.).
         
         output_file (str, optional): File to save the resulting image. Defaults to 'tree.png'.
 
     Returns:
         IPython.display.Image: The image object for display in Jupyter notebooks.
     """
-    graph = build_graph(root, feature_labels=feature_labels, leaf_colors=leaf_colors,
-                        data_scaler=data_scaler, cost=cost)
+    graph = gv.Digraph(format='png')
+    build_graph(
+        graph_obj=graph,
+        node=root,
+        feature_labels=feature_labels,
+        data_scaler=data_scaler,
+        leaf_colors=leaf_colors,
+        display_node_info=display_node_info
+    )
     graph.attr(size="10,10", dpi="300", ratio="0.75")
-    graph.render(output_file, format='png', cleanup=True)
-    return Image(output_file + '.png')
+    output_file_name = os.path.splitext(output_file)[0]
+    print(output_file_name)
+    graph.render(output_file_name, format='png', cleanup=True)
+    return Image(output_file)
 
 
 ####################################################################################################
 
 
 def plot_decision_set(
-    D : List[List[Node]],
-    feature_labels : List[str],
+    decision_set : List[List[Node]],
     rule_labels : List[List[int]],
-    cluster_colors : Dict[int, str],
+    feature_labels : List[str] = None,
     data_scaler : Callable = None,
+    cluster_colors : Dict[int, str] = None,
     filename : str = None
 ):
     """
     Plots a decision set as a list of rules.
     
     Args:
-        D (List[List[Condition]]): A list of rules, where each rule is a list of Condition objects.
+        decision_set (List[List[Condition]]): A list of rules, where each rule is a 
+            list of Condition objects.
+
+        rule_labels (List[List[int]]): List of cluster labels for each rule.
         
-        feature_labels (List[str]): List of feature labels used for display.
+        feature_labels (List[str]): List of feature names used for display. Defaults to None
+            which displays basic feature information. 
+
+        data_scaler (Callable): Sklearn data scaler, which will be used to convert
+            thresholds, conditions back to their unscaled versions (better interpretability).
+            This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
+            in which case values are left as is. 
         
-        rule_labels (List[List[int]]): List of rule labels for each rule.
-        
-        cluster_colors (Dict[int:str]): Dictionary specifying colors for leaf nodes.
-        
-        data_scaler (Callable, optional): Scaler object used to scale the data. Defaults to None.
-            NOTE: If used, this assumes that the data was scaled to a 0-1 range, and will simply 
-                adjust to undo that specific form of scaling.
+        cluster_colors (Dict[int:str]): Dictionary specifying colors for leaf nodes. Defaults 
+            to None in which case no colors are displayed.
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
-    fig,ax = plt.subplots(figsize = (4, 6), dpi = 300)
-    ax.set_xlim(0, len(D) + 0.1)
-    ax.set_ylim(0.9/1.5, len(D) + 0.1)
+    for l in rule_labels:
+        assert len(l) == 1, "Each rule must have exactly one label."
+
+    max_rule_length = np.max([len(r) for r in decision_set])
+    size_factor = max_rule_length // 2
+
+    fig,ax = plt.subplots(figsize = (4, len(decision_set) * size_factor), dpi = 300)
+    ax.set_xlim(0, 5)
+    ax.set_ylim(0.9, (len(decision_set) + 0.1) * size_factor)
     ax.axis('off')
     #ax.set_aspect('equal')
     
     # Order rules by cluster labels
     ordering = np.ndarray.flatten(np.argsort(rule_labels, axis = 0))
     for i, idx in enumerate(ordering):
-        rule = D[idx]
+        rule = decision_set[idx]
         rule_string = 'If '
         
         # Every condition except the last node, which should be a leaf
         for j, condition in enumerate(rule):            
             rule_string += '('
-            # Sum of weights and features
-            for l,feature in enumerate(condition.features):
-                if l > 0:
-                    rule_string += ' + '
-
-                # Rescale the weights if necessary
-                if data_scaler is not None and len(condition.features) > 1:
-                    feature_min = data_scaler.data_min_[feature]
-                    feature_max = data_scaler.data_max_[feature]
-                    weight_l = np.round(condition.weights[l] / (feature_max - feature_min), 2)
-                else:
-                    weight_l = np.round(condition.weights[l], 2)
-                    
-                if weight_l != 1:
-                    rule_string += str(weight_l) + ' '
-                    
-                rule_string += str(feature_labels[feature])
-                
-            
-            # Add the threshold
-            if condition.direction == -1:
-                rule_string += r' $\leq$ '
-            else:
-                rule_string += r' $>$ '
-                
-            threshold = condition.threshold
-            
-            # Rescale if necessary:
-            if data_scaler is not None:                
-                for l,feature in enumerate(condition.features):
-                    feature_min = data_scaler.data_min_[feature]
-                    feature_max = data_scaler.data_max_[feature]
-                    threshold += (condition.weights[l] * feature_min) / (feature_max - feature_min)
-                    
-                if len(condition.features) == 1:
-                    feature_min = data_scaler.data_min_[condition.features[0]]
-                    feature_max = data_scaler.data_max_[condition.features[0]]
-                    threshold = threshold * (feature_max - feature_min) 
-                
-            rule_string += str(np.round(threshold, 3))
+            rule_string += condition.display(
+                scaler=data_scaler,
+                feature_labels=feature_labels,
+                newline = False
+            )
             rule_string += ')'
             
-            if j >= len(rule) - 2:
+            if j >= len(rule) - 1:
                 rule_string += f'\n'
             elif j % 2 == 1:
-                rule_string += r' $\&$ ' + f'\n'
+                rule_string += r" $\&$ " + f'\n'
             else:
-                rule_string += r' $\&$ '
+                rule_string += r" $\&$ "
                 
-        rule_string += 'Then cluster ' + str(list(rule_labels[idx]))
-        rule_color = cluster_colors[list(rule_labels[idx])[0]]
-        ax.scatter(
-            x = 0.25,
-            y = (len(D) - i)/1.5,
-            color = rule_color,
-            s = 50, 
-            marker = 's',
-            edgecolors='black'
-        )
+        rule_string += 'Then cluster ' + str(list(rule_labels[idx])[0])
+
+        if cluster_colors is not None:
+            rule_color = cluster_colors[list(rule_labels[idx])[0]]
+            ax.scatter(
+                x = 0.25,
+                y = (len(decision_set) - i) * size_factor,
+                color = rule_color,
+                s = 100, 
+                marker = 's',
+                edgecolors='black'
+            )
         
         ax.text(
             s = rule_string,
             x = 0.5,
-            y = ((len(D) - i) + 0.055)/1.5,
+            y = ((len(decision_set) - i)) * size_factor + 0.1,
             color = 'black',
             alpha = 1,
             fontweight = 'extra bold',
-            fontsize = 10,
+            fontsize = 18,
             va = 'top',
             ha = 'left'
         )
         
     if filename is not None:
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
-    plt.show()
+    #plt.show()
     
 
 ####################################################################################################

@@ -39,8 +39,6 @@ class ImmTree(Tree):
         min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
             within a single leaf. Defaults to 1.
             
-        feature_labels (List[str]): Iterable object with strings representing feature names. 
-            
             
     Attributes:
         root (Node): Root node of the tree.
@@ -61,8 +59,7 @@ class ImmTree(Tree):
         norm : int = 2,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1,
-        feature_labels : List[str] = None
+        min_points_leaf : int = 1
     ):
         self.centers = centers
         splitter = ImmSplitter(
@@ -74,8 +71,7 @@ class ImmTree(Tree):
             splitter = splitter,
             max_leaf_nodes = max_leaf_nodes,
             max_depth = max_depth, 
-            min_points_leaf = min_points_leaf,
-            feature_labels = feature_labels
+            min_points_leaf = min_points_leaf
         )
         self.is_separated = np.zeros(len(centers), dtype = bool)
         
@@ -105,13 +101,6 @@ class ImmTree(Tree):
         self.leaf_count = 0
         self.node_count = 0
         
-        # Set feature labels if not set already:
-        if self.feature_labels is None:
-            self.feature_labels = [None]*X.shape[1]
-        else:
-            if not len(self.feature_labels) == X.shape[1]:
-                raise ValueError('Feature labels must match the shape of the data.')
-        
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
             self.max_leaf_nodes = len(X)
@@ -131,6 +120,7 @@ class ImmTree(Tree):
         root_cost = 0
         root_depth = 0
         self.root.leaf_node(
+            leaf_num = self.leaf_count,
             label = root_label,
             cost = root_cost,
             indices = root_indices,
@@ -201,13 +191,15 @@ class ImmTree(Tree):
         
         left_depth = node.depth + 1
         right_depth = node.depth + 1
-        
+        l_leaf_num = node.leaf_num
+        r_leaf_num = self.leaf_count
         l_label = left_centroid_indices[0]
         r_label = right_centroid_indices[0]
         
         # Create New leaf nodes
         left_node = Node()
         left_node.leaf_node(
+            leaf_num = l_leaf_num,
             label = l_label,
             cost = left_cost,
             indices = left_indices,
@@ -216,6 +208,7 @@ class ImmTree(Tree):
         )
         right_node = Node()
         right_node.leaf_node(
+            leaf_num = r_leaf_num,
             label = r_label,
             cost = right_cost,
             indices = right_indices,
@@ -235,7 +228,6 @@ class ImmTree(Tree):
             cost=node.cost,
             indices=node.indices,
             depth=node.depth,
-            feature_labels = [self.feature_labels[f] for f in condition.features],
             centroid_indices=node.centroid_indices
         )
         # Adjust counts:
@@ -294,8 +286,7 @@ class ExkmcTree(Tree):
         k : int,
         kmeans : Callable,
         max_leaf_nodes : int = None,
-        imm : bool = True,
-        feature_labels : List[str] = None
+        imm : bool = True
     ):
         """
         Args:
@@ -308,8 +299,6 @@ class ExkmcTree(Tree):
                 
             imm (bool, optional): If True, the base of the tree is built with the IMM algorithm.
                 Defaults to True.
-                
-            feature_labels (List[str]): Iterable object with strings representing feature names. 
                 
                 
         Attributes:
@@ -329,8 +318,7 @@ class ExkmcTree(Tree):
         splitter = DummySplitter()
         super().__init__(
             splitter = splitter,
-            max_leaf_nodes = max_leaf_nodes,
-            feature_labels = feature_labels
+            max_leaf_nodes = max_leaf_nodes
         )
     
     
@@ -350,13 +338,6 @@ class ExkmcTree(Tree):
         # Reset if needed:
         self.leaf_count = 0
         self.node_count = 0
-        
-        # Set feature labels if not set already:
-        if self.feature_labels is None:
-            self.feature_labels = [None]*X.shape[1]
-        else:
-            if not len(self.feature_labels) == X.shape[1]:
-                raise ValueError('Feature labels must match the shape of the data.')
         
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
@@ -413,14 +394,15 @@ class ExkmcTree(Tree):
             self.depth = depth
         
         if exkmc_node.is_leaf():
-            class_label = self.leaf_count 
-            self.leaf_count += 1
+            class_label = exkmc_node.value
             node_obj.leaf_node(
+                leaf_num = self.leaf_count,
                 label = class_label,
                 cost = -1,
                 indices = indices,
                 depth = depth
             )
+            self.leaf_count += 1
         else:
             feature, threshold = exkmc_node.feature, exkmc_node.value
             left_mask = X_[:, feature] <= threshold
@@ -442,8 +424,7 @@ class ExkmcTree(Tree):
                 condition = condition,
                 cost = -1,
                 indices = indices,
-                depth = depth,
-                feature_labels = [self.feature_labels[feature]]
+                depth = depth
             )
             
             self.grow(
@@ -466,7 +447,7 @@ class ExkmcTree(Tree):
     def predict(
         self,
         X : NDArray,
-        leaf_labels : bool = True
+        leaf_labels : bool = False
     ) -> List[Set[int]]:
         """
         Predicts the labels of a dataset X.
@@ -490,7 +471,7 @@ class ExkmcTree(Tree):
                 leaf = path[-1]
                 satisfies = satisfies_path(X, path)
                 for idx in satisfies:
-                    labels[idx].add(int(leaf.label))
+                    labels[idx].add(int(leaf.leaf_num))
             return labels
         else:
             return labels_format(self.exkmc_tree.predict(X).astype(int))

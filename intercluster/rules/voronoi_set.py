@@ -24,8 +24,7 @@ class VoronoiSet(DecisionSet):
         centers : NDArray,
         num_sets : int,
         num_conditions : int = None,
-        feature_pairings : List[List[int]] = None,
-        feature_labels : List[str] = None
+        feature_pairings : List[List[int]] = None
     ):
         """
         Args:
@@ -39,7 +38,7 @@ class VoronoiSet(DecisionSet):
                 features which can be used together in a decision tree. 
 
         """
-        super().__init__(feature_labels = feature_labels)
+        super().__init__()
         self.centers = centers
         self.num_sets = num_sets
         
