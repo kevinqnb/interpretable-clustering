@@ -318,6 +318,7 @@ def prune_with_binary_search(
     n = len(sorted_search_range)
     left_index = 0
     right_index = n - 1
+    midpoint = None
     best_lambda = sorted_search_range[0]
     covered = False
 
@@ -329,13 +330,12 @@ def prune_with_binary_search(
             right_index = midpoint - 1
         else:
             covered = True
+            best_lambda = lambd
             left_index = midpoint + 1
 
-    best_lambda = sorted_search_range[midpoint]
-    
     if not covered:
         return None
-
+    
     prune_selection = distorted_greedy(
         n_rules, 
         best_lambda,
