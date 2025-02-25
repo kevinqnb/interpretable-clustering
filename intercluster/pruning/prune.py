@@ -195,7 +195,7 @@ def prune_with_grid_search(
         # It's possible that nothing was selected, since the cost of selecting 
         # a rule may outweigh the benefits. In this case, we return infinity.
         if len(selected) == 0:
-            return (np.inf, 0), lambda_val
+            return np.inf, 0
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
@@ -212,7 +212,6 @@ def prune_with_grid_search(
     search_results = Parallel(n_jobs=cpu_count, backend = 'loky')(
         delayed(evaluate_lambda)(lambd) for lambd in lambda_search_range
     )
-    
     objective_vals = np.array([x[0] for x in search_results])
     cover_vals = np.array([x[1] for x in search_results])
 
@@ -304,7 +303,7 @@ def prune_with_binary_search(
         # It's possible that nothing was selected, since the cost of selecting 
         # a rule may outweigh the benefits. In this case, we return infinity.
         if len(selected) == 0:
-            return (np.inf, 0), lambda_val
+            return np.inf, 0
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
@@ -320,6 +319,7 @@ def prune_with_binary_search(
     left_index = 0
     right_index = n - 1
     best_lambda = sorted_search_range[0]
+    covered = False
 
     while left_index <= right_index:
         midpoint = (left_index + right_index) // 2
@@ -328,9 +328,13 @@ def prune_with_binary_search(
         if cover < frac_cover:
             right_index = midpoint - 1
         else:
+            covered = True
             left_index = midpoint + 1
 
     best_lambda = sorted_search_range[midpoint]
+    
+    if not covered:
+        return None
 
     prune_selection = distorted_greedy(
         n_rules, 

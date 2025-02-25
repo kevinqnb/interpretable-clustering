@@ -202,7 +202,7 @@ class DecisionSet:
             labels (List[Set[int]]): 2d list of predicted labels, with the internal set 
                 at index i representing the group of decision rules which satisfy X[i,:].
         """
-        if self.pruned_indices is None:
+        if not self.prune_status:
             raise ValueError('Decision set has not been pruned. If prune() was called, this is '
                              'likely because coverage requirements were not met.')
         
