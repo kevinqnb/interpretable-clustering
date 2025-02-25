@@ -14,7 +14,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 15
+experiment_cpu_count = 2
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -240,7 +240,7 @@ mod6 = DecisionSetMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod4, mod5, mod6]
+module_list = [mod1, mod2, mod4]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),
@@ -254,7 +254,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 16
+n_samples = 2
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -268,6 +268,6 @@ Ex1 = CoverageExperiment(
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/covertype/', '')
+Ex1.save_results('data/experiments/covertype/', '_test')
 
 ####################################################################################################
