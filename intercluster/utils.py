@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from collections.abc import Iterable
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Callable
 from numpy.typing import NDArray
 
 

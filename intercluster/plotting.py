@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import networkx as nx
+import pygraphviz
 import graphviz as gv
 from IPython.display import Image
 from typing import Callable, List, Dict
@@ -224,6 +226,92 @@ def visualize_tree(
     print(output_file_name)
     graph.render(output_file_name, format='png', cleanup=True)
     return Image(output_file)
+
+
+####################################################################################################
+
+
+def build_networkx_graph(graph : Callable, node : Node):
+    """
+    Constructs a networkx graph by adding edges from the current node object. 
+
+    Args:
+        graph (networkx Digraph): Networkx Graph object to add nodes to. Should be initially empty.
+
+        node (Node): Node object.
+    """
+    if node.type != "leaf":
+        graph.add_edge(node, node.left_child)
+        build_networkx_graph(graph, node.left_child)
+
+        graph.add_edge(node, node.right_child)
+        build_networkx_graph(graph, node.right_child)
+
+
+####################################################################################################
+
+
+def draw_tree(
+    root : Node,
+    feature_labels : List[str] = None,
+    data_scaler : Callable = None,
+    cmap : Callable = None,
+    display_node_info : bool = True,
+    output_file : str = None,
+):
+    """
+    Wrapper function for drawing a Tree object with networkx.
+
+    Args:
+        root (Node): Root Node object for the tree.
+        
+        feature_labels (List[str], optional): List of feature labels used for display.
+            Each non-leaf Node object has a feature index attribute, and we use 
+            feature_labels[index] to print the label associated with the index. Defaults to None
+            which displays basic feature information. 
+
+        data_scaler (Callable): Sklearn data scaler, which will be used to convert
+            thresholds, conditions back to their unscaled versions (better interpretability).
+            This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
+            in which case values are left as is. 
+            
+        cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) gives the 
+            color for cluster i.
+
+        display_node_info (bool): Boolean for deciding whether to display 
+            additional node information (size, cost, etc.).
+        
+        output_file (str, optional): File to save the resulting image. Defaults to None.
+    """
+    G = nx.DiGraph()
+    build_networkx_graph(G, root)
+    node_colors = [
+        cmap(node.label) if (node.type == 'leaf' and cmap is not None)
+        else 'white' for node in G.nodes
+    ]
+    node_labels = {
+        node : node.condition.display(scaler = data_scaler, feature_labels = feature_labels)
+        if node.type == 'internal'
+        else "Cluster " + str(node.label)
+        for node in G.nodes
+    }
+    node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
+
+    fig,ax = plt.subplots(figsize = (12,12))
+    pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
+    nx.draw_networkx(
+        G,
+        pos,
+        labels=node_labels,
+        node_color = node_colors,
+        node_size = node_sizes,
+        edge_color="black",
+        edgecolors="black",
+        font_size=18,
+        linewidths = 2
+    )
+    if output_file is not None:
+        plt.savefig(output_file, bbox_inches = 'tight', dpi = 300)
 
 
 ####################################################################################################
