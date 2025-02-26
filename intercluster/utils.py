@@ -335,7 +335,7 @@ def labels_format(labels : NDArray) -> List[Set[int]]:
 ####################################################################################################
 
 
-def can_flatten(labels : List[Set[int]]) -> NDArray:
+def can_flatten(labels : List[Set[int]]) -> bool:
     """
     Determines if a 2d list of labels can be flattened so as to be
     exactly represented by a 1 dimensional array.

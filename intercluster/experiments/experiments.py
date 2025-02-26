@@ -161,7 +161,7 @@ class CoverageExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 for s in range(self.n_samples):
-                    self.result_dict[("rule-length", b.name, s)] = [-1]*n_steps
+                    self.result_dict[("rule-length", b.name, s)] = [b.max_rule_length]*n_steps
                     
                     self.result_dict[(fn.name, b.name, s)] = [
                         fn(self.data, bassign, bcenters)
@@ -203,23 +203,6 @@ class CoverageExperiment(Experiment):
             for mod in module_list:
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
                 
-                '''
-                # record maximum rule length:
-                self.result_dict[("rule-length", mod.name, sample_number)].append(
-                    mod.max_rule_length
-                )
-                
-                # record results from measurement functions:
-                for fn in self.measurement_fns:
-                    if fn.name == 'distance-ratio':
-                        self.result_dict[(fn.name, mod.name, sample_number)].append(
-                            fn(self.data, massign, mod.centers)
-                        )
-                    else:
-                        self.result_dict[(fn.name, mod.name, sample_number)].append(
-                            fn(self.data, massign, mcenters)
-                        )
-                '''
                 # record maximum rule length:
                 module_result_dict[("rule-length", mod.name)].append(
                     mod.max_rule_length
@@ -262,29 +245,10 @@ class CoverageExperiment(Experiment):
                 for mod_list in module_lists
         )
 
-        self.result_dict = {}
+        #self.result_dict = {}
         for i, module_result_dict in enumerate(module_results):
             for key,value in module_result_dict.items():
                 self.result_dict[key + (i,)] = value
-        '''
-        for s in range(self.n_samples):
-            if self.verbose:
-                print(f"Running for sample {s}.")
-
-
-            module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.run_modules)(lambd) for lambd in lambda_search_range
-            )
-                
-            self.run_modules(n_steps, step_size, s)
-            
-            # Reset the modules in between samples:
-            for m in self.module_list:
-                m.reset()
-            
-            if self.verbose:
-                print()
-        '''
             
         return pd.DataFrame(self.result_dict)
     
@@ -365,7 +329,7 @@ class RulesExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 for s in range(self.n_samples):
-                    self.result_dict[("rule-length", b.name, s)] = [-1]*n_steps
+                    self.result_dict[("rule-length", b.name, s)] = [b.max_rule_length]*n_steps
                     
                     self.result_dict[(fn.name, b.name, s)] = [
                         fn(self.data, bassign, bcenters)

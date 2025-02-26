@@ -8,7 +8,7 @@ from IPython.display import Image
 from typing import Callable, List, Dict
 from numpy.typing import NDArray
 from intercluster.rules import Node
-from intercluster.utils import flatten_labels, labels_to_assignment
+from intercluster.utils import can_flatten, flatten_labels, labels_to_assignment
 
 
 ####################################################################################################
@@ -322,7 +322,7 @@ def plot_decision_set(
     rule_labels : List[List[int]],
     feature_labels : List[str] = None,
     data_scaler : Callable = None,
-    cluster_colors : Dict[int, str] = None,
+    cmap : Callable = None,
     filename : str = None
 ):
     """
@@ -342,13 +342,13 @@ def plot_decision_set(
             This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
             in which case values are left as is. 
         
-        cluster_colors (Dict[int:str]): Dictionary specifying colors for leaf nodes. Defaults 
-            to None in which case no colors are displayed.
+        cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) gives the 
+            color for cluster i.
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
-    for l in rule_labels:
-        assert len(l) == 1, "Each rule must have exactly one label."
+    assert can_flatten(rule_labels), "Each rule must have exactly one label."
+    rule_label_array = flatten_labels(rule_labels)
 
     max_rule_length = np.max([len(r) for r in decision_set])
     size_factor = max_rule_length // 2
@@ -360,7 +360,7 @@ def plot_decision_set(
     #ax.set_aspect('equal')
     
     # Order rules by cluster labels
-    ordering = np.ndarray.flatten(np.argsort(rule_labels, axis = 0))
+    ordering = np.argsort(rule_label_array)
     for i, idx in enumerate(ordering):
         rule = decision_set[idx]
         rule_string = 'If '
@@ -382,10 +382,10 @@ def plot_decision_set(
             else:
                 rule_string += r" $\&$ "
                 
-        rule_string += 'Then cluster ' + str(list(rule_labels[idx])[0])
+        rule_string += 'Then cluster ' + str(rule_label_array[idx])
 
-        if cluster_colors is not None:
-            rule_color = cluster_colors[list(rule_labels[idx])[0]]
+        if cmap is not None:
+            rule_color = cmap(rule_label_array[idx])
             ax.scatter(
                 x = 0.25,
                 y = (len(decision_set) - i) * size_factor,
@@ -409,7 +409,6 @@ def plot_decision_set(
         
     if filename is not None:
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
-    #plt.show()
     
 
 ####################################################################################################

@@ -172,7 +172,8 @@ class LinearCondition(Condition):
             weights = scaled_weights
 
         condition_str = ""
-        escape = "\n" if (len(features) > 1 and newline) else " "
+        #escape = "\n" if (len(features) > 1 and newline) else " "
+        escape = "\n" if (newline) else " "
         for i,feat in enumerate(features):
             w = np.round(weights[i], 3)
             addit = r" $+$" if i < len(features) - 1 else ""

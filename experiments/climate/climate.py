@@ -64,14 +64,14 @@ forest_params_depth_2 = {
     'train_size' : 0.75
 }
 
-# Depth 5 Forest:
-forest_tree_params_depth_5 = {
-    'max_depth' : 5
+# Depth 4 Forest:
+forest_tree_params_depth_4 = {
+    'max_depth' : 4
 }
 
-forest_params_depth_5 = {
+forest_params_depth_4 = {
     'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params_depth_5,
+    'tree_params' : forest_tree_params_depth_4,
     'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
@@ -174,11 +174,11 @@ mod1 = DecisionSetMod(
 # 2) depth 5:
 mod2 = DecisionSetMod(
     decision_set_model = DecisionForest,
-    decision_set_params = forest_params_depth_5,
+    decision_set_params = forest_params_depth_4,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest-Depth-5'
+    name = 'Forest-Depth-4'
 )
 
 

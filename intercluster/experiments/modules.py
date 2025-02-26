@@ -74,6 +74,7 @@ class KMeansBase(Baseline):
             n_clusters=n_clusters
         )
         self.centers = None
+        self.max_rule_length = np.nan
         
     def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
         """
@@ -120,6 +121,7 @@ class IMMBase(Baseline):
         self.kmeans_model = kmeans_model
         self.centers = kmeans_model.cluster_centers_
         super().__init__(name)
+        self.max_rule_length = np.nan
         
     def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
         """
@@ -200,7 +202,7 @@ class ExkmcMod(Module):
         Resets experiments by returning parametrs to their default values.
         """
         self.n_rules = self.min_rules
-        self.max_rule_length = -1
+        self.max_rule_length = np.nan
         
     
     def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
