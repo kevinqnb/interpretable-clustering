@@ -2,7 +2,7 @@ import os
 import numpy as np
 from intercluster.rules import *
 from intercluster.pruning import *
-from intercluster import *
+from intercluster.utils import *
 from intercluster.experiments import *
 
 # Prevents memory leakage for KMeans:
