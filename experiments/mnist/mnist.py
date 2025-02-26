@@ -62,8 +62,9 @@ forest_params_depth_2 = {
     'num_trees' : n_trees,
     'max_features' : data.shape[1]//4,
     'max_labels' : 1,
+    'max_depths' : [1, 2],
     'feature_pairings' : [list(range(data.shape[1]))],
-    'train_size' : 0.75
+    'train_size' : 0.1
 }
 
 # Depth IMM Forest:
@@ -77,8 +78,9 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : data.shape[1]//4,
     'max_labels' : 1,
+    'max_depths' : list(range(1, imm_depth + 1)),
     'feature_pairings' : [list(range(data.shape[1]))],
-    'train_size' : 0.75
+    'train_size' : 0.1
 }
 
 # Oblique Forest:
@@ -107,7 +109,7 @@ forest_params_svm = {
     'max_features' : 2,
     'max_labels' : 1,
     'feature_pairings' : [list(range(data.shape[1]))],
-    'train_size' : 0.75
+    'train_size' : 0.1
 }
 
 
@@ -267,6 +269,6 @@ Ex1 = CoverageExperiment(
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/mnist/', '')
+Ex1.save_results('data/experiments/mnist/', '_train')
 
 ####################################################################################################

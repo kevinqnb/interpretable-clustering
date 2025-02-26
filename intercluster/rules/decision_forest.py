@@ -19,6 +19,7 @@ class DecisionForest(DecisionSet):
         max_features : int = None,
         max_labels : int = None,
         feature_pairings : List[List[int]] = None,
+        max_depths : List[int] = None,
         train_size : float = 1.0
     ):
         """
@@ -41,6 +42,11 @@ class DecisionForest(DecisionSet):
             feature_pairings (List[List[int]]): List of feature indices representing sets 
                 features which can be used together in a decision tree. 
 
+            depths (List[int]): Available maximum depths for each tree in the forest. 
+                During the random forest process, a maximum depth is selected randomly from this
+                list. 
+
+            train_size (float): Fraction of random data points to train each tree with. 
         """
         super().__init__()
         self.tree_model = tree_model
@@ -48,6 +54,7 @@ class DecisionForest(DecisionSet):
         self.num_trees = num_trees
         self.max_features = max_features
         self.max_labels = max_labels
+        self.max_depths = max_depths
         self.train_size = train_size
         
         for pairing in feature_pairings:
@@ -105,15 +112,18 @@ class DecisionForest(DecisionSet):
             replace = False
         )
             
-        '''
-        # Random depth
+        # Random maximum depth
+        rand_depth = None
+        if self.max_depths is not None:
+            rand_depth = np.random.choice(self.max_depths)
+
         rand_depth = np.random.randint(2, self.tree_params['max_depth'] + 1)
         tree = self.tree_model(
             **dict(self.tree_params, max_depth=rand_depth)
         )
-        '''
+        
             
-        return rand_samples, rand_features, rand_label_selects
+        return rand_samples, rand_features, rand_label_selects, rand_depth
     
     
     def _fit_tree(
@@ -133,7 +143,7 @@ class DecisionForest(DecisionSet):
             rules (List[List[(Node, str)]]): List decision tree paths where each item in the path is
                 a tuple of a node and the direction (left <= or right >) taken on it.
         """
-        rand_samples, rand_features, rand_label_selects = self._random_parameters(X, y)
+        rand_samples, rand_features, rand_label_selects, rand_depth = self._random_parameters(X, y)
         
         train_labels = None
         if rand_label_selects is not None:
@@ -148,9 +158,15 @@ class DecisionForest(DecisionSet):
             
         train_data = X[rand_samples, :]
         train_data = train_data[:, rand_features]
-            
+        
+        params = None
+        if rand_depth is not None:
+            params = dict(self.tree_params, max_depth=rand_depth)
+        else:
+            params = self.tree_params
+
         tree = self.tree_model(
-                **self.tree_params
+            **params
         )
         tree.fit(train_data, train_labels)
         
