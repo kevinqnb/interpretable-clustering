@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 1
+experiment_cpu_count = 20
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -251,7 +251,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 100
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -265,6 +265,6 @@ Ex1 = CoverageExperiment(
 )
 
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/fashion/', '_test')
+Ex1.save_results('data/experiments/fashion/', '')
 
 ####################################################################################################
