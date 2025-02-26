@@ -25,12 +25,15 @@ class DecisionSet:
             pruned_indices (np.ndarray): Indices for rules selected in the pruning process.
             
             pruned_status (bool): `True` if the pruning was successful and `False` otherwise. 
+
+            rule_length (int): Maximum rule length.
             
         """
         self.decision_set = None
         self.decision_set_labels = None
         self.pruned_indices = None
         self.prune_status = False
+        self.max_rule_length = 0
         
         
     def _fitting(
@@ -220,6 +223,44 @@ class DecisionSet:
                 else:
                     labels[j] = labels[j].union(pruned_decision_set_labels[i])
         return labels
+    
+
+    def get_pruned_rule_length(self):
+        """
+        Find the depth of the mod
+        """
+
+
+    def get_weighted_average_rule_length(self, X : NDArray) -> float:
+        """
+        Finds the weighted average length of the rules, which is adjusted by the number 
+        data points which fall into each rule. 
+
+        NOTE: If the decision set has been pruned this will automatically use the 
+            pruned decision set.
+
+        Args:
+            X : Input dataset to predict with. 
+
+        Returns:
+            wad (float): Weighted average depth.
+        """
+        data_to_rules_assignment = self.get_data_to_rules_assignment(X)
+        decision_set = self.decision_set
+
+        if self.prune_status:
+            data_to_rules_assignment = data_to_rules_assignment[:,self.pruned_indices]
+            decision_set = [self.decision_set[i] for i in self.pruned_indices]
+
+        wad = 0
+        total_covers = 0
+        for i, rule in enumerate(decision_set):
+            r_covers = np.where(data_to_rules_assignment[:,i])[0]
+            total_covers += len(r_covers)
+            if len(r_covers) != 0:
+                wad += len(r_covers) * (len(rule))
+            
+        return wad/total_covers
         
     
     

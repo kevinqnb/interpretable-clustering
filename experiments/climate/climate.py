@@ -45,6 +45,8 @@ imm_base = IMMBase(
     n_clusters = n_clusters,
     kmeans_model = kmeans_base.clustering
 )
+imm_assign, imm_centers = imm_base.assign(data)
+imm_depth = int(imm_base.weighted_average_rule_length)
 
 ####################################################################################################
 # Module Parameters:
@@ -65,13 +67,13 @@ forest_params_depth_2 = {
 }
 
 # Depth 4 Forest:
-forest_tree_params_depth_4 = {
-    'max_depth' : 4
+forest_tree_params_depth_imm = {
+    'max_depth' : imm_depth
 }
 
-forest_params_depth_4 = {
+forest_params_depth_imm = {
     'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params_depth_4,
+    'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
@@ -171,14 +173,14 @@ mod1 = DecisionSetMod(
 )
 
 
-# 2) depth 5:
+# 2) depth match:
 mod2 = DecisionSetMod(
     decision_set_model = DecisionForest,
-    decision_set_params = forest_params_depth_4,
+    decision_set_params = forest_params_depth_imm,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest-Depth-4'
+    name = 'Forest-Depth-IMM'
 )
 
 
@@ -213,7 +215,7 @@ mod5 = DecisionSetMod(
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Voronoi'
+    name = 'Voronoi-Set'
 )
 
 
@@ -251,7 +253,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = CoverageExperiment(
     data = data,
@@ -267,7 +269,7 @@ Ex1 = CoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '_bsearch')
+#Ex1.save_results('data/experiments/climate/', '_bsearch')
 end = time.time()
 print(end - start)
 

@@ -45,6 +45,8 @@ imm_base = IMMBase(
     n_clusters = n_clusters,
     kmeans_model = kmeans_base.clustering
 )
+imm_assign, imm_centers = imm_base.assign(data)
+imm_depth = int(imm_base.weighted_average_rule_length)
 
 ####################################################################################################
 # Module Parameters:
@@ -64,14 +66,14 @@ forest_params_depth_2 = {
     'train_size' : 0.75
 }
 
-# Depth 5 Forest:
-forest_tree_params_depth_4 = {
-    'max_depth' : 4
+# Depth IMM Forest:
+forest_tree_params_depth_imm = {
+    'max_depth' : imm_depth
 }
 
-forest_params_depth_4 = {
+forest_params_depth_imm = {
     'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params_depth_4,
+    'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
     'max_features' : data.shape[1]//4,
     'max_labels' : 1,
@@ -174,11 +176,11 @@ mod1 = DecisionSetMod(
 # 2) depth 5:
 mod2 = DecisionSetMod(
     decision_set_model = DecisionForest,
-    decision_set_params = forest_params_depth_4,
+    decision_set_params = forest_params_depth_imm,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest-Depth-4'
+    name = 'Forest-Depth-IMM'
 )
 
 
@@ -213,7 +215,7 @@ mod5 = DecisionSetMod(
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Voronoi'
+    name = 'Voronoi-Set'
 )
 
 
@@ -237,7 +239,7 @@ mod6 = DecisionSetMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod4, mod6]
+module_list = [mod1, mod2, mod4, mod5, mod6]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = False),

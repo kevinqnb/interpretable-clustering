@@ -314,4 +314,26 @@ class Tree():
         """
         leaves = collect_leaves(self.root)
         return leaves
+    
+    def get_weighted_average_depth(self, X : NDArray) -> float:
+        """
+        Finds the weighted average depth of the tree, which is adjusted by the number 
+        data points which fall into each leaf node. 
+
+        Args:
+            X : Input dataset to predict with. 
+
+        Returns:
+            wad (float): Weighted average depth.
+        """
+        wad = 0
+        total_covers = 0
+        decision_paths = get_decision_paths(self.root)
+        for path in decision_paths:
+             satisfies = satisfies_path(X, path)
+             total_covers += len(satisfies)
+             if len(satisfies) != 0:
+                wad += len(satisfies) * (len(path) - 1)
+
+        return wad/total_covers
             

@@ -475,3 +475,5 @@ class ExkmcTree(Tree):
             return labels
         else:
             return labels_format(self.exkmc_tree.predict(X).astype(int))
+
+

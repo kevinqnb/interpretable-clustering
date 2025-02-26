@@ -59,6 +59,7 @@ class Experiment:
         
         # Initializes the result dictionary
         self.result_dict = {}
+        '''
         for b in baseline_list:
             for fn in measurement_fns:
                 for s in range(n_samples):
@@ -66,9 +67,11 @@ class Experiment:
                 
         for m in self.module_list:
             for s in range(n_samples):
-                self.result_dict[("rule-length", m.name, s)] = []
+                self.result_dict[("max-rule-length", m.name, s)] = []
+                self.result_dict[("weighted-average-length", m.name, s)] = []
                 for fn in measurement_fns:
                     self.result_dict[(fn.name, m.name, s)] = []
+        '''
                 
 
     def run_baseline(self):
@@ -161,11 +164,19 @@ class CoverageExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 for s in range(self.n_samples):
-                    self.result_dict[("rule-length", b.name, s)] = [b.max_rule_length]*n_steps
+                    self.result_dict[("max-rule-length", b.name, s)] = [b.max_rule_length]*n_steps
+                    self.result_dict[("weighted-average-rule-length", b.name, s)] = [
+                        b.weighted_average_rule_length
+                    ]*n_steps
                     
-                    self.result_dict[(fn.name, b.name, s)] = [
-                        fn(self.data, bassign, bcenters)
-                    ] * n_steps
+                    if fn.name == 'distance-ratio':
+                        self.result_dict[(fn.name, b.name, s)] = [
+                            fn(self.data, bassign, b.original_centers)
+                        ] * n_steps
+                    else:
+                        self.result_dict[(fn.name, b.name, s)] = [
+                            fn(self.data, bassign, bcenters)
+                        ] * n_steps
                     
             
     def run_modules(
@@ -193,7 +204,8 @@ class CoverageExperiment(Experiment):
         """
         module_result_dict = {}
         for m in self.module_list:
-            module_result_dict[("rule-length", m.name)] = []
+            module_result_dict[("max-rule-length", m.name)] = []
+            module_result_dict[("weighted-average-rule-length", m.name)] = []
             for fn in self.measurement_fns:
                 module_result_dict[(fn.name, m.name)] = []
 
@@ -203,16 +215,19 @@ class CoverageExperiment(Experiment):
             for mod in module_list:
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
                 
-                # record maximum rule length:
-                module_result_dict[("rule-length", mod.name)].append(
+                # record rule lengths:
+                module_result_dict[("max-rule-length", mod.name)].append(
                     mod.max_rule_length
+                )
+                module_result_dict[("weighted-average-rule-length", mod.name)].append(
+                    mod.weighted_average_rule_length
                 )
                 
                 # record results from measurement functions:
                 for fn in self.measurement_fns:
                     if fn.name == 'distance-ratio':
                         module_result_dict[(fn.name, mod.name)].append(
-                            fn(self.data, massign, mod.centers)
+                            fn(self.data, massign, mod.original_centers)
                         )
                     else:
                         module_result_dict[(fn.name, mod.name)].append(
@@ -329,7 +344,7 @@ class RulesExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 for s in range(self.n_samples):
-                    self.result_dict[("rule-length", b.name, s)] = [b.max_rule_length]*n_steps
+                    self.result_dict[("max-rule-length", b.name, s)] = [b.max_rule_length]*n_steps
                     
                     self.result_dict[(fn.name, b.name, s)] = [
                         fn(self.data, bassign, bcenters)

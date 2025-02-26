@@ -1,8 +1,9 @@
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
-import pygraphviz
+#import pygraphviz
 import graphviz as gv
 from IPython.display import Image
 from typing import Callable, List, Dict
@@ -415,29 +416,63 @@ def plot_decision_set(
 
 
 def experiment_plotter(
-    mean_df,
-    std_df,
-    xlabel,
-    ylabel,
-    domain,
-    cmap,
-    legend = True,
-    filename = None,
-    baseline_list = None
+    measurement_df : pd.DataFrame,
+    std_df : pd.DataFrame,
+    domain_df : pd.DataFrame,
+    xlabel : str,
+    ylabel : str,
+    cmap : Callable,
+    baseline_list : List[str] = None,
+    legend : bool = True,
+    filename : str = None
 ):
+    """
+    Plots experiment results (for coverage/cost experiments).
+
+    Args:
+        measurement_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
+            corresponds to an experiment module, containing experimental measurements 
+            over t different trial settings. 
+        
+        std_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
+            corresponds to an experiment module, containing the standard deviation 
+            for experimental measurements over t different trial settings. In other words, 
+            this shows std for the measurement dataframe.
+
+        domain_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
+            corresponds to an experiment module, containing the domain values for each
+            of experimental measurements over t different trial settings. In other words, 
+            these are the x-axis values ofr the measurement dataframe.
+
+        xlabel (str): Label to plot on the x-axis.
+
+        ylabel (str): Label to plot on the y-axis.
+
+        cmap (Callable): cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) 
+            gives the color for cluster i.
+
+        baseline_list (List[str]): List of names for modules within the measurement/std/domain 
+            dataframes to treat like baselines for comparison. This usually means they have 
+            values which do not vary over the t trials and can be plotted as horizontal 
+            baselines.
+
+        legend (bool): If True, plot the legend. Defaults to False.
+
+        filename (str): If given, saves the plot. Defaults to None in which case nothing is saved.
+
+    """
     fig,ax = plt.subplots(figsize = (6,4))
     if baseline_list is None:
         baseline_list = ['KMeans']
     baseline_linestyles = ['-', 'dashed']
-    baselines = [_ for _ in mean_df.columns if _ in baseline_list]
-    modules = [_ for _ in mean_df.columns if _ not in baselines]
+    baselines = [_ for _ in measurement_df.columns if _ in baseline_list]
+    modules = [_ for _ in measurement_df.columns if _ not in baselines]
     
-    end = -1
     for i,b in enumerate(baselines):
         ax.hlines(
-            mean_df[b].iloc[0],
-            xmin = domain.min().min(),
-            xmax = domain.max().max(),
+            measurement_df[b].iloc[0],
+            xmin = domain_df.min().min(),
+            xmax = domain_df.max().max(),
             color = 'k',
             label = fr'$\texttt{{{b}}}$',
             linestyle = baseline_linestyles[i],
@@ -447,8 +482,8 @@ def experiment_plotter(
     
     for i,m in enumerate(modules):
         ax.plot(
-            np.array(domain[m]),
-            np.array(mean_df[m]),
+            np.array(domain_df[m]),
+            np.array(measurement_df[m]),
             linewidth = 3,
             marker='o',
             markersize = 5,
@@ -456,16 +491,12 @@ def experiment_plotter(
             label = fr'$\texttt{{{m}}}$'
         )
         ax.fill_between(
-            np.array(domain[m]), 
-            np.array(mean_df[m]) - np.array(std_df[m]),
-            np.array(mean_df[m]) + np.array(std_df[m]),
+            np.array(domain_df[m]), 
+            np.array(measurement_df[m]) - np.array(std_df[m]),
+            np.array(measurement_df[m]) + np.array(std_df[m]),
             color= cmap(i),
             alpha=0.1
         )
-
-    #ticks = domain[::2]
-    #labels = [str(i) for i in ticks] 
-    #plt.xticks(ticks, labels)
 
     if legend:
         plt.legend(loc = 'upper right', bbox_to_anchor=(2, 1))
@@ -474,7 +505,6 @@ def experiment_plotter(
     ax.set_ylabel(ylabel)
     if filename is not None:
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
-    #plt.show()
         
         
 ####################################################################################################

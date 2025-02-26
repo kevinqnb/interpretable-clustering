@@ -49,6 +49,9 @@ class VoronoiSet(DecisionSet):
         else:
             self.num_conditions = num_conditions
 
+        # always selecting the number of conditions given
+        self.max_rule_length = self.num_conditions
+
         self.num_features = 2
         
         for pairing in feature_pairings:

@@ -60,7 +60,6 @@ class DecisionForest(DecisionSet):
             
         self.feature_pairings = feature_pairings
         self.costs = {}
-        self.depth = 0
         
     
     def _random_parameters(
@@ -227,8 +226,8 @@ class DecisionForest(DecisionSet):
             new_rules = [[node.condition for node in rule[:-1]] for rule in new_rules]
             rules = rules + new_rules
             rule_labels = rule_labels + new_labels
-            if tree.depth > self.depth:
-                self.depth = tree.depth
+            if tree.depth > self.max_rule_length:
+                self.max_rule_length = tree.depth
                 
         return rules, rule_labels
     

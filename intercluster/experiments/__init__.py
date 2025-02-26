@@ -8,7 +8,6 @@ from .measurements import (
 from .modules import (
     KMeansBase,
     IMMBase,
-    ExkmcMod,
     DecisionSetMod,
 )
 
