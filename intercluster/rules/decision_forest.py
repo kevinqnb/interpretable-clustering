@@ -116,12 +116,6 @@ class DecisionForest(DecisionSet):
         rand_depth = None
         if self.max_depths is not None:
             rand_depth = np.random.choice(self.max_depths)
-
-        rand_depth = np.random.randint(2, self.tree_params['max_depth'] + 1)
-        tree = self.tree_model(
-            **dict(self.tree_params, max_depth=rand_depth)
-        )
-        
             
         return rand_samples, rand_features, rand_label_selects, rand_depth
     
