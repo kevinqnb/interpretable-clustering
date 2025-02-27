@@ -257,7 +257,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 100
 
 Ex1 = CoverageExperiment(
     data = data,
