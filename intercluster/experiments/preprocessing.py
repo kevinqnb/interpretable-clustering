@@ -95,6 +95,39 @@ def load_preprocessed_climate(filepath):
 ####################################################################################################
 
 
+def load_preprocessed_digits():
+    """
+    Loads a preprocessed sklearn digits dataset. Values are normalized to the range 
+    with standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data, data_labels = datasets.load_digits(return_X_y=True)
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(data)
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
 def load_preprocessed_mnist():
     """
     Loads a preprocessed MNIST digits dataset. Values are normalized to the range 

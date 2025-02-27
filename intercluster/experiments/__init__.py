@@ -20,6 +20,7 @@ from .experiments import (
 
 from .preprocessing import (
     load_preprocessed_climate,
+    load_preprocessed_digits,
     load_preprocessed_mnist,
     load_preprocessed_fashion,
     load_preprocessed_covtype,
