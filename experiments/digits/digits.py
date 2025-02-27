@@ -63,7 +63,7 @@ forest_params_depth_2 = {
     'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
-    'max_depths' : [1,2],
+    'max_depths' : [2],
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -79,7 +79,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
-    'max_depths' : list(range(1, imm_depth + 1)),
+    'max_depths' : [imm_depth],
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -95,7 +95,7 @@ oblique_forest_params = {
     'num_trees' : n_trees,
     'max_features' : 2,
     'max_labels' : 1,
-    'max_depths' : [1,2],
+    'max_depths' : [2],
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -127,7 +127,7 @@ forest_params_exkmc = {
     'tree_model' : ExkmcTree,
     'tree_params' : forest_tree_params_exkmc,
     'num_trees' : 1,
-    'max_features' : 24,
+    'max_features' : d,
     'max_labels' : k,
     'feature_pairings' : [list(range(d))],
     'train_size' : 1
@@ -257,7 +257,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = CoverageExperiment(
     data = data,
