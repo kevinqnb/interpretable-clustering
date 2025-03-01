@@ -244,6 +244,18 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "exkmc"
+version = "0.0.3"
+description = "Expanding Explainable K-Means Clustering"
+optional = false
+python-versions = ">=3.0"
+groups = ["main"]
+files = [
+    {file = "ExKMC-0.0.3-cp37-cp37m-win_amd64.whl", hash = "sha256:cb7b1b03a1dafcfa87e922fef41e594cf48413aac1b712c1e42265653f8bea30"},
+    {file = "ExKMC-0.0.3.tar.gz", hash = "sha256:97b1cd7bad2dff36b855b21943526592b2ff5f8ffd181d9f4da3f3bac3295c10"},
+]
+
+[[package]]
 name = "fonttools"
 version = "4.56.0"
 description = "Tools to manipulate font files"
@@ -340,23 +352,6 @@ shapely = ">=2.0.0"
 [package.extras]
 all = ["GeoAlchemy2", "SQLAlchemy (>=1.3)", "folium", "geopy", "mapclassify", "matplotlib (>=3.5.0)", "psycopg-binary (>=3.1.0)", "pyarrow (>=8.0.0)", "xyzservices"]
 dev = ["black", "codecov", "pre-commit", "pytest (>=3.1.0)", "pytest-cov", "pytest-xdist"]
-
-[[package]]
-name = "graphviz"
-version = "0.20.3"
-description = "Simple Python interface for Graphviz"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "graphviz-0.20.3-py3-none-any.whl", hash = "sha256:81f848f2904515d8cd359cc611faba817598d2feaac4027b266aa3eda7b3dde5"},
-    {file = "graphviz-0.20.3.zip", hash = "sha256:09d6bc81e6a9fa392e7ba52135a9d49f1ed62526f96499325930e87ca1b5925d"},
-]
-
-[package.extras]
-dev = ["flake8", "pep8-naming", "tox (>=3)", "twine", "wheel"]
-docs = ["sphinx (>=5,<7)", "sphinx-autodoc-typehints", "sphinx-rtd-theme"]
-test = ["coverage", "pytest (>=7,<8.1)", "pytest-cov", "pytest-mock (>=3)"]
 
 [[package]]
 name = "idna"
@@ -880,6 +875,17 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
+name = "pygraphviz"
+version = "1.11"
+description = "Python interface to Graphviz"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pygraphviz-1.11.zip", hash = "sha256:a97eb5ced266f45053ebb1f2c6c6d29091690503e3a5c14be7f908b37b06f2d4"},
+]
+
+[[package]]
 name = "pyogrio"
 version = "0.10.0"
 description = "Vectorized spatial vector file format I/O using GDAL/OGR"
@@ -1392,4 +1398,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9, <=3.10"
-content-hash = "071f3d4c3a7633c70c9c73cba94fb9da378ead0541b458d9179464b42f32ed49"
+content-hash = "dbe8b1694d9b1bb6b323f9e8dab805c82f1c68c8503bf8617ad108a7e34540d2"
