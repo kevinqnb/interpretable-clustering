@@ -5,7 +5,11 @@ as a package manager. If you do not have poetry installed,
 instructions and basic usage  may be found [here](https://python-poetry.org/docs/). 
 
 Once poetry is installed, clone the repository
-and run:`poetry install`
+and run:
+
+```
+poetry install
+```
 
 This creates a virtual environment 
 with all the required dependencies and may be 
@@ -16,15 +20,15 @@ you may either consider updating, or deleting the lock file and
 regenerating a new one with the `poetry lock` command.
 
 Additionally, you may want to 
- install and use the original [ExKMC library](https://github.com/navefr/ExKMC/tree/master).
+install and use the original [ExKMC library](https://github.com/navefr/ExKMC/tree/master).
 Add this to your virtual environment by running
- `poetry run pip install ExKMC==0.0.3`.
 
-For visualization of decision trees, this package uses graphviz, which must be 
-downloaded and installed separately. For linux users 
-this may be done with:
-`sudo apt install graphviz`
-Likewise for MacOS:
+```
+poetry run pip install ExKMC==0.0.3
+```
+
+For visualization of decision trees, this package uses pygraphviz (which also requires installing graphviz), which 
+can be tricky to install. For MacOS, the following seems somewhat robust.
 ```
 brew install graphviz
 python -m pip install \
@@ -33,8 +37,6 @@ python -m pip install \
     --global-option="-L$(brew --prefix graphviz)/lib/" \
     pygraphviz
 ```
-Windows users will need to download from the [source](https://graphviz.org/download/), taking care
-to ensure that the appropriate folders are added to the path.
 
 Reminders for myself:
 Plotting python with latex requires some minimal installation of latex. For linux 
@@ -48,6 +50,12 @@ On Mac OS a working installation can be built with:
 
 ```
 brew install --cask basictex
+```
+
+Then after restarting the terminal:
+
+```
+sudo tlmgr update --self
 sudo tlmgr install type1cm dvipng cm-super
 ```
 

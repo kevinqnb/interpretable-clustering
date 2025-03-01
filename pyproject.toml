@@ -19,8 +19,6 @@ setuptools = "75.1.0"
 pytest = "^8.3.3"
 mnist1d = "^0.0.2.post1"
 urllib3 = "<2"
-pygraphviz = "1.11"
-exkmc = "0.0.3"
 
 
 [build-system]

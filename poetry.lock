@@ -244,18 +244,6 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "exkmc"
-version = "0.0.3"
-description = "Expanding Explainable K-Means Clustering"
-optional = false
-python-versions = ">=3.0"
-groups = ["main"]
-files = [
-    {file = "ExKMC-0.0.3-cp37-cp37m-win_amd64.whl", hash = "sha256:cb7b1b03a1dafcfa87e922fef41e594cf48413aac1b712c1e42265653f8bea30"},
-    {file = "ExKMC-0.0.3.tar.gz", hash = "sha256:97b1cd7bad2dff36b855b21943526592b2ff5f8ffd181d9f4da3f3bac3295c10"},
-]
-
-[[package]]
 name = "fonttools"
 version = "4.56.0"
 description = "Tools to manipulate font files"
@@ -875,17 +863,6 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
-name = "pygraphviz"
-version = "1.11"
-description = "Python interface to Graphviz"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "pygraphviz-1.11.zip", hash = "sha256:a97eb5ced266f45053ebb1f2c6c6d29091690503e3a5c14be7f908b37b06f2d4"},
-]
-
-[[package]]
 name = "pyogrio"
 version = "0.10.0"
 description = "Vectorized spatial vector file format I/O using GDAL/OGR"
@@ -1398,4 +1375,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9, <=3.10"
-content-hash = "dbe8b1694d9b1bb6b323f9e8dab805c82f1c68c8503bf8617ad108a7e34540d2"
+content-hash = "d25782c3b1321c0a1eccfe309375ddcbdaa111fe1c55bf9bbcf3c312f8dadc36"
