@@ -47,7 +47,7 @@ imm_base = IMMBase(
     kmeans_model = kmeans_base.clustering
 )
 imm_assign, imm_centers = imm_base.assign(data)
-imm_depth = int(imm_base.weighted_average_rule_length)
+imm_depth = int(imm_base.max_rule_length)
 
 ####################################################################################################
 # Module Parameters:
@@ -79,7 +79,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : d,
     'max_labels' : 1,
-    'max_depths' : [imm_depth],
+    'max_depths' : list(range(2, imm_depth)),
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -198,7 +198,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/digits/', '')
+Ex1.save_results('data/experiments/digits/', '_depths')
 end = time.time()
 print(end - start)
 
