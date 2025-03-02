@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from sklearn.svm import LinearSVC
 from sklearn.feature_selection import RFE
 from numpy.typing import NDArray
@@ -203,8 +204,26 @@ class SVMSet(DecisionSet):
             assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
                 if point i is covered by rule j and False otherwise.
         """
+        n = X.shape[0]
+        n_rules = len(self.decision_set)
+
+        rows = []
+        cols = []
+        values = []
+        for j, rule in enumerate(self.decision_set):
+            data_indices_satisfied = satisfies_conditions(X, rule)
+            for i in data_indices_satisfied:
+                rows.append(i)
+                cols.append(j)
+                values.append(True)
+        
+        assignment = coo_matrix((values, (rows, cols)), shape=(n, n_rules), dtype = bool)
+        assignment = assignment.tocsc()
+        return assignment
+        '''
         assignment = np.zeros((X.shape[0], len(self.decision_set)))
         for i, rule in enumerate(self.decision_set):
             data_points_satisfied = satisfies_conditions(X, rule)
             assignment[data_points_satisfied, i] = True
         return assignment
+        '''

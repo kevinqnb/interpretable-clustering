@@ -529,7 +529,8 @@ def assignment_to_dict(
     """        
     assignment_dict = {l: np.array([]) for l in range(assignment_matrix.shape[1])}
     for i in range(assignment_matrix.shape[1]):
-        assignment_dict[i] = set(np.where(assignment_matrix[:,i])[0])  
+        #assignment_dict[i] = set(np.where(assignment_matrix[:,i])[0])
+        assignment_dict[i] = set(assignment_matrix[:,i].nonzero()[0]) 
     return assignment_dict
 
 

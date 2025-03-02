@@ -85,7 +85,7 @@ forest_params_depth_imm = {
 
 # SVM set:
 svm_params = {
-    'num_rules' : n_rules,
+    'num_rules' : n_sets,
     'num_features' : 2,
     'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75

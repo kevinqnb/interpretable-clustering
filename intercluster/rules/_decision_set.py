@@ -106,7 +106,8 @@ class DecisionSet:
         
         labels = [set() for _ in range(len(X))]
         for i in range(len(self.decision_set)):
-            r_covers = np.where(data_to_rules_assignment[:,i])[0]
+            #r_covers = np.where(data_to_rules_assignment[:,i])[0]
+            r_covers = data_to_rules_assignment[:,i].nonzero()[0]
             for j in r_covers:
                 if rule_labels:
                     labels[j].add(i)
@@ -216,7 +217,8 @@ class DecisionSet:
         
         labels = [set() for _ in range(len(X))]
         for i in range(len(pruned_decision_set)):
-            r_covers = np.where(pruned_data_to_rules_assignment[:,i])[0]
+            #r_covers = np.where(pruned_data_to_rules_assignment[:,i])[0]
+            r_covers = pruned_data_to_rules_assignment[:,i].nonzero()[0]
             for j in r_covers:
                 if rule_labels:
                     labels[j].add(i)
@@ -255,7 +257,8 @@ class DecisionSet:
         wad = 0
         total_covers = 0
         for i, rule in enumerate(decision_set):
-            r_covers = np.where(data_to_rules_assignment[:,i])[0]
+            #r_covers = np.where(data_to_rules_assignment[:,i])[0]
+            r_covers = data_to_rules_assignment[:,i].nonzero()[0]
             total_covers += len(r_covers)
             if len(r_covers) != 0:
                 wad += len(r_covers) * (len(rule))

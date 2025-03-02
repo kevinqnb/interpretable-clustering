@@ -179,7 +179,8 @@ def prune_with_grid_search(
     if len(selected) != 0:
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
-        pruned_data_to_cluster_assignment = np.dot(A, B)
+        #pruned_data_to_cluster_assignment = np.dot(A, B)
+        pruned_data_to_cluster_assignment = A @ B
         objective(pruned_data_to_cluster_assignment)
 
 
@@ -199,7 +200,8 @@ def prune_with_grid_search(
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
-        pruned_data_to_cluster_assignment = np.dot(A, B)
+        #pruned_data_to_cluster_assignment = np.dot(A, B)
+        pruned_data_to_cluster_assignment = A @ B
         
         cover = coverage(pruned_data_to_cluster_assignment)
         if cover < frac_cover:
@@ -307,7 +309,8 @@ def prune_with_binary_search(
         
         A = data_to_rules_assignment[:, selected]
         B = rule_to_cluster_assignment[selected, :]
-        pruned_data_to_cluster_assignment = np.dot(A, B)
+        #pruned_data_to_cluster_assignment = np.dot(A, B)
+        pruned_data_to_cluster_assignment = A @ B
         
         obj = objective(pruned_data_to_cluster_assignment)
         cover = coverage(pruned_data_to_cluster_assignment)
