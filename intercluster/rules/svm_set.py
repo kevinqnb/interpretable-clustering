@@ -204,6 +204,7 @@ class SVMSet(DecisionSet):
             assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
                 if point i is covered by rule j and False otherwise.
         """
+        '''
         n = X.shape[0]
         n_rules = len(self.decision_set)
 
@@ -226,4 +227,4 @@ class SVMSet(DecisionSet):
             data_points_satisfied = satisfies_conditions(X, rule)
             assignment[data_points_satisfied, i] = True
         return assignment
-        '''
+        
