@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from intercluster.rules import *
 from intercluster.pruning import *
-from intercluster.utils import labels_format, labels_to_assignment, update_centers
+from intercluster.utils import labels_format, labels_to_assignment, update_centers, outlier_mask
 
 
 ####################################################################################################
@@ -166,6 +166,103 @@ class IMMBase(Baseline):
             self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X)
 
         return self.assignment, self.centers
+
+
+####################################################################################################
+
+
+class IMMMod(Module):
+    """
+    IMM clustering module, which allows for training upon a dataset with outliers removed 
+    (i.e. varies coverage).
+    
+    Args:
+        n_clusters (int): Number of clusters.
+        
+        kmeans_model (Any): Pretrained SKLearn KMeans model.
+        
+        min_frac_cover (float): Minimum fraction of data points to cover.
+        
+        name (str, optional): Name of the baseline method. Defaults to 'KMeans'.
+    """
+    def __init__(
+        self,
+        n_clusters : int,
+        kmeans_model : Any,
+        min_frac_cover : float,
+        name : str = 'IMM'
+    ):
+        self.n_clusters = n_clusters
+        self.kmeans_model = kmeans_model
+        self.min_frac_cover = min_frac_cover
+        self.original_centers = kmeans_model.cluster_centers_
+        super().__init__(name)
+        self.reset()
+    
+    def reset(self):
+        """
+        Resets experiments by returning parametrs to their default values.
+        """
+        self.frac_cover = self.min_frac_cover
+        self.max_rule_length = np.nan
+        self.weighted_average_rule_length = np.nan
+
+    def step_coverage(
+        self,
+        X : NDArray,
+        y : NDArray,
+        step_size : float = 0.05
+    ) -> Tuple[NDArray, NDArray]:
+        """
+        Increases the number of rules by one and fits the model.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels.
+        
+        Returns:
+            assignment (np.ndarray): Cluster assignment boolean array of size n x k
+                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
+            
+            centers (np.ndarray): Size k x d array of cluster centers.
+        """
+        n, d = X.shape 
+
+        if self.frac_cover > 1:
+            raise ValueError("Stepped beyond 100 percent coverage.")
+        
+        # remove outliers:
+        frac_remove = 1 - self.frac_cover
+        outliers = outlier_mask(X, centers = self.original_centers, frac_remove=frac_remove)
+        non_outliers_idx = np.where(~outliers)[0]
+
+        X_ = X[~outliers]
+        exkmc_tree = ExkmcTree(
+                k=self.n_clusters,
+                kmeans=self.kmeans_model,
+                max_leaf_nodes=self.n_clusters,
+                imm=True
+        )
+        exkmc_tree.fit(X_)
+        exkmc_labels = exkmc_tree.predict(X_, leaf_labels = False)
+        # Remove outliers from assignment completely (they should not play a role in cost.)
+        exkmc_full_labels = [{} for _ in range(n)]
+        for i,idx in enumerate(non_outliers_idx):
+            exkmc_full_labels[idx] = exkmc_labels[i]
+        
+        assignment = labels_to_assignment(exkmc_full_labels, n_labels = self.n_clusters)
+        updated_centers = update_centers(
+            X = X,
+            current_centers = self.original_centers,
+            assignment = assignment
+        )
+
+        self.max_rule_length = exkmc_tree.depth
+        # NOTE: Full dataset is used in computation of weighted depth
+        self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X)
+        self.frac_cover = np.round(self.frac_cover + step_size, 5)
+        return assignment, updated_centers
     
     
 ####################################################################################################
@@ -184,8 +281,6 @@ class DecisionSetMod(Module):
         
         prune_params (dict[str, Any]): Parameters for the rule pruning method. If None, 
             no pruning will be done. 
-        
-        min_rules (int): Minimum number of rules.
         
         min_frac_cover (float): Minimum fraction of data points to cover.
         
@@ -208,7 +303,6 @@ class DecisionSetMod(Module):
         decision_set_params : Dict[str, Any],
         clustering : Baseline,
         prune_params : Dict[str, Any],
-        min_rules : int = None,
         min_frac_cover : int = None,
         name = 'Decision-Set'
     ):
@@ -216,7 +310,6 @@ class DecisionSetMod(Module):
         self.decision_set_params = decision_set_params
         self.clustering = clustering
         self.prune_params = prune_params
-        self.min_rules = min_rules
         self.min_frac_cover = min_frac_cover
         self.original_centers = self.clustering.centers
         super().__init__(name)
@@ -229,66 +322,9 @@ class DecisionSetMod(Module):
         Resets experiments by returning parametrs to their default values.
         """
         self.model = None
-        self.n_rules = self.min_rules
         self.frac_cover = self.min_frac_cover
         self.max_rule_length = np.nan
-    
-    
-    def step_num_rules(
-        self,
-        X : NDArray,
-        y : NDArray,
-        step_size : int = 1
-    )-> Tuple[NDArray, NDArray]:
-        """
-        Increases the number of rules by one and fits the model.
-        
-        Args:
-            X (np.ndarray): Data matrix.
-            
-            y (np.ndarray, optional): Data labels.
-        
-        Returns:
-            assignment (np.ndarray): Cluster assignment boolean array of size n x k
-                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
-            
-            centers (np.ndarray): Size k x d array of cluster centers.
-        """
-        if self.model is None:
-            self.model = self.decision_set_model(
-                **self.decision_set_params
-            )
-            self.model.fit(X,  y)
-            
-            if hasattr(self.model, "max_rule_length"):
-                self.max_rule_length = self.model.max_rule_length
-            elif hasattr(self.model, "depth"):
-                self.max_rule_length = self.model.depth
-            elif hasattr(self.model, "num_conditions"):
-                self.max_rule_length = self.model.num_conditions
-            else:
-                raise ValueError("Decision set model has no rule length parameter.")
-
-        if self.prune_params is not None:
-            self.model.prune(n_rules = self.n_rules, **self.prune_params)
-            assignment = labels_to_assignment(
-                self.model.pruned_predict(X, rule_labels = False),
-                n_labels = self.clustering.n_clusters
-            )
-        else:
-            assignment = labels_to_assignment(
-                self.model.predict(X, rule_labels = False),
-                n_labels = self.clustering.n_clusters
-            )
-
-        updated_centers = update_centers(
-            X = X,
-            current_centers = self.original_centers,
-            assignment = assignment
-        )
-        
-        self.n_rules += step_size
-        return assignment, updated_centers
+        self.weighted_average_rule_length = np.nan
     
     
     def step_coverage(
@@ -352,92 +388,3 @@ class DecisionSetMod(Module):
     
     
 ####################################################################################################
-
-
-'''
-####################################################################################################
-
-    
-class ExkmcMod(Module):
-    """
-    Experiment module for the ExKMC clustering method. For more information on 
-    ExKMC please see the ExKMC package:
-    (https://github.com/navefr/ExKMC)
-    
-    NOTE: ExKMC does not allow depth control, so this module only allows for 
-    variability in the number of rules used... that is until I get my own version of ExKMC working.
-    
-    Args:
-        n_clusters (int): Number of clusters.
-        
-        base_tree (str): Determines if the first n_clusters number of nodes in the tree 
-            are initialized with IMM or not. Options are 'IMM' or 'NONE', default is 'IMM'.
-        
-        kmeans_model (Any): Pretrained SKLearn KMeans model.
-        
-        min_rules (int): Minimum number of rules.
-        
-        name (str, optional): Name of the module. Defaults to 'ExKMC'.
-        
-    Attributes:
-        n_rules (int): Current number of rules. Defaults to min rules before running any experiment.
-        
-        max_rule_length (int): Current maximum rule length (equivalent to tree depth). 
-            Defaults to -1 before running any experiment.
-    """
-    def __init__(
-        self,
-        n_clusters : int,
-        kmeans_model : Any,
-        base_tree : str,
-        min_rules : int,
-        name : str = 'ExKMC'
-    ):
-        super().__init__(name = name)
-        self.n_clusters = n_clusters
-        self.kmeans_model = kmeans_model
-        self.base_tree = base_tree
-        self.min_rules = min_rules
-        self.centers = kmeans_model.cluster_centers_
-        self.reset()
-        
-        
-    def reset(self):
-        """
-        Resets experiments by returning parametrs to their default values.
-        """
-        self.n_rules = self.min_rules
-        self.max_rule_length = np.nan
-        
-    
-    def step_num_rules(self, X : NDArray, y : NDArray = None) -> Tuple[NDArray, NDArray]:
-        """
-        Increases the number of rules by one and re-fits the model.
-        
-        Args:
-            X (np.ndarray): Data matrix.
-            
-            y (np.ndarray, optional): Data labels. Defaults to None.
-            
-        Returns:
-            assignment (np.ndarray): Cluster assignment boolean array of size n x k
-                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
-            
-            centers (np.ndarray): Size k x d array of cluster centers. 
-        """
-        tree = ExTree(self.n_clusters, max_leaves = self.n_rules, base_tree = self.base_tree)
-        labels = tree.fit_predict(X, kmeans=self.kmeans_model)
-        assignment = labels_to_assignment(labels, n_labels = self.n_clusters)
-        #centers = tree.all_centers
-        updated_centers = update_centers(
-            X = X,
-            current_centers = self.centers,
-            assignment = assignment
-        )
-        self.n_rules += 1
-        self.max_rule_length = tree._max_depth()
-        return assignment, updated_centers   
-    
-
-####################################################################################################
-'''

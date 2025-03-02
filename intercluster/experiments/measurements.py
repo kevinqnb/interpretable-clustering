@@ -1,6 +1,13 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.utils import divide_with_zeros, kmeans_cost, overlap, coverage, center_dists
+from intercluster.utils import (
+    divide_with_zeros,
+    kmeans_cost,
+    overlap,
+    coverage,
+    center_dists,
+    silhouette_score
+)
 
 class MeasurementFunction:
     def __init__(self, name):
@@ -35,8 +42,9 @@ class ClusteringCost(MeasurementFunction):
             overlapping clusters and uncovered points. Defaults to False.
     """
     def __init__(self, average : bool = False, normalize : bool = False):
-        name = 'point-average-clustering-cost' if average else 'clustering-cost'
-        name = 'normalized-clustering-cost' if normalize else name
+        #name = 'point-average-clustering-cost' if average else 'clustering-cost'
+        #name = 'normalized-clustering-cost' if normalize else name
+        name = 'normalized-clustering-cost' if normalize else 'clustering-cost'
         super().__init__(name)
         self.average = average
         self.normalize = normalize
@@ -176,4 +184,31 @@ class DistanceRatio(MeasurementFunction):
         overlap_uncover_points_mean = np.mean(out2)
 
         return all_points_mean / overlap_uncover_points_mean
+    
+
+class Silhouette(MeasurementFunction):
+    """
+    Computes the silhouette score of a clustering.
+    """
+    def __init__(self):
+        super().__init__('silhouette')
+        
+    def __call__(
+        self,
+        X : NDArray,
+        assignment : NDArray,
+        centers : NDArray
+    ) -> int:
+        """
+        X (np.ndarray): (n x d) Dataset
+        
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. 
+            
+        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+        """
+        if (assignment is None) or (centers is None):
+            return np.nan
+        
+        return silhouette_score(X, assignment)
         

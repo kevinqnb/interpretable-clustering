@@ -33,6 +33,10 @@ from .voronoi_set import (
     VoronoiSet
 )
 
+from .svm_set import (
+    SVMSet
+)
+
 from .utils import (
     traverse,
     collect_nodes,

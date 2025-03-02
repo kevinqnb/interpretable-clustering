@@ -19,7 +19,11 @@ setuptools = "75.1.0"
 pytest = "^8.3.3"
 mnist1d = "^0.0.2.post1"
 urllib3 = "<2"
+networkx = "3.2.1"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]

@@ -4,11 +4,13 @@ from .utils import (
     divide_with_zeros,
     entropy,
     overlap,
+    covered_mask,
     coverage,
     center_dists,
     kmeans_cost,
     update_centers,
     distance_ratio,
+    outlier_mask,
     labels_format,
     can_flatten,
     flatten_labels,
@@ -16,6 +18,8 @@ from .utils import (
     labels_to_assignment,
     assignment_to_labels,
     assignment_to_dict,
+    point_silhouette,
+    silhouette_score,
 )
 
 

@@ -1,9 +1,16 @@
 import numpy as np
+import math
 import heapq
 from ExKMC.Tree import Tree as ExTree
 from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.utils import labels_format, can_flatten, flatten_labels
+from intercluster.utils import (
+    labels_format,
+    can_flatten,
+    flatten_labels,
+    center_dists,
+    distance_ratio
+)
 from .splitters import ImmSplitter, DummySplitter
 from ._conditions import Condition, LinearCondition
 from ._node import Node
@@ -279,6 +286,8 @@ class ExkmcTree(Tree):
     paper titled 'ExKMC: Expanding Explainable k-Means Clustering.'
     The following processes a tree created by their implementation, 
     which may be found at: https://github.com/navefr/ExKMC.
+
+    Importantly, this wrapper also gives the ability to train the ExKMC tree with outliers removed. 
     """
     
     def __init__(
@@ -300,7 +309,6 @@ class ExkmcTree(Tree):
             imm (bool, optional): If True, the base of the tree is built with the IMM algorithm.
                 Defaults to True.
                 
-                
         Attributes:
             root (Node): Root node of the tree.
             
@@ -315,6 +323,7 @@ class ExkmcTree(Tree):
         self.k = k
         self.kmeans = kmeans
         self.imm = imm
+
         splitter = DummySplitter()
         super().__init__(
             splitter = splitter,
@@ -359,6 +368,7 @@ class ExkmcTree(Tree):
             max_leaves = self.max_leaf_nodes,
             base_tree = base_tree
         )
+
         self.exkmc_tree.fit(X, self.kmeans)
         
         self.root = Node()

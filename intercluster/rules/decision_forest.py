@@ -42,7 +42,7 @@ class DecisionForest(DecisionSet):
             feature_pairings (List[List[int]]): List of feature indices representing sets 
                 features which can be used together in a decision tree. 
 
-            depths (List[int]): Available maximum depths for each tree in the forest. 
+            max_depths (List[int]): Available maximum depths for each tree in the forest. 
                 During the random forest process, a maximum depth is selected randomly from this
                 list. 
 
@@ -55,6 +55,9 @@ class DecisionForest(DecisionSet):
         self.max_features = max_features
         self.max_labels = max_labels
         self.max_depths = max_depths
+
+        assert train_size <= 1, "Fractional training size must be <= 1."
+        assert train_size >= 0, "Fractional training size must be >= 0."
         self.train_size = train_size
         
         for pairing in feature_pairings:

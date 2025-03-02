@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from intercluster.utils import *
 
@@ -383,3 +384,60 @@ def test_assignment_to_dict():
 
 
 ####################################################################################################
+
+
+def test_silhouette():
+    X = np.array([
+        [1,1,0,0],
+        [1,1,0,0],
+        [0,0,1,1],
+        [0,0,1,1]
+    ])
+
+    assignment1 = np.array([
+            [1,0],
+            [1,0],
+            [0,1],
+            [0,1]
+    ])
+
+    assignment2 = np.array([
+        [1,0],
+        [0,1],
+        [0,1],
+        [0,1]
+    ])
+
+    assignment3 = np.array([
+        [1,0],
+        [1,1],
+        [0,1],
+        [0,1]
+    ])
+
+    assert point_silhouette(X, assignment1, 0, 0) == 1
+    assert point_silhouette(X, assignment1, 1, 0) == 1
+    assert point_silhouette(X, assignment1, 2, 1) == 1
+    assert point_silhouette(X, assignment1, 3, 1) == 1
+
+    with pytest.raises(
+        AssertionError,
+        match="Point at given index is not within given cluster index."
+    ):
+        point_silhouette(X, assignment1, 0, 1)
+
+    with pytest.raises(
+        AssertionError,
+        match="Point at given index is not within given cluster index."
+    ):
+        point_silhouette(X, assignment1, 2, 0)
+
+    assert point_silhouette(X, assignment2, 0, 0) == 0
+    assert point_silhouette(X, assignment2, 1, 1) == -1
+
+    assert point_silhouette(X, assignment3, 0, 0) == 1
+    assert point_silhouette(X, assignment3, 1, 0) == 1
+
+
+
+

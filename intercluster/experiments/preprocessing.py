@@ -147,9 +147,12 @@ def load_preprocessed_mnist():
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-    defaults = get_dataset_args()
-    dataset = make_dataset(defaults)
-    data, data_labels, transformations = dataset['x'], dataset['y'], dataset['t']
+    data, data_labels = datasets.fetch_openml(
+        name = 'mnist_784',
+        return_X_y=True,
+        as_frame=False
+    )
+    data_labels = data_labels.astype(int)
 
     scaler = StandardScaler()
 

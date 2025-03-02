@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 #import pygraphviz
-import graphviz as gv
+#import graphviz as gv
 from IPython.display import Image
 from typing import Callable, List, Dict
 from numpy.typing import NDArray

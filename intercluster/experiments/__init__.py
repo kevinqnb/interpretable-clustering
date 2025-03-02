@@ -3,18 +3,23 @@ from .measurements import (
     Overlap,
     Coverage,
     DistanceRatio,
+    Silhouette,
 )
 
 from .modules import (
+    Baseline,
+    Module,
     KMeansBase,
     IMMBase,
+    IMMMod,
     DecisionSetMod,
 )
 
 from .experiments import (
     CoverageExperiment,
-    RulesExperiment,
-    RulesExperimentV2,
+    CoverageComparisonExperiment,
+    #RulesExperiment,
+    #RulesExperimentV2,
 )
 
 

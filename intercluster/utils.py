@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import copy
 from collections.abc import Iterable
 from typing import List, Dict, Set, Callable
@@ -96,6 +97,24 @@ def entropy(x : NDArray) -> float:
 ####################################################################################################
 
 
+def covered_mask(assignment : np.ndarray) -> NDArray:
+    """
+    Finds a boolean array describing data coverage.
+    
+    Args:
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to class j and False (0) otherwise. 
+        
+    Returns:
+        coverage (np.ndarray): Size n array with index i being true if point i
+            is covered by at least one cluster, and false otherwise.
+    """
+    return np.sum(assignment, axis = 1) > 0
+
+
+####################################################################################################
+
+
 def coverage(assignment : np.ndarray) -> float:
     """
     Computes the coverage of a point assignment. 
@@ -108,7 +127,8 @@ def coverage(assignment : np.ndarray) -> float:
         coverage (float): Fraction of points covered by at least one cluster.
     """
     n,k = assignment.shape
-    coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
+    #coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
+    coverage = np.sum(covered_mask(assignment)) / n
     return coverage
 
 
@@ -183,6 +203,46 @@ def center_dists(X : NDArray, centers : NDArray, norm : int = 2, square : bool =
 ####################################################################################################
 
 
+def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray) -> NDArray:
+    """
+    Given a dataset and a current assignment to cluster centers, update the centers by finding 
+    the mean of the points assigned to each original center.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        current_centers (np.ndarray): Current set of cluster centers represented as a (k x d) array.
+        
+        assignment (np.ndarray): Boolean assignment matrix of size (n x k). Entry (i,j) is 
+            `True` if point i is assigned to cluster j and `False` otherwise.
+            
+    Returns:
+        updated_centers (np.ndarray): Size (k x d) array of updated centers.
+    """
+    n,d = X.shape
+    k,d_ = current_centers.shape
+    n_,k_ = assignment.shape
+    
+    assert d == d_, f"Dimensionality of data {d} and cluster centers {d_} do not match."
+    assert n == n_, f"Shape of data {n} does not match shape of shape of assignment {n_}."
+    assert k == k_, f"Shape of current centers {k} doesn't match shape of shape of assignment {k_}."
+
+    updated_centers = np.zeros((k,d))
+    for i in range(k):
+        assigned = np.where(assignment[:,i])[0]
+        if len(assigned) > 0:
+            new_center = np.mean(X[assigned,:], axis = 0)
+        else:
+            new_center = current_centers[i,:]
+            
+        updated_centers[i,:] = new_center
+        
+    return updated_centers
+
+
+####################################################################################################
+
+
 def kmeans_cost(
     X : NDArray,
     centers : NDArray,
@@ -252,46 +312,6 @@ def kmeans_cost(
 ####################################################################################################
 
 
-def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray) -> NDArray:
-    """
-    Given a dataset and a current assignment to cluster centers, update the centers by finding 
-    the mean of the points assigned to each original center.
-    
-    Args:
-        X (np.ndarray): Input (n x d) dataset.
-        
-        current_centers (np.ndarray): Current set of cluster centers represented as a (k x d) array.
-        
-        assignment (np.ndarray): Boolean assignment matrix of size (n x k). Entry (i,j) is 
-            `True` if point i is assigned to cluster j and `False` otherwise.
-            
-    Returns:
-        updated_centers (np.ndarray): Size (k x d) array of updated centers.
-    """
-    n,d = X.shape
-    k,d_ = current_centers.shape
-    n_,k_ = assignment.shape
-    
-    assert d == d_, f"Dimensionality of data {d} and cluster centers {d_} do not match."
-    assert n == n_, f"Shape of data {n} does not match shape of shape of assignment {n_}."
-    assert k == k_, f"Shape of current centers {k} doesn't match shape of shape of assignment {k_}."
-
-    updated_centers = np.zeros((k,d))
-    for i in range(k):
-        assigned = np.where(assignment[:,i])[0]
-        if len(assigned) > 0:
-            new_center = np.mean(X[assigned,:], axis = 0)
-        else:
-            new_center = current_centers[i,:]
-            
-        updated_centers[i,:] = new_center
-        
-    return updated_centers
-
-
-####################################################################################################
-
-
 def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
     """
     For each data point, computes the ratio of the distance to its second closest cluster center
@@ -316,6 +336,36 @@ def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
     )
     return divide_with_zeros(second_closest_dists, closest_dists)
 
+
+####################################################################################################
+
+
+def outlier_mask(X, centers, frac_remove) -> NDArray:
+    """
+    Finds outliers to remove. Specifically, we take the convention that outliers are 
+    points for which the following ratio is small. 
+
+        (distance to second closest center / distance to closest center)
+
+    Args:
+        X (np.ndarray): Input (n x d) dataset. 
+
+        centers (np.ndarray): Input (k x d) array of cluster centers. 
+
+    Returns:
+        outliers_mask (np.ndarray): Array of boolean values in which a True value indicates that 
+            the point is an outlier and False indicates otherwise.
+    """
+    assert frac_remove <= 1, "Fractional size must be <= 1."
+    assert frac_remove >= 0, "Fractional size must be >= 0."
+    n,d = X.shape
+    out_mask = np.zeros(n, dtype = bool)
+    if frac_remove > 0:
+        dratios = distance_ratio(X, centers)
+        n_removes = math.ceil(n * frac_remove)
+        outliers = np.argsort(dratios)[:n_removes]
+        out_mask[outliers] = True
+    return out_mask
 
 
 ####################################################################################################
@@ -481,6 +531,101 @@ def assignment_to_dict(
     for i in range(assignment_matrix.shape[1]):
         assignment_dict[i] = set(np.where(assignment_matrix[:,i])[0])  
     return assignment_dict
+
+
+####################################################################################################
+
+
+def point_silhouette(X : NDArray, assignment : NDArray, idx : int, cluster_idx : int) -> float:
+    """
+    Computes the silhouette score of a single point.
+
+    Args:
+        X (np.ndarray): Input dataset. 
+
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to cluster j and False otherwise.
+
+        idx (int): Index of point to compute the score for.
+
+        cluster_idx (int): Index for the cluster which the point at idx belongs to
+            and should be evaluated with.
+
+    Returns:
+        silhouette (float): Silhouette score.
+    """
+    n,d = X.shape
+    n2, k = assignment.shape
+
+    assert k > 1, "Must have at least 2 clusters."
+
+    if n != n2:
+        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n2}.")
+    
+    Xi = X[idx, :]
+    Ci = np.where(assignment[:,cluster_idx])[0]
+
+    assert idx in Ci, "Point at given index is not within given cluster index."
+
+    X_Ci = X[Ci, :]
+
+    # Singleton cluster:
+    if len(X_Ci) == 1:
+        return 0
+
+    intercluster_distance = (
+        np.sum(np.linalg.norm(Xi - X_Ci, axis = 1, ord = 2)) / (len(Ci) - 1)
+    )
+
+    intracluster_distance = np.inf
+    for j in range(k):
+        if j != cluster_idx:
+            Cj = np.where(assignment[:,j])[0]
+
+            if len(Cj) > 0:
+                X_Cj = X[Cj, :]
+                intra_dist = (
+                    np.sum(np.linalg.norm(Xi - X_Cj, axis = 1, ord = 2)) / len(Cj)
+                )
+                if intra_dist < intracluster_distance:
+                    intracluster_distance = intra_dist
+
+    score = (
+        (intracluster_distance - intercluster_distance) / 
+        np.max([intracluster_distance, intercluster_distance])
+    )
+
+    return score
+
+
+####################################################################################################
+
+
+def silhouette_score(X : NDArray, assignment : NDArray) -> float:
+    """
+    Computes the silhouette score as the mean of scores for the entire dataset.
+
+    Args:
+        X (np.ndarray): Input dataset. 
+
+        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to cluster j and False otherwise.
+
+    Returns:
+        silhouette (float): Silhouette score.
+    """
+    n,d = X.shape
+    scores = []
+    for idx in range(n):
+        i_clusters = np.where(assignment[idx,:])[0]
+        # Only compute for covered points!
+        if len(i_clusters) > 0:
+            cluster_total = 0
+            for cluster_idx in i_clusters:
+                cluster_total += point_silhouette(X, assignment, idx, cluster_idx)
+            scores.append(cluster_total / len(i_clusters))
+
+    return np.mean(scores)
 
 
 ####################################################################################################
