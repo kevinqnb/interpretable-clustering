@@ -6,7 +6,7 @@ import networkx as nx
 #import pygraphviz
 #import graphviz as gv
 from IPython.display import Image
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Tuple
 from numpy.typing import NDArray
 from intercluster.rules import Node
 from intercluster.utils import can_flatten, flatten_labels, labels_to_assignment
@@ -424,6 +424,8 @@ def experiment_plotter(
     cmap : Callable,
     baseline_list : List[str] = None,
     legend : bool = True,
+    xlim : Tuple[float, float] = None,
+    ylim : Tuple[float, float] = None,
     filename : str = None
 ):
     """
@@ -457,6 +459,10 @@ def experiment_plotter(
             baselines.
 
         legend (bool): If True, plot the legend. Defaults to False.
+
+        xlim (Tuple[float, float]): Tuple of (low, high) x limit values.
+
+        ylim (Tuple[float, float]): Tuple of (low, high) y limit values.
 
         filename (str): If given, saves the plot. Defaults to None in which case nothing is saved.
 
@@ -500,6 +506,12 @@ def experiment_plotter(
 
     if legend:
         plt.legend(loc = 'upper right', bbox_to_anchor=(2, 1))
+
+    if xlim is not None:
+        plt.xlim(xlim)
+    
+    if ylim is not None:
+        plt.ylim(ylim)
         
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
