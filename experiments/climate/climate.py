@@ -144,7 +144,7 @@ mod2 = DecisionSetMod(
 
 # 3) SVM decision set
 mod3 = DecisionSetMod(
-    decision_set_model = DecisionForest,
+    decision_set_model = SVMSet,
     decision_set_params = svm_params,
     clustering = kmeans_base,
     prune_params = prune_params,
