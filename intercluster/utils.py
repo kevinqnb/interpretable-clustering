@@ -362,7 +362,7 @@ def outlier_mask(X, centers, frac_remove) -> NDArray:
     out_mask = np.zeros(n, dtype = bool)
     if frac_remove > 0:
         dratios = distance_ratio(X, centers)
-        n_removes = math.ceil(n * frac_remove)
+        n_removes = int(n * frac_remove)
         outliers = np.argsort(dratios)[:n_removes]
         out_mask[outliers] = True
     return out_mask

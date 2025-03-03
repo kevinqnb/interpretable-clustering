@@ -79,7 +79,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : d,
     'max_labels' : 1,
-    'max_depths' : list(range(2, imm_depth)),
+    'max_depths' : list(range(1, imm_depth + 1)),
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }

@@ -46,7 +46,7 @@ imm_base = IMMBase(
     kmeans_model = kmeans_base.clustering
 )
 imm_assign, imm_centers = imm_base.assign(data)
-imm_depth = int(imm_base.weighted_average_rule_length)
+imm_depth = int(imm_base.max_rule_length)
 
 ####################################################################################################
 # Module Parameters:
@@ -78,7 +78,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : 6,
     'max_labels' : 1,
-    'max_depths' : [imm_depth],
+    'max_depths' : list(range(1, imm_depth + 1)),
     'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
