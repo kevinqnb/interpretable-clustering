@@ -1,12 +1,8 @@
 import os
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-import geopandas as gpd
-from ExKMC.Tree import Tree as ExTree
 from intercluster.rules import *
 from intercluster.pruning import *
-from intercluster import *
+from intercluster.utils import *
 from intercluster.experiments import *
 
 # Prevents memory leakage for KMeans:
@@ -14,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 8
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -26,10 +22,20 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_newsgroups()
+data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+
+import math
+size = math.ceil(0.1 * len(data))
+random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
+data = data[random_samples, :]
+data_labels = data_labels[random_samples]
+
+n,d = data.shape
+
+
 
 # Parameters:
-k = 20
+k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -49,6 +55,8 @@ imm_base = IMMBase(
     n_clusters = n_clusters,
     kmeans_model = kmeans_base.clustering
 )
+imm_assign, imm_centers = imm_base.assign(data)
+imm_depth = int(imm_base.max_rule_length)
 
 ####################################################################################################
 # Module Parameters:
@@ -62,84 +70,36 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : data.shape[1]//4,
+    'max_features' : d,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(data.shape[1]))],
+    'max_depths' : [2],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
-# Depth 5 Forest:
-forest_tree_params_depth_5 = {
-    'max_depth' : 5
+# Depth IMM Forest:
+forest_tree_params_depth_imm = {
+    'max_depth' : imm_depth
 }
 
-forest_params_depth_5 = {
+forest_params_depth_imm = {
     'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params_depth_5,
+    'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : data.shape[1]//4,
+    'max_features' : d,
     'max_labels' : 1,
-    'feature_pairings' : [list(range(data.shape[1]))],
+    'max_depths' : list(range(1, imm_depth + 1)),
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
-# Oblique Forest:
-oblique_forest_tree_params = {
-    'max_depth' : 2
-}
-
-oblique_forest_params = {
-    'tree_model' : ObliqueTree,
-    'tree_params' : oblique_forest_tree_params,
-    'num_trees' : n_trees,
-    'max_features' : 2,
-    'max_labels' : 1,
-    'feature_pairings' : [list(range(data.shape[1]))],
+# SVM set:
+svm_params = {
+    'num_rules' : n_sets,
+    'num_features' : 2,
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
-
-
-# SVM Forest:
-forest_tree_params_svm = {}
-
-forest_params_svm = {
-    'tree_model' : SVMTree,
-    'tree_params' : forest_tree_params_svm,
-    'num_trees' : n_trees,
-    'max_features' : 2,
-    'max_labels' : 1,
-    'feature_pairings' : [list(range(data.shape[1]))],
-    'train_size' : 0.75
-}
-
-
-# ExKMC Forest:
-forest_tree_params_exkmc = {
-    'k' : k,
-    'kmeans' : kmeans_base.clustering,
-    'max_leaf_nodes' : 2*k,
-    'imm' : True
-}
-
-forest_params_exkmc = {
-    'tree_model' : ExkmcTree,
-    'tree_params' : forest_tree_params_exkmc,
-    'num_trees' : 1,
-    'max_features' : data.shape[1],
-    'max_labels' : k,
-    'feature_pairings' : [list(range(data.shape[1]))],
-    'train_size' : 1
-}
-
-
-# Voronoi Decision Set:
-voronoi_params = {
-    'centers' : C,
-    'num_sets' : n_sets,
-    'num_conditions' : k-1,
-    'feature_pairings' : [list(range(data.shape[1]))]
-}
-
 
 prune_objective = KmeansObjective(
     X = data,
@@ -154,7 +114,8 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,100,101),
+    'lambda_search_range' : np.linspace(0,5,101),
+    'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
 
@@ -174,14 +135,14 @@ mod1 = DecisionSetMod(
 )
 
 
-# 2) depth 5:
+# 2) depth match:
 mod2 = DecisionSetMod(
     decision_set_model = DecisionForest,
-    decision_set_params = forest_params_depth_5,
+    decision_set_params = forest_params_depth_imm,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest-Depth-5'
+    name = 'Forest-Depth-IMM'
 )
 
 
@@ -189,49 +150,25 @@ mod2 = DecisionSetMod(
 
 # Oblique rule sets:
 
-# 3) Forest with simple oblique trees depth 2:
+# 3) SVM decision set
 mod3 = DecisionSetMod(
-    decision_set_model = DecisionForest,
-    decision_set_params = oblique_forest_params,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'Oblique-Forest'
-)
-
-# 4) SVM decision set
-mod4 = DecisionSetMod(
-    decision_set_model = DecisionForest,
-    decision_set_params = forest_params_svm,
+    decision_set_model = SVMSet,
+    decision_set_params = svm_params,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
     name = 'SVM'
 )
 
-# 5) Voronoi decision set
-mod5 = DecisionSetMod(
-    decision_set_model = VoronoiSet,
-    decision_set_params = voronoi_params,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'Voronoi'
-)
-
 
 ####################################################################################################
 
-# Forests with ExKMC Trees:
-
-# 6) ExKMC Tree:
-mod6 = DecisionSetMod(
-    decision_set_model = DecisionForest,
-    decision_set_params = forest_params_exkmc,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'ExKMC-Forest'
+# IMM with outliers removed:
+mod4 = IMMMod(
+    n_clusters=k,
+    kmeans_model=kmeans_base.clustering,
+    min_frac_cover=min_frac_cover,
+    name = "IMM-outliers"
 )
 
 
@@ -240,23 +177,23 @@ mod6 = DecisionSetMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod3, mod4, mod5, mod6]
+module_list = [mod1, mod2, mod4]
 
 measurement_fns = [
-    ClusteringCost(average = True, normalize = False),
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(),
     DistanceRatio(),
+    Silhouette(),
 ]
 
 
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 16
+n_samples = 100
 
-Ex1 = CoverageExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -264,11 +201,14 @@ Ex1 = CoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
-    verbose = True
+    verbose = False
 )
 
+import time 
+start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/newsgroups/', '')
+Ex1.save_results('data/experiments/mnist/relative_coverage/', '')
+end = time.time()
+print(end - start)
 
 ####################################################################################################
-

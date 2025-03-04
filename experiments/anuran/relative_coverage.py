@@ -22,10 +22,11 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+n,d = data.shape
 
 # Parameters:
-k = 6
+k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -60,10 +61,10 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : [2],
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -76,10 +77,10 @@ forest_params_depth_imm = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, imm_depth + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -87,7 +88,7 @@ forest_params_depth_imm = {
 svm_params = {
     'num_rules' : n_sets,
     'num_features' : 2,
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -104,7 +105,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,5,101),
     'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
@@ -181,9 +182,9 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1000
 
-Ex1 = CoverageComparisonExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -197,7 +198,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/climate/', '')
+Ex1.save_results('data/experiments/anuran/relative_coverage/', '')
 end = time.time()
 print(end - start)
 

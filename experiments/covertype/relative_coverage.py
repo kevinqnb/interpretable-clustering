@@ -22,7 +22,7 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+data, data_labels, feature_labels, scaler = load_preprocessed_covtype()
 
 import math
 size = math.ceil(0.1 * len(data))
@@ -32,10 +32,8 @@ data_labels = data_labels[random_samples]
 
 n,d = data.shape
 
-
-
 # Parameters:
-k = 10
+k = 7
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -88,7 +86,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : d,
     'max_labels' : 1,
-    'max_depths' : list(range(1, imm_depth + 1)),
+    'max_depths' : list(range(1,imm_depth + 1)),
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -114,7 +112,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,5,101),
     'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
@@ -193,7 +191,7 @@ measurement_fns = [
 
 n_samples = 100
 
-Ex1 = CoverageComparisonExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -207,7 +205,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/mnist/', '_sample')
+Ex1.save_results('data/experiments/covertype/relative_coverage/', '_sample')
 end = time.time()
 print(end - start)
 

@@ -17,7 +17,7 @@ from .modules import (
 
 from .experiments import (
     CoverageExperiment,
-    CoverageComparisonExperiment,
+    RelativeCoverageExperiment,
     #RulesExperiment,
     #RulesExperimentV2,
 )

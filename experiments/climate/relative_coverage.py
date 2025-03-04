@@ -22,18 +22,10 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
-
-import math
-size = math.ceil(0.1 * len(data))
-random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
-data = data[random_samples, :]
-data_labels = data_labels[random_samples]
-
-n,d = data.shape
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 
 # Parameters:
-k = 10
+k = 6
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
@@ -68,10 +60,10 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : d,
+    'max_features' : 6,
     'max_labels' : 1,
-    'max_depths' : [2],
-    'feature_pairings' : [list(range(d))],
+    'max_depths' : [1,2],
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
 
@@ -84,10 +76,10 @@ forest_params_depth_imm = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : d,
+    'max_features' : 6,
     'max_labels' : 1,
     'max_depths' : list(range(1, imm_depth + 1)),
-    'feature_pairings' : [list(range(d))],
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
 
@@ -95,7 +87,7 @@ forest_params_depth_imm = {
 svm_params = {
     'num_rules' : n_sets,
     'num_features' : 2,
-    'feature_pairings' : [list(range(d))],
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
 
@@ -112,7 +104,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,5,101),
     'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
@@ -175,7 +167,7 @@ mod4 = IMMMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod4]
+module_list = [mod1, mod2, mod3, mod4]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = True),
@@ -191,7 +183,7 @@ measurement_fns = [
 
 n_samples = 100
 
-Ex1 = CoverageComparisonExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -205,7 +197,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/fashion/', '_sample')
+Ex1.save_results('data/experiments/climate/relative_coverage/', '')
 end = time.time()
 print(end - start)
 

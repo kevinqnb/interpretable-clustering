@@ -271,14 +271,14 @@ class CoverageExperiment(Experiment):
 ####################################################################################################
 
 
-class CoverageComparisonExperiment(Experiment):
+class RelativeCoverageExperiment(Experiment):
     """
     Perfroms an experiment on an input dataset which measures clustering cost as
     coverage requirements are increased. Every step forward in this experiment should call 
     a .step_coverage() method of its modules, which increases the number of rules used by 1.
 
     This differs from the previous experiment since baselines are evaluated relative to the 
-        set of points that a given module covers. This happens for each module in the module list.
+    set of points that a given module covers. This happens for each module in the module list.
 
     Args:
         data (np.ndarray): Input dataset.
@@ -487,7 +487,7 @@ class CoverageComparisonExperiment(Experiment):
             
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
-        fname = os.path.join(path, 'coverage_comparison_exp' + str(identifier) + '.csv')
+        fname = os.path.join(path, 'exp' + str(identifier) + '.csv')
         cost_df = pd.DataFrame(self.result_dict)
         cost_df.to_csv(fname)
         

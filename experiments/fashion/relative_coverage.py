@@ -22,7 +22,14 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
+
+import math
+size = math.ceil(0.1 * len(data))
+random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
+data = data[random_samples, :]
+data_labels = data_labels[random_samples]
+
 n,d = data.shape
 
 # Parameters:
@@ -105,7 +112,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,5,101),
     'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
@@ -168,7 +175,7 @@ mod4 = IMMMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod3, mod4]
+module_list = [mod1, mod2, mod4]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = True),
@@ -184,7 +191,7 @@ measurement_fns = [
 
 n_samples = 100
 
-Ex1 = CoverageComparisonExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -198,7 +205,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/anuran/', '_depths')
+Ex1.save_results('data/experiments/fashion/relative_coverage/', '')
 end = time.time()
 print(end - start)
 
