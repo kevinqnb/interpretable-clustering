@@ -116,7 +116,7 @@ def load_preprocessed_digits():
     """
     data, data_labels = datasets.load_digits(return_X_y=True)
 
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
 
     scaled_data = scaler.fit_transform(data)
 
@@ -154,7 +154,7 @@ def load_preprocessed_mnist():
     )
     data_labels = data_labels.astype(int)
 
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
 
     scaled_data = scaler.fit_transform(data)
 
@@ -191,7 +191,7 @@ def load_preprocessed_fashion():
     )
     data_labels = data_labels.astype(int)
 
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
 
     scaled_data = scaler.fit_transform(data)
 
