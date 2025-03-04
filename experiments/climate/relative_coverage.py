@@ -181,7 +181,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1000
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
