@@ -3,7 +3,7 @@ from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from sklearn.svm import LinearSVC
 from sklearn.feature_selection import RFE
 from numpy.typing import NDArray
-from typing import List, Any, Tuple, Set
+from typing import List, Any, Tuple, Set, Dict
 from intercluster.utils import unique_labels, can_flatten, flatten_labels, mode
 from ._conditions import Condition, LinearCondition
 from ._decision_set import DecisionSet
@@ -21,7 +21,9 @@ class SVMSet(DecisionSet):
         num_rules : int,
         num_features : int = 2,
         feature_pairings : List[List[int]] = None,
-        train_size : float = 1.0
+        train_size : float = 1.0,
+        svc_params : Dict[str, Any] = {},
+        step_size : int = 1
     ):
         """
         Args:
@@ -34,6 +36,13 @@ class SVMSet(DecisionSet):
                 features which may be used together within a decision boundary. 
 
             train_size (float): Fraction of random data points to train each model with. 
+
+            svc_params (Dict[str, any]): Dictionary of parameters for instantiating a 
+                sklearn linear SVC classifier. Structured as {parameter_name : parameter value}.
+                Defaults to an empty dictionary in which case default parameters are used.
+
+            step_size (int): Number of features to eliminate in each round of recursive feature 
+                elimination process.
         """
         super().__init__()
         self.num_rules = num_rules
@@ -55,6 +64,10 @@ class SVMSet(DecisionSet):
         assert train_size <= 1, "Fractional training size must be <= 1."
         assert train_size >= 0, "Fractional training size must be >= 0."
         self.train_size = train_size
+
+        self.svc_params = svc_params
+        assert step_size > 0, "Step size must be a positive integer"
+        self.step_size = step_size
         
         
     def _random_parameters(
@@ -128,8 +141,8 @@ class SVMSet(DecisionSet):
         X_ = X[rand_samples, :]
         X_ = X_[:, rand_features]
 
-        svm = LinearSVC()
-        selector = RFE(svm, n_features_to_select=self.num_features, step=1)
+        svm = LinearSVC(**self.svc_params)
+        selector = RFE(svm, n_features_to_select=self.num_features, step=self.step_size)
         selector = selector.fit(X_, y_)
         selected_features = selector.support_
 

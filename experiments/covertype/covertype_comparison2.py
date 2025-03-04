@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 12
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -22,25 +22,23 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+data, data_labels, feature_labels, scaler = load_preprocessed_covtype()
 
 import math
-size = math.ceil(0.1 * len(data))
+size = math.ceil(0.25 * len(data))
 random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
 data = data[random_samples, :]
 data_labels = data_labels[random_samples]
 
 n,d = data.shape
 
-
-
 # Parameters:
-k = 10
+k = 7
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
 n_trees = 1000
-n_sets = 1000
+n_sets = 500
 
 ####################################################################################################
 # Baselines:
@@ -88,7 +86,7 @@ forest_params_depth_imm = {
     'num_trees' : n_trees,
     'max_features' : d,
     'max_labels' : 1,
-    'max_depths' : list(range(1, imm_depth + 1)),
+    'max_depths' : list(range(1,imm_depth + 1)),
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -98,7 +96,8 @@ svm_params = {
     'num_rules' : n_sets,
     'num_features' : 2,
     'feature_pairings' : [list(range(d))],
-    'train_size' : 0.75
+    'train_size' : 0.75,
+    'step_size' : 10
 }
 
 prune_objective = KmeansObjective(
@@ -191,7 +190,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = CoverageComparisonExperiment(
     data = data,
@@ -207,7 +206,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/mnist/', '_sample')
+Ex1.save_results('data/experiments/covertype/', '_test')
 end = time.time()
 print(end - start)
 
