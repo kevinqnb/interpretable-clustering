@@ -296,9 +296,11 @@ def draw_tree(
         else "Cluster " + str(node.label)
         for node in G.nodes
     }
-    node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
+    node_labels = {node : "" for node in G.nodes}
+    #node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
+    node_sizes = [100 if node.type == "internal" else 100 for node in G.nodes]
 
-    fig,ax = plt.subplots(figsize = (12,12))
+    fig,ax = plt.subplots(figsize = (4,6))
     pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
     nx.draw_networkx(
         G,
@@ -311,6 +313,7 @@ def draw_tree(
         font_size=18,
         linewidths = 2
     )
+    plt.axis('off')
     if output_file is not None:
         plt.savefig(output_file, bbox_inches = 'tight', dpi = 300)
 

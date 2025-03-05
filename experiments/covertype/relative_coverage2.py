@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 1
+experiment_cpu_count = 24
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -38,7 +38,7 @@ n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
 n_trees = 1000
-n_sets = 500
+n_sets = 1000
 
 ####################################################################################################
 # Baselines:
@@ -70,7 +70,7 @@ forest_params_depth_2 = {
     'num_trees' : n_trees,
     'max_features' : d,
     'max_labels' : 1,
-    'max_depths' : [2],
+    'max_depths' : [1,2],
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -113,7 +113,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,10,101),
+    'lambda_search_range' : np.linspace(0,5,101),
     'full_search' : False,
     'cpu_count' : prune_cpu_count
 }
@@ -176,7 +176,7 @@ mod4 = IMMMod(
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod4]
+module_list = [mod1, mod2, mod3, mod4]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = True),
@@ -190,9 +190,9 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 100
 
-Ex1 = CoverageComparisonExperiment(
+Ex1 = RelativeCoverageExperiment(
     data = data,
     baseline_list = baseline_list,
     module_list = module_list,
@@ -206,7 +206,7 @@ Ex1 = CoverageComparisonExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/covertype/', '_test')
+Ex1.save_results('data/experiments/covertype/relative_coverage/', '_full')
 end = time.time()
 print(end - start)
 
