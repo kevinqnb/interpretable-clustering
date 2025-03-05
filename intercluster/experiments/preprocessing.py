@@ -223,6 +223,9 @@ def load_preprocessed_covtype():
     """
     data, data_labels = datasets.fetch_covtype(return_X_y=True)
 
+    # Only taking non-categorical features.
+    data = data[:,:10]
+
     scaler = StandardScaler()
 
     scaled_data = scaler.fit_transform(data)
