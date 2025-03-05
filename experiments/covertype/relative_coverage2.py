@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 24
+experiment_cpu_count = 4
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -37,8 +37,8 @@ k = 7
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 1000
-n_sets = 1000
+n_trees = 500
+n_sets = 500
 
 ####################################################################################################
 # Baselines:
@@ -190,7 +190,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
@@ -206,7 +206,7 @@ Ex1 = RelativeCoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/covertype/relative_coverage/', '_full')
+Ex1.save_results('data/experiments/covertype/relative_coverage/', '_small')
 end = time.time()
 print(end - start)
 
