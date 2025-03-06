@@ -340,7 +340,11 @@ def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
 ####################################################################################################
 
 
-def outlier_mask(X, centers, frac_remove) -> NDArray:
+def outlier_mask(
+        X : NDArray,
+        centers : NDArray,
+        frac_remove : float
+    ) -> NDArray:
     """
     Finds outliers to remove. Specifically, we take the convention that outliers are 
     points for which the following ratio is small. 

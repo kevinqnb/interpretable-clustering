@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 24
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -25,7 +25,7 @@ np.random.seed(seed)
 data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
 
 import math
-size = math.ceil(0.25 * len(data))
+size = math.ceil(0.1 * len(data))
 random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
 data = data[random_samples, :]
 data_labels = data_labels[random_samples]
@@ -37,8 +37,8 @@ k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 500
-n_sets = 500
+n_trees = 1000
+n_sets = 1000
 
 ####################################################################################################
 # Baselines:
@@ -68,12 +68,45 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : d,
+    'max_features' : 6,
     'max_labels' : 1,
-    'max_depths' : [1,2],
-    'feature_pairings' : [list(range(d))],
+    'max_depths' : list(range(1, 2 + 1)),
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
+
+# Depth 2 Forest:
+forest_tree_params_depth_4 = {
+    'max_depth' : 4
+}
+
+forest_params_depth_4 = {
+    'tree_model' : SklearnTree,
+    'tree_params' : forest_tree_params_depth_4,
+    'num_trees' : n_trees,
+    'max_features' : 6,
+    'max_labels' : 1,
+    'max_depths' : list(range(1, 4 + 1)),
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'train_size' : 0.75
+}
+
+# Depth 6 Forest:
+forest_tree_params_depth_6 = {
+    'max_depth' : 6
+}
+
+forest_params_depth_6 = {
+    'tree_model' : SklearnTree,
+    'tree_params' : forest_tree_params_depth_6,
+    'num_trees' : n_trees,
+    'max_features' : 6,
+    'max_labels' : 1,
+    'max_depths' : list(range(1, 6 + 1)),
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'train_size' : 0.75
+}
+
 
 # Depth IMM Forest:
 forest_tree_params_depth_imm = {
@@ -84,21 +117,13 @@ forest_params_depth_imm = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : d,
+    'max_features' : 6,
     'max_labels' : 1,
     'max_depths' : list(range(1, imm_depth + 1)),
-    'feature_pairings' : [list(range(d))],
+    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'train_size' : 0.75
 }
 
-# SVM set:
-svm_params = {
-    'num_rules' : n_sets,
-    'num_features' : 2,
-    'feature_pairings' : [list(range(d))],
-    'train_size' : 0.75,
-    'step_size' : 100
-}
 
 prune_objective = KmeansObjective(
     X = data,
@@ -133,9 +158,30 @@ mod1 = DecisionSetMod(
     name = 'Forest'
 )
 
-
-# 2) depth match:
+# 2) depth 4:
 mod2 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_4,
+    clustering = kmeans_base,
+    prune_params = prune_params,
+    min_frac_cover = min_frac_cover,
+    name = 'Forest'
+)
+
+
+# 3) depth 6:
+mod3 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_6,
+    clustering = kmeans_base,
+    prune_params = prune_params,
+    min_frac_cover = min_frac_cover,
+    name = 'Forest'
+)
+
+
+# 4) depth match:
+mod4 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_depth_imm,
     clustering = kmeans_base,
@@ -147,36 +193,20 @@ mod2 = DecisionSetMod(
 
 ####################################################################################################
 
-# Oblique rule sets:
-
-# 3) SVM decision set
-mod3 = DecisionSetMod(
-    decision_set_model = SVMSet,
-    decision_set_params = svm_params,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'SVM'
-)
-
-
-####################################################################################################
-
 # IMM with outliers removed:
-mod4 = IMMMod(
+mod5 = IMMMod(
     n_clusters=k,
     kmeans_model=kmeans_base.clustering,
     min_frac_cover=min_frac_cover,
     name = "IMM-outliers"
 )
 
-
 ####################################################################################################
 
 # List of Modules and Measurements:
 
 baseline_list = [kmeans_base, imm_base]
-module_list = [mod1, mod2, mod3, mod4]
+module_list = [mod1, mod2, mod3, mod4, mod5]
 
 measurement_fns = [
     ClusteringCost(average = True, normalize = True),
@@ -190,7 +220,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
@@ -206,7 +236,7 @@ Ex1 = RelativeCoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/mnist/relative_coverage/', '')
+Ex1.save_results('data/experiments/mnist/relative_coverage/', '_updated')
 end = time.time()
 print(end - start)
 
