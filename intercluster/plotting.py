@@ -296,11 +296,11 @@ def draw_tree(
         else "Cluster " + str(node.label)
         for node in G.nodes
     }
-    node_labels = {node : "" for node in G.nodes}
-    #node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
-    node_sizes = [100 if node.type == "internal" else 100 for node in G.nodes]
+    #node_labels = {node : "" for node in G.nodes}
+    node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
+    #node_sizes = [100 if node.type == "internal" else 100 for node in G.nodes]
 
-    fig,ax = plt.subplots(figsize = (4,6))
+    fig,ax = plt.subplots(figsize = (12,12))
     pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
     nx.draw_networkx(
         G,
@@ -355,7 +355,7 @@ def plot_decision_set(
     rule_label_array = flatten_labels(rule_labels)
 
     max_rule_length = np.max([len(r) for r in decision_set])
-    size_factor = max_rule_length // 2
+    size_factor = max(1, max_rule_length // 2)
 
     fig,ax = plt.subplots(figsize = (4, len(decision_set) * size_factor), dpi = 300)
     ax.set_xlim(0, 5)
@@ -429,6 +429,8 @@ def experiment_plotter(
     legend : bool = True,
     xlim : Tuple[float, float] = None,
     ylim : Tuple[float, float] = None,
+    xaxis : bool = True,
+    yaxis : bool = True,
     filename : str = None
 ):
     """
@@ -504,7 +506,7 @@ def experiment_plotter(
             np.array(measurement_df[m]) - np.array(std_df[m]),
             np.array(measurement_df[m]) + np.array(std_df[m]),
             color= cmap(i),
-            alpha=0.1
+            alpha=0.3
         )
 
     if legend:
@@ -515,6 +517,11 @@ def experiment_plotter(
     
     if ylim is not None:
         plt.ylim(ylim)
+
+    if not xaxis:
+        plt.xticks([])
+    if not yaxis:
+        plt.yticks([])
         
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
