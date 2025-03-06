@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 4
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -25,7 +25,7 @@ np.random.seed(seed)
 data, data_labels, feature_labels, scaler = load_preprocessed_covtype()
 
 import math
-size = math.ceil(0.25 * len(data))
+size = math.ceil(0.1 * len(data))
 random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
 data = data[random_samples, :]
 data_labels = data_labels[random_samples]
