@@ -61,10 +61,10 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 2 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -77,10 +77,10 @@ forest_params_depth_4 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_4,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 4 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -93,10 +93,10 @@ forest_params_depth_6 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_6,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 6 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -110,10 +110,10 @@ forest_params_depth_imm = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, imm_depth + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
