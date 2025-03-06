@@ -148,7 +148,7 @@ mod1 = DecisionSetMod(
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest'
+    name = 'Forest-Depth-2'
 )
 
 # 2) depth 4:
@@ -158,7 +158,7 @@ mod2 = DecisionSetMod(
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest'
+    name = 'Forest-Depth-4'
 )
 
 
@@ -169,7 +169,7 @@ mod3 = DecisionSetMod(
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
-    name = 'Forest'
+    name = 'Forest-Depth-6'
 )
 
 
