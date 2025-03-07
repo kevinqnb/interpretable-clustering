@@ -49,6 +49,7 @@ imm_base = IMMBase(
 imm_assign, imm_centers = imm_base.assign(data)
 imm_depth = int(imm_base.max_rule_length)
 
+os.environ.pop("OMP_NUM_THREADS", None)
 #####################################################################################################
 # Module Parameters:
 
@@ -223,6 +224,7 @@ Ex1 = RelativeCoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
+    thread_count = 2,
     verbose = False
 )
 

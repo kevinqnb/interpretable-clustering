@@ -311,7 +311,8 @@ class RelativeCoverageExperiment(Experiment):
         n_samples : int,
         labels : List[List[int]] = None,
         cpu_count : int = 1,
-        verbose : bool = False
+        verbose : bool = False,
+        thread_count : int = 1,
     ):
         super().__init__(
             data = data,
@@ -323,7 +324,9 @@ class RelativeCoverageExperiment(Experiment):
             cpu_count = cpu_count,
             verbose = verbose
         )
-        #self.baseline_results = {}
+        # NOTE: After testing, this should really be a part of 
+        # the main experiment class
+        self.thread_count = thread_count
         
     def run_baselines(self, n_steps : int):
         """
@@ -467,10 +470,16 @@ class RelativeCoverageExperiment(Experiment):
 
         module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
 
-        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.run_modules)(mod_list, n_steps, step_size)
-                for mod_list in module_lists
-        )
+        #module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+        #        delayed(self.run_modules)(mod_list, n_steps, step_size)
+        #        for mod_list in module_lists
+        #)
+        module_results = None
+        with parallel_config(backend = 'loky', inner_max_num_threads = self.thread_count):
+            module_results = Parallel(n_jobs=self.cpu_count)(
+                    delayed(self.run_modules)(mod_list, n_steps, step_size)
+                    for mod_list in module_lists
+            )
 
         for i, module_result_dict in enumerate(module_results):
             for key,value in module_result_dict.items():
