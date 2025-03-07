@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 from intercluster.rules import *
 from intercluster.utils import covered_mask, update_centers
 from .modules import *
+import time
 
 ####################################################################################################
 
@@ -389,10 +390,20 @@ class RelativeCoverageExperiment(Experiment):
                 for fn in self.measurement_fns:
                     module_result_dict[(fn.name, mod.name, base.name)] = []
 
+        # NOTE: Test to see how this works...
+        for mod in module_list:
+            mod.reset()
 
         for i in range(n_steps):
+            print("Step " + str(i) + ": ")
             for mod in module_list:
+                start = time.time()
                 massign, mcenters = mod.step_coverage(self.data, self.labels, step_size = step_size)
+                end = time.time()
+                if i == 0:
+                    print(mod.name + " fitting: " + str(end - start))
+                else:
+                    print(mod.name + " pruning: " + str(end - start))
                 
                 # record rule lengths:
                 module_result_dict[("max-rule-length", mod.name, mod.name)].append(
@@ -448,6 +459,7 @@ class RelativeCoverageExperiment(Experiment):
                             module_result_dict[(fn.name, mod.name, base.name)].append(
                                 fn(self.data, bassign, bcenters)
                             )
+            print()
                         
         return module_result_dict
                     

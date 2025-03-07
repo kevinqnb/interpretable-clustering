@@ -212,8 +212,7 @@ measurement_fns = [
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(),
-    DistanceRatio(),
-    Silhouette(),
+    #Silhouette(),
 ]
 
 

@@ -287,8 +287,8 @@ def kmeans_cost(
     center_dist_sum = np.sum(center_dist_arr, axis = 1)
     n_assigns = np.sum(assignment, axis = 1)
     
+    cost = None
     if average:
-        
         point_costs = np.divide(
             center_dist_sum,
             n_assigns,
