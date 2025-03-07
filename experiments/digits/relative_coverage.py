@@ -224,7 +224,7 @@ Ex1 = RelativeCoverageExperiment(
     n_samples = n_samples,
     labels = y,
     cpu_count = experiment_cpu_count,
-    thread_count = 2,
+    thread_count = 8,
     verbose = False
 )
 

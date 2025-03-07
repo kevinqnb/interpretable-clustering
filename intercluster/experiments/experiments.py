@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import copy
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, parallel_config
 from typing import List, Callable, Any
 from numpy.typing import NDArray
 from intercluster.rules import *
