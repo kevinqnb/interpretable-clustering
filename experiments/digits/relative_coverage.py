@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 1
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -49,7 +49,7 @@ imm_base = IMMBase(
 imm_assign, imm_centers = imm_base.assign(data)
 imm_depth = int(imm_base.max_rule_length)
 
-os.environ.pop("OMP_NUM_THREADS", None)
+#os.environ.pop("OMP_NUM_THREADS", None)
 #####################################################################################################
 # Module Parameters:
 
@@ -214,7 +214,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1
+n_samples = 1000
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
