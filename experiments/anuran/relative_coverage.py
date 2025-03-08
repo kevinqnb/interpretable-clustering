@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 24
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -30,8 +30,8 @@ k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 1000
-n_sets = 1000
+n_trees = 500
+n_sets = 500
 
 ####################################################################################################
 # Baselines:
@@ -68,7 +68,23 @@ forest_params_depth_2 = {
     'train_size' : 0.75
 }
 
-# Depth 2 Forest:
+# Depth 3 Forest:
+forest_tree_params_depth_3 = {
+    'max_depth' : 3
+}
+
+forest_params_depth_3 = {
+    'tree_model' : SklearnTree,
+    'tree_params' : forest_tree_params_depth_3,
+    'num_trees' : n_trees,
+    'max_features' : d,
+    'max_labels' : 1,
+    'max_depths' : list(range(1, 3 + 1)),
+    'feature_pairings' : [list(range(d))],
+    'train_size' : 0.75
+}
+
+# Depth 4 Forest:
 forest_tree_params_depth_4 = {
     'max_depth' : 4
 }
@@ -80,22 +96,6 @@ forest_params_depth_4 = {
     'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 4 + 1)),
-    'feature_pairings' : [list(range(d))],
-    'train_size' : 0.75
-}
-
-# Depth 6 Forest:
-forest_tree_params_depth_6 = {
-    'max_depth' : 6
-}
-
-forest_params_depth_6 = {
-    'tree_model' : SklearnTree,
-    'tree_params' : forest_tree_params_depth_6,
-    'num_trees' : n_trees,
-    'max_features' : d,
-    'max_labels' : 1,
-    'max_depths' : list(range(1, 6 + 1)),
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -131,8 +131,8 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,5,101),
-    'full_search' : False,
+    'lambda_search_range' : np.linspace(0,5,21),
+    'full_search' : True,
     'cpu_count' : prune_cpu_count
 }
 
@@ -151,25 +151,25 @@ mod1 = DecisionSetMod(
     name = 'Forest-Depth-2'
 )
 
-# 2) depth 4:
+
+# 3) depth 3:
 mod2 = DecisionSetMod(
+    decision_set_model = DecisionForest,
+    decision_set_params = forest_params_depth_3,
+    clustering = kmeans_base,
+    prune_params = prune_params,
+    min_frac_cover = min_frac_cover,
+    name = 'Forest-Depth-3'
+)
+
+# 3) depth 4:
+mod3 = DecisionSetMod(
     decision_set_model = DecisionForest,
     decision_set_params = forest_params_depth_4,
     clustering = kmeans_base,
     prune_params = prune_params,
     min_frac_cover = min_frac_cover,
     name = 'Forest-Depth-4'
-)
-
-
-# 3) depth 6:
-mod3 = DecisionSetMod(
-    decision_set_model = DecisionForest,
-    decision_set_params = forest_params_depth_6,
-    clustering = kmeans_base,
-    prune_params = prune_params,
-    min_frac_cover = min_frac_cover,
-    name = 'Forest-Depth-6'
 )
 
 
@@ -205,7 +205,6 @@ measurement_fns = [
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(),
-    DistanceRatio(),
     Silhouette(),
 ]
 
@@ -213,7 +212,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 1000
+n_samples = 10
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
@@ -229,7 +228,7 @@ Ex1 = RelativeCoverageExperiment(
 import time 
 start = time.time()
 Ex1_results = Ex1.run(n_steps = 11, step_size = 0.05)
-Ex1.save_results('data/experiments/anuran/relative_coverage/', '_updated')
+Ex1.save_results('data/experiments/anuran/relative_coverage/', '_test')
 end = time.time()
 print(end - start)
 

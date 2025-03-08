@@ -260,13 +260,14 @@ def load_preprocessed_housing():
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-    data, data_labels = datasets.fetch_california_housing(return_X_y=True)
+    D = datasets.fetch_california_housing()
+    data = D['data']
+    data_labels = D['target']
+    feature_labels = D['feature_names']
 
     scaler = StandardScaler()
 
     scaled_data = scaler.fit_transform(data)
-
-    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
     return scaled_data, data_labels, feature_labels, scaler
 
