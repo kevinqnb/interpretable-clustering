@@ -221,10 +221,46 @@ def load_preprocessed_covtype():
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-    data, data_labels = datasets.fetch_covtype(return_X_y=True)
+    D = datasets.fetch_covtype()
+    data = D['data']
+    data_labels = D['target']
+    feature_labels = D['feature_names']
 
     # Only taking non-categorical features.
-    #data = data[:,:10]
+    data = data[:,:10]
+    feature_labels = feature_labels[:10]
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(data)
+
+    #feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_housing():
+    """
+    Loads a preprocessed california housing dataset. Values are normalized with standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data, data_labels = datasets.fetch_california_housing(return_X_y=True)
 
     scaler = StandardScaler()
 
