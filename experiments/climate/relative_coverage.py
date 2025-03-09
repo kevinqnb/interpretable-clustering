@@ -23,14 +23,14 @@ np.random.seed(seed)
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+n,d = data.shape
 
 # Parameters:
 k = 6
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 500
-n_sets = 500
+n_trees = 1000
 
 ####################################################################################################
 # Baselines:
@@ -60,10 +60,10 @@ forest_params_depth_2 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_2,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 2 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -76,10 +76,11 @@ forest_params_depth_3 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_3,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 3 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    #'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -93,10 +94,10 @@ forest_params_depth_4 = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_4,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 4 + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -110,10 +111,10 @@ forest_params_depth_imm = {
     'tree_model' : SklearnTree,
     'tree_params' : forest_tree_params_depth_imm,
     'num_trees' : n_trees,
-    'max_features' : 6,
+    'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, imm_depth + 1)),
-    'feature_pairings' : [list(range(12))] + [list(range(12,24))],
+    'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
 
@@ -212,7 +213,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 10
+n_samples = 1000
 
 Ex1 = RelativeCoverageExperiment(
     data = data,

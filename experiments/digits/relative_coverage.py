@@ -30,8 +30,7 @@ k = 10
 n_clusters = k
 n_rules = k
 min_frac_cover = 0.5
-n_trees = 500
-n_sets = 500
+n_trees = 1000
 
 ####################################################################################################
 # Baselines:
@@ -205,7 +204,6 @@ measurement_fns = [
     ClusteringCost(average = True, normalize = True),
     Overlap(),
     Coverage(),
-    DistanceRatio(),
     Silhouette(),
 ]
 
@@ -213,7 +211,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 10
+n_samples = 1000
 
 Ex1 = RelativeCoverageExperiment(
     data = data,

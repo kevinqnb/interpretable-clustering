@@ -77,6 +77,7 @@ def distorted_greedy(
     
     selected_rules = set()
     for i in range(n_rules):
+        # NOTE: perhaps this should include a tiebreak mechansim.
         best_rule = None
         best_rule_label = None
         best_rule_score = -np.inf
@@ -221,8 +222,12 @@ def prune_with_grid_search(
         warnings.warn(
             "Coverage requirements not met. "
             "Consider adjusting requirements or increasing the search range for lambda. "
-            "Returning None."
+            "Returning "
+            "None."
         )
+        if return_full:
+            return None, objective_vals, cover_vals
+        
         return None
     
     # Find the lambda value with the smallest objective, breaking ties by preferring 

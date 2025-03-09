@@ -238,6 +238,7 @@ class IMMMod(Module):
         non_outliers_idx = np.where(~outliers)[0]
 
         X_ = X[~outliers]
+        updated_kmeans = KMeans(n_clusters = self.n_clusters).fit(X_)
         exkmc_tree = ExkmcTree(
                 k=self.n_clusters,
                 kmeans=self.kmeans_model,
@@ -246,7 +247,8 @@ class IMMMod(Module):
         )
         exkmc_tree.fit(X_)
         exkmc_labels = exkmc_tree.predict(X_, leaf_labels = False)
-        # Remove outliers from assignment completely (they should not play a role in cost.)
+
+        # Leave outliers excluded from assignment completely (they should not play a role in cost.)
         exkmc_full_labels = [{} for _ in range(n)]
         for i,idx in enumerate(non_outliers_idx):
             exkmc_full_labels[idx] = exkmc_labels[i]
@@ -254,13 +256,14 @@ class IMMMod(Module):
         assignment = labels_to_assignment(exkmc_full_labels, n_labels = self.n_clusters)
         updated_centers = update_centers(
             X = X,
-            current_centers = self.original_centers,
+            #current_centers = self.original_centers,
+            current_centers = updated_kmeans.cluster_centers_,
             assignment = assignment
         )
 
         self.max_rule_length = exkmc_tree.depth
-        # NOTE: Full dataset is used in computation of weighted depth
-        self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X)
+        # NOTE: Non-outlier subset is used in computation of weighted depth
+        self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X_)
         self.frac_cover = np.round(self.frac_cover + step_size, 5)
         return assignment, updated_centers
     
