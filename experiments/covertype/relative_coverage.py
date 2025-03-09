@@ -137,7 +137,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,5,21),
+    'lambda_search_range' : np.linspace(0,5,51),
     'full_search' : True,
     'cpu_count' : prune_cpu_count
 }
@@ -219,7 +219,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 24
+n_samples = 100
 
 Ex1 = RelativeCoverageExperiment(
     data = data,

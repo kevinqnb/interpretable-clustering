@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 12
+experiment_cpu_count = 24
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -130,7 +130,7 @@ prune_params = {
     'X' : data,
     'y' : y,
     'objective' : prune_objective,
-    'lambda_search_range' : np.linspace(0,5,21),
+    'lambda_search_range' : np.linspace(0,5,51),
     'full_search' : True,
     'cpu_count' : prune_cpu_count
 }
@@ -211,7 +211,7 @@ measurement_fns = [
 ####################################################################################################
 # Running the Experiment:
 
-n_samples = 100
+n_samples = 1000
 
 Ex1 = RelativeCoverageExperiment(
     data = data,
