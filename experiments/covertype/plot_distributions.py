@@ -30,7 +30,7 @@ cmap = ListedColormap(palette)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
-prune_cpu_count = 1
+prune_cpu_count = 4
 experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
@@ -200,7 +200,7 @@ prune_params = {
     'objective' : prune_objective,
     'lambda_search_range' : np.linspace(0,5,51),
     'full_search' : True,
-    'cpu_count' : 1
+    'cpu_count' : prune_cpu_count
 }
 
 
