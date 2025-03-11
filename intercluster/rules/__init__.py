@@ -21,6 +21,10 @@ from .decision_tree import (
     ObliqueTree,
 )
 
+from .explanation_tree import (
+    ExplanationTree
+)
+
 from .svm_tree import (
     SVMTree,
 )

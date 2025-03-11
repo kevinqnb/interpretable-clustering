@@ -7,6 +7,10 @@ from .information_gain import (
     ObliqueInformationGainSplitter
 )
 
+from .explanation import (
+    ExplanationSplitter
+)
+
 from .svm import (
     SVMSplitter,
 )

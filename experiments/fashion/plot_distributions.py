@@ -44,6 +44,13 @@ np.random.seed(seed)
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
+
+import math
+size = math.ceil(0.25 * len(data))
+random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
+data = data[random_samples, :]
+data_labels = data_labels[random_samples]
+
 n,d = data.shape
 
 # Parameters:

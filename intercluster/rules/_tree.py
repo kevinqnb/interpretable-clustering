@@ -3,7 +3,7 @@ import copy
 import heapq
 from numpy.typing import NDArray
 from typing import List, Set, Callable
-from intercluster.utils import mode, can_flatten
+from intercluster.utils import mode, can_flatten, flatten_labels
 from ._conditions import Condition
 from ._node import Node
 from .utils import *
@@ -72,10 +72,6 @@ class Tree():
         Initiates and builds a decision tree around a given dataset. 
         Keeps a heap queue for all current leaf nodes in the tree,
         which prioritizes splitting the leaves with the largest costs (gain in cost performance).
-        NOTE: I store -1*costs because heapq pops items with minimum cost by default.
-        For example, heap leaf object looks like:
-            (-1*gain, random_tiebreaker, node object, split info)
-        Where split info is a tuple of precomputed (features, weights, thresholds) information.
 
         Args:
             X (np.ndarray): Input dataset.
@@ -153,6 +149,9 @@ class Tree():
     ):
         """
         Adds a new leaf node to the heap.
+
+        NOTE: I store -1*gain because heapq pops items with minimum value by default, whereas
+        we really want to search for largest gain.
         
         Args:
             node (Node): Leaf node to add to the heap.
@@ -254,6 +253,7 @@ class Tree():
         
         # If we've reached any of the maximum conditions, stop growth. 
         # NOTE: This should also stop if the splitter decides there is no more gain to be had.
+        # In that case, splitters in this package will output a gain of -np.inf.
         if (
             (gain == -np.inf) or
             (node.depth >= self.max_depth) or 
