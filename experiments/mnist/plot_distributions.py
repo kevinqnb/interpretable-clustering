@@ -181,7 +181,7 @@ forest_depth_imm.fit(data, kmeans_labels)
 ####################################################################################################
 
 # Pruning 
-frac_cover = 0.8
+frac_cover = 0.7
 frac_remove = 1- frac_cover
 
 prune_objective = KmeansObjective(
