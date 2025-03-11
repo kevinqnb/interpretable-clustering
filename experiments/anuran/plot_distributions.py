@@ -293,6 +293,7 @@ for mname, massign in assignment_dict.items():
     cdict = {"Unique" : 5, "Overlapping" : 1, "Uncovered" : 7}
     fname = 'figures/anuran/' + mname + '_cover_dist.png'
 
+    plt.figure()
     if single_cover_size > 1:
         sns.histplot(
             single_cover_distance_ratios,
@@ -362,4 +363,5 @@ for mname, massign in assignment_dict.items():
     plt.ylim(0,0.7)
     plt.legend(loc = "upper right", handles=legend_elements, ncol = 1)
     plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
-    plt.show()
+    #plt.show()
+    plt.close()
