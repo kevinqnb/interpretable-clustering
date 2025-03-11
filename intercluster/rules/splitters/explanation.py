@@ -1,4 +1,6 @@
 import numpy as np
+from joblib import Parallel, delayed, parallel_config
+from intercluster.utils import tiebreak
 from numpy.typing import NDArray
 from typing import List, Set, Tuple
 from ._splitter import AxisAlignedSplitter
@@ -17,13 +19,16 @@ class ExplanationSplitter(AxisAlignedSplitter):
     def __init__(
         self,
         num_clusters : int,
-        min_points_leaf : int = 1
+        min_points_leaf : int = 1,
+        cpu_count : int = 1
     ):
         """
         Args:
             num_clusters (int): Number of clusters to split.
 
             min_points_leaf (int, optional): Minimum number of points in a leaf.
+
+            cpu_count (int, optional): Number of processors to use. Defaults to 1.
             
         Attrs:
             X (np.ndarray): Dataset for splitting
@@ -36,6 +41,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
             outliers (Set[int]): List of data indices to be removed as outliers.
         """
         self.num_clusters = num_clusters
+        self.cpu_count = cpu_count
         super().__init__(min_points_leaf = min_points_leaf)
         self.outliers = set()
 
@@ -49,8 +55,8 @@ class ExplanationSplitter(AxisAlignedSplitter):
         Finds outliers to be removed from set of indices. 
         """
         new_outliers = set()
-        left_indices_rem = set(left_indices) - self.outliers
-        right_indices_rem = set(right_indices) - self.outliers
+        left_indices_rem = set(left_indices)
+        right_indices_rem = set(right_indices)
 
         # Count number of clusters appearances in each half
         left_cluster_satisfies = {i:set() for i in range(self.num_clusters)}
@@ -119,11 +125,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
             left_assigned = 0
             right_assigned = 0
 
-            iter_tracker = 0
             while left_assigned == 0 or right_assigned == 0:
-                iter_tracker += 1
-                if iter_tracker > 100:
-                    print("hey slow down! " + str(iter_tracker))
                 left_assigned = len(left_positive)
                 right_assigned = len(right_positive)
                 left_right_assignment[tied] = 0
@@ -200,10 +202,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
             raise ValueError("Indices are not disjoint.")
         
         # If only a single cluster is present, no gain to be had.
-        left_indices_rem = set(left_indices) - self.outliers
-        right_indices_rem = set(right_indices) - self.outliers
-        indices_rem = left_indices_rem.union(right_indices_rem)
-        clusters_present = self.y_array[list(indices_rem)]
+        clusters_present = self.y_array[parent_indices]
         if np.all(clusters_present == clusters_present[0]):
             return -np.inf
 
@@ -214,5 +213,71 @@ class ExplanationSplitter(AxisAlignedSplitter):
         split_outliers = self.get_split_outliers(left_indices, right_indices)
         split_cost = len(split_outliers)
         return parent_cost - (split_cost)
+    
+
+    def evaluate_condition(self, indices : NDArray, condition : Condition) -> float:
+        """
+        Evaluates the gain of a condition upon a set of remaning indices
+
+        Args:
+            indices (np.ndarray): Array of remaining index values.
+
+            condition (Condition): Logical condition object for splitting indices. 
+
+        Returns
+            gain (float): Gain to be acheived via splitting indices upon the given condition.
+        """
+        left_indices, right_indices = self.get_split_indices(indices, condition)
+        gain_val = None
+        if (len(left_indices) < self.min_points_leaf or 
+            len(right_indices) < self.min_points_leaf):
+            gain_val = -np.inf
+        else:
+            gain_val = self.gain(left_indices, right_indices)
+
+        return gain_val
+
+
+
+    def split(
+        self,
+        indices : NDArray
+    ) -> Tuple[float, Condition]:
+        """
+        Computes the best split of a leaf node.
+        
+        Args:
+            indices (np.ndarray, optional): Indices for a subset of the original dataset.
+        
+        Returns:
+            gain (float): The gain associated with the split.
+            
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
+        """
+        X_ = self.X[indices, :]
+        n,d = X_.shape
+
+        condition_list = []
+        for feature in range(d):
+            unique_vals = np.unique(X_[:,feature])
+            for threshold in unique_vals:
+                condition = LinearCondition(
+                    features = np.array([feature]),
+                    weights = np.array([1]),
+                    threshold = threshold,
+                    direction = -1
+                )
+                condition_list.append(condition)
+
+        gain_vals = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                delayed(self.evaluate_condition)(indices, cond)
+                for cond in condition_list
+        )
+        
+        best_condition_idx = tiebreak(scores = -1 * np.array(gain_vals))[0]
+        best_gain = gain_vals[best_condition_idx]
+        best_condition = condition_list[best_condition_idx]
+        return best_gain, best_condition
     
         

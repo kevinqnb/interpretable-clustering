@@ -33,7 +33,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 1
+experiment_cpu_count = 6
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -62,7 +62,7 @@ centers = kmeans.cluster_centers_
 ####################################################################################################
 # Run Explanation Tree:
 
-exp_tree = ExplanationTree(num_clusters = k)
+exp_tree = ExplanationTree(num_clusters = k, cpu_count = experiment_cpu_count)
 exp_tree.fit(data, kmeans_labels)
 exp_labels = exp_tree.predict(data, remove_outliers = True)
 exp_assignment = labels_to_assignment(exp_labels, n_labels = k)

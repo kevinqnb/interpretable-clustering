@@ -1,3 +1,4 @@
+import heapq
 import numpy as np
 from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
@@ -21,12 +22,14 @@ class ExplanationTree(Tree):
     def __init__(
         self,
         num_clusters : int, 
-        min_points_leaf : int = 1
+        min_points_leaf : int = 1,
+        cpu_count : int = 1
     ):
         """
         Args:
             num_clusters (int): The total number of observed clusters.
             
+            cpu_count (int, optional): Number of processors to use. Defaults to 1.
             
         Attributes:            
             root (Node): Root node of the tree.
@@ -45,7 +48,8 @@ class ExplanationTree(Tree):
         self.num_clusters = num_clusters
         splitter = ExplanationSplitter(
             num_clusters = num_clusters,
-            min_points_leaf = min_points_leaf
+            min_points_leaf = min_points_leaf,
+            cpu_count = cpu_count
         )
         super().__init__(
             splitter = splitter,
@@ -76,6 +80,10 @@ class ExplanationTree(Tree):
         self.splitter.update_outliers(new_outliers)
         self.outliers = self.outliers.union(new_outliers)
 
+        # This is really important, keeps track of outlier removal!
+        left_indices_remain = np.array(list(set(left_indices) - self.outliers))
+        right_indices_remain = np.array(list(set(right_indices) - self.outliers))
+
         y_l = None
         y_r = None
         if self.y is not None:
@@ -103,7 +111,7 @@ class ExplanationTree(Tree):
             leaf_num = l_leaf_num,
             label = l_label,
             cost = left_cost,
-            indices = left_indices,
+            indices = left_indices_remain,
             depth = left_depth
         )
         right_node = Node()
@@ -111,7 +119,7 @@ class ExplanationTree(Tree):
             leaf_num = r_leaf_num,
             label = r_label,
             cost = right_cost,
-            indices = right_indices,
+            indices = right_indices_remain,
             depth = right_depth
         )
         

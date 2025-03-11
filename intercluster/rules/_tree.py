@@ -8,7 +8,7 @@ from ._conditions import Condition
 from ._node import Node
 from .utils import *
 
-
+import time
 class Tree():
     """
     Base class for a Tree object. 
