@@ -93,6 +93,7 @@ measurement_df.to_csv("data/experiments/climate/explanation_tree.csv")
 ####################################################################################################
 
 # Plotting 
+# NOTE: This is distance to the original set of cluster centers. 
 distance_ratios = distance_ratio(data, centers)
 
 massign = exp_assignment
@@ -187,3 +188,9 @@ plt.ylim(0,0.7)
 plt.legend(loc = "upper right", handles=legend_elements, ncol = 1)
 plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
 plt.close()
+
+
+# Save data:
+np.savez_compressed("data/experiments/climate/explanation_tree_assignment.npz", arr=exp_assignment)
+np.savez_compressed("data/experiments/climate/reference_centers.npz", arr=centers)
+

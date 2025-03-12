@@ -495,9 +495,9 @@ def experiment_plotter(
         ax.plot(
             np.array(domain_df[m]),
             np.array(measurement_df[m]),
-            linewidth = 3,
+            linewidth = 6,
             marker='o',
-            markersize = 5,
+            markersize = 8,
             c = cmap(i),
             label = fr'$\texttt{{{m}}}$'
         )

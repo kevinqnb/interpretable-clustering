@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from matplotlib.colors import ListedColormap
 import seaborn as sns
+import geopandas as gpd
 from intercluster import *
 from intercluster.rules import *
 from intercluster.pruning import *
@@ -14,6 +15,7 @@ from intercluster.experiments import *
 
 # This assumes tex is installed in your system, 
 # if not you may simply remove most of this, aside from font.size:
+ 
 plt.rcParams.update({
     "pgf.texsystem": "pdflatex",
     "font.family": "serif",
@@ -30,7 +32,7 @@ cmap = ListedColormap(palette)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
-prune_cpu_count = 4
+prune_cpu_count = 1
 experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
@@ -43,20 +45,14 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_covtype()
-
-import math
-size = math.ceil(0.25 * len(data))
-random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
-data = data[random_samples, :]
-data_labels = data_labels[random_samples]
-
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 n,d = data.shape
 
 # Parameters:
-k = 7
+k = 6
 n_clusters = k
 n_rules = k
+min_frac_cover = 0.5
 n_trees = 1000
 
 ####################################################################################################
@@ -112,6 +108,7 @@ forest_params_depth_3 = {
     'max_features' : d,
     'max_labels' : 1,
     'max_depths' : list(range(1, 3 + 1)),
+    #'feature_pairings' : [list(range(12))] + [list(range(12,24))],
     'feature_pairings' : [list(range(d))],
     'train_size' : 0.75
 }
@@ -176,7 +173,7 @@ prune_params = {
 forest_depth_2 = DecisionForest(**forest_params_depth_2)
 forest_depth_2.fit(data, kmeans_labels)
 
-forest_depth_3 = DecisionForest(**forest_params_depth_2)
+forest_depth_3 = DecisionForest(**forest_params_depth_3)
 forest_depth_3.fit(data, kmeans_labels)
 
 forest_depth_4 = DecisionForest(**forest_params_depth_4)
@@ -188,7 +185,7 @@ forest_depth_imm.fit(data, kmeans_labels)
 ####################################################################################################
 
 # Pruning 
-frac_cover = 0.8
+frac_cover = 0.85
 frac_remove = 1- frac_cover
 
 prune_objective = KmeansObjective(
@@ -207,7 +204,7 @@ prune_params = {
     'objective' : prune_objective,
     'lambda_search_range' : np.linspace(0,5,51),
     'full_search' : True,
-    'cpu_count' : prune_cpu_count
+    'cpu_count' : 1
 }
 
 
@@ -259,16 +256,64 @@ forest_depth_imm_assignment = labels_to_assignment(
 )
 
 outliers = outlier_mask(data, centers = centers, frac_remove=frac_remove)
+non_outliers= np.where(~outliers)[0]
 exkmc_outlier_assignment = copy.deepcopy(exkmc_assignment)
 exkmc_outlier_assignment[outliers,:] = False
 
-assignment_dict = {
-    "forest_depth_2" : forest_depth_2_assignment,
-    "forest_depth_3" : forest_depth_3_assignment,
-    "forest_depth_4" : forest_depth_4_assignment,
-    "forest_depth_imm" : forest_depth_imm_assignment,
-    "outlier" : exkmc_outlier_assignment
+method_assignment_dict = {
+    "forest_depth_2" : (forest_depth_2, forest_depth_2_assignment),
+    "forest_depth_3" : (forest_depth_3, forest_depth_3_assignment),
+    "forest_depth_4" : (forest_depth_4, forest_depth_4_assignment),
+    "forest_depth_imm" : (forest_depth_imm, forest_depth_imm_assignment),
+    "outlier" : (exkmc_tree, exkmc_outlier_assignment)
 }
+
+
+####################################################################################################
+
+# Record Measurements
+
+measurement_fns = [
+    ClusteringCost(average = True, normalize = True),
+    Overlap(),
+    Coverage(),
+]
+
+measurement_dict = {}
+
+for mname, (method, massign) in method_assignment_dict.items():
+    for measure in measurement_fns:
+        measurement_dict[(mname, measure.name)] = measure(data, massign, centers)
+
+    if hasattr(method, "depth"):
+        measurement_dict[(mname, "max-rule-length")] = method.depth
+    elif hasattr(method, "max_rule_length"):
+        measurement_dict[(mname,"max-rule-length")] = method.max_rule_length
+    else:
+        raise ValueError("No rule length attribute for the given method.")
+    
+    if hasattr(method, "get_weighted_average_depth"):
+        if mname == 'outlier':
+            measurement_dict[(mname, 'weighted-average-rule-length')] = (
+                method.get_weighted_average_depth(data[non_outliers,:])
+            )
+        else:
+            measurement_dict[(mname, 'weighted-average-rule-length')] = (
+                method.get_weighted_average_depth(data)
+            )
+    elif hasattr(method, "get_weighted_average_rule_length"):
+        measurement_dict[(mname, 'weighted-average-rule-length')] = (
+            method.get_weighted_average_rule_length(data)
+        )
+    else:
+        raise ValueError("No weighted rule length attribute for the given method.")
+
+measurement_df = pd.DataFrame(
+    [(k[0], k[1], v) for k, v in measurement_dict.items()], columns=["Row", "Column", "Value"]
+)
+measurement_df = measurement_df.pivot(index="Row", columns="Column", values="Value")
+measurement_df.to_csv("data/experiments/climate/measurements.csv")
+
 
 
 ####################################################################################################
@@ -276,7 +321,7 @@ assignment_dict = {
 # Plotting 
 distance_ratios = distance_ratio(data, centers)
 
-for mname, massign in assignment_dict.items():
+for mname, (method, massign) in method_assignment_dict.items():
     # Single Covers:
     single_cover_mask = np.sum(massign, axis = 1) == 1
     single_cover_size = np.sum(single_cover_mask)
@@ -298,7 +343,7 @@ for mname, massign in assignment_dict.items():
     else:
         yaxis = False
     cdict = {"Unique" : 5, "Overlapping" : 1, "Uncovered" : 7}
-    fname = 'figures/covertype/' + mname + '_cover_dist.png'
+    fname = 'figures/climate/' + mname + '_cover_dist.png'
 
     plt.figure()
     if single_cover_size > 1:
