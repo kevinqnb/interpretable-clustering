@@ -207,7 +207,7 @@ prune_params = {
     'objective' : prune_objective,
     'lambda_search_range' : np.linspace(0,5,51),
     'full_search' : True,
-    'cpu_count' : 1
+    'cpu_count' : prune_cpu_count
 }
 
 
