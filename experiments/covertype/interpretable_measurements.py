@@ -237,38 +237,78 @@ else:
 
 ####################################################################################################
 
-# Create assignments:
+# Create assignments and updated centers:
+
+# Forests:
 forest_depth_2_assignment = labels_to_assignment(
     forest_depth_2_prune_predictions,
     n_labels = n_clusters
+)
+forest_depth_2_centers = update_centers(
+    data, centers, forest_depth_2_assignment
 )
 
 forest_depth_3_assignment = labels_to_assignment(
     forest_depth_3_prune_predictions,
     n_labels = n_clusters
 )
+forest_depth_3_centers = update_centers(
+    data, centers, forest_depth_3_assignment
+)
 
 forest_depth_4_assignment = labels_to_assignment(
     forest_depth_4_prune_predictions,
     n_labels = n_clusters
+)
+forest_depth_4_centers = update_centers(
+    data, centers, forest_depth_4_assignment
 )
 
 forest_depth_imm_assignment = labels_to_assignment(
     forest_depth_imm_prune_predictions,
     n_labels = n_clusters
 )
+forest_depth_imm_centers = update_centers(
+    data, centers, forest_depth_imm_assignment
+)
 
+
+# IMM with outliers removed:
 outliers = outlier_mask(data, centers = centers, frac_remove=frac_remove)
 non_outliers= np.where(~outliers)[0]
-exkmc_outlier_assignment = copy.deepcopy(exkmc_assignment)
-exkmc_outlier_assignment[outliers,:] = False
 
+X_ = data[non_outliers]
+outlier_exkmc_tree = ExkmcTree(
+    k=k,
+    kmeans = kmeans,
+    max_leaf_nodes=k,
+    imm=True
+)
+outlier_exkmc_tree.fit(X_)
+outlier_exkmc_labels = outlier_exkmc_tree.predict(X_, leaf_labels = False)
+
+# Leave outliers excluded from assignment completely (they should not play a role in cost.)
+outlier_exkmc_full_labels = [{} for _ in range(n)]
+for i,idx in enumerate(non_outliers):
+    outlier_exkmc_full_labels[idx] = outlier_exkmc_labels[i]
+
+outlier_assignment = labels_to_assignment(outlier_exkmc_full_labels, n_labels = k)
+# NOTE that this uses the full dataset, but the assignment will still leave outliers out.
+outlier_centers = update_centers(
+    X = data,
+    current_centers = kmeans.cluster_centers_,
+    assignment = outlier_assignment
+)
+
+
+# Store results
 method_assignment_dict = {
-    "forest_depth_2" : (forest_depth_2, forest_depth_2_assignment),
-    "forest_depth_3" : (forest_depth_3, forest_depth_3_assignment),
-    "forest_depth_4" : (forest_depth_4, forest_depth_4_assignment),
-    "forest_depth_imm" : (forest_depth_imm, forest_depth_imm_assignment),
-    "outlier" : (exkmc_tree, exkmc_outlier_assignment)
+    "forest_depth_2" : (forest_depth_2, forest_depth_2_assignment, forest_depth_2_centers),
+    "forest_depth_3" : (forest_depth_3, forest_depth_3_assignment, forest_depth_3_centers),
+    "forest_depth_4" : (forest_depth_4, forest_depth_4_assignment, forest_depth_4_centers),
+    "forest_depth_imm" : (forest_depth_imm, forest_depth_imm_assignment, forest_depth_imm_centers),
+    "outlier" : (outlier_exkmc_tree, outlier_assignment, outlier_centers),
+    "imm" : (exkmc_tree, exkmc_assignment, exkmc_centers)
 }
 
 
@@ -284,9 +324,9 @@ measurement_fns = [
 
 measurement_dict = {}
 
-for mname, (method, massign) in method_assignment_dict.items():
+for mname, (method, massign, mcenters) in method_assignment_dict.items():
     for measure in measurement_fns:
-        measurement_dict[(mname, measure.name)] = measure(data, massign, centers)
+        measurement_dict[(mname, measure.name)] = measure(data, massign, mcenters)
 
     if hasattr(method, "depth"):
         measurement_dict[(mname, "max-rule-length")] = method.depth
@@ -323,7 +363,7 @@ measurement_df.to_csv("data/experiments/covertype/measurements.csv")
 # Plotting 
 distance_ratios = distance_ratio(data, centers)
 
-for mname, (method, massign) in method_assignment_dict.items():
+for mname, (method, massign, mcenters) in method_assignment_dict.items():
     # Single Covers:
     single_cover_mask = np.sum(massign, axis = 1) == 1
     single_cover_size = np.sum(single_cover_mask)
@@ -428,6 +468,6 @@ for mname, (method, massign) in method_assignment_dict.items():
     plt.ylim(0,0.75)
     plt.xlim(0.95,3)
     plt.legend(loc = "upper right", handles=legend_elements, ncol = 1)
-    plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
+    #plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
     #plt.show()
     plt.close()

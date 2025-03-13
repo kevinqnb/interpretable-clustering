@@ -238,7 +238,8 @@ class IMMMod(Module):
         non_outliers_idx = np.where(~outliers)[0]
 
         X_ = X[~outliers]
-        updated_kmeans = KMeans(n_clusters = self.n_clusters).fit(X_)
+        # NOTE: after thinking a lot about this, I don't think centers should be updated yet.
+        #updated_kmeans = KMeans(n_clusters = self.n_clusters).fit(X_)
         exkmc_tree = ExkmcTree(
                 k=self.n_clusters,
                 kmeans=self.kmeans_model,
@@ -256,8 +257,8 @@ class IMMMod(Module):
         assignment = labels_to_assignment(exkmc_full_labels, n_labels = self.n_clusters)
         updated_centers = update_centers(
             X = X,
-            #current_centers = self.original_centers,
-            current_centers = updated_kmeans.cluster_centers_,
+            current_centers = self.original_centers,
+            #current_centers = updated_kmeans.cluster_centers_,
             assignment = assignment
         )
 
