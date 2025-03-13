@@ -113,9 +113,8 @@ uncovered_size = np.sum(uncovered_mask)
 uncovered_distance_ratios = distance_ratios[uncovered_mask]
 
 binwidth = 0.15
-yaxis = False
 cdict = {"Unique" : 5, "Overlapping" : 1, "Uncovered" : 7}
-fname = 'figures/anuran/explanation_tree_cover_dist.png'
+fname = 'figures/anuran/explanation_tree_cover_dist_.png'
 
 if single_cover_size > 1:
     sns.histplot(
@@ -124,32 +123,46 @@ if single_cover_size > 1:
         binwidth = binwidth,
         alpha = 1,
         label = "Unique",
-        color = cmap(cdict["Unique"])
+        color = cmap(cdict["Unique"]),
+        fill = False,
+        linewidth = 6
     )
 if overlap_size > 1:
     sns.histplot(
         overlap_distance_ratios,
         stat = 'probability',
         binwidth = binwidth,
-        alpha = 0.8,
+        alpha = 1,
         label = "Overlap",
-        color = cmap(cdict["Overlapping"])
+        color = cmap(cdict["Overlapping"]),
+        fill = False,
+        linewidth = 6
     )
 if uncovered_size > 1:
     sns.histplot(
         uncovered_distance_ratios,
         stat = 'probability',
         binwidth = binwidth,
-        alpha = 0.8,
+        alpha = 1,
         label = "Uncovered",
-        color = cmap(cdict["Uncovered"])
+        color = cmap(cdict["Uncovered"]),
+        fill = False,
+        linewidth = 6
     )
 
+yaxis = False
 if yaxis:
     plt.ylabel("Density")
 else:
     plt.ylabel("")
     plt.yticks([])
+
+xaxis = False
+if xaxis:
+    plt.xlabel("Distance Ratio")
+else:
+    plt.xlabel("")
+    plt.xticks([])
 
 legend_elements = [
     mlines.Line2D(
@@ -182,8 +195,14 @@ legend_elements = [
 
 ]
 
-plt.xlabel("Distance Ratio")
 plt.ylim(0,0.7)
+plt.xlim(0.95,3)
 plt.legend(loc = "upper right", handles=legend_elements, ncol = 1)
 plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
 plt.close()
+
+
+# Save data:
+np.savez_compressed("data/experiments/anuran/explanation_tree_assignment.npz", arr=exp_assignment)
+np.savez_compressed("data/experiments/anuran/reference_centers.npz", arr=centers)
+

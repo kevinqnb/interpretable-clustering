@@ -33,7 +33,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 #np.seterr(all='raise')
 prune_cpu_count = 1
-experiment_cpu_count = 6
+experiment_cpu_count = 24
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -45,7 +45,14 @@ np.random.seed(seed)
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_digits()
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
+
+import math
+size = math.ceil(0.25 * len(data))
+random_samples = np.sort(np.random.choice(len(data), size = size, replace = False))
+data = data[random_samples, :]
+data_labels = data_labels[random_samples]
+
 n,d = data.shape
 
 # Parameters:
@@ -87,7 +94,7 @@ measurement_dict['weighted-average-rule-length'] = [
 ]
 
 measurement_df = pd.DataFrame(measurement_dict)
-measurement_df.to_csv("data/experiments/digits/explanation_tree.csv")
+measurement_df.to_csv("data/experiments/fashion/explanation_tree_.csv")
 
 
 ####################################################################################################
@@ -114,7 +121,7 @@ uncovered_distance_ratios = distance_ratios[uncovered_mask]
 
 binwidth = 0.15
 cdict = {"Unique" : 5, "Overlapping" : 1, "Uncovered" : 7}
-fname = 'figures/digits/explanation_tree_cover_dist_.png'
+fname = 'figures/fashion/explanation_tree_cover_dist_.png'
 
 if single_cover_size > 1:
     sns.histplot(
@@ -157,7 +164,7 @@ else:
     plt.ylabel("")
     plt.yticks([])
 
-xaxis = False
+xaxis = True
 if xaxis:
     plt.xlabel("Distance Ratio")
 else:
@@ -203,5 +210,6 @@ plt.close()
 
 
 # Save data:
-#np.savez_compressed("data/experiments/climate/explanation_tree_assignment.npz", arr=exp_assignment)
-#np.savez_compressed("data/experiments/climate/reference_centers.npz", arr=centers)
+np.savez_compressed("data/experiments/fashion/explanation_tree_assignment.npz", arr=exp_assignment)
+np.savez_compressed("data/experiments/fashion/reference_centers.npz", arr=centers)
+
