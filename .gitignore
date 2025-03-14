@@ -171,5 +171,8 @@ experiments/*/*.sh
 experiments/*/*.txt
 
 examples/testing.ipynb
+examples/examples_older.ipynb
+examples/datasets.ipynb
+examples/experiments.ipynb
 
 *.DS_Store

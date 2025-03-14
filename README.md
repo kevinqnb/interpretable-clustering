@@ -1,5 +1,6 @@
 # Interpretable Clustering
 
+## Getting Started
 To build a minimal installation, first ensure that poetry is installed 
 as a package manager. If you do not have poetry installed, 
 instructions and basic usage  may be found [here](https://python-poetry.org/docs/). 
@@ -19,7 +20,7 @@ because you are using an outdated version of poetry. In that case,
 you may either consider updating, or deleting the lock file and 
 regenerating a new one with the `poetry lock` command.
 
-Additionally, you may want to 
+Additionally, you should
 install and use the original [ExKMC library](https://github.com/navefr/ExKMC/tree/master).
 Add this to your virtual environment by running
 
@@ -27,8 +28,9 @@ Add this to your virtual environment by running
 poetry run pip install ExKMC==0.0.3
 ```
 
-For visualization of decision trees, this package uses pygraphviz (which also requires installing graphviz), which 
-can be tricky to install. For MacOS, the following seems somewhat robust.
+For visualization of decision trees, this package uses pygraphviz 
+(which also requires installing graphviz), which can be tricky to install. 
+For MacOS, the following seems somewhat robust.
 ```
 brew install graphviz
 python -m pip install \
@@ -38,29 +40,6 @@ python -m pip install \
     pygraphviz
 ```
 
-Reminders for myself:
-Plotting python with latex requires some minimal installation of latex. For linux 
-this may be installed as:
-
-```
-sudo apt-get install texlive-latex-extra texlive-fonts-recommended dvipng cm-super
-```
-
-On Mac OS a working installation can be built with:
-
-```
-brew install --cask basictex
-```
-
-Then after restarting the terminal:
-
-```
-sudo tlmgr update --self
-sudo tlmgr install type1cm dvipng cm-super
-```
-
-The packages and python version have been set 
-mainly to work with requirements for ExKMC.
 
 # Datasets 
 
