@@ -33,7 +33,7 @@ For visualization of decision trees, this package uses pygraphviz
 For MacOS, the following seems somewhat robust.
 ```
 brew install graphviz
-python -m pip install \
+poetry run python -m pip install \
     --global-option=build_ext \
     --global-option="-I$(brew --prefix graphviz)/include/" \
     --global-option="-L$(brew --prefix graphviz)/lib/" \
