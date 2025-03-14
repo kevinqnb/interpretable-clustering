@@ -65,9 +65,8 @@ defined in `intercluster/experiments/preprocessing.py`. We also include a NOAA c
 within `data/climate`. The exception is the Anuran dataset, which may be downloaded 
 from the UCI machine learning repository. 
 
-* NOAA National Centers for Environmental information, Climate at a Glance: Regional Time Series, 
-published March 2025, retrieved on March 13, 2025 from 
-https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/regional/time-series
+* NOAA National Centers for Environmental information, Climate at a Glance: Divisional Mapping, published March 2025,
+  retrieved on March 14, 2025 from https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/divisional/mapping
 
 * Colonna, J., Nakamura, E., Cristo, M., & Gordo, M. (2015). Anuran Calls (MFCCs) [Dataset]. 
 UCI Machine Learning Repository. https://doi.org/10.24432/C5CC9H.
