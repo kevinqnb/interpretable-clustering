@@ -462,6 +462,6 @@ for mname, (method, massign, mcenters) in method_assignment_dict.items():
     plt.ylim(0,0.75)
     plt.xlim(0.95,3)
     plt.legend(loc = "upper right", handles=legend_elements, ncol = 1)
-    #plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
+    plt.savefig(fname, bbox_inches = 'tight', dpi = 300)
     #plt.show()
     plt.close()

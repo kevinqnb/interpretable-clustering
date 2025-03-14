@@ -162,7 +162,6 @@ cython_debug/
 #.idea/
 
 
-notebooks/tree.png
 data/anuran/
 data/mice_protein/
 older/
@@ -171,4 +170,6 @@ older/
 experiments/*/*.sh
 experiments/*/*.txt
 
-data/experiments/decision_sets/*.csv
+examples/testing.ipynb
+
+*.DS_Store
