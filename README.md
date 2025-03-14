@@ -40,6 +40,11 @@ poetry run python -m pip install \
     pygraphviz
 ```
 
+The environment may then be used and activated by running 
+```
+eval $(poetry env activate)
+```
+
 ## Examples + Experiments
 Example notebooks are provided to showcase the inner workings of the repository. 
 Specifically, the `examples/` folder contains notebooks, including a case study for the 
