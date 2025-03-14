@@ -39,8 +39,8 @@ poetry run python -m pip install \
     --global-option="-L$(brew --prefix graphviz)/lib/" \
     pygraphviz
 ```
-
-The environment may then be used and activated by running 
+Finally, to run jupyter notebooks one should install ipykernel and jupyter.
+The final environment may be used and activated by running 
 ```
 eval $(poetry env activate)
 ```
