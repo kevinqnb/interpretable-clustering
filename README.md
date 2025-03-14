@@ -4,6 +4,8 @@
 To build a minimal installation, first ensure that poetry is installed 
 as a package manager. If you do not have poetry installed, 
 instructions and basic usage  may be found [here](https://python-poetry.org/docs/). 
+Importantly, this uses python version 3.9 in order to 
+satisfy all dependencies and we would recommend the stable 3.9.20. 
 
 Once poetry is installed, clone the repository
 and run:
