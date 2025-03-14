@@ -87,7 +87,7 @@ measurement_dict['weighted-average-rule-length'] = [
 ]
 
 measurement_df = pd.DataFrame(measurement_dict)
-#measurement_df.to_csv("data/experiments/climate/explanation_tree.csv")
+measurement_df.to_csv("data/experiments/climate/explanation_tree.csv")
 
 
 ####################################################################################################
