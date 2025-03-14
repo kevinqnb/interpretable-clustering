@@ -1,4 +1,4 @@
-# Interpretable Clustering
+# Interpretable Clustering :deciduous_tree:
 
 ## Getting Started
 To build a minimal installation, first ensure that poetry is installed 
@@ -40,17 +40,40 @@ python -m pip install \
     pygraphviz
 ```
 
+## Examples + Experiments
+Example notebooks are provided to showcase the inner workings of the repository. 
+Specifically, the `examples/` folder contains notebooks, including a case study for the 
+climate dataset. 
 
-# Datasets 
+Likewise, our experiments are easily reproducible using the files provided in the `experiments`
+folder. For each dataset we include a `relative_coverage.py` file to run an experiment which measures the 
+result of changing coverage requirements. Similarly, the `interpretable_measurements.py` and `explanation_tree.py`
+files contain code for computing and plotting interpretability metrics for both our algorithms as well as 
+the explanation tree algorithm of Bandyapadhyay et al [2]. Pre-computed data and visualizations are available within 
+the `data/experiments/` and `figures` folders.
+## Datasets 
 
 Most experiments may be run by downloading datasets with sklearn and our preprocessing functions 
 defined in `intercluster/experiments/preprocessing.py`. We also include a NOAA climate dataset 
 within `data/climate`. The exception is the Anuran dataset, which may be downloaded 
 from the UCI machine learning repository. 
 
-NOAA National Centers for Environmental information, Climate at a Glance: Regional Time Series, 
+* NOAA National Centers for Environmental information, Climate at a Glance: Regional Time Series, 
 published March 2025, retrieved on March 13, 2025 from 
 https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/regional/time-series
 
-Colonna, J., Nakamura, E., Cristo, M., & Gordo, M. (2015). Anuran Calls (MFCCs) [Dataset]. 
+* Colonna, J., Nakamura, E., Cristo, M., & Gordo, M. (2015). Anuran Calls (MFCCs) [Dataset]. 
 UCI Machine Learning Repository. https://doi.org/10.24432/C5CC9H.
+
+## References
+1. Bandyapadhyay, S., Fomin, F.V., Golovach, P.A., Lochet, W., Purohit, N., Si-
+monov, K.: How to find a good explanation for clustering? Artificial Intelligence
+322, 103948 (2023)
+   
+2. Frost,N.,Moshkovitz,M.,Rashtchian,C.: ExKMC: Expanding Explainable K-means
+Clustering. arXiv preprint arXiv:2006.02399 (2020)
+
+2. Moshkovitz, M., Dasgupta, S., Rashtchian, C., Frost, N.: Explainable k-means and
+k-medians clustering. In: International conference on machine learning. pp. 7055–7065. PMLR (2020)
+
+
