@@ -2,7 +2,7 @@
 name = "intercluster"
 version = "0.1.0"
 description = "Clustering with Rules"
-authors = ["kevin-q2 <quinnk@bu.edu>"]
+authors = ["anonymous"]
 license = "MIT"
 readme = "README.md"
 
