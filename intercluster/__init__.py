@@ -25,8 +25,6 @@ from .utils import (
 
 from .plotting import (
     plot_decision_boundaries,
-    build_graph,
-    visualize_tree,
     build_networkx_graph,
     draw_tree,
     plot_decision_set,
