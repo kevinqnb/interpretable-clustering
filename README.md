@@ -29,6 +29,17 @@ Add this to your virtual environment by running
 ```
 poetry run pip install ExKMC==0.0.3
 ```
+For visualization of decision trees, this package uses pygraphviz 
+(which also requires installing graphviz), which can be tricky to install. 
+For MacOS, the following seems somewhat robust.
+```
+brew install graphviz
+poetry run python -m pip install \
+    --global-option=build_ext \
+    --global-option="-I$(brew --prefix graphviz)/include/" \
+    --global-option="-L$(brew --prefix graphviz)/lib/" \
+    pygraphviz
+```
 The environment may then be used and activated by running 
 ```
 eval $(poetry env activate)
