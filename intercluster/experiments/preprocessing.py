@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import sklearn.datasets as datasets
-from mnist1d.data import make_dataset, get_dataset_args
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from typing import List
 
