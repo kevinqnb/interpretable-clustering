@@ -79,7 +79,6 @@ class ExplanationTree(Tree):
         new_outliers = self.splitter.get_split_outliers(left_indices, right_indices)
         self.splitter.update_outliers(new_outliers)
         self.outliers = self.outliers.union(new_outliers)
-
         # This is really important, keeps track of outlier removal!
         left_indices_remain = np.array(list(set(left_indices) - self.outliers))
         right_indices_remain = np.array(list(set(right_indices) - self.outliers))

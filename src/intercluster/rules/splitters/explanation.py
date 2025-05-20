@@ -5,6 +5,7 @@ from numpy.typing import NDArray
 from typing import List, Set, Tuple
 from ._splitter import AxisAlignedSplitter
 from .._conditions import Condition, LinearCondition
+from ._explanation import _get_split_outliers
 
 ####################################################################################################
 
@@ -52,111 +53,26 @@ class ExplanationSplitter(AxisAlignedSplitter):
             right_indices : NDArray
         ) -> Tuple[NDArray, NDArray]:
         """
-        Finds outliers to be removed from set of indices. 
+        Finds outliers to be removed from set of indices. Note that this a wrapper to an
+        internal cython function.
+
+        Args:
+            left_indices (np.ndarray): Indices for the left child of the split.
+            
+            right_indices (np.ndarray): Indices for the right child of the split.
+
+        Returns:
+            outliers (np.ndarray): Indices of the data points to be removed as outliers.
         """
-        new_outliers = set()
-        left_indices_rem = set(left_indices)
-        right_indices_rem = set(right_indices)
-
-        # Count number of clusters appearances in each half
-        left_cluster_satisfies = {i:set() for i in range(self.num_clusters)}
-        right_cluster_satisfies = {i:set() for i in range(self.num_clusters)}
-        left_cluster_counts = np.zeros(self.num_clusters)
-        right_cluster_counts = np.zeros(self.num_clusters)
-
-        for i in left_indices_rem:
-            i_cluster = self.y_array[i]
-            left_cluster_satisfies[i_cluster].add(i)
-            left_cluster_counts[i_cluster] += 1
-
-        for i in right_indices_rem:
-            i_cluster = self.y_array[i]
-            right_cluster_satisfies[i_cluster].add(i)
-            right_cluster_counts[i_cluster] += 1
-
-        both_zeros = (left_cluster_counts == 0) & (right_cluster_counts == 0)
-
-        # Case 1. All clusters have majority in the left indices:
-        if np.sum((right_cluster_counts >= left_cluster_counts) & (~both_zeros)) == 0:
-            left_positive = np.where(left_cluster_counts > right_cluster_counts)[0]
-            positive_counts = left_cluster_counts[left_positive]
-            minimum_majority_cluster = left_positive[np.argmin(positive_counts)]
-
-            # Effectively assign minimum majority to right by removing its left satisfying points.
-            new_outliers = new_outliers.union(left_cluster_satisfies[minimum_majority_cluster])
-
-            # Effectively assign all others to left by rmeoving their right satisfying points.
-            for i in range(self.num_clusters):
-                if i != minimum_majority_cluster:
-                    new_outliers = new_outliers.union(right_cluster_satisfies[i])
-
-
-        # Case 2. All clusters have majority in the right indices:
-        elif np.sum((left_cluster_counts >= right_cluster_counts) & (~both_zeros)) == 0:
-            right_positive = np.where(right_cluster_counts > left_cluster_counts)[0]
-            positive_counts = right_cluster_counts[right_positive]
-            minimum_majority_cluster = right_positive[np.argmin(positive_counts)]
-
-            # Effectively assign minimum majority to left by removing its right satisfying points.
-            new_outliers = new_outliers.union(right_cluster_satisfies[minimum_majority_cluster])
-
-            # Effectively assign all others to right by rmeoving their left satisfying points.
-            for i in range(self.num_clusters):
-                if i != minimum_majority_cluster:
-                    new_outliers = new_outliers.union(left_cluster_satisfies[i])
-
-        # Case 3. Cluster membership is mixed:
-        else:
-            left_positive = np.where(left_cluster_counts > right_cluster_counts)[0]
-            right_positive = np.where(right_cluster_counts > left_cluster_counts)[0]
-            tied = np.where(
-                (left_cluster_counts == right_cluster_counts) & (~both_zeros)
-            )
-
-            # Distinct majorities are assigned to their respective halves.
-            left_right_assignment = np.zeros(self.num_clusters)
-            left_right_assignment[left_positive] = -1
-            left_right_assignment[right_positive] = 1
-            left_assigned = 0
-            right_assigned = 0
-
-            # Ties are broken, and then rebroken if necessary (until both halves have at least 
-            # one cluster).
-            left_assigned = 0
-            right_assigned = 0
-
-            while left_assigned == 0 or right_assigned == 0:
-                left_assigned = len(left_positive)
-                right_assigned = len(right_positive)
-                left_right_assignment[tied] = 0
-
-                for i in tied:
-                    # Flip a coin and assign
-                    coin_val = np.random.uniform()
-                    if coin_val <= 0.5:
-                        left_assigned += 1
-                        left_right_assignment[i] = -1
-                    else:
-                        right_assigned += 1
-                        left_right_assignment[i] = 1
-
-            # Track outliers based on cluster assignment
-            for i,assign_val in enumerate(left_right_assignment):
-                if assign_val == -1:
-                    # remove right indices
-                    new_outliers = new_outliers.union(right_cluster_satisfies[i])
-                elif assign_val == 1:
-                    # remove left indices
-                    new_outliers = new_outliers.union(left_cluster_satisfies[i])
-                else:
-                    # must be a case where the cluster is not present. 
-                    pass
-
-        return new_outliers
+        outliers = _get_split_outliers(self.y_array, left_indices, right_indices)
+        return outliers
 
     def update_outliers(self, new_outliers : Set[int]):
         """
-        updates the outlier list.
+        Updates the outlier list.
+
+        Args:
+            new_outliers (Set[int]): Set of data points to include as new outliers. 
         """
         self.outliers = self.outliers.union(new_outliers)
 
@@ -209,7 +125,6 @@ class ExplanationSplitter(AxisAlignedSplitter):
         # Setting this to 0 simply minimizes the number of outliers removed without considering 
         # what happened in the parent node.
         parent_cost = 0
-
         split_outliers = self.get_split_outliers(left_indices, right_indices)
         split_cost = len(split_outliers)
         return parent_cost - (split_cost)

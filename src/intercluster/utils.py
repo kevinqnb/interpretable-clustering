@@ -419,7 +419,7 @@ def flatten_labels(labels : List[Set[int]]) -> NDArray:
     Returns:
         flattened (List[int]): Flattened list of labels.
     """
-    flattened = np.array([j for _,labs in enumerate(labels) for j in labs])
+    flattened = np.array([j for _,labs in enumerate(labels) for j in labs], dtype = np.int64)
     return flattened
 
 
