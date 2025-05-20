@@ -3,7 +3,7 @@ from sklearn.tree import DecisionTreeClassifier
 from typing import List,Set
 from numpy.typing import NDArray
 from intercluster.utils import mode, labels_format, can_flatten, flatten_labels
-from .splitters import InformationGainSplitter, ObliqueInformationGainSplitter, DummySplitter
+from .splitters import InformationGainSplitter, DummySplitter, ObliqueInformationGainSplitter
 from ._conditions import Condition, LinearCondition
 from ._node import Node
 from ._tree import Tree

@@ -49,7 +49,7 @@ class ExplanationTree(Tree):
         splitter = ExplanationSplitter(
             num_clusters = num_clusters,
             min_points_leaf = min_points_leaf,
-            cpu_count = cpu_count
+            #cpu_count = cpu_count
         )
         super().__init__(
             splitter = splitter,

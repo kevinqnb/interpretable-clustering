@@ -11,14 +11,17 @@ cnp.import_array()
 
 DTYPE_float = np.float64
 ctypedef cnp.float64_t DTYPE_float_t
-DTYPE = np.int64
-ctypedef cnp.int64_t DTYPE_t
+DTYPE_int = np.int64
+ctypedef cnp.int64_t DTYPE_int_t
 
 
-def _get_split_outliers(
-        cnp.ndarray[DTYPE_t, ndim = 1] cluster_labels,
-        cnp.ndarray[DTYPE_t, ndim = 1] left_indices,
-        cnp.ndarray[DTYPE_t, ndim = 1] right_indices
+####################################################################################################
+
+
+def get_split_outliers_cy(
+        cnp.ndarray[DTYPE_int_t, ndim = 1] cluster_labels,
+        cnp.ndarray[DTYPE_int_t, ndim = 1] left_indices,
+        cnp.ndarray[DTYPE_int_t, ndim = 1] right_indices
     ) -> NDArray:
     """
     Finds outliers to be removed from set of indices.
@@ -34,7 +37,7 @@ def _get_split_outliers(
         outliers (np.ndarray): Indices of the data points to be removed as outliers.
     """
     cdef int n = len(cluster_labels)
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] unique_clusters = np.unique(
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] unique_clusters = np.unique(
         cluster_labels[np.concatenate((left_indices, right_indices))]
     )
     cdef int num_clusters = len(unique_clusters)
@@ -42,24 +45,24 @@ def _get_split_outliers(
         raise ValueError("The clustering must contain at least 2 non-empty clusters.")
     cdef cluster_idx_dict = {clust:i for i,clust in enumerate(unique_clusters)}
 
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] outliers = np.zeros(
-        n, dtype = DTYPE
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] outliers = np.zeros(
+        n, dtype = DTYPE_int
     )
-    cdef cnp.ndarray[DTYPE_t, ndim = 2] left_half_satisfies = np.zeros(
-        (num_clusters, n), dtype = DTYPE
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 2] left_half_satisfies = np.zeros(
+        (num_clusters, n), dtype = DTYPE_int
     )
-    cdef cnp.ndarray[DTYPE_t, ndim = 2] right_half_satisfies = np.zeros(
-        (num_clusters, n), dtype = DTYPE
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 2] right_half_satisfies = np.zeros(
+        (num_clusters, n), dtype = DTYPE_int
     )
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] left_half_counts = np.zeros(
-        num_clusters, dtype = DTYPE
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] left_half_counts = np.zeros(
+        num_clusters, dtype = DTYPE_int
     )
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] right_half_counts = np.zeros(
-        num_clusters, dtype = DTYPE
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] right_half_counts = np.zeros(
+        num_clusters, dtype = DTYPE_int
     )
     cdef int i, idx, cluster, minimum_majority_cluster, left_assigned, right_assigned, left_assign
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] non_empty, left_positive, right_positive, tied
-    cdef cnp.ndarray[DTYPE_t, ndim = 1] tied_left_assignment
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] non_empty, left_positive, right_positive, tied
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] tied_left_assignment
 
     for i,idx in enumerate(left_indices):
         cluster = cluster_labels[idx]
@@ -83,7 +86,7 @@ def _get_split_outliers(
                 right_half_satisfies[~np.isin(range(num_clusters), minimum_majority_cluster), :]
             ),
             axis = 0,
-            dtype = DTYPE
+            dtype = DTYPE_int
         )
 
     # Case 2. All clusters have majority in the right indices:
@@ -97,7 +100,7 @@ def _get_split_outliers(
                 left_half_satisfies[~np.isin(range(num_clusters), minimum_majority_cluster), :]
             ),
             axis = 0,
-            dtype = DTYPE
+            dtype = DTYPE_int
         )
 
     # Case 3. Cluster membership is mixed:
@@ -110,20 +113,20 @@ def _get_split_outliers(
             outliers = np.sum(
                 outliers + right_half_satisfies[left_positive, :],
                 axis = 0,
-                dtype = DTYPE
+                dtype = DTYPE_int
             )
 
         if len(right_positive) > 0:
             outliers = np.sum(
                 outliers + left_half_satisfies[right_positive, :],
                 axis = 0,
-                dtype = DTYPE
+                dtype = DTYPE_int
             )
 
         if len(tied) > 0:
             left_assigned = 0
             right_assigned = 0
-            tied_left_assignment = np.zeros(len(tied), dtype = DTYPE)
+            tied_left_assignment = np.zeros(len(tied), dtype = DTYPE_int)
 
             # Break ties until both halves contain at least one cluster.
             while left_assigned == 0 or right_assigned == 0:
@@ -148,41 +151,4 @@ def _get_split_outliers(
     return np.where(outliers)[0]
 
 
-
-def split(cnp.ndarray[DTYPE_t, ndim = 1] indices) -> Tuple[float, Condition]:
-    """
-    Computes the best split of a leaf node.
-    
-    Args:
-        indices (np.ndarray): Indices for a subset of the original dataset.
-    
-    Returns:
-        gain (float): The gain associated with the split.
-        
-        condition (Condition): Logical or functional condition for evaluating and 
-            splitting the data points.
-    """
-    X_ = self.X[indices, :]
-    n,d = X_.shape
-
-    condition_list = []
-    for feature in range(d):
-        unique_vals = np.unique(X_[:,feature])
-        for threshold in unique_vals:
-            condition = LinearCondition(
-                features = np.array([feature]),
-                weights = np.array([1]),
-                threshold = threshold,
-                direction = -1
-            )
-            condition_list.append(condition)
-
-    gain_vals = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-            delayed(self.evaluate_condition)(indices, cond)
-            for cond in condition_list
-    )
-    
-    best_condition_idx = tiebreak(scores = -1 * np.array(gain_vals))[0]
-    best_gain = gain_vals[best_condition_idx]
-    best_condition = condition_list[best_condition_idx]
-    return best_gain, best_condition
+####################################################################################################

@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from typing import List, Set, Tuple
 from ._splitter import AxisAlignedSplitter
 from .._conditions import Condition, LinearCondition
-from ._explanation import _get_split_outliers
+from .explanation_cy import get_split_outliers_cy
 
 ####################################################################################################
 
@@ -20,8 +20,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
     def __init__(
         self,
         num_clusters : int,
-        min_points_leaf : int = 1,
-        cpu_count : int = 1
+        min_points_leaf : int = 1
     ):
         """
         Args:
@@ -42,7 +41,6 @@ class ExplanationSplitter(AxisAlignedSplitter):
             outliers (Set[int]): List of data indices to be removed as outliers.
         """
         self.num_clusters = num_clusters
-        self.cpu_count = cpu_count
         super().__init__(min_points_leaf = min_points_leaf)
         self.outliers = set()
 
@@ -64,7 +62,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
         Returns:
             outliers (np.ndarray): Indices of the data points to be removed as outliers.
         """
-        outliers = _get_split_outliers(self.y_array, left_indices, right_indices)
+        outliers = get_split_outliers_cy(self.y_array, left_indices, right_indices)
         return outliers
 
     def update_outliers(self, new_outliers : Set[int]):
@@ -128,71 +126,5 @@ class ExplanationSplitter(AxisAlignedSplitter):
         split_outliers = self.get_split_outliers(left_indices, right_indices)
         split_cost = len(split_outliers)
         return parent_cost - (split_cost)
-    
-
-    def evaluate_condition(self, indices : NDArray, condition : Condition) -> float:
-        """
-        Evaluates the gain of a condition upon a set of remaning indices
-
-        Args:
-            indices (np.ndarray): Array of remaining index values.
-
-            condition (Condition): Logical condition object for splitting indices. 
-
-        Returns
-            gain (float): Gain to be acheived via splitting indices upon the given condition.
-        """
-        left_indices, right_indices = self.get_split_indices(indices, condition)
-        gain_val = None
-        if (len(left_indices) < self.min_points_leaf or 
-            len(right_indices) < self.min_points_leaf):
-            gain_val = -np.inf
-        else:
-            gain_val = self.gain(left_indices, right_indices)
-
-        return gain_val
-
-
-
-    def split(
-        self,
-        indices : NDArray
-    ) -> Tuple[float, Condition]:
-        """
-        Computes the best split of a leaf node.
-        
-        Args:
-            indices (np.ndarray, optional): Indices for a subset of the original dataset.
-        
-        Returns:
-            gain (float): The gain associated with the split.
-            
-            condition (Condition): Logical or functional condition for evaluating and 
-                splitting the data points.
-        """
-        X_ = self.X[indices, :]
-        n,d = X_.shape
-
-        condition_list = []
-        for feature in range(d):
-            unique_vals = np.unique(X_[:,feature])
-            for threshold in unique_vals:
-                condition = LinearCondition(
-                    features = np.array([feature]),
-                    weights = np.array([1]),
-                    threshold = threshold,
-                    direction = -1
-                )
-                condition_list.append(condition)
-
-        gain_vals = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.evaluate_condition)(indices, cond)
-                for cond in condition_list
-        )
-        
-        best_condition_idx = tiebreak(scores = -1 * np.array(gain_vals))[0]
-        best_gain = gain_vals[best_condition_idx]
-        best_condition = condition_list[best_condition_idx]
-        return best_gain, best_condition
     
         
