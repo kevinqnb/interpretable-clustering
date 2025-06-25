@@ -2,7 +2,6 @@ cimport cython
 import numpy as np
 cimport numpy as cnp
 from intercluster.utils import tiebreak
-from .._conditions import Condition, LinearCondition
 
 # Typing
 from typing import Tuple, List, Set, Callable, Union
@@ -18,11 +17,11 @@ ctypedef cnp.int64_t DTYPE_int_t
 ####################################################################################################
 
 
-def get_split_outliers_cy(
+cpdef cnp.ndarray[DTYPE_int_t, ndim=1] get_split_outliers_cy(
         cnp.ndarray[DTYPE_int_t, ndim = 1] cluster_labels,
         cnp.ndarray[DTYPE_int_t, ndim = 1] left_indices,
         cnp.ndarray[DTYPE_int_t, ndim = 1] right_indices
-    ) -> NDArray:
+):
     """
     Finds outliers to be removed from set of indices.
 
@@ -152,3 +151,102 @@ def get_split_outliers_cy(
 
 
 ####################################################################################################
+
+
+cpdef float gain_cy(
+    cnp.ndarray[DTYPE_int_t, ndim = 1] y,
+    cnp.ndarray[DTYPE_int_t, ndim = 1] left_indices,
+    cnp.ndarray[DTYPE_int_t, ndim = 1] right_indices
+):
+    """
+    Computes the gain associated with a split.
+    
+    Args:
+        left_indices (np.ndarray): Indices for the left child of the split.
+        
+        right_indices (np.ndarray): Indices for the right child of the split.
+        
+        parent_cost (float, optional): The cost of the parent node. Dummy variable, 
+            Defaults to None.
+    
+    Returns:
+        gain (float): The gain associated with the split.
+    """    
+    # If only a single cluster is present, no gain to be had.
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] parent_indices = np.concatenate(
+        (left_indices, right_indices)
+    )
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] clusters_present = y[parent_indices]
+    if np.all(clusters_present == clusters_present[0]):
+        return -np.inf
+
+    # Setting this to 0 simply minimizes the number of outliers removed without considering 
+    # what happened in the parent node.
+    cdef float parent_cost = 0
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] split_outliers = get_split_outliers_cy(
+        y, left_indices, right_indices
+    )
+    cdef float split_cost = len(split_outliers)
+    return parent_cost - (split_cost)
+
+
+####################################################################################################
+
+
+def split_cy(
+    cnp.ndarray[DTYPE_float_t, ndim = 2] X,
+    cnp.ndarray[DTYPE_int_t, ndim = 1] y,
+    cnp.ndarray[DTYPE_int_t, ndim = 1] indices,
+    int min_points_leaf,
+) -> Tuple[float, Condition]:
+    """
+    Computes the best split of a leaf node.
+    
+    Args:
+        indices (np.ndarray, optional): Indices for a subset of the original dataset.
+    
+    Returns:
+        gain (float): The gain associated with the split.
+        
+        condition (Condition): Logical or functional condition for evaluating and 
+            splitting the data points.
+    """
+    cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
+    cdef int n = X_.shape[0]
+    cdef int d = X_.shape[1]
+    
+    cdef int i,j
+    cdef cnp.ndarray[DTYPE_float_t, ndim = 1] unique_values
+    cdef float threshold, gain_val, best_gain_val
+    cdef cnp.ndarray[DTYPE_int_t, ndim = 1] evals, left_indices, right_indices
+    cdef object condition, best_condition
+    cdef list best_conditions
+
+    best_gain_val = -np.inf
+    best_conditions = []
+    for i in range(d):
+        unique_values = np.unique(X_[:, i])
+        for j in range(unique_values.shape[0]):
+
+            # Split condition:
+            threshold = unique_values[j]
+            evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)
+            left_indices = indices[np.where(evals)[0]]
+            right_indices = indices[np.where(1 - evals)[0]]
+            
+            if (len(left_indices) < min_points_leaf or 
+                len(right_indices) < min_points_leaf):
+                gain_val = -np.inf
+            else:
+                gain_val = gain_cy(y, left_indices, right_indices)
+            
+            if gain_val > best_gain_val:
+                best_gain_val = gain_val
+                best_conditions = [(i, threshold)]
+            
+            elif gain_val == best_gain_val:
+                best_conditions.append((i, threshold))
+    
+    # Randomly break ties if necessary:
+    best_condition = best_conditions[np.random.randint(len(best_conditions))]
+    return best_gain_val, best_condition

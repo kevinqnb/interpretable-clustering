@@ -11,11 +11,11 @@ from intercluster.utils import (
     center_dists,
     distance_ratio
 )
-from .splitters import ImmSplitter, DummySplitter
-from ._conditions import Condition, LinearCondition
-from ._node import Node
+from ..splitters import ImmSplitter, DummySplitter
+from .._conditions import Condition, LinearCondition
+from .._node import Node
 from ._tree import Tree
-from .utils import get_decision_paths, satisfies_path
+from ..utils import get_decision_paths, satisfies_path
 
 
 class ImmTree(Tree):

@@ -2,8 +2,8 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import List, Set
 from intercluster.utils import unique_labels
-from .splitters import SVMSplitter
-from ._node import Node
+from ..splitters import SVMSplitter
+from .._node import Node
 from ._tree import Tree
     
 

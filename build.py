@@ -25,7 +25,7 @@ def build() -> None:
     extensions = [
         Extension(
             "*",
-            ["src/intercluster/**/*.pyx"],
+            ["src/intercluster/***/*.pyx"],
             extra_compile_args=COMPILE_ARGS,
             extra_link_args=LINK_ARGS,
             include_dirs=INCLUDE_DIRS,

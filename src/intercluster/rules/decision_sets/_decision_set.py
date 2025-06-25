@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
 from intercluster.pruning import prune_with_grid_search, prune_with_binary_search
-from ._conditions import Condition
+from .._conditions import Condition
 
 class DecisionSet:
     """

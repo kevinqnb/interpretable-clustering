@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 from typing import Tuple, List, Set
 from intercluster.utils import can_flatten, flatten_labels
 from .._conditions import Condition, LinearCondition
-from ._splitter_cy import split_cy, oblique_split_cy
+from .cython.information_gain import split_cy, oblique_split_cy
 
 
 ####################################################################################################
@@ -23,8 +23,8 @@ class Splitter:
             
         y_array (np.ndarray): Flattened one-dim array of labels.
     """
-    def __init__(self):
-        pass
+    def __init__(self, min_points_leaf : int = 1):
+        self.min_points_leaf = min_points_leaf
     
     
     def fit(
@@ -202,13 +202,17 @@ class AxisAlignedSplitter(Splitter):
             condition (Condition): Logical or functional condition for evaluating and 
                 splitting the data points.
         """
-        gain_val, condition = split_cy(
+        gain_val, condition_tuple = split_cy(
             X = self.X,
+            y = self.y_array,
             indices = indices,
             min_points_leaf = self.min_points_leaf,
-            get_split_indices_fn = self. get_split_indices,
-            cost_fn = self.cost,
-            gain_fn = self.gain
+        )
+        condition = LinearCondition(
+            features = np.array([condition_tuple[0]]),
+            weights = np.array([1]),
+            threshold = condition_tuple[1],
+            direction = -1
         )
         return gain_val, condition
     

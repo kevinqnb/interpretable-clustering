@@ -5,9 +5,9 @@ from sklearn.feature_selection import RFE
 from numpy.typing import NDArray
 from typing import List, Any, Tuple, Set, Dict
 from intercluster.utils import unique_labels, can_flatten, flatten_labels, mode
-from ._conditions import Condition, LinearCondition
+from .._conditions import Condition, LinearCondition
 from ._decision_set import DecisionSet
-from .utils import satisfies_conditions
+from ..utils import satisfies_conditions
 
 
 class SVMSet(DecisionSet):

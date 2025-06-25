@@ -3,14 +3,14 @@ from joblib import Parallel, delayed, parallel_config
 from intercluster.utils import tiebreak
 from numpy.typing import NDArray
 from typing import List, Set, Tuple
-from ._splitter import AxisAlignedSplitter
+from ._splitter import Splitter
 from .._conditions import Condition, LinearCondition
-from .explanation_cy import get_split_outliers_cy
+from .cython.explanation import get_split_outliers_cy, gain_cy, split_cy
 
 ####################################################################################################
 
 
-class ExplanationSplitter(AxisAlignedSplitter):
+class ExplanationSplitter(Splitter):
     """
     Splits leaf nodes and removes outliers, in order to create an explainable clustering 
     for the remaining set of points. This follows the explainable clustering 
@@ -110,6 +110,7 @@ class ExplanationSplitter(AxisAlignedSplitter):
         Returns:
             gain (float): The gain associated with the split.
         """
+        '''
         parent_indices = np.unique(np.concatenate([left_indices, right_indices]))
         
         if len(parent_indices) < len(left_indices) + len(right_indices):
@@ -126,5 +127,42 @@ class ExplanationSplitter(AxisAlignedSplitter):
         split_outliers = self.get_split_outliers(left_indices, right_indices)
         split_cost = len(split_outliers)
         return parent_cost - (split_cost)
+        '''
+        return gain_cy(
+            y = self.y_array,
+            left_indices = left_indices,
+            right_indices = right_indices,
+        )
+    
+
+    def split(
+        self,
+        indices : NDArray
+    ) -> Tuple[float, Condition]:
+        """
+        Computes the best split of a leaf node.
+        
+        Args:
+            indices (np.ndarray, optional): Indices for a subset of the original dataset.
+        
+        Returns:
+            gain (float): The gain associated with the split.
+            
+            condition (Condition): Logical or functional condition for evaluating and 
+                splitting the data points.
+        """
+        gain_val, condition_tuple = split_cy(
+            X = self.X,
+            y = self.y_array,
+            indices = indices,
+            min_points_leaf = self.min_points_leaf,
+        )
+        condition = LinearCondition(
+            features = np.array([condition_tuple[0]]),
+            weights = np.array([1]),
+            threshold = condition_tuple[1],
+            direction = -1
+        )
+        return gain_val, condition
     
         

@@ -3,11 +3,11 @@ import numpy as np
 from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
 from intercluster.utils import mode, can_flatten, flatten_labels
-from .splitters import ExplanationSplitter
-from ._conditions import Condition, LinearCondition
-from ._node import Node
+from ..splitters import ExplanationSplitter
+from .._conditions import Condition, LinearCondition
+from .._node import Node
 from ._tree import Tree
-from .utils import get_decision_paths, satisfies_path
+from ..utils import get_decision_paths, satisfies_path
 
 
 class ExplanationTree(Tree):

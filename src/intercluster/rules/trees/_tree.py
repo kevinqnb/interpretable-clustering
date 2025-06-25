@@ -4,9 +4,9 @@ import heapq
 from numpy.typing import NDArray
 from typing import List, Set, Callable
 from intercluster.utils import mode, can_flatten, flatten_labels
-from ._conditions import Condition
-from ._node import Node
-from .utils import *
+from .._conditions import Condition
+from .._node import Node
+from ..utils import *
 
 import time
 class Tree():

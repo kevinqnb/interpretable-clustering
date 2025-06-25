@@ -3,9 +3,9 @@ from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from numpy.typing import NDArray
 from typing import List, Dict, Any, Tuple, Set
 from intercluster.utils import labels_format,unique_labels, can_flatten
-from ._conditions import Condition
+from .._conditions import Condition
 from ._decision_set import DecisionSet
-from .utils import get_decision_paths, get_decision_paths_with_labels, satisfies_conditions
+from ..utils import get_decision_paths, get_decision_paths_with_labels, satisfies_conditions
 
 class DecisionForest(DecisionSet):
     """
