@@ -9,3 +9,7 @@ from .voronoi_set import (
 from .svm_set import (
     SVMSet
 )
+
+from .point_set import (
+    PointSet
+)

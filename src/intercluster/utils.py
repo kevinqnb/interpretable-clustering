@@ -115,20 +115,26 @@ def covered_mask(assignment : np.ndarray) -> NDArray:
 ####################################################################################################
 
 
-def coverage(assignment : np.ndarray) -> float:
+def coverage(assignment : np.ndarray, percentage : bool = True) -> float:
     """
     Computes the coverage of a point assignment. 
     
     Args:
         assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
             being True (1) if point i belongs to class j and False (0) otherwise. 
+
+        percentage (bool, optional): If True, returns the coverage as a percentage of points
+            covered by at least one cluster. If False, returns the total number of points covered.
         
     Returns:
         coverage (float): Fraction of points covered by at least one cluster.
     """
     n,k = assignment.shape
     #coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
-    coverage = np.sum(covered_mask(assignment)) / n
+    if percentage:
+        coverage = np.sum(covered_mask(assignment)) / n
+    else:
+        coverage = np.sum(covered_mask(assignment))
     return coverage
 
 

@@ -3,6 +3,9 @@ from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
 from intercluster.pruning import prune_with_grid_search, prune_with_binary_search
 from .._conditions import Condition
+from ..utils import satisfies_conditions
+from ...utils import labels_to_assignment
+
 
 class DecisionSet:
     """
@@ -40,7 +43,7 @@ class DecisionSet:
         self,
         X : NDArray,
         y : List[Set[int]] = None
-    ) -> Tuple[List[Condition], List[Set[int]]]:
+    ) -> Tuple[List[List[Condition]], List[Set[int]]]:
         """
         Privately used, custom fitting function.
         Fits a decision set to an input dataset. 
@@ -82,7 +85,65 @@ class DecisionSet:
             assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
                 if point i is covered by rule j and False otherwise.
         """
-        raise NotImplementedError('Method not implemented.')
+        assignment = np.zeros((X.shape[0], len(self.decision_set)))
+        for i, condition_list in enumerate(self.decision_set):
+            data_points_satisfied = satisfies_conditions(X, condition_list)
+            assignment[data_points_satisfied, i] = True
+        return assignment
+    
+    
+    def get_pruned_data_to_rules_assignment(self, X : NDArray) -> NDArray:
+        """
+        Finds data points of X covered by each rule in the decision set.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+        Returns:
+            assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
+                if point i is covered by rule j and False otherwise.
+        """
+        if self.pruned_indices is None:
+            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
+                             'likely because coverage requirements were not met.')
+        
+        assignment = self.get_data_to_rules_assignment(X)
+        pruned_assignment = assignment[:,self.pruned_indices]
+        return pruned_assignment
+    
+
+    def get_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
+        """
+        Finds data points of X covered by each rule in the decision set.
+        
+        Args:
+            n_labels (int): Number of labels in the dataset.
+            
+        Returns:
+            assignment (np.ndarray): n_rules x k boolean matrix with entry (i,j) being True
+                if point i is covered by rule j and False otherwise.
+        """
+        assignment = labels_to_assignment(self.decision_set_labels, n_labels)
+        return assignment
+    
+
+    def get_pruned_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
+        """
+        Finds data points of X covered by each rule in the decision set.
+        
+        Args:
+            n_labels (int): Number of labels in the dataset.
+            
+        Returns:
+            assignment (np.ndarray): n_rules x k boolean matrix with entry (i,j) being True
+                if point i is covered by rule j and False otherwise.
+        """
+        if self.pruned_indices is None:
+            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
+                             'likely because coverage requirements were not met.')
+        assignment = self.get_rules_to_clusters_assignment(n_labels)
+        pruned_assignment = assignment[self.pruned_indices,:]
+        return pruned_assignment
     
     
     def predict(self, X : NDArray, rule_labels : bool = False) -> List[Set[int]]:

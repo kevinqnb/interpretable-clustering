@@ -183,7 +183,7 @@ class DecisionForest(DecisionSet):
         self,
         X : NDArray,
         y : List[Set[int]] = None
-    ) -> List[List[Condition]]:
+    ) -> Tuple[List[List[Condition]], List[Set[int]]]:
         """
         Fits a decision set by training a forest of decision trees, 
         and using collecting their leaf nodes as rules.

@@ -143,7 +143,7 @@ class ExplanationTree(Tree):
     def predict(
         self, X : NDArray,
         leaf_labels = False,
-        remove_outliers : bool = True
+        remove_outliers : bool = False
     ) -> List[Set[int]]:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
