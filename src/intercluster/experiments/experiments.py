@@ -4,7 +4,8 @@ import copy
 from joblib import Parallel, delayed, parallel_config
 from typing import List, Callable, Any
 from numpy.typing import NDArray
-from intercluster.rules import *
+from intercluster.decision_trees import *
+from intercluster.decision_sets import *
 from intercluster.utils import covered_mask, update_centers
 from .modules import *
 import time

@@ -3,10 +3,18 @@ import copy
 import heapq
 from numpy.typing import NDArray
 from typing import List, Set, Callable
-from intercluster.utils import mode, can_flatten, flatten_labels
-from .._conditions import Condition
-from .._node import Node
-from ..utils import *
+from intercluster import (
+    mode,
+    can_flatten,
+    flatten_labels,
+    get_decision_paths,
+    satisfies_path,
+    collect_nodes,
+    collect_leaves
+
+)
+from intercluster import Condition
+from .node import Node
 
 import time
 class Tree():

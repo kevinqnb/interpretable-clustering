@@ -4,7 +4,7 @@ from intercluster.utils import tiebreak
 from numpy.typing import NDArray
 from typing import List, Set, Tuple
 from ._splitter import Splitter
-from .._conditions import Condition, LinearCondition
+from intercluster import Condition, LinearCondition
 from .cython.explanation import get_split_outliers_cy, gain_cy, split_cy
 
 ####################################################################################################

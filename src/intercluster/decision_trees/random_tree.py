@@ -1,5 +1,5 @@
-from ._tree import Tree
-from .._node import Node
+from .tree import Tree
+from .node import Node
 
 class RandomTree(Tree):
     """

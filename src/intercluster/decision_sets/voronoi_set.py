@@ -2,11 +2,15 @@ from itertools import combinations
 import numpy as np
 from numpy.typing import NDArray
 from typing import List, Any, Tuple, Set
-from intercluster.utils import tiebreak, entropy, can_flatten, flatten_labels
-from .._conditions import Condition, LinearCondition
-from ._decision_set import DecisionSet
-from ..utils import satisfies_conditions
-
+from intercluster import Condition, LinearCondition
+from intercluster import (
+    tiebreak,
+    entropy,
+    can_flatten,
+    flatten_labels,
+    satisfies_conditions
+)
+from .decision_set import DecisionSet
 
 class VoronoiSet(DecisionSet):
     """

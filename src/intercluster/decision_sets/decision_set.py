@@ -1,10 +1,9 @@
 import numpy as np
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.pruning import prune_with_grid_search, prune_with_binary_search
-from .._conditions import Condition
-from ..utils import satisfies_conditions
-from ...utils import labels_to_assignment
+from .pruning import prune_with_grid_search, prune_with_binary_search
+from intercluster import Condition
+from intercluster import satisfies_conditions, labels_to_assignment
 
 
 class DecisionSet:

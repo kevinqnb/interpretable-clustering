@@ -1,10 +1,9 @@
 import numpy as np
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.utils import can_flatten, flatten_labels
-from ..utils import satisfies_conditions
-from ._decision_set import DecisionSet
-from .._conditions import Condition, LinearCondition
+from intercluster import can_flatten, flatten_labels, satisfies_conditions
+from intercluster import Condition, LinearCondition
+from .decision_set import DecisionSet
 
 class PointSet(DecisionSet):
     """

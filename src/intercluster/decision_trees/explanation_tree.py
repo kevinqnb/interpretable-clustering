@@ -2,12 +2,17 @@ import heapq
 import numpy as np
 from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.utils import mode, can_flatten, flatten_labels
-from ..splitters import ExplanationSplitter
-from .._conditions import Condition, LinearCondition
-from .._node import Node
-from ._tree import Tree
-from ..utils import get_decision_paths, satisfies_path
+from intercluster import Condition, LinearCondition
+from intercluster import (
+    mode,
+    can_flatten,
+    flatten_labels,
+    get_decision_paths,
+    satisfies_path
+)
+from .splitters import ExplanationSplitter
+from .node import Node
+from .tree import Tree
 
 
 class ExplanationTree(Tree):

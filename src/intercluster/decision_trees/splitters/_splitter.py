@@ -3,7 +3,7 @@ from itertools import combinations, permutations
 from numpy.typing import NDArray
 from typing import Tuple, List, Set
 from intercluster.utils import can_flatten, flatten_labels
-from .._conditions import Condition, LinearCondition
+from intercluster import Condition, LinearCondition
 from .cython.information_gain import split_cy, oblique_split_cy
 
 

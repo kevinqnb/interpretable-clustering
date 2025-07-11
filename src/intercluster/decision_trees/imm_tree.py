@@ -4,18 +4,19 @@ import heapq
 from ExKMC.Tree import Tree as ExTree
 from typing import List, Set, Tuple, Callable
 from numpy.typing import NDArray
-from intercluster.utils import (
+from intercluster import Condition, LinearCondition
+from intercluster import (
     labels_format,
     can_flatten,
     flatten_labels,
     center_dists,
-    distance_ratio
+    distance_ratio,
+    get_decision_paths,
+    satisfies_path
 )
-from ..splitters import ImmSplitter, DummySplitter
-from .._conditions import Condition, LinearCondition
-from .._node import Node
-from ._tree import Tree
-from ..utils import get_decision_paths, satisfies_path
+from .splitters import ImmSplitter, DummySplitter
+from .node import Node
+from .tree import Tree
 
 
 class ImmTree(Tree):

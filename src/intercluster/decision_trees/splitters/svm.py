@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 from typing import Tuple
 from intercluster.utils import entropy
 from ._splitter import Splitter
-from .._conditions import Condition, LinearCondition
+from intercluster import Condition, LinearCondition
  
 
 

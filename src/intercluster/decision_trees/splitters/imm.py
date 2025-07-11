@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 from typing import Tuple, List, Set
 from intercluster.utils import center_dists, flatten_labels
 from ._splitter import Splitter
-from .._conditions import Condition, LinearCondition
+from intercluster import Condition, LinearCondition
  
     
 class ImmSplitter(Splitter):

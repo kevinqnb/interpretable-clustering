@@ -2,12 +2,19 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from typing import List,Set
 from numpy.typing import NDArray
-from intercluster.utils import mode, labels_format, can_flatten, flatten_labels
-from ..splitters import InformationGainSplitter, DummySplitter, ObliqueInformationGainSplitter
-from .._conditions import Condition, LinearCondition
-from .._node import Node
-from ._tree import Tree
-from ..utils import traverse, get_decision_paths, satisfies_path
+from intercluster import Condition, LinearCondition
+from intercluster import (
+    mode,
+    labels_format,
+    can_flatten,
+    flatten_labels,
+    traverse,
+    get_decision_paths,
+    satisfies_path
+)
+from .splitters import InformationGainSplitter, DummySplitter, ObliqueInformationGainSplitter
+from .node import Node
+from .tree import Tree
 
 
 class ID3Tree(Tree):

@@ -4,10 +4,15 @@ from sklearn.svm import LinearSVC
 from sklearn.feature_selection import RFE
 from numpy.typing import NDArray
 from typing import List, Any, Tuple, Set, Dict
-from intercluster.utils import unique_labels, can_flatten, flatten_labels, mode
-from .._conditions import Condition, LinearCondition
-from ._decision_set import DecisionSet
-from ..utils import satisfies_conditions
+from intercluster import Condition, LinearCondition
+from intercluster import (
+    unique_labels,
+    can_flatten,
+    flatten_labels,
+    mode,
+    satisfies_conditions
+)
+from .decision_set import DecisionSet
 
 
 class SVMSet(DecisionSet):

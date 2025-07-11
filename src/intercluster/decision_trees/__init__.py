@@ -1,4 +1,8 @@
-from ._tree import (
+from .node import (
+    Node
+)
+
+from .tree import (
     Tree
 )
 
@@ -7,7 +11,7 @@ from .imm_tree import (
     ExkmcTree,
 )
 
-from .decision_tree import (
+from .entropy_tree import (
     ID3Tree,
     SklearnTree,
     ObliqueTree,

@@ -8,7 +8,7 @@ import networkx as nx
 from IPython.display import Image
 from typing import Callable, List, Dict, Tuple
 from numpy.typing import NDArray
-from intercluster.rules import Node
+from intercluster.decision_trees import Node
 from intercluster.utils import can_flatten, flatten_labels, labels_to_assignment
 
 

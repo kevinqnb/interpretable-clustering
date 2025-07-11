@@ -1,3 +1,8 @@
+from .conditions import (
+    Condition,
+    LinearCondition
+)
+
 from .utils import (
     tiebreak,
     mode,
@@ -20,6 +25,14 @@ from .utils import (
     assignment_to_dict,
     point_silhouette,
     silhouette_score,
+    traverse,
+    collect_nodes,
+    collect_leaves,
+    get_decision_paths,
+    get_decision_paths_with_labels,
+    get_depth,
+    satisfies_path,
+    satisfies_conditions
 )
 
 

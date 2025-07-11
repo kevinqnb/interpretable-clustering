@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 from intercluster.utils import entropy
 from ._splitter import Splitter
 from typing import Tuple
-from .._conditions import Condition, LinearCondition
+from intercluster import Condition, LinearCondition
 from .cython.information_gain import cost_cy, gain_cy, split_cy
 
 
