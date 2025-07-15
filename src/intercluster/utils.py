@@ -1,10 +1,12 @@
-import numpy as np
 import math
 import copy
+import numpy as np
+import networkx as nx
+from sklearn.metrics.pairwise import pairwise_distances
 from collections.abc import Iterable
 from typing import List, Dict, Set, Callable, Tuple, Iterator
 from numpy.typing import NDArray
-from .decision_trees.node import Node
+from .node import Node
 
 
 ####################################################################################################
@@ -878,3 +880,56 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 
 
 ####################################################################################################
+
+
+def density_distance(X : NDArray) -> NDArray:
+    """
+    Computes the density distance between each pair of points in a dataset. The density distance 
+    between points i and j is the computed as the largest edge weight on the path 
+    between them in the minimum spanning tree of the graph where edge weights are given 
+    by euclidean distances. 
+
+    This is an implemenation of work seen in:
+    "Unsupervised representation learning with Minimax distance measures"
+    by Morteza Haghir Chehreghani 2020, https://arxiv.org/abs/1904.13223
+    
+    Args:
+        X (np.ndarray): (n x d) Dataset.
+        
+    Returns:
+        distances (np.ndarray): n x n array of density distances.
+    """
+    n, d = X.shape
+    density_distances = np.zeros((n,n))
+    euclidean_distances = pairwise_distances(X, metric='euclidean')
+
+    # Create a graph from the distance matrix
+    G = nx.from_numpy_array(euclidean_distances)
+    T = nx.minimum_spanning_tree(G)
+
+    # Extract the edges of the minimum spanning tree, sorted by weight
+    sorted_mst_edges = sorted(T.edges(data=True), key=lambda x: x[2]['weight'])
+
+    # Compute minimax path distances by dynamic programming
+    component_list = [{i} for i in range(n)]
+    component_id = list(range(n))
+    current_id = n - 1
+    for u, v, data in sorted_mst_edges:
+        if component_id[u] != component_id[v]:
+            first_side = component_list[component_id[u]]
+            second_side = component_list[component_id[v]]
+            new_component = first_side.union(second_side)
+
+            component_list.append(new_component)
+            current_id += 1
+            component_id.append(current_id)
+            for i in new_component:
+                component_id[i] = current_id
+
+            weight = data['weight']
+            for i in first_side:
+                for j in second_side:
+                    density_distances[i, j] = weight
+                    density_distances[j, i] = weight
+
+    return density_distances

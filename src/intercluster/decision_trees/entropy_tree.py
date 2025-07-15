@@ -4,6 +4,7 @@ from typing import List,Set
 from numpy.typing import NDArray
 from intercluster import Condition, LinearCondition
 from intercluster import (
+    Node,
     mode,
     labels_format,
     can_flatten,
@@ -13,7 +14,6 @@ from intercluster import (
     satisfies_path
 )
 from .splitters import InformationGainSplitter, DummySplitter, ObliqueInformationGainSplitter
-from .node import Node
 from .tree import Tree
 
 

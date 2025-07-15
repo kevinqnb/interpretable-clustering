@@ -10,6 +10,6 @@ from .svm_set import (
     SVMSet
 )
 
-from .point_set import (
-    PointSet
+from .db_set import (
+    DBSet
 )

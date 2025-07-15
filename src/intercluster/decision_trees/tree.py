@@ -14,7 +14,7 @@ from intercluster import (
 
 )
 from intercluster import Condition
-from .node import Node
+from ..node import Node
 
 import time
 class Tree():

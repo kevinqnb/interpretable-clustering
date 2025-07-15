@@ -3,6 +3,8 @@ from .conditions import (
     LinearCondition
 )
 
+from .node import Node
+
 from .utils import (
     tiebreak,
     mode,
@@ -32,7 +34,8 @@ from .utils import (
     get_decision_paths_with_labels,
     get_depth,
     satisfies_path,
-    satisfies_conditions
+    satisfies_conditions,
+    density_distance
 )
 
 

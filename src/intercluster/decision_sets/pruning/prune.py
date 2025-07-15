@@ -15,6 +15,58 @@ from intercluster.utils import (
 ####################################################################################################
 
 
+def greedy(
+    n_rules : int,
+    data_to_rules_assignment : NDArray
+) -> NDArray:
+    
+    """
+    Implements a greedy algorithm for rule selection. Selects the first n_rules rules that cover 
+    data points in the dataset.
+    
+    Args:
+        n_rules (int): The maximum number of rules to select.
+        
+        data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+            data point i is assigned to rule j and `False otherwise.
+            
+    Returns:
+        rule_subset (NDArray): An array of integers representing the indices of the selected rules.
+    """
+    n,r = data_to_rules_assignment.shape
+    index = set(range(r))
+    points = set(range(n))
+    selected_rules = set()
+    covered_points = set()
+    for i in range(n_rules):
+        remaining_rules = index - selected_rules
+        remaining_points = points - covered_points
+        rule_list = list(remaining_rules)
+        point_list = list(remaining_points)
+        sub_assignment = data_to_rules_assignment[:, rule_list]
+        sub_assignment = sub_assignment[point_list, :]
+        marginal_gain = np.sum(sub_assignment, axis = 0)
+        marginal_gain_tiebroken = marginal_gain + np.random.uniform(size = r - len(selected_rules))
+        best_rule = np.argmax(marginal_gain_tiebroken)
+        best_idx = rule_list[best_rule]
+        if marginal_gain[best_rule] > 0:
+            selected_rules.add(best_idx)
+            covered_points = covered_points.union(
+                set(np.where(data_to_rules_assignment[:, best_idx])[0])
+            )
+        else:
+            warnings.warn(
+                "No more rules can be selected that cover data points. "
+                "Returning the rules selected so far."
+            )
+            break
+
+    return np.array(list(selected_rules))
+
+
+####################################################################################################
+
+
 def distorted_greedy(
     n_rules : int,
     lambda_val : float,
