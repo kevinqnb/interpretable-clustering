@@ -35,6 +35,7 @@ from .utils import (
     get_depth,
     satisfies_path,
     satisfies_conditions,
+    mutual_reachability_distance,
     density_distance
 )
 

@@ -17,6 +17,7 @@ class DBSet(DecisionSet):
         n_rules,
         n_features,
         epsilon,
+        mu, 
         rules_per_point : int = 1
     ):
         """
@@ -33,6 +34,7 @@ class DBSet(DecisionSet):
         self.n_rules = n_rules
         self.n_features = n_features
         self.epsilon = epsilon
+        self.mu = mu
         self.rules_per_point = rules_per_point
 
 
@@ -49,7 +51,7 @@ class DBSet(DecisionSet):
         """        
         n,d = X.shape
         X_sorted = np.argsort(X, axis=0)
-        distances = density_distance(X)
+        distances = density_distance(X, self.mu)
 
         decision_set = []
         for i in range(n):
@@ -111,15 +113,6 @@ class DBSet(DecisionSet):
                                 upper_idx[j] += 1
                                 any_movement = True
 
-                        #import pdb; pdb.set_trace()
-
-                #if np.sum(satisfies[:,0] & satisfies[:,1], axis=0) == 1:
-                #if len(point_set) == 1:
-                #    print(point_loc)
-                #    print(lower_idx)
-                #    print(upper_idx)
-                #    print(satisfies[i])
-                #    print()
 
                 # Add the conditions to the rule, and the rule to the decision set
                 rule = []
@@ -169,7 +162,6 @@ class DBSet(DecisionSet):
             pruned_set (List[List[Condition]]): Selected subset of rules.
         """
         data_to_rules_assignment = self.get_data_to_rules_assignment(X, decision_set)
-        #print(np.sum(data_to_rules_assignment, axis=0))
         selected_rules = greedy(self.n_rules, data_to_rules_assignment)
         pruned_set = [decision_set[i] for i in selected_rules]
         return pruned_set
@@ -205,7 +197,6 @@ class DBSet(DecisionSet):
         G.add_nodes_from(range(len(decision_set)))
         G.add_edges_from(edges)
         connected_components = list(nx.connected_components(G))
-        #print(connected_components)
         decision_set_labels = np.zeros(len(decision_set), dtype=int)
         for i, component in enumerate(connected_components):
             for rule_index in component:

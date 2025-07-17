@@ -55,10 +55,12 @@ def greedy(
                 set(np.where(data_to_rules_assignment[:, best_idx])[0])
             )
         else:
+            '''
             warnings.warn(
                 "No more rules can be selected that cover data points. "
                 "Returning the rules selected so far."
             )
+            '''
             break
 
     return np.array(list(selected_rules))

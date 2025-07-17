@@ -453,7 +453,11 @@ def unique_labels(labels : List[Set[int]]) -> Set[int]:
 ####################################################################################################
 
 
-def labels_to_assignment(labels : List[Set[int]], n_labels):
+def labels_to_assignment(
+        labels : List[Set[int]],
+        n_labels : int,
+        ignore : Set[int] = set()
+    ) -> NDArray:
     """
     Takes an input list of labels and returns its associated clustering matrix.
     NOTE: By convention, clusters are indexed [0...k-1] and items are indexed [0...n-1].
@@ -468,27 +472,19 @@ def labels_to_assignment(labels : List[Set[int]], n_labels):
         n_labels (int, optional): Total number of unique labels to create the assignment matrix 
             with. Helfpul for cases where points aren't assigned to any label (empty list).
 
+        ignore (Set[int], optional): Set of labels to ignore in the assignment matrix. For example,
+            this might be set to the set {-1} in the case that a label of -1 indicates that a point
+            is not assigned to any cluster. Defaults to an empty set.
+
     Returns:
         assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
             if point i belongs to label j and False otherwise.
     """
-    '''
-    # Infer if n_labels is not provided
-    if n_labels is None:
-        unique_labels = set()
-        for l in labels:
-            if isinstance(l, (int, float, np.integer)):
-                unique_labels.add(l)
-            elif isinstance(l, Iterable) and not isinstance(l, (str, bytes)):
-                unique_labels = unique_labels.union(set(l))
-            else:
-                raise ValueError("Invalid label type")         
-        n_labels = len(unique_labels)
-    '''    
     assignment_matrix = np.zeros((len(labels), n_labels), dtype = bool)
     for i,labs in enumerate(labels):
         for j in labs:
-            assignment_matrix[i, j] = True
+            if j not in ignore:
+                assignment_matrix[i, j] = True
         
     return assignment_matrix
 
@@ -882,7 +878,49 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 ####################################################################################################
 
 
-def density_distance(X : NDArray) -> NDArray:
+def mutual_reachability_distance(X : NDArray, mu : int = 1) -> NDArray:
+    """
+    For each pair of points (i,j) in a dataset, computes the distance between them as the maximum of 
+    their {euclidean distance, the euclidean distance to the mu-th nearest neighbor of i, and 
+    the euclidean distance to the mu-th nearest neighbor of j}. In the context of DBSCAN, this is 
+    a value of epsilon at which the points i and j must belong to the same cluster (but not yet the 
+    minimum most).
+
+    Args:
+        X (np.ndarray): (n x d) Dataset.
+        
+        mu (int, optional): Number of nearest neighbors to consider. Defaults to 1.
+
+    Returns:
+        distances (np.ndarray): n x n array of mutual reachability distances.
+    """
+    n, d = X.shape
+    distances = np.zeros((n, n))
+    euclidean_distances = pairwise_distances(X, metric='euclidean')
+
+    # mu-th nearest neighbor distance for each point
+    euclidean_distance_sorted = np.sort(euclidean_distances, axis=1)
+    mu_distance = euclidean_distance_sorted[:, mu - 1]
+
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                distances[i, j] = 0
+            else:
+                mutual_distance = max(
+                    euclidean_distances[i, j],
+                    mu_distance[i],
+                    mu_distance[j]
+                )
+                distances[i, j] = mutual_distance
+
+    return distances
+
+
+####################################################################################################
+
+
+def density_distance(X : NDArray, mu : int = 1) -> NDArray:
     """
     Computes the density distance between each pair of points in a dataset. The density distance 
     between points i and j is the computed as the largest edge weight on the path 
@@ -895,16 +933,18 @@ def density_distance(X : NDArray) -> NDArray:
     
     Args:
         X (np.ndarray): (n x d) Dataset.
+
+        mu (int, optional): Number of nearest neighbors to consider. Defaults to 1.
         
     Returns:
         distances (np.ndarray): n x n array of density distances.
     """
     n, d = X.shape
     density_distances = np.zeros((n,n))
-    euclidean_distances = pairwise_distances(X, metric='euclidean')
+    reachability_distances = mutual_reachability_distance(X, mu)
 
     # Create a graph from the distance matrix
-    G = nx.from_numpy_array(euclidean_distances)
+    G = nx.from_numpy_array(reachability_distances)
     T = nx.minimum_spanning_tree(G)
 
     # Extract the edges of the minimum spanning tree, sorted by weight

@@ -71,6 +71,7 @@ class DecisionSet:
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         self.decision_set, self.decision_set_labels = self._fitting(X, y)
+        self.trim_rules()
     
         
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
@@ -173,6 +174,9 @@ class DecisionSet:
                     labels[j].add(i)
                 else:
                     labels[j] = labels[j].union(self.decision_set_labels[i])
+
+        # Mark uncovered points with {-1}
+        labels = [label if label else {-1} for label in labels]
         
         return labels
     
@@ -324,6 +328,28 @@ class DecisionSet:
                 wad += len(r_covers) * (len(rule))
             
         return wad/total_covers
+    
+
+    def trim_rules(self):
+        """
+        Trims the rules in the decision set to remove any redundant conditions. 
+        """
+        if self.decision_set is None or self.decision_set_labels is None:
+            raise ValueError('Decision set has not been fitted yet.')
+        
+        trimmed_set = []
+        trimmed_labels = []
+        for i, rule in enumerate(self.decision_set):
+            trimmed_rule = []
+            for j, condition in enumerate(rule):
+                if np.abs(condition.threshold) < np.inf:
+                    trimmed_rule.append(condition)
+            if len(trimmed_rule) > 0:
+                trimmed_set.append(trimmed_rule)
+                trimmed_labels.append(self.decision_set_labels[i])
+        
+        self.decision_set = trimmed_set
+        self.decision_set_labels = trimmed_labels
         
     
     
