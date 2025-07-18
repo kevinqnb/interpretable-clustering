@@ -287,7 +287,7 @@ class SklearnTree(Tree):
         else:
             return labels_format(self.sklearn_tree.predict(X))
         
-    
+    '''
     def get_leaves(self, y : NDArray = None, label : int = None) -> List[Node]:
         """
         Returns the leaf nodes of the tree. If an array y of training data labels AND a 
@@ -312,6 +312,7 @@ class SklearnTree(Tree):
                     leaves.append(last_node)
                 
         return leaves
+    '''
     
 
 

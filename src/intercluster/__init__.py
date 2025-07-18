@@ -36,7 +36,8 @@ from .utils import (
     satisfies_path,
     satisfies_conditions,
     mutual_reachability_distance,
-    density_distance
+    density_distance,
+    pairwise_distance_threshold
 )
 
 

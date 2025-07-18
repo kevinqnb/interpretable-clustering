@@ -11,7 +11,6 @@ from intercluster import (
     satisfies_path,
     collect_nodes,
     collect_leaves
-
 )
 from intercluster import Condition
 from ..node import Node

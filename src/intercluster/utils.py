@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import networkx as nx
 from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics import silhouette_score as sklearn_silhouette_score
 from collections.abc import Iterable
 from typing import List, Dict, Set, Callable, Tuple, Iterator
 from numpy.typing import NDArray
@@ -610,7 +611,7 @@ def point_silhouette(X : NDArray, assignment : NDArray, idx : int, cluster_idx :
 
 ####################################################################################################
 
-
+'''
 def silhouette_score(X : NDArray, assignment : NDArray) -> float:
     """
     Computes the silhouette score as the mean of scores for the entire dataset.
@@ -636,6 +637,67 @@ def silhouette_score(X : NDArray, assignment : NDArray) -> float:
             scores.append(cluster_total / len(i_clusters))
 
     return np.mean(scores)
+'''
+
+def silhouette_score(
+        distances : NDArray,
+        labels : NDArray,
+        ignore : List[int] = []
+    ) -> float:
+    """
+    Given a precomputed set of pairwise distances and a set of labels, 
+    computes the silhouette score as the mean of silhouette values for each point.
+
+    Args:
+        distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
+
+        labels (np.ndarray): Length n array of labels.
+
+        ignore (List[int], optional): List of labels to ignore in the silhouette score computation.
+            Defaults to an empty list.
+
+    Returns:
+        silhouette (float): Silhouette score.
+    """
+    '''
+    assignment = {
+        label : np.where(labels == label)[0] for label in unique_labels if label not in ignore
+    }
+
+    count = 0
+    silhouette = 0.0
+    for i in range(n):
+        i_label = labels[i]
+        if i_label not in ignore:
+            mean_intra = np.sum(distances[i, assignment[i_label]]) / (len(assignment[i_label]) - 1)
+            min_mean_inter = np.inf
+            for j in unique_labels:
+                if j != i_label and j not in ignore:
+                    mean_inter = np.sum(distances[i, assignment[j]]) / len(assignment[j])
+                    if mean_inter < min_mean_inter:
+                        min_mean_inter = mean_inter
+            count += 1
+            silhouette += (min_mean_inter - mean_intra) / max(min_mean_inter, mean_intra)
+
+    return silhouette / count
+    '''
+    assert len(distances.shape) == 2, "Distances must be a 2D array."
+    assert distances.shape[0] == distances.shape[1], "Distances must be a square matrix."
+    assert len(labels) == distances.shape[0], "Labels must match the number of points in distances."
+
+    non_ignore = np.where(~np.isin(labels, ignore))[0]
+    labels_ = labels[non_ignore]
+    distances_ = distances[np.ix_(non_ignore, non_ignore)]
+
+    unique_labels = np.unique(labels_)
+    if len(unique_labels) == 1 or len(non_ignore) == 0:
+        # If there is only one label, the silhouette score is undefined.
+        return np.nan
+    else:
+        # Compute the silhouette score using sklearn's implementation.
+        # This requires a precomputed distance matrix.
+        return sklearn_silhouette_score(X = distances_, labels = labels_, metric = 'precomputed')
+            
 
 
 ####################################################################################################
@@ -878,7 +940,7 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 ####################################################################################################
 
 
-def mutual_reachability_distance(X : NDArray, mu : int = 1) -> NDArray:
+def mutual_reachability_distance(X : NDArray, n_core : int = 1) -> NDArray:
     """
     For each pair of points (i,j) in a dataset, computes the distance between them as the maximum of 
     their {euclidean distance, the euclidean distance to the mu-th nearest neighbor of i, and 
@@ -889,7 +951,8 @@ def mutual_reachability_distance(X : NDArray, mu : int = 1) -> NDArray:
     Args:
         X (np.ndarray): (n x d) Dataset.
         
-        mu (int, optional): Number of nearest neighbors to consider. Defaults to 1.
+        n_core (int, optional): Number of nearest neighbors to consider for a core point.
+            Defaults to 1.
 
     Returns:
         distances (np.ndarray): n x n array of mutual reachability distances.
@@ -900,7 +963,7 @@ def mutual_reachability_distance(X : NDArray, mu : int = 1) -> NDArray:
 
     # mu-th nearest neighbor distance for each point
     euclidean_distance_sorted = np.sort(euclidean_distances, axis=1)
-    mu_distance = euclidean_distance_sorted[:, mu - 1]
+    mu_distance = euclidean_distance_sorted[:, n_core - 1]
 
     for i in range(n):
         for j in range(n):
@@ -920,7 +983,7 @@ def mutual_reachability_distance(X : NDArray, mu : int = 1) -> NDArray:
 ####################################################################################################
 
 
-def density_distance(X : NDArray, mu : int = 1) -> NDArray:
+def density_distance(X : NDArray, n_core : int = 1) -> NDArray:
     """
     Computes the density distance between each pair of points in a dataset. The density distance 
     between points i and j is the computed as the largest edge weight on the path 
@@ -934,14 +997,15 @@ def density_distance(X : NDArray, mu : int = 1) -> NDArray:
     Args:
         X (np.ndarray): (n x d) Dataset.
 
-        mu (int, optional): Number of nearest neighbors to consider. Defaults to 1.
+        n_core (int, optional): Number of nearest neighbors to consider for a core point.
+            Defaults to 1.
         
     Returns:
         distances (np.ndarray): n x n array of density distances.
     """
     n, d = X.shape
     density_distances = np.zeros((n,n))
-    reachability_distances = mutual_reachability_distance(X, mu)
+    reachability_distances = mutual_reachability_distance(X, n_core)
 
     # Create a graph from the distance matrix
     G = nx.from_numpy_array(reachability_distances)
@@ -973,3 +1037,40 @@ def density_distance(X : NDArray, mu : int = 1) -> NDArray:
                     density_distances[j, i] = weight
 
     return density_distances
+
+
+####################################################################################################
+
+
+def pairwise_distance_threshold(D : NDArray, indices : NDArray, threshold : float) -> bool:
+    """
+    Given a distance matrix D and a subset of indices, determines if each pair of points 
+    within indices satisfies the distance threshold.
+    
+    Args:
+        D (np.ndarray): Distance matrix of size n x n.
+        
+        indices (np.ndarray): Indices of points to consider.
+        
+        threshold (float): Distance threshold to satisfy.
+    
+    Returns:
+        (bool) : True if all pairs satisfy the distance threshold, False otherwise.
+    """
+    if D.shape[0] != D.shape[1]:
+        raise ValueError("Distance matrix must be square.")
+    
+    if np.any(D < 0):
+        raise ValueError("Distance matrix must only contain non-negative values.")
+    
+    if len(indices) == 0 or len(indices) == 1:
+        # If no indices or only one index, trivially satisfied.
+        return True
+    
+    if len(indices) > D.shape[0]:
+        raise ValueError("Indices length exceeds distance matrix size.")
+    
+    if threshold < 0:
+        raise ValueError("Threshold must be non-negative.")
+    
+    return np.all(D[np.ix_(indices, indices)] <= threshold)

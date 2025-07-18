@@ -20,3 +20,7 @@ from .explanation_tree import (
 from .svm_tree import (
     SVMTree,
 )
+
+from .density_tree import (
+    DensityTree
+)

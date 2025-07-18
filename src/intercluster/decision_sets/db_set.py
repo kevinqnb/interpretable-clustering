@@ -3,7 +3,7 @@ import networkx as nx
 from typing import List, Set, Any, Tuple, Callable
 from numpy.typing import NDArray
 from sklearn.metrics.pairwise import pairwise_distances
-from intercluster import labels_format, satisfies_conditions, density_distance
+from intercluster import labels_format, satisfies_conditions, density_distance, pairwise_distance_threshold
 from intercluster import Condition, LinearCondition
 from .decision_set import DecisionSet
 from .pruning import greedy
@@ -14,27 +14,30 @@ class DBSet(DecisionSet):
     """
     def __init__(
         self,
-        n_rules,
-        n_features,
-        epsilon,
-        mu, 
+        epsilon : float,
+        n_core : int,
+        n_rules : int,
+        n_features : int,
         rules_per_point : int = 1
     ):
         """
         Args:
+            epsilon (float): distance threshold for pairs of points covered by the same rule.
+
+            n_core (int): Minimum number of points within an epsilon distance for a point to be
+                considered a dense, core point.
+
             n_rules (int): Number of rules to use in the decision set.
             
             n_features (int): Number of randomly chosen features to use for each rule.
 
-            epsilon (float): Maximum width between any pair of points in a box.
-
             rules_per_point (int): Number of random rules to create for each point in the dataset.
         """
         super().__init__()
+        self.epsilon = epsilon
+        self.n_core = n_core
         self.n_rules = n_rules
         self.n_features = n_features
-        self.epsilon = epsilon
-        self.mu = mu
         self.rules_per_point = rules_per_point
 
 
@@ -51,7 +54,7 @@ class DBSet(DecisionSet):
         """        
         n,d = X.shape
         X_sorted = np.argsort(X, axis=0)
-        distances = density_distance(X, self.mu)
+        distances = density_distance(X = X, n_core = self.n_core)
 
         decision_set = []
         for i in range(n):
@@ -177,7 +180,7 @@ class DBSet(DecisionSet):
             X (np.ndarray): Input dataset.
         """
         # NOTE: This is inefficient to compute (already computed it in the rule creation step)
-        distances = density_distance(X)
+        distances = density_distance(X, self.n_core)
         assignment = self.get_data_to_rules_assignment(X, decision_set)
         edges = []
         for i in range(assignment.shape[1]):
@@ -186,8 +189,8 @@ class DBSet(DecisionSet):
                 first_rule_points = np.where(assignment[:, i])[0]
                 second_rule_points = np.where(assignment[:, j])[0]
                 if len(first_rule_points) > 0 and len(second_rule_points) > 0:
-                    rule_distances = distances[first_rule_points][:, second_rule_points]
-                    if np.all(rule_distances <= self.epsilon):
+                    rule_distances = distances[np.ix_(first_rule_points, second_rule_points)]
+                    if np.max(rule_distances) <= self.epsilon:
                         edges.append((i, j))
 
                 #if np.any(assignment[:, i] & assignment[:, j]):
@@ -225,7 +228,18 @@ class DBSet(DecisionSet):
             decision_set_labels (List[int]): List of labels corresponding to each rule.
         """
         decision_set = self.create_rules(X)
-        pruned_set = self.prune_rules(X, decision_set)
+        
+        distance = density_distance(X = X, n_core = self.n_core)
+        trim_set = []
+        for i,condition_list in enumerate(decision_set):
+            indices = satisfies_conditions(X, condition_list)
+            if pairwise_distance_threshold(distance, indices, self.epsilon):
+                trim_set.append(condition_list)
+
+        #print(len(decision_set), "rules before pruning")
+        #print(len(trim_set), "rules after pruning")
+
+        pruned_set = self.prune_rules(X, trim_set)
         #pruned_set = decision_set
         pruned_set_labels = self.assign_rules(X, pruned_set)
         #pruned_set_labels = [{0} for _ in range(len(pruned_set))]
