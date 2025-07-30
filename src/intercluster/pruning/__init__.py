@@ -1,9 +1,13 @@
 from .objectives import (
-    KmeansObjective,
+    PruningObjective,
     CoverageObjective,
+    CoverageMistakeObjective,
+    KmeansObjective,
 )
 
 from .prune import (
+    Pruner,
+    CoverageMistakePruner,
     greedy,
     distorted_greedy,
     prune_with_grid_search,

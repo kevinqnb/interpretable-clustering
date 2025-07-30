@@ -1,13 +1,13 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.utils import (
-    divide_with_zeros,
+from intercluster.measures import (
     kmeans_cost,
     overlap,
     coverage,
     center_dists,
     silhouette_score
 )
+from intercluster.utils import divide_with_zeros
 
 class MeasurementFunction:
     def __init__(self, name):

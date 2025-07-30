@@ -1,9 +1,11 @@
 import numpy as np
-from typing import List, Set, Any, Tuple, Callable
+from typing import List, Set, Tuple
 from numpy.typing import NDArray
-from .pruning import prune_with_grid_search, prune_with_binary_search
-from intercluster import Condition
-from intercluster import satisfies_conditions, labels_to_assignment
+from intercluster import (
+    Condition,
+    satisfies_conditions,
+    labels_to_assignment
+)
 
 
 class DecisionSet:
@@ -14,28 +16,30 @@ class DecisionSet:
         self
     ):
         
-        """
-        Args:                
-            
-            
+        """            
         Attributes:
             decision_set (List[Condition]): List of rules in the decision set.
             
             decision_set_labels (List[Set[int]]): List of labels corresponding to each
                 rule in the decision set. 
-                
-            pruned_indices (np.ndarray): Indices for rules selected in the pruning process.
-            
-            pruned_status (bool): `True` if the pruning was successful and `False` otherwise. 
 
             rule_length (int): Maximum rule length.
+
+            pruner (Callable, optional): Function/Object used to prune rules. 
+                Defaults to None, in which case no pruning is performed.
             
         """
+        '''
+        if pruner is not None:
+            assert issubclass(pruner, Pruner), \
+                "Input pruner must be a valid instance of the Pruner object."
+        self.pruner = pruner
+        '''
+
         self.decision_set = None
         self.decision_set_labels = None
-        self.pruned_indices = None
-        self.prune_status = False
         self.max_rule_length = 0
+        self.pruner = None
         
         
     def _fitting(
@@ -58,6 +62,44 @@ class DecisionSet:
             decision_set_labels (List[int]): List of labels corresponding to each rule.
         """
         raise NotImplementedError('Method not implemented.')
+    
+
+    def prune(self, X : NDArray, y : List[Set[int]] = None):
+        """
+        Prunes the decision set using the pruner.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (List[Set[int]], optional): Target labels. Defaults to None.
+        """
+        if self.pruner is not None:
+            if self.decision_set is None or self.decision_set_labels is None:
+                raise ValueError('Decision set has not been fitted yet.')
+            
+            pass
+    
+
+    def trim(self):
+        """
+        Trims the rules in the decision set to remove any redundant conditions. 
+        """
+        if self.decision_set is None or self.decision_set_labels is None:
+            raise ValueError('Decision set has not been fitted yet.')
+        
+        trimmed_set = []
+        trimmed_labels = []
+        for i, rule in enumerate(self.decision_set):
+            trimmed_rule = []
+            for j, condition in enumerate(rule):
+                if np.abs(condition.threshold) < np.inf:
+                    trimmed_rule.append(condition)
+            if len(trimmed_rule) > 0:
+                trimmed_set.append(trimmed_rule)
+                trimmed_labels.append(self.decision_set_labels[i])
+        
+        self.decision_set = trimmed_set
+        self.decision_set_labels = trimmed_labels
         
         
     def fit(self, X : NDArray, y : List[Set[int]] = None):
@@ -71,7 +113,8 @@ class DecisionSet:
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         self.decision_set, self.decision_set_labels = self._fitting(X, y)
-        self.trim_rules()
+        self.prune(X, y)
+        self.trim()
     
         
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
@@ -91,26 +134,6 @@ class DecisionSet:
             assignment[data_points_satisfied, i] = True
         return assignment
     
-    
-    def get_pruned_data_to_rules_assignment(self, X : NDArray) -> NDArray:
-        """
-        Finds data points of X covered by each rule in the decision set.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-        Returns:
-            assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
-                if point i is covered by rule j and False otherwise.
-        """
-        if self.pruned_indices is None:
-            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
-                             'likely because coverage requirements were not met.')
-        
-        assignment = self.get_data_to_rules_assignment(X)
-        pruned_assignment = assignment[:,self.pruned_indices]
-        return pruned_assignment
-    
 
     def get_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
         """
@@ -125,25 +148,6 @@ class DecisionSet:
         """
         assignment = labels_to_assignment(self.decision_set_labels, n_labels)
         return assignment
-    
-
-    def get_pruned_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
-        """
-        Finds data points of X covered by each rule in the decision set.
-        
-        Args:
-            n_labels (int): Number of labels in the dataset.
-            
-        Returns:
-            assignment (np.ndarray): n_rules x k boolean matrix with entry (i,j) being True
-                if point i is covered by rule j and False otherwise.
-        """
-        if self.pruned_indices is None:
-            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
-                             'likely because coverage requirements were not met.')
-        assignment = self.get_rules_to_clusters_assignment(n_labels)
-        pruned_assignment = assignment[self.pruned_indices,:]
-        return pruned_assignment
     
     
     def predict(self, X : NDArray, rule_labels : bool = False) -> List[Set[int]]:
@@ -179,122 +183,6 @@ class DecisionSet:
         labels = [label if label else {-1} for label in labels]
         
         return labels
-    
-    
-    def prune(
-        self,
-        n_rules : int,
-        frac_cover : float,
-        n_clusters : int,
-        X : NDArray,
-        y : List[Set[int]],
-        objective : Callable, 
-        lambda_search_range : NDArray = np.linspace(0,1,10),
-        full_search : bool = True,
-        cpu_count : int = 1
-    ):
-        """
-        Prunes the decision set using a distorted greedy algorithm for a submodular 
-        coverage objective. 
-        
-        Args:
-            n_rules (int): The number of rules to select.
-            
-            frac_cover (float): Required threshold for coverage of data points.
-            
-            n_clusters (int) : The desired number of clusters. 
-            
-            X (np.ndarray): Input dataset.
-            
-            y (List[Set[int]]): Labeling of the data points.
-            
-            objective (Callable): A function that takes an assignment matrix of data points 
-                to clusters and returns a score.
-            
-            lambda_search_range (np.ndarray, optional): A range of lambda values to search over. 
-                Defaults to np.linspace(0,1,10).
-
-            full_search (bool): If true, performs a grid search over the entire search range.
-                Otherwise, performs a binary search to find the largest lambda value for which 
-                coverage requirements are satisfied.
-
-            cpu_count (int): Number of cores to use for a parallelized grid search.
-        """
-        data_to_rules_assignment = self.get_data_to_rules_assignment(X)
-        
-        selected_rules = None
-        if full_search:
-            selected_rules = prune_with_grid_search(
-                n_rules = n_rules,
-                frac_cover = frac_cover,
-                n_clusters = n_clusters,
-                data_labels = y,
-                rule_labels = self.decision_set_labels,
-                data_to_rules_assignment = data_to_rules_assignment,
-                objective = objective,
-                lambda_search_range = lambda_search_range,
-                cpu_count = cpu_count
-            )
-        else:
-            selected_rules = prune_with_binary_search(
-                n_rules = n_rules,
-                frac_cover = frac_cover,
-                n_clusters = n_clusters,
-                data_labels = y,
-                rule_labels = self.decision_set_labels,
-                data_to_rules_assignment = data_to_rules_assignment,
-                objective = objective,
-                lambda_search_range = lambda_search_range
-            )
-        
-        if selected_rules is None: #or len(selected_rules) == 0:
-            self.prune_status = False
-        else:
-            self.prune_status = True
-            self.pruned_indices = selected_rules
-        
-        
-    def pruned_predict(self, X : NDArray, rule_labels : bool = False) -> List[Set[int]]:
-        """
-        Predicts the label(s) of each data point in X.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            rule_labels (bool, optional): If true, gives labels based soley upon 
-                rule membership. That is, each rule is given a unique label. 
-                Otherwise, returns the orignal predictions from the fitted rule models -- 
-                whatever label is given to the rule. Defaults to False.
-            
-        Returns:
-            labels (List[Set[int]]): 2d list of predicted labels, with the internal set 
-                at index i representing the group of decision rules which satisfy X[i,:].
-        """
-        if not self.prune_status:
-            raise ValueError('Decision set has not been pruned. If prune() was called, this is '
-                             'likely because coverage requirements were not met.')
-        
-        data_to_rules_assignment = self.get_data_to_rules_assignment(X)
-        pruned_data_to_rules_assignment = data_to_rules_assignment[:,self.pruned_indices]
-        pruned_decision_set = [self.decision_set[i] for i in self.pruned_indices]
-        pruned_decision_set_labels = [self.decision_set_labels[i] for i in self.pruned_indices]
-        
-        labels = [set() for _ in range(len(X))]
-        for i in range(len(pruned_decision_set)):
-            #r_covers = np.where(pruned_data_to_rules_assignment[:,i])[0]
-            r_covers = pruned_data_to_rules_assignment[:,i].nonzero()[0]
-            for j in r_covers:
-                if rule_labels:
-                    labels[j].add(i)
-                else:
-                    labels[j] = labels[j].union(pruned_decision_set_labels[i])
-        return labels
-    
-
-    def get_pruned_rule_length(self):
-        """
-        Find the depth of the mod
-        """
 
 
     def get_weighted_average_rule_length(self, X : NDArray) -> float:
@@ -314,10 +202,6 @@ class DecisionSet:
         data_to_rules_assignment = self.get_data_to_rules_assignment(X)
         decision_set = self.decision_set
 
-        if self.prune_status:
-            data_to_rules_assignment = data_to_rules_assignment[:,self.pruned_indices]
-            decision_set = [self.decision_set[i] for i in self.pruned_indices]
-
         wad = 0
         total_covers = 0
         for i, rule in enumerate(decision_set):
@@ -328,28 +212,6 @@ class DecisionSet:
                 wad += len(r_covers) * (len(rule))
             
         return wad/total_covers
-    
-
-    def trim_rules(self):
-        """
-        Trims the rules in the decision set to remove any redundant conditions. 
-        """
-        if self.decision_set is None or self.decision_set_labels is None:
-            raise ValueError('Decision set has not been fitted yet.')
-        
-        trimmed_set = []
-        trimmed_labels = []
-        for i, rule in enumerate(self.decision_set):
-            trimmed_rule = []
-            for j, condition in enumerate(rule):
-                if np.abs(condition.threshold) < np.inf:
-                    trimmed_rule.append(condition)
-            if len(trimmed_rule) > 0:
-                trimmed_set.append(trimmed_rule)
-                trimmed_labels.append(self.decision_set_labels[i])
-        
-        self.decision_set = trimmed_set
-        self.decision_set_labels = trimmed_labels
         
     
     

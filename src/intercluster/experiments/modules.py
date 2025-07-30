@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.decision_sets.pruning import *
+from intercluster.pruning import *
 from intercluster.utils import labels_format, labels_to_assignment, update_centers, outlier_mask
 
 

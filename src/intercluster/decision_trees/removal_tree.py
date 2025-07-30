@@ -15,7 +15,10 @@ from .splitters import ExplanationSplitter
 from .tree import Tree
 
 
-class ExplanationTree(Tree):
+####################################################################################################
+
+
+class RemovalTree(Tree):
     """
     Implements a tree in which outliers are removed during the fitting process
     in order to create an explainable clustering for the remaining set of points.
@@ -222,4 +225,4 @@ class ExplanationTree(Tree):
         return wad/total_covers
         
  
-        
+####################################################################################################

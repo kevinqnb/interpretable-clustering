@@ -8,12 +8,12 @@ from .information_gain import (
 )
 
 
-from .explanation import (
-    ExplanationSplitter
+from .removal import (
+    RemovalSplitter
 )
 
-from .svm import (
-    SVMSplitter,
+from ._splitter import (
+    Splitter,
 )
 
 from .testing import (

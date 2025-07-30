@@ -10,7 +10,7 @@ from .cython.explanation import get_split_outliers_cy, gain_cy, split_cy
 ####################################################################################################
 
 
-class ExplanationSplitter(Splitter):
+class RemovalSplitter(Splitter):
     """
     Splits leaf nodes and removes outliers, in order to create an explainable clustering 
     for the remaining set of points. This follows the explainable clustering 

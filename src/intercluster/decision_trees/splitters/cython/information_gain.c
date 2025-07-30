@@ -4,28 +4,28 @@
 {
     "distutils": {
         "depends": [
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/arrayobject.h",
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/arrayscalars.h",
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ndarrayobject.h",
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ndarraytypes.h",
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ufuncobject.h"
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/arrayobject.h",
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/arrayscalars.h",
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ndarrayobject.h",
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ndarraytypes.h",
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include/numpy/ufuncobject.h"
         ],
         "extra_compile_args": [
             "-march=native",
             "-O3"
         ],
         "include_dirs": [
-            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/_core/include"
+            "/var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/_core/include"
         ],
         "libraries": [
             "m"
         ],
-        "name": "intercluster.rules.splitters.cython.information_gain",
+        "name": "intercluster.decision_trees.splitters.cython.information_gain",
         "sources": [
-            "src/intercluster/rules/splitters/cython/information_gain.pyx"
+            "src/intercluster/decision_trees/splitters/cython/information_gain.pyx"
         ]
     },
-    "module_name": "intercluster.rules.splitters.cython.information_gain"
+    "module_name": "intercluster.decision_trees.splitters.cython.information_gain"
 }
 END: Cython Metadata */
 
@@ -1141,8 +1141,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE__intercluster__rules__splitters__cython__information_gain
-#define __PYX_HAVE_API__intercluster__rules__splitters__cython__information_gain
+#define __PYX_HAVE__intercluster__decision_trees__splitters__cython__information_gain
+#define __PYX_HAVE_API__intercluster__decision_trees__splitters__cython__information_gain
 /* Early includes */
 #include <string.h>
 #include <stdio.h>
@@ -1383,8 +1383,8 @@ static const char *__pyx_filename;
 /* #### Code section: filename_table ### */
 
 static const char* const __pyx_f[] = {
-  "src/intercluster/rules/splitters/cython/information_gain.pyx",
-  "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd",
+  "src/intercluster/decision_trees/splitters/cython/information_gain.pyx",
+  "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd",
   "cpython/type.pxd",
 };
 /* #### Code section: utility_code_proto_before_types ### */
@@ -1584,7 +1584,7 @@ typedef struct {
 
 /* #### Code section: numeric_typedefs ### */
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":770
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":770
  * # in Cython to enable them only on the right systems.
  * 
  * ctypedef npy_int8       int8_t             # <<<<<<<<<<<<<<
@@ -1593,7 +1593,7 @@ typedef struct {
 */
 typedef npy_int8 __pyx_t_5numpy_int8_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":771
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":771
  * 
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t             # <<<<<<<<<<<<<<
@@ -1602,7 +1602,7 @@ typedef npy_int8 __pyx_t_5numpy_int8_t;
 */
 typedef npy_int16 __pyx_t_5numpy_int16_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":772
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":772
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t             # <<<<<<<<<<<<<<
@@ -1611,7 +1611,7 @@ typedef npy_int16 __pyx_t_5numpy_int16_t;
 */
 typedef npy_int32 __pyx_t_5numpy_int32_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":773
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":773
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t
  * ctypedef npy_int64      int64_t             # <<<<<<<<<<<<<<
@@ -1620,7 +1620,7 @@ typedef npy_int32 __pyx_t_5numpy_int32_t;
 */
 typedef npy_int64 __pyx_t_5numpy_int64_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":777
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":777
  * #ctypedef npy_int128     int128_t
  * 
  * ctypedef npy_uint8      uint8_t             # <<<<<<<<<<<<<<
@@ -1629,7 +1629,7 @@ typedef npy_int64 __pyx_t_5numpy_int64_t;
 */
 typedef npy_uint8 __pyx_t_5numpy_uint8_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":778
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":778
  * 
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t             # <<<<<<<<<<<<<<
@@ -1638,7 +1638,7 @@ typedef npy_uint8 __pyx_t_5numpy_uint8_t;
 */
 typedef npy_uint16 __pyx_t_5numpy_uint16_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":779
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":779
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t             # <<<<<<<<<<<<<<
@@ -1647,7 +1647,7 @@ typedef npy_uint16 __pyx_t_5numpy_uint16_t;
 */
 typedef npy_uint32 __pyx_t_5numpy_uint32_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":780
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":780
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t
  * ctypedef npy_uint64     uint64_t             # <<<<<<<<<<<<<<
@@ -1656,7 +1656,7 @@ typedef npy_uint32 __pyx_t_5numpy_uint32_t;
 */
 typedef npy_uint64 __pyx_t_5numpy_uint64_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":784
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":784
  * #ctypedef npy_uint128    uint128_t
  * 
  * ctypedef npy_float32    float32_t             # <<<<<<<<<<<<<<
@@ -1665,7 +1665,7 @@ typedef npy_uint64 __pyx_t_5numpy_uint64_t;
 */
 typedef npy_float32 __pyx_t_5numpy_float32_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":785
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":785
  * 
  * ctypedef npy_float32    float32_t
  * ctypedef npy_float64    float64_t             # <<<<<<<<<<<<<<
@@ -1674,7 +1674,7 @@ typedef npy_float32 __pyx_t_5numpy_float32_t;
 */
 typedef npy_float64 __pyx_t_5numpy_float64_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":792
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":792
  * ctypedef double complex complex128_t
  * 
  * ctypedef npy_longlong   longlong_t             # <<<<<<<<<<<<<<
@@ -1683,7 +1683,7 @@ typedef npy_float64 __pyx_t_5numpy_float64_t;
 */
 typedef npy_longlong __pyx_t_5numpy_longlong_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":793
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":793
  * 
  * ctypedef npy_longlong   longlong_t
  * ctypedef npy_ulonglong  ulonglong_t             # <<<<<<<<<<<<<<
@@ -1692,7 +1692,7 @@ typedef npy_longlong __pyx_t_5numpy_longlong_t;
 */
 typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":795
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":795
  * ctypedef npy_ulonglong  ulonglong_t
  * 
  * ctypedef npy_intp       intp_t             # <<<<<<<<<<<<<<
@@ -1701,7 +1701,7 @@ typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
 */
 typedef npy_intp __pyx_t_5numpy_intp_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":796
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":796
  * 
  * ctypedef npy_intp       intp_t
  * ctypedef npy_uintp      uintp_t             # <<<<<<<<<<<<<<
@@ -1710,7 +1710,7 @@ typedef npy_intp __pyx_t_5numpy_intp_t;
 */
 typedef npy_uintp __pyx_t_5numpy_uintp_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":798
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":798
  * ctypedef npy_uintp      uintp_t
  * 
  * ctypedef npy_double     float_t             # <<<<<<<<<<<<<<
@@ -1719,7 +1719,7 @@ typedef npy_uintp __pyx_t_5numpy_uintp_t;
 */
 typedef npy_double __pyx_t_5numpy_float_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":799
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":799
  * 
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t             # <<<<<<<<<<<<<<
@@ -1728,7 +1728,7 @@ typedef npy_double __pyx_t_5numpy_float_t;
 */
 typedef npy_double __pyx_t_5numpy_double_t;
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":800
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":800
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t
  * ctypedef npy_longdouble longdouble_t             # <<<<<<<<<<<<<<
@@ -1737,23 +1737,23 @@ typedef npy_double __pyx_t_5numpy_double_t;
 */
 typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":13
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":13
  * 
  * DTYPE_float = np.float64
  * ctypedef cnp.float64_t DTYPE_float_t             # <<<<<<<<<<<<<<
  * DTYPE_int = np.int64
  * ctypedef cnp.int64_t DTYPE_int_t
 */
-typedef __pyx_t_5numpy_float64_t __pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t;
+typedef __pyx_t_5numpy_float64_t __pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t;
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":15
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":15
  * ctypedef cnp.float64_t DTYPE_float_t
  * DTYPE_int = np.int64
  * ctypedef cnp.int64_t DTYPE_int_t             # <<<<<<<<<<<<<<
  * 
  * 
 */
-typedef __pyx_t_5numpy_int64_t __pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t;
+typedef __pyx_t_5numpy_int64_t __pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t;
 /* #### Code section: complex_type_declarations ### */
 /* Declarations.proto */
 #if CYTHON_CCOMPLEX && (1) && (!0 || __cplusplus)
@@ -1795,7 +1795,7 @@ static CYTHON_INLINE __pyx_t_long_double_complex __pyx_t_long_double_complex_fro
 
 /*--- Type declarations ---*/
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1096
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1096
  * 
  * # Iterator API added in v1.6
  * ctypedef int (*NpyIter_IterNextFunc)(NpyIter* it) noexcept nogil             # <<<<<<<<<<<<<<
@@ -1804,7 +1804,7 @@ static CYTHON_INLINE __pyx_t_long_double_complex __pyx_t_long_double_complex_fro
 */
 typedef int (*__pyx_t_5numpy_NpyIter_IterNextFunc)(NpyIter *);
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1097
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1097
  * # Iterator API added in v1.6
  * ctypedef int (*NpyIter_IterNextFunc)(NpyIter* it) noexcept nogil
  * ctypedef void (*NpyIter_GetMultiIndexFunc)(NpyIter* it, npy_intp* outcoords) noexcept nogil             # <<<<<<<<<<<<<<
@@ -2819,18 +2819,18 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
 /* Module declarations from "numpy" */
 static CYTHON_INLINE int __pyx_f_5numpy_import_array(void); /*proto*/
 
-/* Module declarations from "intercluster.rules.splitters.cython.information_gain" */
-static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
-static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_gain_cy(int, PyArrayObject *, PyArrayObject *, PyArrayObject *, float, int __pyx_skip_dispatch); /*proto*/
+/* Module declarations from "intercluster.decision_trees.splitters.cython.information_gain" */
+static float __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
+static float __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_gain_cy(int, PyArrayObject *, PyArrayObject *, PyArrayObject *, float, int __pyx_skip_dispatch); /*proto*/
 /* #### Code section: typeinfo ### */
-static const __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t = { "DTYPE_int_t", NULL, sizeof(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t), 0 };
-static const __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t = { "DTYPE_float_t", NULL, sizeof(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t), { 0 }, 0, 'R', 0, 0 };
+static const __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t = { "DTYPE_int_t", NULL, sizeof(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t), 0 };
+static const __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t = { "DTYPE_float_t", NULL, sizeof(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t), { 0 }, 0, 'R', 0, 0 };
 /* #### Code section: before_global_var ### */
-#define __Pyx_MODULE_NAME "intercluster.rules.splitters.cython.information_gain"
-extern int __pyx_module_is_main_intercluster__rules__splitters__cython__information_gain;
-int __pyx_module_is_main_intercluster__rules__splitters__cython__information_gain = 0;
+#define __Pyx_MODULE_NAME "intercluster.decision_trees.splitters.cython.information_gain"
+extern int __pyx_module_is_main_intercluster__decision_trees__splitters__cython__information_gain;
+int __pyx_module_is_main_intercluster__decision_trees__splitters__cython__information_gain = 0;
 
-/* Implementation of "intercluster.rules.splitters.cython.information_gain" */
+/* Implementation of "intercluster.decision_trees.splitters.cython.information_gain" */
 /* #### Code section: global_var ### */
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_ImportError;
@@ -2913,21 +2913,21 @@ static const char __pyx_k_oblique_split_cy[] = "oblique_split_cy";
 static const char __pyx_k_1_s_9Cq_q_F_1_waq[] = "\320\000\023\2201\360 \000\005\010\200s\210!\2109\220C\220q\330\010\017\210q\340\010\024\220F\230!\2301\330\010\017\210w\220a\220q";
 static const char __pyx_k_asyncio_coroutines[] = "asyncio.coroutines";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
-static const char __pyx_k_intercluster_utils[] = "intercluster.utils";
 static const char __pyx_k_Tuple_float_Condition[] = "Tuple[float, Condition]";
+static const char __pyx_k_intercluster_measures[] = "intercluster.measures";
 static const char __pyx_k_1_S_r_AQ_1M_A_1N_G1O1_ARs_c_2Q[] = "\320\000\023\2201\360.\000\005\036\230S\240\001\240\036\250r\260\023\260A\260Q\360\010\000\005\021\220\003\2201\220M\240\021\240.\260\002\260'\270\021\270.\310\001\330\004\021\220\023\220A\220^\2401\240N\260\"\260G\2701\270O\3101\330\004\017\210}\230A\230R\230s\240,\250c\260\032\2702\270Q\330\004\013\2101";
 static const char __pyx_k_41AQ_6_6_WAYa_ARq_a_U_1_D_E_a_F[] = "\200\001\360\n\000\006\007\360\032\000\0054\2601\260A\260Q\330\004\021\220\022\2206\230\021\230!\330\004\021\220\022\2206\230\021\230!\330\004\035\230W\240A\240Y\250a\360\022\000\005\025\220A\220R\220q\330\004\026\220a\330\004\010\210\005\210U\220!\2201\330\010\030\230\002\230'\240\021\240\"\240D\250\001\330\010\014\210E\220\025\220a\220}\240F\250!\2501\360\006\000\r\031\230\r\240Q\240a\330\014\024\220B\220f\230A\230R\230t\2403\240c\250\033\260H\270A\330\014\033\2307\240!\2402\240V\2501\250F\260!\2601\330\014\034\230G\2401\240B\240f\250A\250R\250r\260\026\260q\270\001\340\014\020\220\003\2201\220N\240\"\320$4\260A\330\020\023\2201\220O\2402\240Q\330\020\033\2301\230B\230a\340\020\033\2307\240!\2401\240F\250!\2504\250s\260.\300\017\310q\340\014\017\210y\230\002\230!\330\020 \240\001\330\020\"\240\"\240C\240q\340\021\032\230#\230Q\330\020\037\230w\240b\250\003\2501\360\006\000\005\026\220_\240A\240R\240w\250h\260a\260s\270!\2701\330\004\013\210?\230!";
 static const char __pyx_k_41AQ_6_6_WAYa_BfA_A_q_A_7r_q_AQ[] = "\200\001\360\020\000\006\007\360\032\000\0054\2601\260A\260Q\330\004\021\220\022\2206\230\021\230!\330\004\021\220\022\2206\230\021\230!\330\004\035\230W\240A\240Y\250a\360\026\000\005=\270B\270f\300A\330\010\014\210A\210\\\230\021\230%\230q\240\004\240A\340\0047\260r\270\026\270q\330\010\t\210\023\210A\210Q\210c\220\023\220C\220r\230\027\240\004\240D\250\001\250\021\250$\250h\260a\360\006\000\005\025\220A\220R\220q\330\004\026\220a\330\004\010\210\010\220\001\330\010\021\220\022\2204\220q\330\010\014\210E\220\025\220a\220v\230V\2401\240A\330\014\031\230\026\230q\240\001\330\014\020\220\t\230\021\330\020\023\2206\230\023\230A\360\024\000\025!\240\n\250!\2501\330\024\034\230B\230f\240A\240R\240t\2504\250q\260\004\260C\260{\300(\310!\360\006\000\026\034\2303\230b\240\001\360\024\000\025!\240\n\250!\2501\330\024\034\230B\230f\240A\240R\240t\2504\250q\260\004\260C\260{\300(\310!\360\006\000\025!\240\001\240\026\240r\250\032\2601\260C\260r\270\032\3001\300A\360\022\000\025\035\230B\230f\240A\330\030\032\230$\230a\230r\240\024\240W\250B\250f\260A\260Q\260a\260w\270e\3003\300a\330\030 \240\001\360\010\000\021 \230w\240a\240r\250\026\250q\260\006\260a\260q\330\020 \240\007\240q\250\002\250&\260\001\260\022\2602\260V\2701\270A\340\020\024\220C\220q\230\016\240b\320(8\270\001\330\024\027\220q\230\017\240r\250\021\330\024\037\230q\240\002\240!\340\024\037\230w\240a\240q\250\006\250a\250t\2603\260n\300O\320ST\340\020\023\2209\230B\230a\330\024$\240A\330\024&\240b\250\006\250g\260Q\340\025\036\230c\240\021\330\024#\2407\250\"\250F\260'\270\021\360\006\000\005\026\220_\240A\240R\240w\250h\260a\260s\270!\2701\330\004\013\210?\230!";
+static const char __pyx_k_src_intercluster_decision_trees[] = "src/intercluster/decision_trees/splitters/cython/information_gain.pyx";
 static const char __pyx_k_Note_that_Cython_is_deliberately[] = "Note that Cython is deliberately stricter than PEP-484 and rejects subclasses of builtin types. If you need to pass subclasses then set the 'annotation_typing' directive to False.";
-static const char __pyx_k_intercluster_rules_splitters_cyt[] = "intercluster.rules.splitters.cython.information_gain";
+static const char __pyx_k_intercluster_decision_trees_spli[] = "intercluster.decision_trees.splitters.cython.information_gain";
 static const char __pyx_k_numpy__core_multiarray_failed_to[] = "numpy._core.multiarray failed to import";
 static const char __pyx_k_numpy__core_umath_failed_to_impo[] = "numpy._core.umath failed to import";
-static const char __pyx_k_src_intercluster_rules_splitters[] = "src/intercluster/rules/splitters/cython/information_gain.pyx";
 /* #### Code section: decls ### */
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels); /* proto */
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_2gain_cy(CYTHON_UNUSED PyObject *__pyx_self, int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost); /* proto */
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_4split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf); /* proto */
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_6oblique_split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf); /* proto */
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels); /* proto */
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_2gain_cy(CYTHON_UNUSED PyObject *__pyx_self, int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost); /* proto */
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_4split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf); /* proto */
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_6oblique_split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf); /* proto */
 /* #### Code section: late_includes ### */
 /* #### Code section: module_state ### */
 /* SmallCodeConfig */
@@ -3070,8 +3070,8 @@ static __pyx_mstatetype * const __pyx_mstate_global = &__pyx_mstate_global_stati
 #define __pyx_n_u_inf __pyx_string_tab[39]
 #define __pyx_n_u_initializing __pyx_string_tab[40]
 #define __pyx_n_u_int64 __pyx_string_tab[41]
-#define __pyx_n_u_intercluster_rules_splitters_cyt __pyx_string_tab[42]
-#define __pyx_n_u_intercluster_utils __pyx_string_tab[43]
+#define __pyx_n_u_intercluster_decision_trees_spli __pyx_string_tab[42]
+#define __pyx_n_u_intercluster_measures __pyx_string_tab[43]
 #define __pyx_n_u_is_coroutine __pyx_string_tab[44]
 #define __pyx_n_u_itertools __pyx_string_tab[45]
 #define __pyx_n_u_j __pyx_string_tab[46]
@@ -3104,7 +3104,7 @@ static __pyx_mstatetype * const __pyx_mstate_global = &__pyx_mstate_global_stati
 #define __pyx_n_u_slopes __pyx_string_tab[73]
 #define __pyx_n_u_spec __pyx_string_tab[74]
 #define __pyx_n_u_split_cy __pyx_string_tab[75]
-#define __pyx_kp_u_src_intercluster_rules_splitters __pyx_string_tab[76]
+#define __pyx_kp_u_src_intercluster_decision_trees __pyx_string_tab[76]
 #define __pyx_n_u_test __pyx_string_tab[77]
 #define __pyx_n_u_threshold __pyx_string_tab[78]
 #define __pyx_n_u_typing __pyx_string_tab[79]
@@ -3205,7 +3205,7 @@ static CYTHON_SMALL_CODE int __pyx_m_traverse(PyObject *m, visitproc visit, void
 #endif
 /* #### Code section: module_code ### */
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":285
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":285
  *         cdef int type_num
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3216,7 +3216,7 @@ static CYTHON_SMALL_CODE int __pyx_m_traverse(PyObject *m, visitproc visit, void
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_Descr *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":287
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":287
  *         @property
  *         cdef inline npy_intp itemsize(self) noexcept nogil:
  *             return PyDataType_ELSIZE(self)             # <<<<<<<<<<<<<<
@@ -3226,7 +3226,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
   __pyx_r = PyDataType_ELSIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":285
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":285
  *         cdef int type_num
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3239,7 +3239,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":289
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":289
  *             return PyDataType_ELSIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3250,7 +3250,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray_Descr *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":291
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":291
  *         @property
  *         cdef inline npy_intp alignment(self) noexcept nogil:
  *             return PyDataType_ALIGNMENT(self)             # <<<<<<<<<<<<<<
@@ -3260,7 +3260,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray
   __pyx_r = PyDataType_ALIGNMENT(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":289
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":289
  *             return PyDataType_ELSIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3273,7 +3273,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":295
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":295
  *         # Use fields/names with care as they may be NULL.  You must check
  *         # for this using PyDataType_HASFIELDS.
  *         @property             # <<<<<<<<<<<<<<
@@ -3287,7 +3287,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   PyObject *__pyx_t_1;
   __Pyx_RefNannySetupContext("fields", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":297
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":297
  *         @property
  *         cdef inline object fields(self):
  *             return <object>PyDataType_FIELDS(self)             # <<<<<<<<<<<<<<
@@ -3300,7 +3300,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   __pyx_r = ((PyObject *)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":295
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":295
  *         # Use fields/names with care as they may be NULL.  You must check
  *         # for this using PyDataType_HASFIELDS.
  *         @property             # <<<<<<<<<<<<<<
@@ -3315,7 +3315,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":299
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":299
  *             return <object>PyDataType_FIELDS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3329,7 +3329,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   PyObject *__pyx_t_1;
   __Pyx_RefNannySetupContext("names", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":301
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":301
  *         @property
  *         cdef inline tuple names(self):
  *             return <tuple>PyDataType_NAMES(self)             # <<<<<<<<<<<<<<
@@ -3342,7 +3342,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   __pyx_r = ((PyObject*)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":299
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":299
  *             return <object>PyDataType_FIELDS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3357,7 +3357,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":306
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":306
  *         # valid (the pointer can be NULL). Most users should access
  *         # this field via the inline helper method PyDataType_SHAPE.
  *         @property             # <<<<<<<<<<<<<<
@@ -3368,7 +3368,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
 static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarray(PyArray_Descr *__pyx_v_self) {
   PyArray_ArrayDescr *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":308
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":308
  *         @property
  *         cdef inline PyArray_ArrayDescr* subarray(self) noexcept nogil:
  *             return PyDataType_SUBARRAY(self)             # <<<<<<<<<<<<<<
@@ -3378,7 +3378,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
   __pyx_r = PyDataType_SUBARRAY(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":306
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":306
  *         # valid (the pointer can be NULL). Most users should access
  *         # this field via the inline helper method PyDataType_SHAPE.
  *         @property             # <<<<<<<<<<<<<<
@@ -3391,7 +3391,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":310
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":310
  *             return PyDataType_SUBARRAY(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3402,7 +3402,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
 static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr *__pyx_v_self) {
   npy_uint64 __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":313
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":313
  *         cdef inline npy_uint64 flags(self) noexcept nogil:
  *             """The data types flags."""
  *             return PyDataType_FLAGS(self)             # <<<<<<<<<<<<<<
@@ -3412,7 +3412,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
   __pyx_r = PyDataType_FLAGS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":310
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":310
  *             return PyDataType_SUBARRAY(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3425,7 +3425,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":322
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":322
  *     ctypedef class numpy.broadcast [object PyArrayMultiIterObject, check_size ignore]:
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3436,7 +3436,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
 static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMultiIterObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":325
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":325
  *         cdef inline int numiter(self) noexcept nogil:
  *             """The number of arrays that need to be broadcast to the same shape."""
  *             return PyArray_MultiIter_NUMITER(self)             # <<<<<<<<<<<<<<
@@ -3446,7 +3446,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
   __pyx_r = PyArray_MultiIter_NUMITER(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":322
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":322
  *     ctypedef class numpy.broadcast [object PyArrayMultiIterObject, check_size ignore]:
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3459,7 +3459,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":327
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":327
  *             return PyArray_MultiIter_NUMITER(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3470,7 +3470,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":330
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":330
  *         cdef inline npy_intp size(self) noexcept nogil:
  *             """The total broadcasted size."""
  *             return PyArray_MultiIter_SIZE(self)             # <<<<<<<<<<<<<<
@@ -3480,7 +3480,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
   __pyx_r = PyArray_MultiIter_SIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":327
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":327
  *             return PyArray_MultiIter_NUMITER(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3493,7 +3493,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":332
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":332
  *             return PyArray_MultiIter_SIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3504,7 +3504,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":335
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":335
  *         cdef inline npy_intp index(self) noexcept nogil:
  *             """The current (1-d) index into the broadcasted result."""
  *             return PyArray_MultiIter_INDEX(self)             # <<<<<<<<<<<<<<
@@ -3514,7 +3514,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
   __pyx_r = PyArray_MultiIter_INDEX(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":332
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":332
  *             return PyArray_MultiIter_SIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3527,7 +3527,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":337
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":337
  *             return PyArray_MultiIter_INDEX(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3538,7 +3538,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
 static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":340
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":340
  *         cdef inline int nd(self) noexcept nogil:
  *             """The number of dimensions in the broadcasted result."""
  *             return PyArray_MultiIter_NDIM(self)             # <<<<<<<<<<<<<<
@@ -3548,7 +3548,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
   __pyx_r = PyArray_MultiIter_NDIM(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":337
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":337
  *             return PyArray_MultiIter_INDEX(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3561,7 +3561,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":342
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":342
  *             return PyArray_MultiIter_NDIM(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3572,7 +3572,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":345
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":345
  *         cdef inline npy_intp* dimensions(self) noexcept nogil:
  *             """The shape of the broadcasted result."""
  *             return PyArray_MultiIter_DIMS(self)             # <<<<<<<<<<<<<<
@@ -3582,7 +3582,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
   __pyx_r = PyArray_MultiIter_DIMS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":342
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":342
  *             return PyArray_MultiIter_NDIM(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3595,7 +3595,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":347
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":347
  *             return PyArray_MultiIter_DIMS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3606,7 +3606,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
 static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiIterObject *__pyx_v_self) {
   void **__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":351
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":351
  *             """An array of iterator objects that holds the iterators for the arrays to be broadcast together.
  *             On return, the iterators are adjusted for broadcasting."""
  *             return PyArray_MultiIter_ITERS(self)             # <<<<<<<<<<<<<<
@@ -3616,7 +3616,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
   __pyx_r = PyArray_MultiIter_ITERS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":347
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":347
  *             return PyArray_MultiIter_DIMS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3629,7 +3629,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":365
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":365
  *         # Instead, we use properties that map to the corresponding C-API functions.
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3640,7 +3640,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
 static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject *__pyx_v_self) {
   PyObject *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":369
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":369
  *             """Returns a borrowed reference to the object owning the data/memory.
  *             """
  *             return PyArray_BASE(self)             # <<<<<<<<<<<<<<
@@ -3650,7 +3650,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject 
   __pyx_r = PyArray_BASE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":365
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":365
  *         # Instead, we use properties that map to the corresponding C-API functions.
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3663,7 +3663,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject 
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":371
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":371
  *             return PyArray_BASE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3677,7 +3677,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   PyArray_Descr *__pyx_t_1;
   __Pyx_RefNannySetupContext("descr", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":375
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":375
  *             """Returns an owned reference to the dtype of the array.
  *             """
  *             return <dtype>PyArray_DESCR(self)             # <<<<<<<<<<<<<<
@@ -3690,7 +3690,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   __pyx_r = ((PyArray_Descr *)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":371
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":371
  *             return PyArray_BASE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3705,7 +3705,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":377
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":377
  *             return <dtype>PyArray_DESCR(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3716,7 +3716,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
 static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":381
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":381
  *             """Returns the number of dimensions in the array.
  *             """
  *             return PyArray_NDIM(self)             # <<<<<<<<<<<<<<
@@ -3726,7 +3726,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
   __pyx_r = PyArray_NDIM(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":377
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":377
  *             return <dtype>PyArray_DESCR(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3739,7 +3739,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":383
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":383
  *             return PyArray_NDIM(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3750,7 +3750,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":389
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":389
  *             Can return NULL for 0-dimensional arrays.
  *             """
  *             return PyArray_DIMS(self)             # <<<<<<<<<<<<<<
@@ -3760,7 +3760,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
   __pyx_r = PyArray_DIMS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":383
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":383
  *             return PyArray_NDIM(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3773,7 +3773,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":391
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":391
  *             return PyArray_DIMS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3784,7 +3784,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":396
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":396
  *             The number of elements matches the number of dimensions of the array (ndim).
  *             """
  *             return PyArray_STRIDES(self)             # <<<<<<<<<<<<<<
@@ -3794,7 +3794,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
   __pyx_r = PyArray_STRIDES(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":391
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":391
  *             return PyArray_DIMS(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3807,7 +3807,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":398
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":398
  *             return PyArray_STRIDES(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3818,7 +3818,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":402
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":402
  *             """Returns the total size (in number of elements) of the array.
  *             """
  *             return PyArray_SIZE(self)             # <<<<<<<<<<<<<<
@@ -3828,7 +3828,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
   __pyx_r = PyArray_SIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":398
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":398
  *             return PyArray_STRIDES(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3841,7 +3841,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":404
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":404
  *             return PyArray_SIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3852,7 +3852,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
 static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__pyx_v_self) {
   char *__pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":411
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":411
  *             of `PyArray_DATA()` instead, which returns a 'void*'.
  *             """
  *             return PyArray_BYTES(self)             # <<<<<<<<<<<<<<
@@ -3862,7 +3862,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
   __pyx_r = PyArray_BYTES(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":404
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":404
  *             return PyArray_SIZE(self)
  * 
  *         @property             # <<<<<<<<<<<<<<
@@ -3875,7 +3875,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":807
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":807
  * ctypedef long double complex clongdouble_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -3892,7 +3892,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew1", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":808
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":808
  * 
  * cdef inline object PyArray_MultiIterNew1(a):
  *     return PyArray_MultiIterNew(1, <void*>a)             # <<<<<<<<<<<<<<
@@ -3906,7 +3906,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":807
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":807
  * ctypedef long double complex clongdouble_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -3925,7 +3925,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":810
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":810
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -3942,7 +3942,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew2", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":811
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":811
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)             # <<<<<<<<<<<<<<
@@ -3956,7 +3956,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":810
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":810
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -3975,7 +3975,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":813
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":813
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -3992,7 +3992,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew3", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":814
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":814
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)             # <<<<<<<<<<<<<<
@@ -4006,7 +4006,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":813
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":813
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -4025,7 +4025,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":816
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":816
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -4042,7 +4042,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew4", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":817
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":817
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)             # <<<<<<<<<<<<<<
@@ -4056,7 +4056,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":816
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":816
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -4075,7 +4075,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":819
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":819
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -4092,7 +4092,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew5", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":820
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":820
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)             # <<<<<<<<<<<<<<
@@ -4106,7 +4106,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":819
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":819
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -4125,7 +4125,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":822
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":822
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):             # <<<<<<<<<<<<<<
@@ -4140,7 +4140,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   PyObject *__pyx_t_2;
   __Pyx_RefNannySetupContext("PyDataType_SHAPE", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":823
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":823
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):             # <<<<<<<<<<<<<<
@@ -4150,7 +4150,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   __pyx_t_1 = PyDataType_HASSUBARRAY(__pyx_v_d);
   if (__pyx_t_1) {
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":824
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":824
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):
  *         return <tuple>d.subarray.shape             # <<<<<<<<<<<<<<
@@ -4163,7 +4163,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
     __pyx_r = ((PyObject*)__pyx_t_2);
     goto __pyx_L0;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":823
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":823
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):             # <<<<<<<<<<<<<<
@@ -4172,7 +4172,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
 */
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":826
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":826
  *         return <tuple>d.subarray.shape
  *     else:
  *         return ()             # <<<<<<<<<<<<<<
@@ -4186,7 +4186,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
     goto __pyx_L0;
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":822
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":822
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):             # <<<<<<<<<<<<<<
@@ -4201,7 +4201,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1010
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1010
  *     int _import_umath() except -1
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:             # <<<<<<<<<<<<<<
@@ -4215,7 +4215,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1011
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1011
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:
  *     Py_INCREF(base) # important to do this before stealing the reference below!             # <<<<<<<<<<<<<<
@@ -4224,7 +4224,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
 */
   Py_INCREF(__pyx_v_base);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1012
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1012
  * cdef inline void set_array_base(ndarray arr, object base) except *:
  *     Py_INCREF(base) # important to do this before stealing the reference below!
  *     PyArray_SetBaseObject(arr, base)             # <<<<<<<<<<<<<<
@@ -4233,7 +4233,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
 */
   __pyx_t_1 = PyArray_SetBaseObject(__pyx_v_arr, __pyx_v_base); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(1, 1012, __pyx_L1_error)
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1010
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1010
  *     int _import_umath() except -1
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:             # <<<<<<<<<<<<<<
@@ -4248,7 +4248,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   __pyx_L0:;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1014
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1014
  *     PyArray_SetBaseObject(arr, base)
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -4263,7 +4263,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("get_array_base", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1015
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1015
  * 
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)             # <<<<<<<<<<<<<<
@@ -4272,7 +4272,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
 */
   __pyx_v_base = PyArray_BASE(__pyx_v_arr);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1016
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1016
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)
  *     if base is NULL:             # <<<<<<<<<<<<<<
@@ -4282,7 +4282,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   __pyx_t_1 = (__pyx_v_base == NULL);
   if (__pyx_t_1) {
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1017
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1017
  *     base = PyArray_BASE(arr)
  *     if base is NULL:
  *         return None             # <<<<<<<<<<<<<<
@@ -4293,7 +4293,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1016
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1016
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)
  *     if base is NULL:             # <<<<<<<<<<<<<<
@@ -4302,7 +4302,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
 */
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1018
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1018
  *     if base is NULL:
  *         return None
  *     return <object>base             # <<<<<<<<<<<<<<
@@ -4314,7 +4314,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   __pyx_r = ((PyObject *)__pyx_v_base);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1014
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1014
  *     PyArray_SetBaseObject(arr, base)
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -4329,7 +4329,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1022
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1022
  * # Versions of the import_* functions which are more suitable for
  * # Cython code.
  * cdef inline int import_array() except -1:             # <<<<<<<<<<<<<<
@@ -4356,7 +4356,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_array", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4372,7 +4372,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1024
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1024
  * cdef inline int import_array() except -1:
  *     try:
  *         __pyx_import_array()             # <<<<<<<<<<<<<<
@@ -4381,7 +4381,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
 */
       __pyx_t_4 = _import_array(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1024, __pyx_L3_error)
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4395,7 +4395,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1025
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1025
  *     try:
  *         __pyx_import_array()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4410,7 +4410,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1026
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1026
  *         __pyx_import_array()
  *     except Exception:
  *         raise ImportError("numpy._core.multiarray failed to import")             # <<<<<<<<<<<<<<
@@ -4435,7 +4435,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1023
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4451,7 +4451,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1022
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1022
  * # Versions of the import_* functions which are more suitable for
  * # Cython code.
  * cdef inline int import_array() except -1:             # <<<<<<<<<<<<<<
@@ -4476,7 +4476,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1028
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1028
  *         raise ImportError("numpy._core.multiarray failed to import")
  * 
  * cdef inline int import_umath() except -1:             # <<<<<<<<<<<<<<
@@ -4503,7 +4503,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_umath", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4519,7 +4519,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1030
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1030
  * cdef inline int import_umath() except -1:
  *     try:
  *         _import_umath()             # <<<<<<<<<<<<<<
@@ -4528,7 +4528,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
 */
       __pyx_t_4 = _import_umath(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1030, __pyx_L3_error)
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4542,7 +4542,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1031
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1031
  *     try:
  *         _import_umath()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4557,7 +4557,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1032
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1032
  *         _import_umath()
  *     except Exception:
  *         raise ImportError("numpy._core.umath failed to import")             # <<<<<<<<<<<<<<
@@ -4582,7 +4582,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1029
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4598,7 +4598,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1028
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1028
  *         raise ImportError("numpy._core.multiarray failed to import")
  * 
  * cdef inline int import_umath() except -1:             # <<<<<<<<<<<<<<
@@ -4623,7 +4623,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1034
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1034
  *         raise ImportError("numpy._core.umath failed to import")
  * 
  * cdef inline int import_ufunc() except -1:             # <<<<<<<<<<<<<<
@@ -4650,7 +4650,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_ufunc", 0);
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4666,7 +4666,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1036
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1036
  * cdef inline int import_ufunc() except -1:
  *     try:
  *         _import_umath()             # <<<<<<<<<<<<<<
@@ -4675,7 +4675,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
 */
       __pyx_t_4 = _import_umath(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1036, __pyx_L3_error)
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4689,7 +4689,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1037
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1037
  *     try:
  *         _import_umath()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4704,7 +4704,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1038
+      /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1038
  *         _import_umath()
  *     except Exception:
  *         raise ImportError("numpy._core.umath failed to import")             # <<<<<<<<<<<<<<
@@ -4729,7 +4729,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
+    /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1035
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4745,7 +4745,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1034
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1034
  *         raise ImportError("numpy._core.umath failed to import")
  * 
  * cdef inline int import_ufunc() except -1:             # <<<<<<<<<<<<<<
@@ -4770,7 +4770,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1041
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1041
  * 
  * 
  * cdef inline bint is_timedelta64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4781,7 +4781,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
 static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_obj) {
   int __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1053
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1053
  *     bool
  *     """
  *     return PyObject_TypeCheck(obj, &PyTimedeltaArrType_Type)             # <<<<<<<<<<<<<<
@@ -4791,7 +4791,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
   __pyx_r = PyObject_TypeCheck(__pyx_v_obj, (&PyTimedeltaArrType_Type));
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1041
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1041
  * 
  * 
  * cdef inline bint is_timedelta64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4804,7 +4804,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1056
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1056
  * 
  * 
  * cdef inline bint is_datetime64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4815,7 +4815,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
 static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_obj) {
   int __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1068
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1068
  *     bool
  *     """
  *     return PyObject_TypeCheck(obj, &PyDatetimeArrType_Type)             # <<<<<<<<<<<<<<
@@ -4825,7 +4825,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
   __pyx_r = PyObject_TypeCheck(__pyx_v_obj, (&PyDatetimeArrType_Type));
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1056
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1056
  * 
  * 
  * cdef inline bint is_datetime64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4838,7 +4838,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1071
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1071
  * 
  * 
  * cdef inline npy_datetime get_datetime64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4849,7 +4849,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
 static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *__pyx_v_obj) {
   npy_datetime __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1078
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1078
  *     also needed.  That can be found using `get_datetime64_unit`.
  *     """
  *     return (<PyDatetimeScalarObject*>obj).obval             # <<<<<<<<<<<<<<
@@ -4859,7 +4859,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
   __pyx_r = ((PyDatetimeScalarObject *)__pyx_v_obj)->obval;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1071
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1071
  * 
  * 
  * cdef inline npy_datetime get_datetime64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4872,7 +4872,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1081
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1081
  * 
  * 
  * cdef inline npy_timedelta get_timedelta64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4883,7 +4883,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
 static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject *__pyx_v_obj) {
   npy_timedelta __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1085
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1085
  *     returns the int64 value underlying scalar numpy timedelta64 object
  *     """
  *     return (<PyTimedeltaScalarObject*>obj).obval             # <<<<<<<<<<<<<<
@@ -4893,7 +4893,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
   __pyx_r = ((PyTimedeltaScalarObject *)__pyx_v_obj)->obval;
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1081
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1081
  * 
  * 
  * cdef inline npy_timedelta get_timedelta64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4906,7 +4906,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
   return __pyx_r;
 }
 
-/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1088
+/* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1088
  * 
  * 
  * cdef inline NPY_DATETIMEUNIT get_datetime64_unit(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4917,7 +4917,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
 static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObject *__pyx_v_obj) {
   NPY_DATETIMEUNIT __pyx_r;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1092
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1092
  *     returns the unit part of the dtype for a numpy datetime64 object.
  *     """
  *     return <NPY_DATETIMEUNIT>(<PyDatetimeScalarObject*>obj).obmeta.base             # <<<<<<<<<<<<<<
@@ -4927,7 +4927,7 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
   __pyx_r = ((NPY_DATETIMEUNIT)((PyDatetimeScalarObject *)__pyx_v_obj)->obmeta.base);
   goto __pyx_L0;
 
-  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmpi85aal2b/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1088
+  /* "../../../../../var/folders/gx/n_zylxjn46v7vssq3_z29kpr0000gn/T/tmp3ugexo13/.venv/lib/python3.9/site-packages/numpy/__init__.cython-30.pxd":1088
  * 
  * 
  * cdef inline NPY_DATETIMEUNIT get_datetime64_unit(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4940,7 +4940,7 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
   return __pyx_r;
 }
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":21
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":21
  * 
  * 
  * cpdef float cost_cy(             # <<<<<<<<<<<<<<
@@ -4948,14 +4948,14 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
  *     cnp.ndarray[DTYPE_int_t, ndim = 1] labels,
 */
 
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static float __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyArrayObject *__pyx_v_sublabels = 0;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_indices;
   __Pyx_Buffer __pyx_pybuffer_indices;
@@ -4994,16 +4994,16 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   __pyx_pybuffernd_labels.rcbuffer = &__pyx_pybuffer_labels;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
   }
   __pyx_pybuffernd_indices.diminfo[0].strides = __pyx_pybuffernd_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_indices.diminfo[0].shape = __pyx_pybuffernd_indices.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_labels.rcbuffer->pybuffer, (PyObject*)__pyx_v_labels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_labels.rcbuffer->pybuffer, (PyObject*)__pyx_v_labels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
   }
   __pyx_pybuffernd_labels.diminfo[0].strides = __pyx_pybuffernd_labels.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_labels.diminfo[0].shape = __pyx_pybuffernd_labels.rcbuffer->pybuffer.shape[0];
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":37
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":37
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] unique_labels, counts
  *     cdef float entropy_score
  *     if len(indices) == 0:             # <<<<<<<<<<<<<<
@@ -5014,7 +5014,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   __pyx_t_2 = (__pyx_t_1 == 0);
   if (__pyx_t_2) {
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":38
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":38
  *     cdef float entropy_score
  *     if len(indices) == 0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -5024,7 +5024,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     __pyx_r = 0.0;
     goto __pyx_L0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":37
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":37
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] unique_labels, counts
  *     cdef float entropy_score
  *     if len(indices) == 0:             # <<<<<<<<<<<<<<
@@ -5033,7 +5033,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
 */
   }
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":40
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":40
  *         return 0
  *     else:
  *         sublabels = labels[indices]             # <<<<<<<<<<<<<<
@@ -5047,10 +5047,10 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
       __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer);
-      __pyx_t_4 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_3), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+      __pyx_t_4 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_3), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
       if (unlikely(__pyx_t_4 < 0)) {
         PyErr_Fetch(&__pyx_t_5, &__pyx_t_6, &__pyx_t_7);
-        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer, (PyObject*)__pyx_v_sublabels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer, (PyObject*)__pyx_v_sublabels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
           Py_XDECREF(__pyx_t_5); Py_XDECREF(__pyx_t_6); Py_XDECREF(__pyx_t_7);
           __Pyx_RaiseBufferFallbackError();
         } else {
@@ -5064,7 +5064,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     __pyx_v_sublabels = ((PyArrayObject *)__pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":41
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":41
  *     else:
  *         sublabels = labels[indices]
  *         return entropy(sublabels)             # <<<<<<<<<<<<<<
@@ -5100,7 +5100,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     goto __pyx_L0;
   }
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":21
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":21
  * 
  * 
  * cpdef float cost_cy(             # <<<<<<<<<<<<<<
@@ -5121,7 +5121,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_labels.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_sublabels.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5135,16 +5135,16 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy, "\n    Given a set of points X, computes the score as the entropy of the labels.\n    \n    Args:                \n        indices (NDArray, optional): Indices of points to compute score with.\n            \n    Returns:\n        (float): Score of the given data.\n    ");
-static PyMethodDef __pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy = {"cost_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy};
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy, "\n    Given a set of points X, computes the score as the entropy of the labels.\n    \n    Args:                \n        indices (NDArray, optional): Indices of points to compute score with.\n            \n    Returns:\n        (float): Score of the given data.\n    ");
+static PyMethodDef __pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy = {"cost_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy};
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5214,13 +5214,13 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
     Py_XDECREF(values[__pyx_temp]);
   }
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_indices), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "indices", 0))) __PYX_ERR(0, 22, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_labels), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "labels", 0))) __PYX_ERR(0, 23, __pyx_L1_error)
-  __pyx_r = __pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(__pyx_self, __pyx_v_indices, __pyx_v_labels);
+  __pyx_r = __pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(__pyx_self, __pyx_v_indices, __pyx_v_labels);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5239,7 +5239,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels) {
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_indices, PyArrayObject *__pyx_v_labels) {
   __Pyx_LocalBuf_ND __pyx_pybuffernd_indices;
   __Pyx_Buffer __pyx_pybuffer_indices;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_labels;
@@ -5262,16 +5262,16 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_pybuffernd_labels.rcbuffer = &__pyx_pybuffer_labels;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
   }
   __pyx_pybuffernd_indices.diminfo[0].strides = __pyx_pybuffernd_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_indices.diminfo[0].shape = __pyx_pybuffernd_indices.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_labels.rcbuffer->pybuffer, (PyObject*)__pyx_v_labels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_labels.rcbuffer->pybuffer, (PyObject*)__pyx_v_labels, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 21, __pyx_L1_error)
   }
   __pyx_pybuffernd_labels.diminfo[0].strides = __pyx_pybuffernd_labels.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_labels.diminfo[0].shape = __pyx_pybuffernd_labels.rcbuffer->pybuffer.shape[0];
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(__pyx_v_indices, __pyx_v_labels, 1); if (unlikely(__pyx_t_1 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(__pyx_v_indices, __pyx_v_labels, 1); if (unlikely(__pyx_t_1 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 21, __pyx_L1_error)
   __pyx_t_2 = PyFloat_FromDouble(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
@@ -5288,7 +5288,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_indices.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_labels.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.cost_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5300,7 +5300,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   return __pyx_r;
 }
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":47
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":47
  * 
  * 
  * cpdef float gain_cy(             # <<<<<<<<<<<<<<
@@ -5308,14 +5308,14 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
  *     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
 */
 
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_gain_cy(int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static float __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_gain_cy(int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost, CYTHON_UNUSED int __pyx_skip_dispatch) {
   float __pyx_v_left_cost;
   float __pyx_v_right_cost;
   float __pyx_v_gain_val;
@@ -5347,21 +5347,21 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   __pyx_pybuffernd_right_indices.rcbuffer = &__pyx_pybuffer_right_indices;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_left_indices.diminfo[0].strides = __pyx_pybuffernd_left_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_left_indices.diminfo[0].shape = __pyx_pybuffernd_left_indices.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_right_indices.diminfo[0].strides = __pyx_pybuffernd_right_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_right_indices.diminfo[0].shape = __pyx_pybuffernd_right_indices.rcbuffer->pybuffer.shape[0];
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":70
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":70
  *     cdef float left_cost, right_cost
  *     cdef float gain_val
  *     cdef int total_indices = len(left_indices) + len(right_indices)             # <<<<<<<<<<<<<<
@@ -5372,7 +5372,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   __pyx_t_2 = PyObject_Length(((PyObject *)__pyx_v_right_indices)); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 70, __pyx_L1_error)
   __pyx_v_total_indices = (__pyx_t_1 + __pyx_t_2);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":74
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":74
  *     # This calculates the relative reduction in impurity, based on the
  *     # definitions used by SKLearn's decision tree model.
  *     left_cost = len(left_indices)/total_indices * cost_cy(left_indices, y)             # <<<<<<<<<<<<<<
@@ -5384,10 +5384,10 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
     __PYX_ERR(0, 74, __pyx_L1_error)
   }
-  __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L1_error)
   __pyx_v_left_cost = ((((double)__pyx_t_2) / ((double)__pyx_v_total_indices)) * __pyx_t_3);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":75
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":75
  *     # definitions used by SKLearn's decision tree model.
  *     left_cost = len(left_indices)/total_indices * cost_cy(left_indices, y)
  *     right_cost = len(right_indices)/total_indices * cost_cy(right_indices, y)             # <<<<<<<<<<<<<<
@@ -5399,10 +5399,10 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
     __PYX_ERR(0, 75, __pyx_L1_error)
   }
-  __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_right_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_right_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L1_error)
   __pyx_v_right_cost = ((((double)__pyx_t_2) / ((double)__pyx_v_total_indices)) * __pyx_t_3);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":76
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":76
  *     left_cost = len(left_indices)/total_indices * cost_cy(left_indices, y)
  *     right_cost = len(right_indices)/total_indices * cost_cy(right_indices, y)
  *     gain_val = total_indices/n * (parent_cost - (left_cost + right_cost))             # <<<<<<<<<<<<<<
@@ -5415,7 +5415,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   }
   __pyx_v_gain_val = ((((double)__pyx_v_total_indices) / ((double)__pyx_v_n)) * (__pyx_v_parent_cost - (__pyx_v_left_cost + __pyx_v_right_cost)));
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":77
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":77
  *     right_cost = len(right_indices)/total_indices * cost_cy(right_indices, y)
  *     gain_val = total_indices/n * (parent_cost - (left_cost + right_cost))
  *     return gain_val             # <<<<<<<<<<<<<<
@@ -5425,7 +5425,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
   __pyx_r = __pyx_v_gain_val;
   goto __pyx_L0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":47
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":47
  * 
  * 
  * cpdef float gain_cy(             # <<<<<<<<<<<<<<
@@ -5443,7 +5443,7 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_y.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5455,16 +5455,16 @@ static float __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_2gain_cy, "\n    Computes the gain associated with a split.\n    \n    Args:\n        left_indices (np.ndarray): Indices for the left child of the split.\n        \n        right_indices (np.ndarray): Indices for the right child of the split.\n        \n        parent_cost (float, optional): The cost of the parent node. Defaults to None.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n    ");
-static PyMethodDef __pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy = {"gain_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_2gain_cy};
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_2gain_cy, "\n    Computes the gain associated with a split.\n    \n    Args:\n        left_indices (np.ndarray): Indices for the left child of the split.\n        \n        right_indices (np.ndarray): Indices for the right child of the split.\n        \n        parent_cost (float, optional): The cost of the parent node. Defaults to None.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n    ");
+static PyMethodDef __pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy = {"gain_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_2gain_cy};
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5558,14 +5558,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
     Py_XDECREF(values[__pyx_temp]);
   }
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 49, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_left_indices), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "left_indices", 0))) __PYX_ERR(0, 50, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_right_indices), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "right_indices", 0))) __PYX_ERR(0, 51, __pyx_L1_error)
-  __pyx_r = __pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_2gain_cy(__pyx_self, __pyx_v_n, __pyx_v_y, __pyx_v_left_indices, __pyx_v_right_indices, __pyx_v_parent_cost);
+  __pyx_r = __pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_2gain_cy(__pyx_self, __pyx_v_n, __pyx_v_y, __pyx_v_left_indices, __pyx_v_right_indices, __pyx_v_parent_cost);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5584,7 +5584,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_2gain_cy(CYTHON_UNUSED PyObject *__pyx_self, int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost) {
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_2gain_cy(CYTHON_UNUSED PyObject *__pyx_self, int __pyx_v_n, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_left_indices, PyArrayObject *__pyx_v_right_indices, float __pyx_v_parent_cost) {
   __Pyx_LocalBuf_ND __pyx_pybuffernd_left_indices;
   __Pyx_Buffer __pyx_pybuffer_left_indices;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_right_indices;
@@ -5613,21 +5613,21 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_pybuffernd_right_indices.rcbuffer = &__pyx_pybuffer_right_indices;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_left_indices.diminfo[0].strides = __pyx_pybuffernd_left_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_left_indices.diminfo[0].shape = __pyx_pybuffernd_left_indices.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 47, __pyx_L1_error)
   }
   __pyx_pybuffernd_right_indices.diminfo[0].strides = __pyx_pybuffernd_right_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_right_indices.diminfo[0].shape = __pyx_pybuffernd_right_indices.rcbuffer->pybuffer.shape[0];
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_gain_cy(__pyx_v_n, __pyx_v_y, __pyx_v_left_indices, __pyx_v_right_indices, __pyx_v_parent_cost, 1); if (unlikely(__pyx_t_1 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_gain_cy(__pyx_v_n, __pyx_v_y, __pyx_v_left_indices, __pyx_v_right_indices, __pyx_v_parent_cost, 1); if (unlikely(__pyx_t_1 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 47, __pyx_L1_error)
   __pyx_t_2 = PyFloat_FromDouble(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
@@ -5645,7 +5645,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_y.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.gain_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5658,7 +5658,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   return __pyx_r;
 }
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":83
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":83
  * 
  * 
  * def split_cy(             # <<<<<<<<<<<<<<
@@ -5667,16 +5667,16 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_5split_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_5split_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_4split_cy, "\n    Computes the best split of a leaf node.\n    \n    Args:\n        indices (np.ndarray, optional): Indices for a subset of the original dataset.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n        \n        condition (Condition): Logical or functional condition for evaluating and \n            splitting the data points.\n    ");
-static PyMethodDef __pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_5split_cy = {"split_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_5split_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_4split_cy};
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_5split_cy(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_4split_cy, "\n    Computes the best split of a leaf node.\n    \n    Args:\n        indices (np.ndarray, optional): Indices for a subset of the original dataset.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n        \n        condition (Condition): Logical or functional condition for evaluating and \n            splitting the data points.\n    ");
+static PyMethodDef __pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_5split_cy = {"split_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_5split_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_4split_cy};
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_5split_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5762,14 +5762,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
     Py_XDECREF(values[__pyx_temp]);
   }
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_X), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "X", 0))) __PYX_ERR(0, 84, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 85, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_indices), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "indices", 0))) __PYX_ERR(0, 86, __pyx_L1_error)
-  __pyx_r = __pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_4split_cy(__pyx_self, __pyx_v_X, __pyx_v_y, __pyx_v_indices, __pyx_v_min_points_leaf);
+  __pyx_r = __pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_4split_cy(__pyx_self, __pyx_v_X, __pyx_v_y, __pyx_v_indices, __pyx_v_min_points_leaf);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5788,7 +5788,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_4split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf) {
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_4split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf) {
   PyArrayObject *__pyx_v_X_ = 0;
   CYTHON_UNUSED int __pyx_v_n;
   int __pyx_v_d;
@@ -5883,21 +5883,21 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_pybuffernd_indices.rcbuffer = &__pyx_pybuffer_indices;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
   }
   __pyx_pybuffernd_X.diminfo[0].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_X.diminfo[0].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_X.diminfo[1].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_X.diminfo[1].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 83, __pyx_L1_error)
   }
   __pyx_pybuffernd_indices.diminfo[0].strides = __pyx_pybuffernd_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_indices.diminfo[0].shape = __pyx_pybuffernd_indices.rcbuffer->pybuffer.shape[0];
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":101
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":101
  *             splitting the data points.
  *     """
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]             # <<<<<<<<<<<<<<
@@ -5918,7 +5918,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_mstate_global->__pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 101, __pyx_L1_error)
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X_.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X_.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_X_ = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_X_.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 101, __pyx_L1_error)
     } else {__pyx_pybuffernd_X_.diminfo[0].strides = __pyx_pybuffernd_X_.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_X_.diminfo[0].shape = __pyx_pybuffernd_X_.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_X_.diminfo[1].strides = __pyx_pybuffernd_X_.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_X_.diminfo[1].shape = __pyx_pybuffernd_X_.rcbuffer->pybuffer.shape[1];
@@ -5927,7 +5927,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_X_ = ((PyArrayObject *)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":102
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":102
  *     """
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
  *     cdef int n = X_.shape[0]             # <<<<<<<<<<<<<<
@@ -5936,7 +5936,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
   __pyx_v_n = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X_))[0]);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":103
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":103
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
  *     cdef int n = X_.shape[0]
  *     cdef int d = X_.shape[1]             # <<<<<<<<<<<<<<
@@ -5945,17 +5945,17 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
   __pyx_v_d = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X_))[1]);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":104
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":104
  *     cdef int n = X_.shape[0]
  *     cdef int d = X_.shape[1]
  *     cdef float parent_cost = cost_cy(indices, y)             # <<<<<<<<<<<<<<
  * 
  *     cdef int i,j
 */
-  __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 104, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 104, __pyx_L1_error)
   __pyx_v_parent_cost = __pyx_t_3;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":113
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":113
  *     cdef list best_conditions
  * 
  *     best_gain_val = -np.inf             # <<<<<<<<<<<<<<
@@ -5974,7 +5974,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_best_gain_val = __pyx_t_3;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":114
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":114
  * 
  *     best_gain_val = -np.inf
  *     best_conditions = []             # <<<<<<<<<<<<<<
@@ -5986,7 +5986,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_best_conditions = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":115
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":115
  *     best_gain_val = -np.inf
  *     best_conditions = []
  *     for i in range(d):             # <<<<<<<<<<<<<<
@@ -5998,7 +5998,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
     __pyx_v_i = __pyx_t_6;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":116
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":116
  *     best_conditions = []
  *     for i in range(d):
  *         unique_values = np.unique(X_[:, i])             # <<<<<<<<<<<<<<
@@ -6049,10 +6049,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
       __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer);
-      __pyx_t_11 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+      __pyx_t_11 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
       if (unlikely(__pyx_t_11 < 0)) {
         PyErr_Fetch(&__pyx_t_12, &__pyx_t_13, &__pyx_t_14);
-        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer, (PyObject*)__pyx_v_unique_values, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer, (PyObject*)__pyx_v_unique_values, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
           Py_XDECREF(__pyx_t_12); Py_XDECREF(__pyx_t_13); Py_XDECREF(__pyx_t_14);
           __Pyx_RaiseBufferFallbackError();
         } else {
@@ -6066,7 +6066,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_XDECREF_SET(__pyx_v_unique_values, ((PyArrayObject *)__pyx_t_2));
     __pyx_t_2 = 0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":117
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":117
  *     for i in range(d):
  *         unique_values = np.unique(X_[:, i])
  *         for j in range(unique_values.shape[0]):             # <<<<<<<<<<<<<<
@@ -6078,7 +6078,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_16; __pyx_t_11+=1) {
       __pyx_v_j = __pyx_t_11;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":120
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":120
  * 
  *             # Split condition:
  *             threshold = unique_values[j]             # <<<<<<<<<<<<<<
@@ -6095,9 +6095,9 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_RaiseBufferIndexError(__pyx_t_18);
         __PYX_ERR(0, 120, __pyx_L1_error)
       }
-      __pyx_v_threshold = (*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t *, __pyx_pybuffernd_unique_values.rcbuffer->pybuffer.buf, __pyx_t_17, __pyx_pybuffernd_unique_values.diminfo[0].strides));
+      __pyx_v_threshold = (*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t *, __pyx_pybuffernd_unique_values.rcbuffer->pybuffer.buf, __pyx_t_17, __pyx_pybuffernd_unique_values.diminfo[0].strides));
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":121
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":121
  *             # Split condition:
  *             threshold = unique_values[j]
  *             evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)             # <<<<<<<<<<<<<<
@@ -6160,10 +6160,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       {
         __Pyx_BufFmt_StackElem __pyx_stack[1];
         __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_evals.rcbuffer->pybuffer);
-        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
         if (unlikely(__pyx_t_18 < 0)) {
           PyErr_Fetch(&__pyx_t_14, &__pyx_t_13, &__pyx_t_12);
-          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
             Py_XDECREF(__pyx_t_14); Py_XDECREF(__pyx_t_13); Py_XDECREF(__pyx_t_12);
             __Pyx_RaiseBufferFallbackError();
           } else {
@@ -6177,7 +6177,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __Pyx_XDECREF_SET(__pyx_v_evals, ((PyArrayObject *)__pyx_t_2));
       __pyx_t_2 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":122
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":122
  *             threshold = unique_values[j]
  *             evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)
  *             left_indices = indices[np.where(evals)[0]]             # <<<<<<<<<<<<<<
@@ -6220,10 +6220,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       {
         __Pyx_BufFmt_StackElem __pyx_stack[1];
         __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer);
-        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
         if (unlikely(__pyx_t_18 < 0)) {
           PyErr_Fetch(&__pyx_t_12, &__pyx_t_13, &__pyx_t_14);
-          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
             Py_XDECREF(__pyx_t_12); Py_XDECREF(__pyx_t_13); Py_XDECREF(__pyx_t_14);
             __Pyx_RaiseBufferFallbackError();
           } else {
@@ -6237,7 +6237,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __Pyx_XDECREF_SET(__pyx_v_left_indices, ((PyArrayObject *)__pyx_t_2));
       __pyx_t_2 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":123
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":123
  *             evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)
  *             left_indices = indices[np.where(evals)[0]]
  *             right_indices = indices[np.where(1 - evals)[0]]             # <<<<<<<<<<<<<<
@@ -6283,10 +6283,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       {
         __Pyx_BufFmt_StackElem __pyx_stack[1];
         __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer);
-        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+        __pyx_t_18 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
         if (unlikely(__pyx_t_18 < 0)) {
           PyErr_Fetch(&__pyx_t_14, &__pyx_t_13, &__pyx_t_12);
-          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+          if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
             Py_XDECREF(__pyx_t_14); Py_XDECREF(__pyx_t_13); Py_XDECREF(__pyx_t_12);
             __Pyx_RaiseBufferFallbackError();
           } else {
@@ -6300,7 +6300,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __Pyx_XDECREF_SET(__pyx_v_right_indices, ((PyArrayObject *)__pyx_t_2));
       __pyx_t_2 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":125
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":125
  *             right_indices = indices[np.where(1 - evals)[0]]
  * 
  *             if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -6315,7 +6315,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         goto __pyx_L8_bool_binop_done;
       }
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":126
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":126
  * 
  *             if (len(left_indices) < min_points_leaf or
  *                 len(right_indices) < min_points_leaf):             # <<<<<<<<<<<<<<
@@ -6327,7 +6327,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __pyx_t_20 = __pyx_t_22;
       __pyx_L8_bool_binop_done:;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":125
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":125
  *             right_indices = indices[np.where(1 - evals)[0]]
  * 
  *             if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -6336,7 +6336,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
       if (__pyx_t_20) {
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":127
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":127
  *             if (len(left_indices) < min_points_leaf or
  *                 len(right_indices) < min_points_leaf):
  *                 gain_val = -np.inf             # <<<<<<<<<<<<<<
@@ -6355,7 +6355,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __pyx_v_gain_val = __pyx_t_3;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":125
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":125
  *             right_indices = indices[np.where(1 - evals)[0]]
  * 
  *             if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -6365,7 +6365,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         goto __pyx_L7;
       }
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":129
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":129
  *                 gain_val = -np.inf
  *             else:
  *                 gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)             # <<<<<<<<<<<<<<
@@ -6373,12 +6373,12 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
  *             if gain_val > best_gain_val:
 */
       /*else*/ {
-        __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_gain_cy((__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X))[0]), ((PyArrayObject *)__pyx_v_y), ((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_right_indices), __pyx_v_parent_cost, 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
+        __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_gain_cy((__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X))[0]), ((PyArrayObject *)__pyx_v_y), ((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_right_indices), __pyx_v_parent_cost, 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
         __pyx_v_gain_val = __pyx_t_3;
       }
       __pyx_L7:;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":131
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":131
  *                 gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)
  * 
  *             if gain_val > best_gain_val:             # <<<<<<<<<<<<<<
@@ -6388,7 +6388,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __pyx_t_20 = (__pyx_v_gain_val > __pyx_v_best_gain_val);
       if (__pyx_t_20) {
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":132
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":132
  * 
  *             if gain_val > best_gain_val:
  *                 best_gain_val = gain_val             # <<<<<<<<<<<<<<
@@ -6397,7 +6397,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
         __pyx_v_best_gain_val = __pyx_v_gain_val;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":133
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":133
  *             if gain_val > best_gain_val:
  *                 best_gain_val = gain_val
  *                 best_conditions = [(i, threshold)]             # <<<<<<<<<<<<<<
@@ -6424,7 +6424,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_DECREF_SET(__pyx_v_best_conditions, ((PyObject*)__pyx_t_7));
         __pyx_t_7 = 0;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":131
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":131
  *                 gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)
  * 
  *             if gain_val > best_gain_val:             # <<<<<<<<<<<<<<
@@ -6434,7 +6434,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         goto __pyx_L10;
       }
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":135
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":135
  *                 best_conditions = [(i, threshold)]
  * 
  *             elif gain_val == best_gain_val:             # <<<<<<<<<<<<<<
@@ -6444,7 +6444,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __pyx_t_20 = (__pyx_v_gain_val == __pyx_v_best_gain_val);
       if (__pyx_t_20) {
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":136
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":136
  * 
  *             elif gain_val == best_gain_val:
  *                 best_conditions.append((i, threshold))             # <<<<<<<<<<<<<<
@@ -6466,7 +6466,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __pyx_t_23 = __Pyx_PyList_Append(__pyx_v_best_conditions, __pyx_t_2); if (unlikely(__pyx_t_23 == ((int)-1))) __PYX_ERR(0, 136, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":135
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":135
  *                 best_conditions = [(i, threshold)]
  * 
  *             elif gain_val == best_gain_val:             # <<<<<<<<<<<<<<
@@ -6478,7 +6478,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     }
   }
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":139
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":139
  * 
  *     # Randomly break ties if necessary:
  *     best_condition = best_conditions[np.random.randint(len(best_conditions))]             # <<<<<<<<<<<<<<
@@ -6511,7 +6511,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_best_condition = __pyx_t_9;
   __pyx_t_9 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":140
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":140
  *     # Randomly break ties if necessary:
  *     best_condition = best_conditions[np.random.randint(len(best_conditions))]
  *     return best_gain_val, best_condition             # <<<<<<<<<<<<<<
@@ -6533,7 +6533,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":83
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":83
  * 
  * 
  * def split_cy(             # <<<<<<<<<<<<<<
@@ -6562,7 +6562,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_unique_values.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_y.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -6587,7 +6587,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   return __pyx_r;
 }
 
-/* "intercluster/rules/splitters/cython/information_gain.pyx":147
+/* "intercluster/decision_trees/splitters/cython/information_gain.pyx":147
  * # NOTE: I have no idea if this works!!
  * 
  * def oblique_split_cy(             # <<<<<<<<<<<<<<
@@ -6596,16 +6596,16 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_7oblique_split_cy(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_7oblique_split_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_6oblique_split_cy, "\n    Computes the best split of a leaf node.\n    \n    Args:\n        indices (np.ndarray, optional): Indices for a subset of the original dataset.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n        \n        condition (Condition): Logical or functional condition for evaluating and \n            splitting the data points.\n    ");
-static PyMethodDef __pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_7oblique_split_cy = {"oblique_split_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_7oblique_split_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_5rules_9splitters_6cython_16information_gain_6oblique_split_cy};
-static PyObject *__pyx_pw_12intercluster_5rules_9splitters_6cython_16information_gain_7oblique_split_cy(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_6oblique_split_cy, "\n    Computes the best split of a leaf node.\n    \n    Args:\n        indices (np.ndarray, optional): Indices for a subset of the original dataset.\n    \n    Returns:\n        gain (float): The gain associated with the split.\n        \n        condition (Condition): Logical or functional condition for evaluating and \n            splitting the data points.\n    ");
+static PyMethodDef __pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_7oblique_split_cy = {"oblique_split_cy", (PyCFunction)(void(*)(void))(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_7oblique_split_cy, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12intercluster_14decision_trees_9splitters_6cython_16information_gain_6oblique_split_cy};
+static PyObject *__pyx_pw_12intercluster_14decision_trees_9splitters_6cython_16information_gain_7oblique_split_cy(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -6691,14 +6691,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
     Py_XDECREF(values[__pyx_temp]);
   }
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.oblique_split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.oblique_split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_X), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "X", 0))) __PYX_ERR(0, 148, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 149, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_indices), __pyx_mstate_global->__pyx_ptype_5numpy_ndarray, 1, "indices", 0))) __PYX_ERR(0, 150, __pyx_L1_error)
-  __pyx_r = __pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_6oblique_split_cy(__pyx_self, __pyx_v_X, __pyx_v_y, __pyx_v_indices, __pyx_v_min_points_leaf);
+  __pyx_r = __pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_6oblique_split_cy(__pyx_self, __pyx_v_X, __pyx_v_y, __pyx_v_indices, __pyx_v_min_points_leaf);
 
   /* function exit code */
   goto __pyx_L0;
@@ -6717,7 +6717,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information_gain_6oblique_split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf) {
+static PyObject *__pyx_pf_12intercluster_14decision_trees_9splitters_6cython_16information_gain_6oblique_split_cy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_indices, int __pyx_v_min_points_leaf) {
   PyArrayObject *__pyx_v_X_ = 0;
   CYTHON_UNUSED int __pyx_v_n;
   int __pyx_v_d;
@@ -6837,21 +6837,21 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_pybuffernd_indices.rcbuffer = &__pyx_pybuffer_indices;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
   }
   __pyx_pybuffernd_X.diminfo[0].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_X.diminfo[0].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_X.diminfo[1].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_X.diminfo[1].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 147, __pyx_L1_error)
   }
   __pyx_pybuffernd_indices.diminfo[0].strides = __pyx_pybuffernd_indices.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_indices.diminfo[0].shape = __pyx_pybuffernd_indices.rcbuffer->pybuffer.shape[0];
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":168
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":168
  *             splitting the data points.
  *     """
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]             # <<<<<<<<<<<<<<
@@ -6872,7 +6872,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_mstate_global->__pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 168, __pyx_L1_error)
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X_.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X_.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_X_ = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_X_.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 168, __pyx_L1_error)
     } else {__pyx_pybuffernd_X_.diminfo[0].strides = __pyx_pybuffernd_X_.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_X_.diminfo[0].shape = __pyx_pybuffernd_X_.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_X_.diminfo[1].strides = __pyx_pybuffernd_X_.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_X_.diminfo[1].shape = __pyx_pybuffernd_X_.rcbuffer->pybuffer.shape[1];
@@ -6881,7 +6881,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_X_ = ((PyArrayObject *)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":169
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":169
  *     """
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
  *     cdef int n = X_.shape[0]             # <<<<<<<<<<<<<<
@@ -6890,7 +6890,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
   __pyx_v_n = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X_))[0]);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":170
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":170
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
  *     cdef int n = X_.shape[0]
  *     cdef int d = X_.shape[1]             # <<<<<<<<<<<<<<
@@ -6899,17 +6899,17 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
   __pyx_v_d = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X_))[1]);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":171
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":171
  *     cdef int n = X_.shape[0]
  *     cdef int d = X_.shape[1]
  *     cdef float parent_cost = cost_cy(indices, y)             # <<<<<<<<<<<<<<
  * 
  *     cdef int feature
 */
-  __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_cost_cy(((PyArrayObject *)__pyx_v_indices), ((PyArrayObject *)__pyx_v_y), 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 171, __pyx_L1_error)
   __pyx_v_parent_cost = __pyx_t_3;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":182
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":182
  *     # low dimensional space.
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] pair
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 2] feature_pairs = np.array(             # <<<<<<<<<<<<<<
@@ -6923,7 +6923,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":183
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":183
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] pair
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 2] feature_pairs = np.array(
  *         list(combinations(range(d), 2))             # <<<<<<<<<<<<<<
@@ -6994,7 +6994,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_GOTREF(__pyx_t_2);
   }
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":182
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":182
  *     # low dimensional space.
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] pair
  *     cdef cnp.ndarray[DTYPE_int_t, ndim = 2] feature_pairs = np.array(             # <<<<<<<<<<<<<<
@@ -7004,7 +7004,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_mstate_global->__pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 182, __pyx_L1_error)
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_feature_pairs = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 182, __pyx_L1_error)
     } else {__pyx_pybuffernd_feature_pairs.diminfo[0].strides = __pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_feature_pairs.diminfo[0].shape = __pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_feature_pairs.diminfo[1].strides = __pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_feature_pairs.diminfo[1].shape = __pyx_pybuffernd_feature_pairs.rcbuffer->pybuffer.shape[1];
@@ -7013,7 +7013,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_feature_pairs = ((PyArrayObject *)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":185
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":185
  *         list(combinations(range(d), 2))
  *     )
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 1] slopes = np.array(             # <<<<<<<<<<<<<<
@@ -7027,7 +7027,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":186
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":186
  *     )
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 1] slopes = np.array(
  *         [0, 1/2, 1, 2, np.inf, -2, -1, -1/2], dtype = DTYPE_float             # <<<<<<<<<<<<<<
@@ -7098,7 +7098,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_GOTREF(__pyx_t_2);
   }
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":185
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":185
  *         list(combinations(range(d), 2))
  *     )
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 1] slopes = np.array(             # <<<<<<<<<<<<<<
@@ -7108,7 +7108,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_mstate_global->__pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 185, __pyx_L1_error)
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_slopes.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_slopes.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_2), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_float_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
       __pyx_v_slopes = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_slopes.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 185, __pyx_L1_error)
     } else {__pyx_pybuffernd_slopes.diminfo[0].strides = __pyx_pybuffernd_slopes.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_slopes.diminfo[0].shape = __pyx_pybuffernd_slopes.rcbuffer->pybuffer.shape[0];
@@ -7117,7 +7117,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_slopes = ((PyArrayObject *)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":189
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":189
  *     )
  * 
  *     best_gain_val = -np.inf             # <<<<<<<<<<<<<<
@@ -7136,7 +7136,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_best_gain_val = __pyx_t_3;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":190
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":190
  * 
  *     best_gain_val = -np.inf
  *     best_conditions = []             # <<<<<<<<<<<<<<
@@ -7148,7 +7148,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_best_conditions = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":191
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":191
  *     best_gain_val = -np.inf
  *     best_conditions = []
  *     for pair in feature_pairs:             # <<<<<<<<<<<<<<
@@ -7208,10 +7208,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
       __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_pair.rcbuffer->pybuffer);
-      __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_pair.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_1), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+      __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_pair.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_1), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
       if (unlikely(__pyx_t_15 < 0)) {
         PyErr_Fetch(&__pyx_t_16, &__pyx_t_17, &__pyx_t_18);
-        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_pair.rcbuffer->pybuffer, (PyObject*)__pyx_v_pair, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+        if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_pair.rcbuffer->pybuffer, (PyObject*)__pyx_v_pair, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
           Py_XDECREF(__pyx_t_16); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_18);
           __Pyx_RaiseBufferFallbackError();
         } else {
@@ -7225,7 +7225,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_XDECREF_SET(__pyx_v_pair, ((PyArrayObject *)__pyx_t_1));
     __pyx_t_1 = 0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":192
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":192
  *     best_conditions = []
  *     for pair in feature_pairs:
  *         X_pair = X_[:, pair]             # <<<<<<<<<<<<<<
@@ -7246,7 +7246,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_XDECREF_SET(__pyx_v_X_pair, __pyx_t_8);
     __pyx_t_8 = 0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":193
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":193
  *     for pair in feature_pairs:
  *         X_pair = X_[:, pair]
  *         for i in range(X_pair.shape[0]):             # <<<<<<<<<<<<<<
@@ -7324,7 +7324,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_8);
       __pyx_t_8 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":194
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":194
  *         X_pair = X_[:, pair]
  *         for i in range(X_pair.shape[0]):
  *             data_point = X_pair[i,:]             # <<<<<<<<<<<<<<
@@ -7345,7 +7345,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       __Pyx_XDECREF_SET(__pyx_v_data_point, __pyx_t_5);
       __pyx_t_5 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":195
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":195
  *         for i in range(X_pair.shape[0]):
  *             data_point = X_pair[i,:]
  *             for slope in slopes:             # <<<<<<<<<<<<<<
@@ -7404,7 +7404,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_XDECREF_SET(__pyx_v_slope, __pyx_t_8);
         __pyx_t_8 = 0;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":196
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":196
  *             data_point = X_pair[i,:]
  *             for slope in slopes:
  *                 if slope == 0:             # <<<<<<<<<<<<<<
@@ -7414,7 +7414,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __pyx_t_23 = (__Pyx_PyLong_BoolEqObjC(__pyx_v_slope, __pyx_mstate_global->__pyx_int_0, 0, 0)); if (unlikely((__pyx_t_23 < 0))) __PYX_ERR(0, 196, __pyx_L1_error)
         if (__pyx_t_23) {
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":206
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":206
  *                     )
  *                     '''
  *                     threshold = data_point[1]             # <<<<<<<<<<<<<<
@@ -7427,7 +7427,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __pyx_v_threshold = __pyx_t_3;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":207
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":207
  *                     '''
  *                     threshold = data_point[1]
  *                     evals = np.array(X_[:, pair[1]] <= threshold, dtype = DTYPE_int)             # <<<<<<<<<<<<<<
@@ -7450,7 +7450,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
             __Pyx_RaiseBufferIndexError(__pyx_t_15);
             __PYX_ERR(0, 207, __pyx_L1_error)
           }
-          __pyx_t_6 = __Pyx_PyLong_From_npy_int64((*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t *, __pyx_pybuffernd_pair.rcbuffer->pybuffer.buf, __pyx_t_24, __pyx_pybuffernd_pair.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 207, __pyx_L1_error)
+          __pyx_t_6 = __Pyx_PyLong_From_npy_int64((*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t *, __pyx_pybuffernd_pair.rcbuffer->pybuffer.buf, __pyx_t_24, __pyx_pybuffernd_pair.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 207, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_6);
           __pyx_t_10 = PyTuple_New(2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 207, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_10);
@@ -7500,10 +7500,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           {
             __Pyx_BufFmt_StackElem __pyx_stack[1];
             __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_evals.rcbuffer->pybuffer);
-            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
             if (unlikely(__pyx_t_15 < 0)) {
               PyErr_Fetch(&__pyx_t_18, &__pyx_t_17, &__pyx_t_16);
-              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
                 Py_XDECREF(__pyx_t_18); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_16);
                 __Pyx_RaiseBufferFallbackError();
               } else {
@@ -7517,7 +7517,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_XDECREF_SET(__pyx_v_evals, ((PyArrayObject *)__pyx_t_8));
           __pyx_t_8 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":196
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":196
  *             data_point = X_pair[i,:]
  *             for slope in slopes:
  *                 if slope == 0:             # <<<<<<<<<<<<<<
@@ -7527,7 +7527,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           goto __pyx_L9;
         }
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":210
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":210
  * 
  * 
  *                 elif slope == np.inf:             # <<<<<<<<<<<<<<
@@ -7545,7 +7545,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         if (__pyx_t_23) {
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":220
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":220
  *                     )
  *                     '''
  *                     threshold = data_point[0]             # <<<<<<<<<<<<<<
@@ -7558,7 +7558,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __pyx_v_threshold = __pyx_t_3;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":221
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":221
  *                     '''
  *                     threshold = data_point[0]
  *                     evals = np.array(X_[:, pair[0]] <= threshold, dtype = DTYPE_int)             # <<<<<<<<<<<<<<
@@ -7581,7 +7581,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
             __Pyx_RaiseBufferIndexError(__pyx_t_15);
             __PYX_ERR(0, 221, __pyx_L1_error)
           }
-          __pyx_t_6 = __Pyx_PyLong_From_npy_int64((*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t *, __pyx_pybuffernd_pair.rcbuffer->pybuffer.buf, __pyx_t_24, __pyx_pybuffernd_pair.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 221, __pyx_L1_error)
+          __pyx_t_6 = __Pyx_PyLong_From_npy_int64((*__Pyx_BufPtrStrided1d(__pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t *, __pyx_pybuffernd_pair.rcbuffer->pybuffer.buf, __pyx_t_24, __pyx_pybuffernd_pair.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 221, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_6);
           __pyx_t_11 = PyTuple_New(2); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 221, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_11);
@@ -7631,10 +7631,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           {
             __Pyx_BufFmt_StackElem __pyx_stack[1];
             __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_evals.rcbuffer->pybuffer);
-            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
             if (unlikely(__pyx_t_15 < 0)) {
               PyErr_Fetch(&__pyx_t_16, &__pyx_t_17, &__pyx_t_18);
-              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
                 Py_XDECREF(__pyx_t_16); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_18);
                 __Pyx_RaiseBufferFallbackError();
               } else {
@@ -7648,7 +7648,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_XDECREF_SET(__pyx_v_evals, ((PyArrayObject *)__pyx_t_8));
           __pyx_t_8 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":210
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":210
  * 
  * 
  *                 elif slope == np.inf:             # <<<<<<<<<<<<<<
@@ -7658,7 +7658,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           goto __pyx_L9;
         }
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":224
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":224
  *                 else:
  *                     # non-axis aligned slopes
  *                     threshold = -slope * data_point[0] + data_point[1]             # <<<<<<<<<<<<<<
@@ -7684,7 +7684,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __pyx_v_threshold = __pyx_t_3;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":233
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":233
  *                     )
  *                     '''
  *                     evals = np.array(             # <<<<<<<<<<<<<<
@@ -7698,7 +7698,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_GOTREF(__pyx_t_11);
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":234
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":234
  *                     '''
  *                     evals = np.array(
  *                         np.dot(X_[:, pair], np.array([-slope, 1])) <= threshold,             # <<<<<<<<<<<<<<
@@ -7787,7 +7787,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":235
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":235
  *                     evals = np.array(
  *                         np.dot(X_[:, pair], np.array([-slope, 1])) <= threshold,
  *                         dtype = DTYPE_int             # <<<<<<<<<<<<<<
@@ -7823,7 +7823,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
             __Pyx_GOTREF(__pyx_t_8);
           }
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":233
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":233
  *                     )
  *                     '''
  *                     evals = np.array(             # <<<<<<<<<<<<<<
@@ -7834,10 +7834,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           {
             __Pyx_BufFmt_StackElem __pyx_stack[1];
             __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_evals.rcbuffer->pybuffer);
-            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+            __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
             if (unlikely(__pyx_t_15 < 0)) {
               PyErr_Fetch(&__pyx_t_18, &__pyx_t_17, &__pyx_t_16);
-              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+              if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_evals.rcbuffer->pybuffer, (PyObject*)__pyx_v_evals, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
                 Py_XDECREF(__pyx_t_18); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_16);
                 __Pyx_RaiseBufferFallbackError();
               } else {
@@ -7853,7 +7853,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         }
         __pyx_L9:;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":239
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":239
  * 
  *                 #left_indices, right_indices = get_split_indices_fn(indices, condition)
  *                 left_indices = indices[np.where(evals)[0]]             # <<<<<<<<<<<<<<
@@ -7896,10 +7896,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         {
           __Pyx_BufFmt_StackElem __pyx_stack[1];
           __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer);
-          __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+          __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
           if (unlikely(__pyx_t_15 < 0)) {
             PyErr_Fetch(&__pyx_t_16, &__pyx_t_17, &__pyx_t_18);
-            if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+            if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_left_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_left_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
               Py_XDECREF(__pyx_t_16); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_18);
               __Pyx_RaiseBufferFallbackError();
             } else {
@@ -7913,7 +7913,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_XDECREF_SET(__pyx_v_left_indices, ((PyArrayObject *)__pyx_t_8));
         __pyx_t_8 = 0;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":240
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":240
  *                 #left_indices, right_indices = get_split_indices_fn(indices, condition)
  *                 left_indices = indices[np.where(evals)[0]]
  *                 right_indices = indices[np.where(1 - evals)[0]]             # <<<<<<<<<<<<<<
@@ -7959,10 +7959,10 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         {
           __Pyx_BufFmt_StackElem __pyx_stack[1];
           __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer);
-          __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
+          __pyx_t_15 = __Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)((PyArrayObject *)__pyx_t_8), &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack);
           if (unlikely(__pyx_t_15 < 0)) {
             PyErr_Fetch(&__pyx_t_18, &__pyx_t_17, &__pyx_t_16);
-            if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_5rules_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+            if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_right_indices.rcbuffer->pybuffer, (PyObject*)__pyx_v_right_indices, &__Pyx_TypeInfo_nn___pyx_t_12intercluster_14decision_trees_9splitters_6cython_16information_gain_DTYPE_int_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
               Py_XDECREF(__pyx_t_18); Py_XDECREF(__pyx_t_17); Py_XDECREF(__pyx_t_16);
               __Pyx_RaiseBufferFallbackError();
             } else {
@@ -7976,7 +7976,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __Pyx_XDECREF_SET(__pyx_v_right_indices, ((PyArrayObject *)__pyx_t_8));
         __pyx_t_8 = 0;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":242
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":242
  *                 right_indices = indices[np.where(1 - evals)[0]]
  * 
  *                 if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -7991,7 +7991,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           goto __pyx_L11_bool_binop_done;
         }
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":243
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":243
  * 
  *                 if (len(left_indices) < min_points_leaf or
  *                     len(right_indices) < min_points_leaf):             # <<<<<<<<<<<<<<
@@ -8003,7 +8003,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __pyx_t_23 = __pyx_t_31;
         __pyx_L11_bool_binop_done:;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":242
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":242
  *                 right_indices = indices[np.where(1 - evals)[0]]
  * 
  *                 if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -8012,7 +8012,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
         if (__pyx_t_23) {
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":244
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":244
  *                 if (len(left_indices) < min_points_leaf or
  *                     len(right_indices) < min_points_leaf):
  *                     gain_val = -np.inf             # <<<<<<<<<<<<<<
@@ -8031,7 +8031,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __pyx_v_gain_val = __pyx_t_3;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":242
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":242
  *                 right_indices = indices[np.where(1 - evals)[0]]
  * 
  *                 if (len(left_indices) < min_points_leaf or             # <<<<<<<<<<<<<<
@@ -8041,7 +8041,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           goto __pyx_L10;
         }
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":246
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":246
  *                     gain_val = -np.inf
  *                 else:
  *                     gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)             # <<<<<<<<<<<<<<
@@ -8049,12 +8049,12 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
  *                 if gain_val > best_gain_val:
 */
         /*else*/ {
-          __pyx_t_3 = __pyx_f_12intercluster_5rules_9splitters_6cython_16information_gain_gain_cy((__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X))[0]), ((PyArrayObject *)__pyx_v_y), ((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_right_indices), __pyx_v_parent_cost, 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 246, __pyx_L1_error)
+          __pyx_t_3 = __pyx_f_12intercluster_14decision_trees_9splitters_6cython_16information_gain_gain_cy((__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_X))[0]), ((PyArrayObject *)__pyx_v_y), ((PyArrayObject *)__pyx_v_left_indices), ((PyArrayObject *)__pyx_v_right_indices), __pyx_v_parent_cost, 0); if (unlikely(__pyx_t_3 == ((float)-1) && PyErr_Occurred())) __PYX_ERR(0, 246, __pyx_L1_error)
           __pyx_v_gain_val = __pyx_t_3;
         }
         __pyx_L10:;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":248
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":248
  *                     gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)
  * 
  *                 if gain_val > best_gain_val:             # <<<<<<<<<<<<<<
@@ -8064,7 +8064,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __pyx_t_23 = (__pyx_v_gain_val > __pyx_v_best_gain_val);
         if (__pyx_t_23) {
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":249
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":249
  * 
  *                 if gain_val > best_gain_val:
  *                     best_gain_val = gain_val             # <<<<<<<<<<<<<<
@@ -8073,7 +8073,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
 */
           __pyx_v_best_gain_val = __pyx_v_gain_val;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":250
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":250
  *                 if gain_val > best_gain_val:
  *                     best_gain_val = gain_val
  *                     best_conditions = [(pair, slope, threshold)]             # <<<<<<<<<<<<<<
@@ -8101,7 +8101,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __Pyx_DECREF_SET(__pyx_v_best_conditions, ((PyObject*)__pyx_t_8));
           __pyx_t_8 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":248
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":248
  *                     gain_val = gain_cy(X.shape[0], y, left_indices, right_indices, parent_cost)
  * 
  *                 if gain_val > best_gain_val:             # <<<<<<<<<<<<<<
@@ -8111,7 +8111,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           goto __pyx_L13;
         }
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":252
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":252
  *                     best_conditions = [(pair, slope, threshold)]
  * 
  *                 elif gain_val == best_gain_val:             # <<<<<<<<<<<<<<
@@ -8121,7 +8121,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         __pyx_t_23 = (__pyx_v_gain_val == __pyx_v_best_gain_val);
         if (__pyx_t_23) {
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":253
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":253
  * 
  *                 elif gain_val == best_gain_val:
  *                     best_conditions.append((pair, slope, threshold))             # <<<<<<<<<<<<<<
@@ -8144,7 +8144,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
           __pyx_t_32 = __Pyx_PyList_Append(__pyx_v_best_conditions, __pyx_t_6); if (unlikely(__pyx_t_32 == ((int)-1))) __PYX_ERR(0, 253, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-          /* "intercluster/rules/splitters/cython/information_gain.pyx":252
+          /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":252
  *                     best_conditions = [(pair, slope, threshold)]
  * 
  *                 elif gain_val == best_gain_val:             # <<<<<<<<<<<<<<
@@ -8154,7 +8154,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
         }
         __pyx_L13:;
 
-        /* "intercluster/rules/splitters/cython/information_gain.pyx":195
+        /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":195
  *         for i in range(X_pair.shape[0]):
  *             data_point = X_pair[i,:]
  *             for slope in slopes:             # <<<<<<<<<<<<<<
@@ -8164,7 +8164,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
       }
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-      /* "intercluster/rules/splitters/cython/information_gain.pyx":193
+      /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":193
  *     for pair in feature_pairs:
  *         X_pair = X_[:, pair]
  *         for i in range(X_pair.shape[0]):             # <<<<<<<<<<<<<<
@@ -8174,7 +8174,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "intercluster/rules/splitters/cython/information_gain.pyx":191
+    /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":191
  *     best_gain_val = -np.inf
  *     best_conditions = []
  *     for pair in feature_pairs:             # <<<<<<<<<<<<<<
@@ -8184,7 +8184,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":256
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":256
  * 
  *     # Randomly break ties if necessary:
  *     best_condition = best_conditions[np.random.randint(len(best_conditions))]             # <<<<<<<<<<<<<<
@@ -8217,7 +8217,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_v_best_condition = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":257
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":257
  *     # Randomly break ties if necessary:
  *     best_condition = best_conditions[np.random.randint(len(best_conditions))]
  *     return best_gain_val, best_condition             # <<<<<<<<<<<<<<
@@ -8239,7 +8239,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":147
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":147
  * # NOTE: I have no idea if this works!!
  * 
  * def oblique_split_cy(             # <<<<<<<<<<<<<<
@@ -8279,7 +8279,7 @@ static PyObject *__pyx_pf_12intercluster_5rules_9splitters_6cython_16information
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_slopes.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_y.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("intercluster.rules.splitters.cython.information_gain.oblique_split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("intercluster.decision_trees.splitters.cython.information_gain.oblique_split_cy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -8812,13 +8812,13 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   if (__pyx_AsyncGen_init(__pyx_m) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
   /*--- Library function declarations ---*/
-  if (__pyx_module_is_main_intercluster__rules__splitters__cython__information_gain) {
+  if (__pyx_module_is_main_intercluster__decision_trees__splitters__cython__information_gain) {
     if (PyObject_SetAttr(__pyx_m, __pyx_mstate_global->__pyx_n_u_name, __pyx_mstate_global->__pyx_n_u_main) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "intercluster.rules.splitters.cython.information_gain")) {
-      if (unlikely((PyDict_SetItemString(modules, "intercluster.rules.splitters.cython.information_gain", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "intercluster.decision_trees.splitters.cython.information_gain")) {
+      if (unlikely((PyDict_SetItemString(modules, "intercluster.decision_trees.splitters.cython.information_gain", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   /*--- Builtin init code ---*/
@@ -8836,20 +8836,20 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   (void)__Pyx_modinit_function_import_code(__pyx_mstate);
   /*--- Execution code ---*/
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":1
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":1
  * import numpy as np             # <<<<<<<<<<<<<<
  * from itertools import combinations, permutations
- * from intercluster.utils import entropy
+ * from intercluster.measures import entropy
 */
   __pyx_t_2 = __Pyx_ImportDottedModule(__pyx_mstate_global->__pyx_n_u_numpy, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_np, __pyx_t_2) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":2
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":2
  * import numpy as np
  * from itertools import combinations, permutations             # <<<<<<<<<<<<<<
- * from intercluster.utils import entropy
+ * from intercluster.measures import entropy
  * cimport cython
 */
   __pyx_t_2 = __Pyx_PyList_Pack(2, __pyx_mstate_global->__pyx_n_u_combinations, __pyx_mstate_global->__pyx_n_u_permutations); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 2, __pyx_L1_error)
@@ -8867,16 +8867,16 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":3
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":3
  * import numpy as np
  * from itertools import combinations, permutations
- * from intercluster.utils import entropy             # <<<<<<<<<<<<<<
+ * from intercluster.measures import entropy             # <<<<<<<<<<<<<<
  * cimport cython
  * cimport numpy as cnp
 */
   __pyx_t_3 = __Pyx_PyList_Pack(1, __pyx_mstate_global->__pyx_n_u_entropy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_Import(__pyx_mstate_global->__pyx_n_u_intercluster_utils, __pyx_t_3, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Import(__pyx_mstate_global->__pyx_n_u_intercluster_measures, __pyx_t_3, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = __Pyx_ImportFrom(__pyx_t_2, __pyx_mstate_global->__pyx_n_u_entropy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 3, __pyx_L1_error)
@@ -8885,7 +8885,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":8
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":8
  * 
  * # Typing
  * from numpy.typing import NDArray             # <<<<<<<<<<<<<<
@@ -8903,7 +8903,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":9
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":9
  * # Typing
  * from numpy.typing import NDArray
  * cnp.import_array()             # <<<<<<<<<<<<<<
@@ -8912,7 +8912,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
 */
   __pyx_t_4 = __pyx_f_5numpy_import_array(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(0, 9, __pyx_L1_error)
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":10
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":10
  * from numpy.typing import NDArray
  * cnp.import_array()
  * from typing import Tuple, List, Set             # <<<<<<<<<<<<<<
@@ -8938,7 +8938,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":12
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":12
  * from typing import Tuple, List, Set
  * 
  * DTYPE_float = np.float64             # <<<<<<<<<<<<<<
@@ -8953,7 +8953,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_DTYPE_float, __pyx_t_3) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":14
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":14
  * DTYPE_float = np.float64
  * ctypedef cnp.float64_t DTYPE_float_t
  * DTYPE_int = np.int64             # <<<<<<<<<<<<<<
@@ -8968,31 +8968,31 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_DTYPE_int, __pyx_t_2) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":21
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":21
  * 
  * 
  * cpdef float cost_cy(             # <<<<<<<<<<<<<<
  *     cnp.ndarray[DTYPE_int_t, ndim = 1] indices,
  *     cnp.ndarray[DTYPE_int_t, ndim = 1] labels,
 */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_1cost_cy, 0, __pyx_mstate_global->__pyx_n_u_cost_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_rules_splitters_cyt, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[0])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_1cost_cy, 0, __pyx_mstate_global->__pyx_n_u_cost_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_decision_trees_spli, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[0])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_cost_cy, __pyx_t_2) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":47
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":47
  * 
  * 
  * cpdef float gain_cy(             # <<<<<<<<<<<<<<
  *     int n,
  *     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
 */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_3gain_cy, 0, __pyx_mstate_global->__pyx_n_u_gain_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_rules_splitters_cyt, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[1])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_3gain_cy, 0, __pyx_mstate_global->__pyx_n_u_gain_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_decision_trees_spli, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[1])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_gain_cy, __pyx_t_2) < 0) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":83
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":83
  * 
  * 
  * def split_cy(             # <<<<<<<<<<<<<<
@@ -9002,14 +9002,14 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_t_2, __pyx_mstate_global->__pyx_n_u_return, __pyx_mstate_global->__pyx_kp_u_Tuple_float_Condition) < 0) __PYX_ERR(0, 83, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_5split_cy, 0, __pyx_mstate_global->__pyx_n_u_split_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_rules_splitters_cyt, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[2])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_5split_cy, 0, __pyx_mstate_global->__pyx_n_u_split_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_decision_trees_spli, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[2])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_CyFunction_SetAnnotationsDict(__pyx_t_3, __pyx_t_2);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_split_cy, __pyx_t_3) < 0) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":147
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":147
  * # NOTE: I have no idea if this works!!
  * 
  * def oblique_split_cy(             # <<<<<<<<<<<<<<
@@ -9019,17 +9019,17 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_t_3, __pyx_mstate_global->__pyx_n_u_return, __pyx_mstate_global->__pyx_kp_u_Tuple_float_Condition) < 0) __PYX_ERR(0, 147, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_5rules_9splitters_6cython_16information_gain_7oblique_split_cy, 0, __pyx_mstate_global->__pyx_n_u_oblique_split_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_rules_splitters_cyt, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[3])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12intercluster_14decision_trees_9splitters_6cython_16information_gain_7oblique_split_cy, 0, __pyx_mstate_global->__pyx_n_u_oblique_split_cy, NULL, __pyx_mstate_global->__pyx_n_u_intercluster_decision_trees_spli, __pyx_mstate_global->__pyx_d, ((PyObject *)__pyx_mstate_global->__pyx_codeobj_tab[3])); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetAnnotationsDict(__pyx_t_2, __pyx_t_3);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   if (PyDict_SetItem(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_oblique_split_cy, __pyx_t_2) < 0) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":1
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":1
  * import numpy as np             # <<<<<<<<<<<<<<
  * from itertools import combinations, permutations
- * from intercluster.utils import entropy
+ * from intercluster.measures import entropy
 */
   __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -9044,7 +9044,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
   __Pyx_XDECREF(__pyx_t_3);
   if (__pyx_m) {
     if (__pyx_mstate->__pyx_d && stringtab_initialized) {
-      __Pyx_AddTraceback("init intercluster.rules.splitters.cython.information_gain", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init intercluster.decision_trees.splitters.cython.information_gain", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     #if !CYTHON_USE_MODULE_STATE
     Py_CLEAR(__pyx_m);
@@ -9058,7 +9058,7 @@ __Pyx_RefNannySetupContext("PyInit_information_gain", 0);
     }
     #endif
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init intercluster.rules.splitters.cython.information_gain");
+    PyErr_SetString(PyExc_ImportError, "init intercluster.decision_trees.splitters.cython.information_gain");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();
@@ -9137,8 +9137,8 @@ static const __Pyx_StringTabEntry __pyx_string_tab[] = {
   {__pyx_k_inf, sizeof(__pyx_k_inf), 0, 1, 1}, /* PyObject cname: __pyx_n_u_inf */
   {__pyx_k_initializing, sizeof(__pyx_k_initializing), 0, 1, 1}, /* PyObject cname: __pyx_n_u_initializing */
   {__pyx_k_int64, sizeof(__pyx_k_int64), 0, 1, 1}, /* PyObject cname: __pyx_n_u_int64 */
-  {__pyx_k_intercluster_rules_splitters_cyt, sizeof(__pyx_k_intercluster_rules_splitters_cyt), 0, 1, 1}, /* PyObject cname: __pyx_n_u_intercluster_rules_splitters_cyt */
-  {__pyx_k_intercluster_utils, sizeof(__pyx_k_intercluster_utils), 0, 1, 1}, /* PyObject cname: __pyx_n_u_intercluster_utils */
+  {__pyx_k_intercluster_decision_trees_spli, sizeof(__pyx_k_intercluster_decision_trees_spli), 0, 1, 1}, /* PyObject cname: __pyx_n_u_intercluster_decision_trees_spli */
+  {__pyx_k_intercluster_measures, sizeof(__pyx_k_intercluster_measures), 0, 1, 1}, /* PyObject cname: __pyx_n_u_intercluster_measures */
   {__pyx_k_is_coroutine, sizeof(__pyx_k_is_coroutine), 0, 1, 1}, /* PyObject cname: __pyx_n_u_is_coroutine */
   {__pyx_k_itertools, sizeof(__pyx_k_itertools), 0, 1, 1}, /* PyObject cname: __pyx_n_u_itertools */
   {__pyx_k_j, sizeof(__pyx_k_j), 0, 1, 1}, /* PyObject cname: __pyx_n_u_j */
@@ -9171,7 +9171,7 @@ static const __Pyx_StringTabEntry __pyx_string_tab[] = {
   {__pyx_k_slopes, sizeof(__pyx_k_slopes), 0, 1, 1}, /* PyObject cname: __pyx_n_u_slopes */
   {__pyx_k_spec, sizeof(__pyx_k_spec), 0, 1, 1}, /* PyObject cname: __pyx_n_u_spec */
   {__pyx_k_split_cy, sizeof(__pyx_k_split_cy), 0, 1, 1}, /* PyObject cname: __pyx_n_u_split_cy */
-  {__pyx_k_src_intercluster_rules_splitters, sizeof(__pyx_k_src_intercluster_rules_splitters), 0, 1, 0}, /* PyObject cname: __pyx_kp_u_src_intercluster_rules_splitters */
+  {__pyx_k_src_intercluster_decision_trees, sizeof(__pyx_k_src_intercluster_decision_trees), 0, 1, 0}, /* PyObject cname: __pyx_kp_u_src_intercluster_decision_trees */
   {__pyx_k_test, sizeof(__pyx_k_test), 0, 1, 1}, /* PyObject cname: __pyx_n_u_test */
   {__pyx_k_threshold, sizeof(__pyx_k_threshold), 0, 1, 1}, /* PyObject cname: __pyx_n_u_threshold */
   {__pyx_k_typing, sizeof(__pyx_k_typing), 0, 1, 1}, /* PyObject cname: __pyx_n_u_typing */
@@ -9201,7 +9201,7 @@ static int __Pyx_InitCachedConstants(__pyx_mstatetype *__pyx_mstate) {
   CYTHON_UNUSED_VAR(__pyx_mstate);
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "intercluster/rules/splitters/cython/information_gain.pyx":101
+  /* "intercluster/decision_trees/splitters/cython/information_gain.pyx":101
  *             splitting the data points.
  *     """
  *     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]             # <<<<<<<<<<<<<<
@@ -9261,22 +9261,22 @@ static int __Pyx_CreateCodeObjects(__pyx_mstatetype *__pyx_mstate) {
   {
     const __Pyx_PyCode_New_function_description descr = {2, 0, 0, 2, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 21, 43};
     PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_indices, __pyx_mstate->__pyx_n_u_labels};
-    __pyx_mstate_global->__pyx_codeobj_tab[0] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_rules_splitters, __pyx_mstate->__pyx_n_u_cost_cy, __pyx_k_1_s_9Cq_q_F_1_waq, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[0])) goto bad;
+    __pyx_mstate_global->__pyx_codeobj_tab[0] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_decision_trees, __pyx_mstate->__pyx_n_u_cost_cy, __pyx_k_1_s_9Cq_q_F_1_waq, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[0])) goto bad;
   }
   {
     const __Pyx_PyCode_New_function_description descr = {5, 0, 0, 5, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 47, 98};
     PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_n, __pyx_mstate->__pyx_n_u_y, __pyx_mstate->__pyx_n_u_left_indices, __pyx_mstate->__pyx_n_u_right_indices, __pyx_mstate->__pyx_n_u_parent_cost};
-    __pyx_mstate_global->__pyx_codeobj_tab[1] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_rules_splitters, __pyx_mstate->__pyx_n_u_gain_cy, __pyx_k_1_S_r_AQ_1M_A_1N_G1O1_ARs_c_2Q, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[1])) goto bad;
+    __pyx_mstate_global->__pyx_codeobj_tab[1] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_decision_trees, __pyx_mstate->__pyx_n_u_gain_cy, __pyx_k_1_S_r_AQ_1M_A_1N_G1O1_ARs_c_2Q, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[1])) goto bad;
   }
   {
     const __Pyx_PyCode_New_function_description descr = {4, 0, 0, 20, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 83, 316};
     PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_X, __pyx_mstate->__pyx_n_u_y, __pyx_mstate->__pyx_n_u_indices, __pyx_mstate->__pyx_n_u_min_points_leaf, __pyx_mstate->__pyx_n_u_X_2, __pyx_mstate->__pyx_n_u_n, __pyx_mstate->__pyx_n_u_d, __pyx_mstate->__pyx_n_u_parent_cost, __pyx_mstate->__pyx_n_u_i, __pyx_mstate->__pyx_n_u_j, __pyx_mstate->__pyx_n_u_unique_values, __pyx_mstate->__pyx_n_u_threshold, __pyx_mstate->__pyx_n_u_gain_val, __pyx_mstate->__pyx_n_u_best_gain_val, __pyx_mstate->__pyx_n_u_evals, __pyx_mstate->__pyx_n_u_left_indices, __pyx_mstate->__pyx_n_u_right_indices, __pyx_mstate->__pyx_n_u_condition, __pyx_mstate->__pyx_n_u_best_condition, __pyx_mstate->__pyx_n_u_best_conditions};
-    __pyx_mstate_global->__pyx_codeobj_tab[2] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_rules_splitters, __pyx_mstate->__pyx_n_u_split_cy, __pyx_k_41AQ_6_6_WAYa_ARq_a_U_1_D_E_a_F, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[2])) goto bad;
+    __pyx_mstate_global->__pyx_codeobj_tab[2] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_decision_trees, __pyx_mstate->__pyx_n_u_split_cy, __pyx_k_41AQ_6_6_WAYa_ARq_a_U_1_D_E_a_F, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[2])) goto bad;
   }
   {
     const __Pyx_PyCode_New_function_description descr = {4, 0, 0, 24, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 147, 533};
     PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_X, __pyx_mstate->__pyx_n_u_y, __pyx_mstate->__pyx_n_u_indices, __pyx_mstate->__pyx_n_u_min_points_leaf, __pyx_mstate->__pyx_n_u_X_2, __pyx_mstate->__pyx_n_u_n, __pyx_mstate->__pyx_n_u_d, __pyx_mstate->__pyx_n_u_parent_cost, __pyx_mstate->__pyx_n_u_feature, __pyx_mstate->__pyx_n_u_threshold, __pyx_mstate->__pyx_n_u_gain_val, __pyx_mstate->__pyx_n_u_best_gain_val, __pyx_mstate->__pyx_n_u_evals, __pyx_mstate->__pyx_n_u_left_indices, __pyx_mstate->__pyx_n_u_right_indices, __pyx_mstate->__pyx_n_u_best_conditions, __pyx_mstate->__pyx_n_u_pair, __pyx_mstate->__pyx_n_u_feature_pairs, __pyx_mstate->__pyx_n_u_slopes, __pyx_mstate->__pyx_n_u_X_pair, __pyx_mstate->__pyx_n_u_i, __pyx_mstate->__pyx_n_u_data_point, __pyx_mstate->__pyx_n_u_slope, __pyx_mstate->__pyx_n_u_best_condition};
-    __pyx_mstate_global->__pyx_codeobj_tab[3] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_rules_splitters, __pyx_mstate->__pyx_n_u_oblique_split_cy, __pyx_k_41AQ_6_6_WAYa_BfA_A_q_A_7r_q_AQ, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[3])) goto bad;
+    __pyx_mstate_global->__pyx_codeobj_tab[3] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_src_intercluster_decision_trees, __pyx_mstate->__pyx_n_u_oblique_split_cy, __pyx_k_41AQ_6_6_WAYa_BfA_A_q_A_7r_q_AQ, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[3])) goto bad;
   }
   Py_DECREF(tuple_dedup_map);
   return 0;

@@ -8,10 +8,10 @@ from intercluster import (
     pairwise_distance_threshold
 )
 from .splitters import DummySplitter
-from .entropy_tree import SklearnTree
+from .decision_tree import DecisionTree
 
 
-class DensityTree(SklearnTree):
+class DensityTree(DecisionTree):
     """
     A decision tree that uses entropy or gini as the splitting criterion, while removing leaf nodes 
     that don't satisfy density constraints.

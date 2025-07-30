@@ -4,6 +4,7 @@ import heapq
 from numpy.typing import NDArray
 from typing import List, Set, Callable
 from intercluster import (
+    Condition,
     mode,
     can_flatten,
     flatten_labels,
@@ -12,10 +13,11 @@ from intercluster import (
     collect_nodes,
     collect_leaves
 )
-from intercluster import Condition
+from intercluster.pruning import Pruner
+from .splitters import Splitter
 from ..node import Node
 
-import time
+
 class Tree():
     """
     Base class for a Tree object. 
@@ -26,7 +28,8 @@ class Tree():
         base_tree : Node = None,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1
+        min_points_leaf : int = 1,
+        pruner : Callable = None
     ):
         """
         Args:
@@ -43,7 +46,9 @@ class Tree():
                 
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
-            
+
+            pruner (Callable, optional): Function/Object used to prune branches of the tree. 
+                Defaults to None, in which case no pruning is performed.
             
         Attributes:            
             root (Node): Root node of the tree.
@@ -62,6 +67,11 @@ class Tree():
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
+
+        if pruner is not None:
+            assert issubclass(pruner, Pruner), \
+                "Input pruner must be a valid instance of the Pruner object."
+        self.pruner = pruner
 
         self.root = None
         self.heap = []
@@ -83,12 +93,18 @@ class Tree():
         Args:
             X (np.ndarray): Input dataset.
             
-            y (np.ndarray, optional): Target labels. Defaults to None.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         # Reset the heap and tree:
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
+
+        # Remove any points with no label (outliers):
+        if y is not None:
+            X, y = zip(*[(x, label) for x, label in zip(X, y) if len(label) > 0])
+            X = np.array(X)
+            y = list(y)
         
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
@@ -272,18 +288,22 @@ class Tree():
         else:
             self.branch(node, condition)
 
+    
+    def prune(self):
+        """
+        Prunes the decision tree by selecting a subset of leaf nodes which best satisfy the 
+        pruning objective.
+        """
+        pass
+
         
-    def predict(self, X : NDArray, leaf_labels = False) -> List[Set[int]]:
+    def predict(self, X : NDArray) -> List[Set[int]]:
         """
         Predicts the class labels of an input dataset X by recursing through the tree to 
         find where data points fall into leaf nodes.
 
         Args:
-            X (np.ndarray): Input n x m dataset
-
-            leaf_labels (bool, optional): If true, gives labels based soley upon 
-                leaf membership. Otherwise, returns the orignal class label predictions from 
-                the fitted tree. Defaults to False.  
+            X (np.ndarray): Input n x m dataset  
 
         Returns:
             labels (List[Set[int]]): Length n list of sets where the set at index i 
@@ -295,13 +315,11 @@ class Tree():
             leaf = path[-1]
             satisfies = satisfies_path(X, path)
             for idx in satisfies:
-                if leaf_labels:
-                    labels[idx].add(leaf.leaf_num)
-                else:
-                    labels[idx].add(leaf.label)
+                labels[idx].add(leaf.label)
             
         return labels
     
+
     def get_nodes(self) -> List[Node]:
         """
         Returns all leaf nodes in the tree.
@@ -312,6 +330,7 @@ class Tree():
         nodes = collect_nodes(self.root)
         return nodes
     
+
     def get_leaves(self) -> List[Node]:
         """
         Returns all leaf nodes in the tree.
@@ -322,6 +341,7 @@ class Tree():
         leaves = collect_leaves(self.root)
         return leaves
     
+
     def get_weighted_average_depth(self, X : NDArray) -> float:
         """
         Finds the weighted average depth of the tree, which is adjusted by the number 
@@ -343,4 +363,36 @@ class Tree():
                 wad += len(satisfies) * (len(path) - 1)
 
         return wad/total_covers
+    
+
+    def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
+        """
+        Finds data points of X covered by each rule in the decision set.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+        Returns:
+            assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
+                if point i is covered by rule j and False otherwise.
+        """
+        leaves = self.get_leaves()
+        assignment = np.zeros((X.shape[0], len(leaves)), dtype=bool)
+        decision_paths = get_decision_paths(self.root)
+        for i, path in enumerate(decision_paths):
+            satisfies = satisfies_path(X, path)
+            assignment[satisfies, i] = True
+        return assignment
+    
+
+    def get_leaf_labels(self) -> List[Set[int]]:
+        """
+        Returns the labels of each leaf node in the tree.
+        
+        Returns:
+            labels (List[int]): List of labels for each leaf node.
+        """
+        leaves = self.get_leaves()
+        labels = [{leaf.label} for leaf in leaves]
+        return labels
             

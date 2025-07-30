@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from typing import List,Set
+from typing import List, Set, Callable
 from numpy.typing import NDArray
 from intercluster import Condition, LinearCondition
 from intercluster import (
@@ -17,61 +17,12 @@ from .splitters import InformationGainSplitter, DummySplitter, ObliqueInformatio
 from .tree import Tree
 
 
-class ID3Tree(Tree):
-    """
-    Inherits from the Tree class to implement a decision tree in which 
-    axis aligned split criterion are chosen so that points in any leaf node 
-    have small entropy with respect to their labels.
-    
-    Args:            
-        base_tree (Node, optional): Root node of a baseline tree to start from. 
-                Defaults to None, in which case the tree is grown from root.
-            
-        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-            Defaults to None.
-            
-        max_depth (int, optional): Optional constraint for maximum depth. 
-            Defaults to None.
-            
-        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-            within a single leaf. Defaults to 1.
-            
-            
-    Attributes:
-        root (Node): Root node of the tree.
-        
-        heap (heapq list): Maintains the heap structure of the tree.
-        
-        leaf_count (int): Number of leaves in the tree.
-        
-        node_count (int): Number of nodes in the tree.
-            
-        depth (int): The maximum depth of the tree.   
-    """
-    
-    def __init__(
-        self,
-        base_tree : Node = None,
-        max_leaf_nodes : int = None,
-        max_depth : int = None,
-        min_points_leaf : int = 1
-    ):
-        splitter = InformationGainSplitter(
-            min_points_leaf = min_points_leaf
-        )  
-        super().__init__(
-            splitter = splitter,
-            base_tree = base_tree, 
-            max_leaf_nodes = max_leaf_nodes,
-            max_depth = max_depth, 
-            min_points_leaf = min_points_leaf
-        )
-    
+####################################################################################################   
 
 
-class SklearnTree(Tree):
+class DecisionTree(Tree):
     """
-    Class designed to interface with an Sklearn Tree object. 
+    Class designed to interface with an Sklearn Decision Tree Classifier. 
     For more information about Sklearn trees, please visit 
     (https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
     #sphx-glr-auto-examples-tree-plot-unveil-tree-structure-py)
@@ -80,10 +31,11 @@ class SklearnTree(Tree):
     def __init__(
         self,
         criterion : str = 'entropy',
-        max_leaf_nodes=None,
-        max_depth=None,
-        min_points_leaf=1,
-        random_state = None
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1,
+        random_state : int = None,
+        pruner : Callable = None, 
     ):
         """
          Args:
@@ -98,6 +50,9 @@ class SklearnTree(Tree):
                 
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
+
+            pruner (Callable, optional): Function/Object used to prune branches of the tree.
+                Defaults to None, in which case no pruning is performed.
             
         Attributes:
             root (Node): Root node of the tree.
@@ -113,12 +68,22 @@ class SklearnTree(Tree):
         self.criterion = criterion
         self.random_state = random_state
         splitter = DummySplitter()
+
         super().__init__(
             splitter = splitter,
             max_leaf_nodes=max_leaf_nodes,
             max_depth=max_depth,
-            min_points_leaf=min_points_leaf
+            min_points_leaf=min_points_leaf,
+            pruner=pruner
         )
+
+        if self.pruner is not None:
+            supported_pruners = ['CoverageMistakePruner']
+            if self.pruner.__name__ not in supported_pruners:
+                raise ValueError(
+                    f"Pruner {pruner.__name__} is not supported. "
+                    "Supported pruners are: {supported_pruners}"
+                )
         
             
     def fit(
@@ -133,11 +98,17 @@ class SklearnTree(Tree):
             X (np.ndarray): Input dataset.
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
-        """        
+        """ 
         # Reset if needed:
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
+
+        # Remove any points with no label (outliers):
+        if y is not None:
+            X, y = zip(*[(x, label) for x, label in zip(X, y) if len(label) > 0])
+            X = np.array(X)
+            y = list(y)
         
         # if stopping criteria weren't provided, set to the maximum possible
         if self.max_leaf_nodes is None:
@@ -202,7 +173,6 @@ class SklearnTree(Tree):
         if (self.tree_info.children_left[sklearn_node] < 0 and 
             self.tree_info.children_right[sklearn_node] < 0):
             class_label = self.classes[np.argmax(self.tree_info.value[sklearn_node])]
-            #class_label = mode(y_)
             node_obj.leaf_node(
                 leaf_num = self.leaf_count,
                 label = class_label,
@@ -252,6 +222,14 @@ class SklearnTree(Tree):
             )
             
             self.node_count += 2
+
+    
+    def prune(self):
+        """
+        Prunes the decision tree by selecting a subset of leaf nodes which best satisfy the 
+        pruning objective.
+        """
+        pass
             
     def predict(
         self,
@@ -286,34 +264,66 @@ class SklearnTree(Tree):
         
         else:
             return labels_format(self.sklearn_tree.predict(X))
-        
-    '''
-    def get_leaves(self, y : NDArray = None, label : int = None) -> List[Node]:
-        """
-        Returns the leaf nodes of the tree. If an array y of training data labels AND a 
-        specific label are provided, only the leaf nodes with that specified label are returned.
-        
-        Args:
-            y (np.ndarray, optional): Training Data labels. Defaults to None.
-            
-            label (int, optional): Label to filter by. Defaults to None.
-        Returns:
-            leaves (List[Node]): List of leaf nodes in the tree. 
-        """
-        
-        leaves = []
-        for path in traverse(self.root):
-            last_node = path[-1][0]
-            if last_node.type == 'leaf':
-                if y is not None and label is not None:
-                    if mode(y[last_node.indices[0]]) == label:
-                        leaves.append(last_node)
-                else:
-                    leaves.append(last_node)
-                
-        return leaves
-    '''
+
+
+####################################################################################################
+
+
+class ID3Tree(Tree):
+    """
+    Inherits from the Tree class to implement a decision tree in which 
+    axis aligned split criterion are chosen so that points in any leaf node 
+    have small entropy with respect to their labels.
+
+    This is a custom implementation of the decision tree class above, which does not 
+    rely upon Sklearn's DecisionTreeClassifier (although is designed to be identical).
     
+    Args:            
+        base_tree (Node, optional): Root node of a baseline tree to start from. 
+                Defaults to None, in which case the tree is grown from root.
+            
+        max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+            Defaults to None.
+            
+        max_depth (int, optional): Optional constraint for maximum depth. 
+            Defaults to None.
+            
+        min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+            within a single leaf. Defaults to 1.
+            
+            
+    Attributes:
+        root (Node): Root node of the tree.
+        
+        heap (heapq list): Maintains the heap structure of the tree.
+        
+        leaf_count (int): Number of leaves in the tree.
+        
+        node_count (int): Number of nodes in the tree.
+            
+        depth (int): The maximum depth of the tree.   
+    """
+    
+    def __init__(
+        self,
+        base_tree : Node = None,
+        max_leaf_nodes : int = None,
+        max_depth : int = None,
+        min_points_leaf : int = 1
+    ):
+        splitter = InformationGainSplitter(
+            min_points_leaf = min_points_leaf
+        )  
+        super().__init__(
+            splitter = splitter,
+            base_tree = base_tree, 
+            max_leaf_nodes = max_leaf_nodes,
+            max_depth = max_depth, 
+            min_points_leaf = min_points_leaf
+        )
+
+
+####################################################################################################
 
 
 class ObliqueTree(Tree):

@@ -7,18 +7,14 @@ from .imm_tree import (
     ExkmcTree,
 )
 
-from .entropy_tree import (
+from .decision_tree import (
+    DecisionTree,
     ID3Tree,
-    SklearnTree,
     ObliqueTree,
 )
 
-from .explanation_tree import (
-    ExplanationTree
-)
-
-from .svm_tree import (
-    SVMTree,
+from .removal_tree import (
+    RemovalTree
 )
 
 from .density_tree import (

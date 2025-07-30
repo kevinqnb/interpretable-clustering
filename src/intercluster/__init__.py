@@ -3,20 +3,30 @@ from .conditions import (
     LinearCondition
 )
 
+from .measures import (
+    mode, 
+    entropy,
+    coverage,
+    overlap,
+    center_dists,
+    kmeans_cost,
+    distance_ratio,
+    point_silhouette,
+    silhouette_score,
+    mutual_reachability_distance,
+    density_distance,
+    pairwise_distance_threshold,
+    max_intra_cluster_distance,
+    min_inter_cluster_distance
+)
+
 from .node import Node
 
 from .utils import (
     tiebreak,
-    mode,
     divide_with_zeros,
-    entropy,
-    overlap,
     covered_mask,
-    coverage,
-    center_dists,
-    kmeans_cost,
     update_centers,
-    distance_ratio,
     outlier_mask,
     labels_format,
     can_flatten,
@@ -25,8 +35,6 @@ from .utils import (
     labels_to_assignment,
     assignment_to_labels,
     assignment_to_dict,
-    point_silhouette,
-    silhouette_score,
     traverse,
     collect_nodes,
     collect_leaves,
@@ -35,9 +43,6 @@ from .utils import (
     get_depth,
     satisfies_path,
     satisfies_conditions,
-    mutual_reachability_distance,
-    density_distance,
-    pairwise_distance_threshold
 )
 
 

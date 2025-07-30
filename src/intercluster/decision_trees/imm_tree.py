@@ -17,6 +17,220 @@ from intercluster import (
 )
 from .splitters import ImmSplitter, DummySplitter
 from .tree import Tree
+        
+                    
+####################################################################################################
+
+
+class ExkmcTree(Tree):
+    """ 
+    The ExKMC tree is based around work from [Frost, Moshkovitz, Rashtchian '20] in their 
+    paper titled 'ExKMC: Expanding Explainable k-Means Clustering.'
+    The following class acts as a wrapper, processesing a tree created by their implementation, 
+    which may be found at: https://github.com/navefr/ExKMC.
+
+    NOTE: that if `max_leaf_nodes = k` and `imm = True`, the tree will be built using the
+    IMM algorithm. 
+    """
+    
+    def __init__(
+        self,
+        k : int,
+        kmeans : Callable,
+        max_leaf_nodes : int = None,
+        imm : bool = True
+    ):
+        """
+        Args:
+            k (int): Number of clusters.
+            
+            kmeans (Callable): Trained Sklearn KMeans model.
+            
+            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+                Defaults to None.
+                
+            imm (bool, optional): If True, the base of the tree is built with the IMM algorithm.
+                Defaults to True.
+                
+        Attributes:
+            root (Node): Root node of the tree.
+            
+            heap (heapq list): Maintains the heap structure of the tree.
+            
+            leaf_count (int): Number of leaves in the tree.
+            
+            node_count (int): Number of nodes in the tree.
+                
+            depth (int): The maximum depth of the tree.
+        """
+        self.k = k
+        self.kmeans = kmeans
+        self.imm = imm
+
+        splitter = DummySplitter()
+        super().__init__(
+            splitter = splitter,
+            max_leaf_nodes = max_leaf_nodes
+        )
+    
+    
+    def fit(
+        self,
+        X : NDArray,
+        y : List[Set[int]] = None
+    ):
+        """
+        Fits and Exkmc tree to a dataset X. 
+
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (np.ndarray, optional): Target labels. Defaults to None.
+        """
+        # Reset if needed:
+        self.leaf_count = 0
+        self.node_count = 0
+        
+        # if stopping criteria weren't provided, set to the maximum possible
+        if self.max_leaf_nodes is None:
+            self.max_leaf_nodes = len(X)
+        
+        self.X = X
+        self.y = y
+        
+        if (y is not None) and can_flatten(y):
+            self.y_array = flatten_labels(y)
+        elif y is not None:
+            raise ValueError("Each data point must have exactly one label.")
+        else:
+            self.y_array = None
+        
+        base_tree = 'IMM' if self.imm else 'NONE'
+        self.exkmc_tree = ExTree(
+            k = self.k,
+            max_leaves = self.max_leaf_nodes,
+            base_tree = base_tree
+        )
+
+        self.exkmc_tree.fit(X, self.kmeans)
+        
+        self.root = Node()
+        indices = np.arange(len(X))        
+        self.grow(X, indices, self.exkmc_tree.tree, self.root, 0)
+        self.node_count += 1
+        
+        
+    def grow(
+        self,
+        X : NDArray,
+        indices : NDArray,
+        exkmc_node : Callable,
+        node_obj: Node,
+        depth : int
+    ):
+        """
+        Traverses through the ExKMC tree.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            indices (np.ndarray): Subset of data indices to build node with.
+            
+            exkmc_node (ExKMC.Tree.Node): Node of an ExKMC tree.
+            
+            node_obj (Node): Corresponding Node object to copy conditions into.  
+            
+            depth (int): current depth of the tree
+        """
+        X_ = X[indices, :]
+        if depth > self.depth:
+            self.depth = depth
+        
+        if exkmc_node.is_leaf():
+            class_label = exkmc_node.value
+            node_obj.leaf_node(
+                leaf_num = self.leaf_count,
+                label = class_label,
+                cost = -1,
+                indices = indices,
+                depth = depth
+            )
+            self.leaf_count += 1
+        else:
+            feature, threshold = exkmc_node.feature, exkmc_node.value
+            left_mask = X_[:, feature] <= threshold
+            right_mask = ~left_mask
+            
+            left_child = Node()
+            right_child = Node()
+            
+            condition = LinearCondition(
+                features = np.array([feature]),
+                weights = np.array([1]),
+                threshold = threshold,
+                direction = -1
+            )
+            
+            node_obj.tree_node(
+                left_child = left_child,
+                right_child = right_child,
+                condition = condition,
+                cost = -1,
+                indices = indices,
+                depth = depth
+            )
+            
+            self.grow(
+                X,
+                indices[left_mask],
+                exkmc_node.left,
+                left_child,
+                depth + 1
+            )
+            self.grow(
+                X,
+                indices[right_mask],
+                exkmc_node.right,
+                right_child,
+                depth + 1
+            )
+            
+            self.node_count += 2
+            
+    def predict(
+        self,
+        X : NDArray,
+        leaf_labels : bool = False
+    ) -> List[Set[int]]:
+        """
+        Predicts the labels of a dataset X.
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            leaf_labels (bool, optional): If true, gives labels based soley upon 
+                leaf membership. Otherwise, returns the orignal predictions from 
+                the fitted tree. Defaults to True.  
+                
+        Returns:
+            List[Set[int]]: List of label sets where the set at index i contains class 
+                labels for data point i.
+
+        """
+        if leaf_labels:
+            labels = [set() for _ in range(len(X))]
+            decision_paths = get_decision_paths(self.root)
+            for path in decision_paths:
+                leaf = path[-1]
+                satisfies = satisfies_path(X, path)
+                for idx in satisfies:
+                    labels[idx].add(int(leaf.leaf_num))
+            return labels
+        else:
+            return labels_format(self.exkmc_tree.predict(X).astype(int))
+
+
+####################################################################################################
 
 
 class ImmTree(Tree):
@@ -30,6 +244,9 @@ class ImmTree(Tree):
     "Explainable k-Means and k-Medians Clustering"
     Dasgupta, Frost, Moshkovitz, Rashtchian, 2020
     (https://arxiv.org/abs/2002.12538)
+
+    NOTE: Unforuntaley this manual implementation of IMM is still slower than the one that can 
+    be built using the ExKMC class above. 
     
     Args:
         centers (np.ndarray, optional): Input list of reference centers to calculate cost with. 
@@ -276,215 +493,6 @@ class ImmTree(Tree):
 
         else:
             self.branch(node, condition)
-        
-                    
+
+
 ####################################################################################################
-
-
-class ExkmcTree(Tree):
-    """ 
-    The ExKMC tree is based around work from [Frost, Moshkovitz, Rashtchian '20] in their 
-    paper titled 'ExKMC: Expanding Explainable k-Means Clustering.'
-    The following processes a tree created by their implementation, 
-    which may be found at: https://github.com/navefr/ExKMC.
-
-    Importantly, this wrapper also gives the ability to train the ExKMC tree with outliers removed. 
-    """
-    
-    def __init__(
-        self,
-        k : int,
-        kmeans : Callable,
-        max_leaf_nodes : int = None,
-        imm : bool = True
-    ):
-        """
-        Args:
-            k (int): Number of clusters.
-            
-            kmeans (Callable): Trained Sklearn KMeans model.
-            
-            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-                Defaults to None.
-                
-            imm (bool, optional): If True, the base of the tree is built with the IMM algorithm.
-                Defaults to True.
-                
-        Attributes:
-            root (Node): Root node of the tree.
-            
-            heap (heapq list): Maintains the heap structure of the tree.
-            
-            leaf_count (int): Number of leaves in the tree.
-            
-            node_count (int): Number of nodes in the tree.
-                
-            depth (int): The maximum depth of the tree.
-        """
-        self.k = k
-        self.kmeans = kmeans
-        self.imm = imm
-
-        splitter = DummySplitter()
-        super().__init__(
-            splitter = splitter,
-            max_leaf_nodes = max_leaf_nodes
-        )
-    
-    
-    def fit(
-        self,
-        X : NDArray,
-        y : List[Set[int]] = None
-    ):
-        """
-        Fits and Exkmc tree to a dataset X. 
-
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            y (np.ndarray, optional): Target labels. Defaults to None.
-        """
-        # Reset if needed:
-        self.leaf_count = 0
-        self.node_count = 0
-        
-        # if stopping criteria weren't provided, set to the maximum possible
-        if self.max_leaf_nodes is None:
-            self.max_leaf_nodes = len(X)
-        
-        self.X = X
-        self.y = y
-        
-        if (y is not None) and can_flatten(y):
-            self.y_array = flatten_labels(y)
-        elif y is not None:
-            raise ValueError("Each data point must have exactly one label.")
-        else:
-            self.y_array = None
-        
-        base_tree = 'IMM' if self.imm else 'NONE'
-        self.exkmc_tree = ExTree(
-            k = self.k,
-            max_leaves = self.max_leaf_nodes,
-            base_tree = base_tree
-        )
-
-        self.exkmc_tree.fit(X, self.kmeans)
-        
-        self.root = Node()
-        indices = np.arange(len(X))        
-        self.grow(X, indices, self.exkmc_tree.tree, self.root, 0)
-        self.node_count += 1
-        
-        
-    def grow(
-        self,
-        X : NDArray,
-        indices : NDArray,
-        exkmc_node : Callable,
-        node_obj: Node,
-        depth : int
-    ):
-        """
-        Traverses through the ExKMC tree.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            indices (np.ndarray): Subset of data indices to build node with.
-            
-            exkmc_node (ExKMC.Tree.Node): Node of an ExKMC tree.
-            
-            node_obj (Node): Corresponding Node object to copy conditions into.  
-            
-            depth (int): current depth of the tree
-        """
-        X_ = X[indices, :]
-        if depth > self.depth:
-            self.depth = depth
-        
-        if exkmc_node.is_leaf():
-            class_label = exkmc_node.value
-            node_obj.leaf_node(
-                leaf_num = self.leaf_count,
-                label = class_label,
-                cost = -1,
-                indices = indices,
-                depth = depth
-            )
-            self.leaf_count += 1
-        else:
-            feature, threshold = exkmc_node.feature, exkmc_node.value
-            left_mask = X_[:, feature] <= threshold
-            right_mask = ~left_mask
-            
-            left_child = Node()
-            right_child = Node()
-            
-            condition = LinearCondition(
-                features = np.array([feature]),
-                weights = np.array([1]),
-                threshold = threshold,
-                direction = -1
-            )
-            
-            node_obj.tree_node(
-                left_child = left_child,
-                right_child = right_child,
-                condition = condition,
-                cost = -1,
-                indices = indices,
-                depth = depth
-            )
-            
-            self.grow(
-                X,
-                indices[left_mask],
-                exkmc_node.left,
-                left_child,
-                depth + 1
-            )
-            self.grow(
-                X,
-                indices[right_mask],
-                exkmc_node.right,
-                right_child,
-                depth + 1
-            )
-            
-            self.node_count += 2
-            
-    def predict(
-        self,
-        X : NDArray,
-        leaf_labels : bool = False
-    ) -> List[Set[int]]:
-        """
-        Predicts the labels of a dataset X.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            leaf_labels (bool, optional): If true, gives labels based soley upon 
-                leaf membership. Otherwise, returns the orignal predictions from 
-                the fitted tree. Defaults to True.  
-                
-        Returns:
-            List[Set[int]]: List of label sets where the set at index i contains class 
-                labels for data point i.
-
-        """
-        if leaf_labels:
-            labels = [set() for _ in range(len(X))]
-            decision_paths = get_decision_paths(self.root)
-            for path in decision_paths:
-                leaf = path[-1]
-                satisfies = satisfies_path(X, path)
-                for idx in satisfies:
-                    labels[idx].add(int(leaf.leaf_num))
-            return labels
-        else:
-            return labels_format(self.exkmc_tree.predict(X).astype(int))
-
-
