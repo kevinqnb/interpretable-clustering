@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from .node import Node
-from .measures import distance_ratio
+from .measurements import distance_ratio
 
 ####################################################################################################
 

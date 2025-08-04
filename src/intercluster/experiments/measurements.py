@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.measures import (
+from intercluster.measurements import (
     kmeans_cost,
     overlap,
     coverage,

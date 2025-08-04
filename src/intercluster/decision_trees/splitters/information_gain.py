@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster.measures import entropy
+from intercluster.measurements import entropy
 from ._splitter import Splitter
 from typing import Tuple
 from intercluster import Condition, LinearCondition

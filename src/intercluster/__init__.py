@@ -3,7 +3,7 @@ from .conditions import (
     LinearCondition
 )
 
-from .measures import (
+from .measurements import (
     mode, 
     entropy,
     coverage,

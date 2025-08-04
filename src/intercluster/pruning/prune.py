@@ -4,7 +4,7 @@ from joblib import Parallel, delayed
 from typing import Callable, List, Set, Tuple
 from numpy.typing import NDArray
 import warnings
-from intercluster.measures import (
+from intercluster.measurements import (
     coverage,
 )
 from intercluster.utils import (

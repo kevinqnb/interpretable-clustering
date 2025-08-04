@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Tuple
 from numpy.typing import NDArray
-from intercluster.measures import (
+from intercluster.measurements import (
     coverage,
     kmeans_cost
 )
