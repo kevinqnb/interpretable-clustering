@@ -267,12 +267,23 @@ class CoverageMistakeScore(MeasurementFunction):
             float : Computed coverage mistake score.
         """
         if (
-            (data_to_rule_assignment is None) or
-            (rule_to_cluster_assignment is None) or
+            (data_to_rule_assignment is None) and
+            (rule_to_cluster_assignment is None) and
             (data_to_cluster_assignment is None)
         ):
             return np.nan
         
+        elif (
+            (data_to_rule_assignment is None) and
+            (rule_to_cluster_assignment is None) and
+            (data_to_cluster_assignment is not None)
+        ):
+            return coverage(
+                assignment = data_to_cluster_assignment, percentage = False
+            )
+        
+        elif rule_to_cluster_assignment.shape[1] != self.ground_truth_assignment.shape[1]:
+            return np.nan
         
         return coverage_mistake_score(
             lambda_val = self.lambda_val,

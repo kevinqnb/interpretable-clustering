@@ -106,7 +106,7 @@ class MaxRulesExperiment(Experiment):
     Args:
         data (np.ndarray): Input dataset.
         
-        baseline_list (List[Any]): List of baseline modules to use and record results for. 
+        baseline (Baseline): Single baseline model to use and record results for. 
         
         module (List[Module]): Modules to use and record results for.
         
@@ -126,7 +126,7 @@ class MaxRulesExperiment(Experiment):
     def __init__(
         self, 
         data : NDArray,
-        baseline_list : List[Baseline],
+        baseline : Baseline,
         module_list : List[Module],
         measurement_fns : List[Callable],
         n_samples : int,
@@ -137,7 +137,7 @@ class MaxRulesExperiment(Experiment):
     ):
         super().__init__(
             data = data,
-            baseline_list = baseline_list,
+            baseline_list = [baseline],
             module_list = module_list,
             measurement_fns = measurement_fns,
             n_samples = n_samples,
@@ -157,20 +157,20 @@ class MaxRulesExperiment(Experiment):
         """
         for base in self.baseline_list:
             bassign = base.assign(self.data)
-            self.result_dict[("max-rule-length", base.name, base.name, 0)] = [
+            self.result_dict[("max-rule-length", base.name, 0)] = [
                 base.max_rule_length
             ]*n_steps
-            self.result_dict[("weighted-average-rule-length", base.name, base.name, 0)] = [
+            self.result_dict[("weighted-average-rule-length", base.name, 0)] = [
                 base.weighted_average_rule_length
             ]*n_steps
             for fn in self.measurement_fns:
                 if fn.name == 'coverage-mistake-score':
                     # Coverage mistake score uses original assignment.
-                    self.result_dict[(fn.name, base.name, base.name, 0)] = [
+                    self.result_dict[(fn.name, base.name, 0)] = [
                         coverage(assignment = bassign, percentage = False)
                     ] * n_steps
                 else:
-                    self.result_dict[(fn.name, base.name, base.name, 0)] = [
+                    self.result_dict[(fn.name, base.name, 0)] = [
                         fn(data_to_cluster_assignment = bassign)
                     ] * n_steps
 
@@ -201,10 +201,10 @@ class MaxRulesExperiment(Experiment):
         module_result_dict = {}
         for mod in module_list:
             for base in self.baseline_list:
-                module_result_dict[("max-rule-length", mod.name, base.name)] = []
-                module_result_dict[("weighted-average-rule-length", mod.name, base.name)] = []
+                module_result_dict[("max-rule-length", mod.name)] = []
+                module_result_dict[("weighted-average-rule-length", mod.name)] = []
                 for fn in self.measurement_fns:
-                    module_result_dict[(fn.name, mod.name, base.name)] = []
+                    module_result_dict[(fn.name, mod.name)] = []
 
         for mod in module_list:
             for base in self.baseline_list:
@@ -217,16 +217,16 @@ class MaxRulesExperiment(Experiment):
                     ) = mod.step_n_rules(self.data, base.labels)
                     
                     # record rule lengths:
-                    module_result_dict[("max-rule-length", mod.name, base.name)].append(
+                    module_result_dict[("max-rule-length", mod.name)].append(
                         mod.max_rule_length
                     )
-                    module_result_dict[("weighted-average-rule-length", mod.name, base.name)].append(
+                    module_result_dict[("weighted-average-rule-length", mod.name)].append(
                         mod.weighted_average_rule_length
                     )
                     
                     # record results from measurement functions:
                     for fn in self.measurement_fns:
-                        module_result_dict[(fn.name, mod.name, base.name)].append(
+                        module_result_dict[(fn.name, mod.name)].append(
                             fn(
                                 data_to_rule_assignment,
                                 rule_to_cluster_assignment,

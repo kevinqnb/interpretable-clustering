@@ -27,10 +27,9 @@ true_assignment = labels_to_assignment(data_labels, n_labels = 6)
 n,d = data.shape
 
 # Parameters:
-k = 6
-n_clusters = k
+n_clusters = 6
 n_core = 5
-epsilon = 0.1
+epsilon = 1.9
 density_distances = density_distance(data, n_core = n_core)
 euclidean_distances = pairwise_distances(data)
 
@@ -90,49 +89,30 @@ dsclust_mod = DecisionSetMod(
 
 ####################################################################################################
 
-# List of Modules and Measurements:
+# Experiment 1: KMeans reference clustering:
 
-baseline_list = [kmeans_base, dbscan_base]
-module_list = [decision_tree_mod, rem_tree_mod, dsclust_mod]
+baseline = kmeans_base
+module_list = [decision_tree_mod, rem_tree_mod, exkmc_mod, dsclust_mod]
 
-coverage_mistake_measure1 = CoverageMistakeScore(
+coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
     ground_truth_assignment = kmeans_assignment,
-    name = 'Coverage-Mistake-Score-KMeans'
+    name = 'Coverage-Mistake-Score'
 )
 
-coverage_mistake_measure2 = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = dbscan_assignment,
-    name = 'Coverage-Mistake-Score-DBSCAN'
-)
-
-silhouette_measure1 = Silhouette(
+silhouette_measure = Silhouette(
     distances = euclidean_distances,
-    name = 'Silhouette-Score-Euclidean'
+    name = 'Silhouette-Score'
 )
-
-
-silhouette_measure2 = Silhouette(
-    distances = density_distances,
-    name = 'Silhouette-Score-Density'
-)
-
 
 measurement_fns = [
-    coverage_mistake_measure1,
-    coverage_mistake_measure2,
-    silhouette_measure1,
-    silhouette_measure2
+    coverage_mistake_measure,
+    silhouette_measure,
 ]
 
-
-####################################################################################################
-# Running the Experiment:
-
-exp = MaxRulesExperiment(
+exp1 = MaxRulesExperiment(
     data = data,
-    baseline_list = baseline_list,
+    baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
     n_samples = 100,
@@ -141,9 +121,48 @@ exp = MaxRulesExperiment(
 
 import time 
 start = time.time()
-exp_results = exp.run(n_steps = max_rules - min_rules)
-exp.save_results('data/experiments/climate/max_rules/', '_test')
+exp1_results = exp1.run(n_steps = max_rules - min_rules)
+exp1.save_results('data/experiments/climate/max_rules/', '_kmeans')
 end = time.time()
-print(end - start)
+print("Experiment 1 time:", end - start)
+
+####################################################################################################
+
+# Experiment 2: DBSCAN reference clustering:
+
+baseline = dbscan_base
+module_list = [decision_tree_mod, rem_tree_mod, dsclust_mod]
+
+coverage_mistake_measure = CoverageMistakeScore(
+    lambda_val = lambda_val,
+    ground_truth_assignment = dbscan_assignment,
+    name = 'Coverage-Mistake-Score'
+)
+
+silhouette_measure = Silhouette(
+    distances = density_distances,
+    name = 'Silhouette-Score'
+)
+
+measurement_fns = [
+    coverage_mistake_measure,
+    silhouette_measure
+]
+
+exp2 = MaxRulesExperiment(
+    data = data,
+    baseline = baseline,
+    module_list = module_list,
+    measurement_fns = measurement_fns,
+    n_samples = 100,
+    cpu_count = experiment_cpu_count
+)
+
+import time 
+start = time.time()
+exp2_results = exp2.run(n_steps = max_rules - min_rules)
+exp2.save_results('data/experiments/climate/max_rules/', '_dbscan')
+end = time.time()
+print("Experiment 2 time:", end - start)
 
 ####################################################################################################
