@@ -5,7 +5,8 @@ from intercluster.measurements import (
     overlap,
     coverage,
     center_dists,
-    silhouette_score
+    silhouette_score,
+    coverage_mistake_score
 )
 from intercluster.utils import divide_with_zeros
 
@@ -190,25 +191,93 @@ class Silhouette(MeasurementFunction):
     """
     Computes the silhouette score of a clustering.
     """
-    def __init__(self):
-        super().__init__('silhouette')
+    def __init__(self, distances : NDArray, name : str = 'Silhouette'):
+        """
+        Args:
+            distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
+        """
+        super().__init__(name = name)
+        self.distances = distances
         
     def __call__(
         self,
-        X : NDArray,
-        assignment : NDArray,
-        centers : NDArray
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
     ) -> int:
         """
-        X (np.ndarray): (n x d) Dataset
-        
-        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
-            being True (1) if point i belongs to cluster j and False (0) otherwise. 
-            
-        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed silhouette score.
         """
-        if (assignment is None) or (centers is None):
+        if data_to_cluster_assignment is None:
             return np.nan
         
-        return silhouette_score(X, assignment)
+        return silhouette_score(self.distances, data_to_cluster_assignment)
+    
+
+class CoverageMistakeScore(MeasurementFunction):
+    """
+    Computes the silhouette score of a clustering.
+    """
+    def __init__(self, lambda_val : float, ground_truth_assignment : NDArray, name : str = 'Coverage-Mistake-Score'):
+        """
+        Args:
+            lambda_val (float): Weighting factor for the mistakes term in the objective function.
+
+            ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+                with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+                otherwise. This should correspond to a ground truth labeling of the data. 
+        """
+        super().__init__(name = name)
+        self.lambda_val = lambda_val
+        self.ground_truth_assignment = ground_truth_assignment
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed coverage mistake score.
+        """
+        if (
+            (data_to_rule_assignment is None) or
+            (rule_to_cluster_assignment is None) or
+            (data_to_cluster_assignment is None)
+        ):
+            return np.nan
+        
+        
+        return coverage_mistake_score(
+            lambda_val = self.lambda_val,
+            ground_truth_assignment = self.ground_truth_assignment,
+            data_to_rule_assignment = data_to_rule_assignment,
+            rule_to_cluster_assignment= rule_to_cluster_assignment
+        )
         

@@ -52,10 +52,72 @@ def plot_decision_boundaries(
     # Plot the decision boundaries
     if ax is None:
         plt.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
-                    alpha = 0.8, linewidths = 1.5)
+                    alpha = 0.5, linewidths = 2)
     else:
         ax.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
-                   alpha = 0.8, linewidths = 1.5)
+                   alpha = 0.5, linewidths = 2)
+        
+
+####################################################################################################
+
+
+def plot_rule_boxes(
+    model : Callable,
+    X : NDArray,
+    ax : Callable = None
+):
+    """
+    Plots the decision boundaries of a given model as boxes around the rules.
+    This is useful for visualizing the rules of a decision set, which are often overlapping.
+
+    Args:
+        model (Callable): Prediction object which should have a predict() method.
+        X (NDArray): Dataset fitted to the model. Must be 2D with shape (n_samples, 2).
+        ax (matplotlib axes, optional): Axes for plotting. If None, uses the current axes.
+    """
+    assert X.shape[1] == 2, "X must be a 2D array with shape (n_samples, 2)."
+
+    supported_pruners = ['DSCluster']
+    if model.__class__.__name__ not in supported_pruners:
+        raise ValueError(
+            f"Pruner {model.__class__.__name__} is not supported. "
+            "Supported models are: {supported_pruners}"
+        )
+    
+    for rule in model.decision_set:
+        x_bounds = [np.min(X[:,0]), np.max(X[:,0])]
+        y_bounds = [np.min(X[:,1]), np.max(X[:,1])]
+
+        for condition in rule:
+            if condition.features[0] == 0:
+                if condition.direction == -1:
+                    x_bounds[1] = min(x_bounds[1], condition.threshold)
+                else:
+                    x_bounds[0] = max(x_bounds[0], condition.threshold)
+            elif condition.features[0] == 1:
+                if condition.direction == -1:
+                    y_bounds[1] = min(y_bounds[1], condition.threshold)
+                else:
+                    y_bounds[0] = max(y_bounds[0], condition.threshold)
+
+        if ax is None:
+            plt.gca().add_patch(
+                plt.Rectangle(
+                    (x_bounds[0], y_bounds[0]),
+                    x_bounds[1] - x_bounds[0],
+                    y_bounds[1] - y_bounds[0],
+                    fill=False, edgecolor='k', linewidth=2, alpha=0.5, linestyle='dashed'
+                )
+            )
+        else:
+            ax.add_patch(
+                plt.Rectangle(
+                    (x_bounds[0], y_bounds[0]),
+                    x_bounds[1] - x_bounds[0],
+                    y_bounds[1] - y_bounds[0],
+                    fill=False, edgecolor='k', linewidth=2, alpha=0.5, linestyle='dashed'
+                )
+            )
         
 
 ####################################################################################################

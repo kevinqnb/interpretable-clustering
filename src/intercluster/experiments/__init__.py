@@ -4,19 +4,20 @@ from .measurements import (
     Coverage,
     DistanceRatio,
     Silhouette,
+    CoverageMistakeScore
 )
 
 from .modules import (
     Baseline,
     Module,
     KMeansBase,
-    IMMBase,
-    IMMMod,
+    DBSCANBase,
+    DecisionTreeMod,
     DecisionSetMod,
 )
 
 from .experiments import (
-    RelativeCoverageExperiment,
+    MaxRulesExperiment
 )
 
 

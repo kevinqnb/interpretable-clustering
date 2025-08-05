@@ -1,12 +1,17 @@
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from ExKMC.Tree import Tree as ExTree
 from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.pruning import *
-from intercluster.utils import labels_format, labels_to_assignment, update_centers, outlier_mask
+from intercluster.utils import (
+    labels_format,
+    labels_to_assignment,
+    update_centers,
+    unique_labels,
+)
 
 
 ####################################################################################################
@@ -76,12 +81,11 @@ class KMeansBase(Baseline):
         )
         self.fitted = False
         self.assignment = None
-        self.original_centers = None
         self.centers = None
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         
-    def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
+    def assign(self, X : NDArray) -> NDArray:
         """
         Fits the KMeans model and returns the cluster assignment.
         
@@ -91,20 +95,78 @@ class KMeansBase(Baseline):
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
                 with entry (i,j) being True if point i belongs to cluster j and False otherwise.
-            
-            centers (np.ndarray): Size k x d array of cluster centers. 
         """
         if not self.fitted:
             self.clustering.fit(X)
-            clustering_labels = labels_format(self.clustering.labels_)
-            self.assignment = labels_to_assignment(clustering_labels, n_labels = self.n_clusters)
+            self.labels = labels_format(self.clustering.labels_)
+            self.assignment = labels_to_assignment(
+                self.labels,
+                n_labels = self.n_clusters
+            )
             self.centers = self.clustering.cluster_centers_
-            self.original_centers = self.centers
             self.fitted = True
         
-        return self.assignment, self.centers
+        return self.assignment
     
     
+####################################################################################################
+
+
+class DBSCANBase(Baseline):
+    """
+    Baseline DBSCAN clustering method.
+    
+    Args:
+        eps (float): The maximum distance between two samples for one to be considered 
+            as in the neighborhood of the other.
+        
+        min_samples (int): The number of samples in a neighborhood for a point to be 
+            considered as a core point.
+        
+        name (str, optional): Name of the baseline method. Defaults to 'DBSCAN'.
+    """
+    def __init__(
+        self,
+        eps : float,
+        n_core : int,
+        name : str = 'DBSCAN'
+    ):
+        super().__init__(name)
+        self.eps = eps
+        self.n_core = n_core
+        self.clustering = DBSCAN(eps=eps, min_samples=n_core)
+        self.fitted = False
+        self.assignment = None
+        self.max_rule_length = np.nan
+        self.weighted_average_rule_length = np.nan
+
+        
+    def assign(self, X : NDArray) -> NDArray:
+        """
+        Fits the DBSCAN model and returns the cluster assignment.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+            
+        Returns:
+            assignment (np.ndarray): Cluster assignment boolean array of size n x k
+                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
+        """
+        if not self.fitted:
+            self.clustering.fit(X)
+            self.labels = labels_format(self.clustering.labels_)
+            n_unique = len(unique_labels(self.labels, ignore = {-1}))
+            self.assignment = labels_to_assignment(
+                self.labels,
+                n_labels = n_unique,
+                ignore = {-1}
+            )
+            self.fitted = True
+        
+        return self.assignment
+
+
+
 ####################################################################################################
 
 
@@ -172,6 +234,187 @@ class IMMBase(Baseline):
 ####################################################################################################
 
 
+class DecisionTreeMod(Module):
+    """
+    Experiment module for a decision tree clustering method.
+    
+    Args:
+        model (Any): Tree model. 
+
+        fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
+            prior to fitting. 
+        
+        min_rules (int): The minimum (starting) number of rules to use for the model.
+        
+        name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
+    """
+    def __init__(
+        self,
+        model : Any,
+        fitting_params : Dict[str, Any],
+        min_rules : int = 1,
+        name : str = 'Decision-Tree'
+    ):
+        self.model = model
+        self.fitting_params = fitting_params
+        if min_rules < 1:
+            raise ValueError("Minimum number of rules must be >= 1.")
+        self.min_rules = min_rules
+        super().__init__(name)
+        self.reset()
+
+
+    def reset(self):
+        """
+        Resets experiments by returning parametrs to their default values.
+        """
+        self.n_rules = self.min_rules
+        self.max_rule_length = np.nan
+        self.weighted_average_rule_length = np.nan
+
+
+    def step_n_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+        """
+        Increases the number of rules by one and fits the model.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels.
+        
+        Returns:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+        """
+        n_unique = len(unique_labels(y, ignore = {-1}))
+        # Fit the model with the current number of rules
+        dtree = self.model(max_leaf_nodes=self.n_rules, **self.fitting_params)
+        dtree.fit(X, y)
+        dtree_labels = dtree.predict(X)
+        dtree_leaf_labels = dtree.get_leaf_labels()
+        # This should ignore any rules which are assigned to the outlier class 
+        dtree_rule_assignment = labels_to_assignment(
+            dtree_leaf_labels, n_labels = n_unique, ignore = {-1}
+        )
+        dtree_data_to_rule_assignment = dtree.get_data_to_rules_assignment(X)
+        dtree_data_to_cluster_assignment = labels_to_assignment(
+            dtree_labels, n_labels = n_unique, ignore = {-1}
+        )
+        
+        self.n_rules += 1
+
+        self.max_rule_length = dtree.depth
+        self.weighted_average_rule_length = dtree.get_weighted_average_depth(X)
+
+        return (
+            dtree_data_to_rule_assignment,
+            dtree_rule_assignment,
+            dtree_data_to_cluster_assignment
+        )
+
+
+####################################################################################################
+
+
+class DecisionSetMod(Module):
+    """
+    Experiment module for a decision tree clustering method.
+    
+    Args:
+        model (Any): Tree model. 
+
+        fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
+            prior to fitting. 
+        
+        min_rules (int): The minimum (starting) number of rules to use for the model.
+        
+        name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
+    """
+    def __init__(
+        self,
+        model : Any,
+        fitting_params : Dict[str, Any],
+        min_rules : int = 1,
+        name : str = 'Decision-Set'
+    ):
+        self.model = model
+        self.fitting_params = fitting_params
+        if min_rules < 1:
+            raise ValueError("Minimum number of rules must be >= 1.")
+        self.min_rules = min_rules
+        super().__init__(name)
+        self.reset()
+
+
+    def reset(self):
+        """
+        Resets experiments by returning parametrs to their default values.
+        """
+        self.n_rules = self.min_rules
+        self.max_rule_length = np.nan
+        self.weighted_average_rule_length = np.nan
+
+
+    def step_n_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+        """
+        Increases the number of rules by one and fits the model.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+            
+            y (np.ndarray, optional): Data labels.
+        
+        Returns:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+        """
+        n_unique = len(unique_labels(y, ignore = {-1}))
+        # Fit the model with the current number of rules
+        dset = self.model(n_rules=self.n_rules, **self.fitting_params)
+        dset.fit(X, y)
+        dset_labels = dset.predict(X)
+        dset_rule_labels = dset.decision_set_labels
+        # This should ignore any rules which are assigned to the outlier class 
+        dset_rule_assignment = labels_to_assignment(
+            dset_rule_labels, n_labels = n_unique, ignore = {-1}
+        )
+        dset_data_to_rule_assignment = dset.get_data_to_rules_assignment(X)
+        dset_data_to_cluster_assignment = labels_to_assignment(
+            dset_labels, n_labels = n_unique, ignore = {-1}
+        )
+        
+        self.n_rules += 1
+
+        # NOTE: I'm not sure if max rule length has been set properly
+        self.max_rule_length = dset.max_rule_length
+        self.weighted_average_rule_length = dset.get_weighted_average_rule_length(X)
+
+        return (
+            dset_data_to_rule_assignment,
+            dset_rule_assignment,
+            dset_data_to_cluster_assignment
+        )
+
+
+####################################################################################################
+
+'''
 class IMMMod(Module):
     """
     IMM clustering module, which allows for training upon a dataset with outliers removed 
@@ -393,3 +636,4 @@ class DecisionSetMod(Module):
     
     
 ####################################################################################################
+'''

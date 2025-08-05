@@ -1,10 +1,3 @@
-from .objectives import (
-    PruningObjective,
-    CoverageObjective,
-    CoverageMistakeObjective,
-    KmeansObjective,
-)
-
 from .prune import (
     Pruner,
     CoverageMistakePruner,

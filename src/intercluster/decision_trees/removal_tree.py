@@ -11,7 +11,7 @@ from intercluster import (
     get_decision_paths,
     satisfies_path
 )
-from .splitters import ExplanationSplitter
+from .splitters import RemovalSplitter
 from .tree import Tree
 
 
@@ -31,7 +31,8 @@ class RemovalTree(Tree):
         self,
         num_clusters : int, 
         min_points_leaf : int = 1,
-        cpu_count : int = 1
+        cpu_count : int = 1,
+        max_leaf_nodes : int = None,
     ):
         """
         Args:
@@ -54,7 +55,7 @@ class RemovalTree(Tree):
                 
         """
         self.num_clusters = num_clusters
-        splitter = ExplanationSplitter(
+        splitter = RemovalSplitter(
             num_clusters = num_clusters,
             min_points_leaf = min_points_leaf,
             #cpu_count = cpu_count

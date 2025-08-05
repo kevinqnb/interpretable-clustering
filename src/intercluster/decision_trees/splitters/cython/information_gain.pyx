@@ -1,6 +1,6 @@
 import numpy as np
 from itertools import combinations, permutations
-from intercluster.measures import entropy
+from intercluster.measurements import entropy
 cimport cython
 cimport numpy as cnp
 

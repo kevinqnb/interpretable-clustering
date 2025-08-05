@@ -3,7 +3,6 @@ import numpy as np
 from typing import List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from .node import Node
-from .measurements import distance_ratio
 
 ####################################################################################################
 
@@ -124,6 +123,10 @@ def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray)
 
 ####################################################################################################
 
+'''
+
+NOTE: I think this should be re-worked into a more general function that takes a 1d array of 
+distance measurements and returns a mask of outliers based on a threshold or a fraction to remove.
 
 def outlier_mask(
         X : NDArray,
@@ -155,6 +158,7 @@ def outlier_mask(
         outliers = np.argsort(dratios)[:n_removes]
         out_mask[outliers] = True
     return out_mask
+'''
 
 
 ####################################################################################################

@@ -235,159 +235,126 @@ def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
 ####################################################################################################
 
 
-
-
-def point_silhouette(X : NDArray, assignment : NDArray, idx : int, cluster_idx : int) -> float:
+def _point_silhouette_score(
+        distances : NDArray,
+        assignment : NDArray,
+        idx : int,
+        cluster_idx : int
+) -> float:
     """
-    Computes the silhouette score of a single point.
-
+    Computes the silhouette score of a single point from a distance matrix and an assignment matrix.
+    This is a private function, and should not be used directly. Use silhouette_score instead.
+    
     Args:
-        X (np.ndarray): Input dataset. 
-
-        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
+        distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
+        
+        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
             if point i belongs to cluster j and False otherwise.
 
         idx (int): Index of point to compute the score for.
 
-        cluster_idx (int): Index for the cluster which the point at idx belongs to
+        cluster_idx (int): Index for the cluster which the point at idx belongs to,
             and should be evaluated with.
 
     Returns:
         silhouette (float): Silhouette score.
     """
-    n,d = X.shape
-    n2, k = assignment.shape
-
-    assert k > 1, "Must have at least 2 clusters."
-
-    if n != n2:
-        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n2}.")
-    
-    Xi = X[idx, :]
+    n, k = assignment.shape
     Ci = np.where(assignment[:,cluster_idx])[0]
+    assert idx in Ci, "Point at given index is not within given cluster."
 
-    assert idx in Ci, "Point at given index is not within given cluster index."
+    if len(Ci) == 1:
+        # Singleton cluster, assuming 0/0 = 0:
+        avg_intracluster_distance = 0
+    else:
+        avg_intracluster_distance = distances[idx, Ci].sum() / (len(Ci) - 1)
 
-    X_Ci = X[Ci, :]
-
-    # Singleton cluster:
-    if len(X_Ci) == 1:
-        return 0
-
-    intercluster_distance = (
-        np.sum(np.linalg.norm(Xi - X_Ci, axis = 1, ord = 2)) / (len(Ci) - 1)
-    )
-
-    intracluster_distance = np.inf
+    avg_intercluster_distance = np.inf
     for j in range(k):
         if j != cluster_idx:
+            # Every point in cluster j, excluding the point at idx, if present.
             Cj = np.where(assignment[:,j])[0]
-
             if len(Cj) > 0:
-                X_Cj = X[Cj, :]
-                intra_dist = (
-                    np.sum(np.linalg.norm(Xi - X_Cj, axis = 1, ord = 2)) / len(Cj)
-                )
-                if intra_dist < intracluster_distance:
-                    intracluster_distance = intra_dist
+                inter_dist = np.inf
+                if idx in Cj:
+                    if len(Cj) == 1:
+                        # Assuming 0/0 = 0:
+                        inter_dist = 0
+                    else:
+                        inter_dist = distances[idx, Cj].sum() / (len(Cj) - 1) 
+                else:
+                    inter_dist = distances[idx, Cj].sum() / len(Cj)
 
-    score = (
-        (intracluster_distance - intercluster_distance) / 
-        np.max([intracluster_distance, intercluster_distance])
-    )
+                if inter_dist < avg_intercluster_distance:
+                    avg_intercluster_distance = inter_dist
 
-    return score
+
+    if avg_intercluster_distance == avg_intracluster_distance:
+        # No way to distinguish the point from at least one other cluster, return a score of 0.0.
+        return 0.0
+    
+    elif avg_intracluster_distance == np.inf:
+        # Otherwise, if the intra-cluster distance is infinite, 
+        # the point must be better distinguished by some other cluster.
+        return -1.0
+    
+    elif avg_intercluster_distance == np.inf:
+        # Otherwise, if the inter-cluster distance is infinite, 
+        # the point is best distinguished by its own cluster.
+        return 1.0
+    
+    else:
+        score = (
+            (avg_intercluster_distance - avg_intracluster_distance) / 
+            np.max([avg_intercluster_distance, avg_intracluster_distance])
+        )
+        return score
+
 
 
 ####################################################################################################
 
-'''
-def silhouette_score(X : NDArray, assignment : NDArray) -> float:
-    """
-    Computes the silhouette score as the mean of scores for the entire dataset.
-
-    Args:
-        X (np.ndarray): Input dataset. 
-
-        assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-
-    Returns:
-        silhouette (float): Silhouette score.
-    """
-    n,d = X.shape
-    scores = []
-    for idx in range(n):
-        i_clusters = np.where(assignment[idx,:])[0]
-        # Only compute for covered points!
-        if len(i_clusters) > 0:
-            cluster_total = 0
-            for cluster_idx in i_clusters:
-                cluster_total += point_silhouette(X, assignment, idx, cluster_idx)
-            scores.append(cluster_total / len(i_clusters))
-
-    return np.mean(scores)
-'''
 
 def silhouette_score(
         distances : NDArray,
-        labels : NDArray,
-        ignore : List[int] = []
-    ) -> float:
+        assignment : NDArray
+) -> float:
     """
-    Given a precomputed set of pairwise distances and a set of labels, 
-    computes the silhouette score as the mean of silhouette values for each point.
+    Computes the silhouette score from a distance matrix and an point to cluster assignment matrix.
 
     Args:
         distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
-
-        labels (np.ndarray): Length n array of labels.
-
-        ignore (List[int], optional): List of labels to ignore in the silhouette score computation.
-            Defaults to an empty list.
-
+        
+        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
+            if point i belongs to cluster j and False otherwise.
+    
     Returns:
         silhouette (float): Silhouette score.
     """
-    '''
-    assignment = {
-        label : np.where(labels == label)[0] for label in unique_labels if label not in ignore
-    }
+    n,n_ = distances.shape
+    if n != n_:
+        raise ValueError("Distance matrix must be square.")
+    
+    if np.any(distances) < 0:
+        raise ValueError("Distance matrix must only contain non-negative values.")
+    
+    n_, k = assignment.shape
+    if n != n_:
+        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n_}.")
 
-    count = 0
-    silhouette = 0.0
-    for i in range(n):
-        i_label = labels[i]
-        if i_label not in ignore:
-            mean_intra = np.sum(distances[i, assignment[i_label]]) / (len(assignment[i_label]) - 1)
-            min_mean_inter = np.inf
-            for j in unique_labels:
-                if j != i_label and j not in ignore:
-                    mean_inter = np.sum(distances[i, assignment[j]]) / len(assignment[j])
-                    if mean_inter < min_mean_inter:
-                        min_mean_inter = mean_inter
-            count += 1
-            silhouette += (min_mean_inter - mean_intra) / max(min_mean_inter, mean_intra)
+    if k < 2 or (np.sum(assignment, axis = 0) > 0).sum() < 2:
+        raise ValueError("Assignment must have at least 2 non-empty clusters.")
+    
+    
+    covered = coverage(assignment, percentage = False)
+    score_sum = 0.0
+    for i in range(k):
+        cluster_points = np.where(assignment[:, i])[0]
+        for j in cluster_points:
+            score = _point_silhouette_score(distances, assignment, j, i)
+            score_sum += score / np.sum(assignment[j,:])
 
-    return silhouette / count
-    '''
-    assert len(distances.shape) == 2, "Distances must be a 2D array."
-    assert distances.shape[0] == distances.shape[1], "Distances must be a square matrix."
-    assert len(labels) == distances.shape[0], "Labels must match the number of points in distances."
-
-    non_ignore = np.where(~np.isin(labels, ignore))[0]
-    labels_ = labels[non_ignore]
-    distances_ = distances[np.ix_(non_ignore, non_ignore)]
-
-    unique_labels = np.unique(labels_)
-    if len(unique_labels) == 1 or len(non_ignore) == 0:
-        # If there is only one label, the silhouette score is undefined.
-        return np.nan
-    else:
-        # Compute the silhouette score using sklearn's implementation.
-        # This requires a precomputed distance matrix.
-        return sklearn_silhouette_score(X = distances_, labels = labels_, metric = 'precomputed')
-            
+    return score_sum / covered
 
 
 ####################################################################################################
@@ -594,3 +561,44 @@ def min_inter_cluster_distance(
 
 
 ####################################################################################################
+
+
+def coverage_mistake_score(
+        lambda_val : float,
+        ground_truth_assignment : NDArray,
+        data_to_rule_assignment : NDArray,
+        rule_to_cluster_assignment : NDArray
+):
+    """
+    Args:
+        lambda_val (float): Weighting factor for the mistakes term in the objective function.
+        ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+            otherwise. This should correspond to a ground truth labeling of the data. 
+        rule_to_cluster_assignment (np.ndarray: bool): m x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if rule i belongs to cluster j and False (0) 
+            otherwise. NOTE: each rule must belong to exactly one cluster.
+        data_to_rules_assignment (np.ndarray: bool): n x m boolean (or binary) matrix 
+            with entry (i,j)  being True (1) if point i satisfies rule j and False (0) 
+            otherwise.
+    """
+    n, k = ground_truth_assignment.shape
+    m = rule_to_cluster_assignment.shape[0]
+    assert rule_to_cluster_assignment.shape[1] == k, \
+        "The number of clusters in the rule assignment must match the data assignment."
+    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
+        "Each rule must belong to exactly one cluster."
+    assert data_to_rule_assignment.shape == (n, m), \
+        ("The data to rules assignment must have shape (n, m) where n is the number of data "
+        "points and m is the number of rules.")
+    
+    cover = coverage(data_to_rule_assignment, percentage = False)
+    
+    mistakes = 0
+    for i, rule_points in enumerate(data_to_rule_assignment.T):
+        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
+        if len(rule_clusters) > 0:
+            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
+            mistakes += np.sum(rule_points & ~cluster_points)
+
+    return cover - lambda_val * mistakes
