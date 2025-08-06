@@ -23,7 +23,7 @@ np.random.seed(seed)
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
-true_assignment = labels_to_assignment(data_labels, n_labels = 6)
+#true_assignment = labels_to_assignment(data_labels, n_labels = 6)
 n,d = data.shape
 
 # Parameters:
@@ -35,44 +35,39 @@ euclidean_distances = pairwise_distances(data)
 
 lambda_val = 10
 
-min_rules = 2
 max_rules = 20
 
 ####################################################################################################
 
-# Baseline KMeans
+# Experiment 1: KMeans reference clustering:
+
 kmeans_base = KMeansBase(n_clusters = n_clusters)
 kmeans_assignment = kmeans_base.assign(data)
-
-# Baseline DBSCAN
-dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
-dbscan_assignment = dbscan_base.assign(data)
 
 # Decision Tree
 decision_tree_params = {}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     fitting_params = decision_tree_params,
-    min_rules = min_rules,
+    min_rules = n_clusters,
     name = 'Decision-Tree'
 )
 
 # Removal Tree
-rem_tree_params = {'num_clusters' : len(unique_labels(dbscan_base.labels))}
+rem_tree_params = {'num_clusters' : n_clusters}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
     fitting_params = rem_tree_params,
-    min_rules = min_rules,
+    min_rules = n_clusters,
     name = 'Removal-Tree'
 )
-
 
 # ExKMC
 exkmc_params = {'k' : n_clusters, 'kmeans': kmeans_base.clustering}
 exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
     fitting_params = exkmc_params,
-    min_rules = min_rules,
+    min_rules = n_clusters,
     name = 'ExKMC'
 )
 
@@ -81,15 +76,9 @@ dsclust_params = {'lambd' : lambda_val, 'n_features' : 2, 'rules_per_point' : 10
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
     fitting_params = dsclust_params,
-    min_rules = min_rules,
+    min_rules = n_clusters,
     name = 'Decision-Set-Clustering'
 )
-
-
-
-####################################################################################################
-
-# Experiment 1: KMeans reference clustering:
 
 baseline = kmeans_base
 module_list = [decision_tree_mod, rem_tree_mod, exkmc_mod, dsclust_mod]
@@ -121,7 +110,7 @@ exp1 = MaxRulesExperiment(
 
 import time 
 start = time.time()
-exp1_results = exp1.run(n_steps = max_rules - min_rules)
+exp1_results = exp1.run(n_steps = max_rules - n_clusters)
 exp1.save_results('data/experiments/climate/max_rules/', '_kmeans')
 end = time.time()
 print("Experiment 1 time:", end - start)
@@ -129,6 +118,38 @@ print("Experiment 1 time:", end - start)
 ####################################################################################################
 
 # Experiment 2: DBSCAN reference clustering:
+
+# Baseline DBSCAN
+dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
+dbscan_assignment = dbscan_base.assign(data)
+n_clusters = len(unique_labels(dbscan_base.labels)) # NOTE: Really need to think more about this...
+
+# Decision Treef
+decision_tree_params = {}
+decision_tree_mod = DecisionTreeMod(
+    model = DecisionTree,
+    fitting_params = decision_tree_params,
+    min_rules = n_clusters,
+    name = 'Decision-Tree'
+)
+
+# Removal Tree
+rem_tree_params = {'num_clusters' : n_clusters}
+rem_tree_mod = DecisionTreeMod(
+    model = RemovalTree,
+    fitting_params = rem_tree_params,
+    min_rules = n_clusters,
+    name = 'Removal-Tree'
+)
+
+# Decision Set Clustering
+dsclust_params = {'lambd' : lambda_val, 'n_features' : 2, 'rules_per_point' : 10}
+dsclust_mod = DecisionSetMod(
+    model = DSCluster,
+    fitting_params = dsclust_params,
+    min_rules = n_clusters,
+    name = 'Decision-Set-Clustering'
+)
 
 baseline = dbscan_base
 module_list = [decision_tree_mod, rem_tree_mod, dsclust_mod]
@@ -160,7 +181,7 @@ exp2 = MaxRulesExperiment(
 
 import time 
 start = time.time()
-exp2_results = exp2.run(n_steps = max_rules - min_rules)
+exp2_results = exp2.run(n_steps = max_rules - n_clusters)
 exp2.save_results('data/experiments/climate/max_rules/', '_dbscan')
 end = time.time()
 print("Experiment 2 time:", end - start)
