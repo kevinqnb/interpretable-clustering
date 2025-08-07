@@ -175,3 +175,5 @@ examples/examples_older.ipynb
 examples/datasets.ipynb
 
 *.DS_Store
+
+*.c
