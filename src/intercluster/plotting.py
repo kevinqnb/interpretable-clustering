@@ -6,7 +6,7 @@ import networkx as nx
 #import pygraphviz
 #import graphviz as gv
 from IPython.display import Image
-from typing import Callable, List, Dict, Tuple
+from typing import Callable, List, Dict, Tuple, Any
 from numpy.typing import NDArray
 from .node import Node
 from .utils import can_flatten, flatten_labels, labels_to_assignment
@@ -18,6 +18,7 @@ from .utils import can_flatten, flatten_labels, labels_to_assignment
 def plot_decision_boundaries(
     model : Callable,
     X : NDArray,
+    color_dict : Dict[int, Any],
     ax : Callable = None,
     resolution : int = 100,
     label_array = False
@@ -28,6 +29,7 @@ def plot_decision_boundaries(
     Args:
         model (Callable): Prediction object which should have a predict() method.
         X (NDArray): Dataset fitted to the model. 
+        color_dict (Dict[int, Any], optional): Dictionary mapping cluster labels to colors.
         ax (matplotlib axes, optional): Axes for plotting. 
         resolution (int, optional): Number of points on the meshgrid, controls the 
             resolution of the contour lines. Defaults to 100.
@@ -48,14 +50,26 @@ def plot_decision_boundaries(
     if not label_array:
         Z = flatten_labels(Z)
     Z = Z.reshape(xx.shape)
+    unique_labs = np.unique(Z)
+
+    for l in unique_labs:
+        ix = np.where(Z == l)
+        if ax is None:
+            plt.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.2)
+        else:
+            ax.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.2)
     
+    '''
     # Plot the decision boundaries
     if ax is None:
-        plt.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
+        
+        plt.contourf(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='solid',
                     alpha = 0.5, linewidths = 2)
+        plt.contourf
     else:
-        ax.contour(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='dashed',
+        ax.contourf(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='solid',
                    alpha = 0.5, linewidths = 2)
+    '''
         
 
 ####################################################################################################
@@ -64,6 +78,7 @@ def plot_decision_boundaries(
 def plot_rule_boxes(
     model : Callable,
     X : NDArray,
+    color_dict : Dict[int, Any],
     ax : Callable = None
 ):
     """
@@ -73,18 +88,19 @@ def plot_rule_boxes(
     Args:
         model (Callable): Prediction object which should have a predict() method.
         X (NDArray): Dataset fitted to the model. Must be 2D with shape (n_samples, 2).
+        color_dict (Dict[int, Any], optional): Dictionary mapping cluster labels to colors.
         ax (matplotlib axes, optional): Axes for plotting. If None, uses the current axes.
     """
     assert X.shape[1] == 2, "X must be a 2D array with shape (n_samples, 2)."
 
-    supported_pruners = ['DSCluster']
-    if model.__class__.__name__ not in supported_pruners:
+    supported_plot = ['DSCluster', 'IdsSet']
+    if model.__class__.__name__ not in supported_plot:
         raise ValueError(
-            f"Pruner {model.__class__.__name__} is not supported. "
-            "Supported models are: {supported_pruners}"
+            f"Plotting for {model.__class__.__name__} is not supported. "
+            "Supported models are: {supported_plot}"
         )
     
-    for rule in model.decision_set:
+    for i,rule in enumerate(model.decision_set):
         x_bounds = [np.min(X[:,0]), np.max(X[:,0])]
         y_bounds = [np.min(X[:,1]), np.max(X[:,1])]
 
@@ -106,7 +122,11 @@ def plot_rule_boxes(
                     (x_bounds[0], y_bounds[0]),
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
-                    fill=False, edgecolor='k', linewidth=2, alpha=0.5, linestyle='dashed'
+                    fill=True,
+                    color=color_dict[list(model.decision_set_labels[i])[0]],
+                    alpha=0.2,
+                    linestyle='solid',
+                    linecolor='k'
                 )
             )
         else:
@@ -115,7 +135,10 @@ def plot_rule_boxes(
                     (x_bounds[0], y_bounds[0]),
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
-                    fill=False, edgecolor='k', linewidth=2, alpha=0.5, linestyle='dashed'
+                    fill=True, 
+                    color=color_dict[list(model.decision_set_labels[i])[0]],
+                    alpha=0.2,
+                    linestyle='solid'
                 )
             )
         
@@ -217,7 +240,7 @@ def plot_decision_set(
     rule_labels : List[List[int]],
     feature_labels : List[str] = None,
     data_scaler : Callable = None,
-    cmap : Callable = None,
+    color_dict : Dict[int, Any] = None,
     filename : str = None
 ):
     """
@@ -236,9 +259,9 @@ def plot_decision_set(
             thresholds, conditions back to their unscaled versions (better interpretability).
             This current supports the StandardScaler or the MinMaxScaler. Defaults to None 
             in which case values are left as is. 
-        
-        cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) gives the 
-            color for cluster i.
+
+        color_dict (Dict[int, Any]): Dictionary mapping cluster labels to colors.
+            If None, does not use any colors for plotting.
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
@@ -279,8 +302,8 @@ def plot_decision_set(
                 
         rule_string += 'Then cluster ' + str(rule_label_array[idx])
 
-        if cmap is not None:
-            rule_color = cmap(rule_label_array[idx])
+        if color_dict is not None:
+            rule_color = color_dict[rule_label_array[idx]]
             ax.scatter(
                 x = 0.25,
                 y = (len(decision_set) - i) * size_factor,

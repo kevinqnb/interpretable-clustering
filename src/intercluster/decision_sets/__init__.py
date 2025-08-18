@@ -9,3 +9,7 @@ from .db_set import (
 from .decision_set_clustering import (
     DSCluster
 )
+
+from .ids_set import (
+    IdsSet
+)

@@ -119,6 +119,7 @@ class DSCluster(DecisionSet):
                                         lower_idx[j] += 1
 
                             else:
+                                lower_idx[j] -= 1
                                 lower_idx_is_moving[j] = False
 
 
@@ -149,6 +150,7 @@ class DSCluster(DecisionSet):
                                         upper_idx[j] -= 1
                             
                             else:
+                                upper_idx[j] += 1
                                 upper_idx_is_moving[j] = False
                     
 
