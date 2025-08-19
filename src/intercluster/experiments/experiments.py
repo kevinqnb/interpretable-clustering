@@ -24,9 +24,11 @@ class Experiment:
         
         labels (np.ndarray): Labels for the input dataset.
         
-        baseline_list (List[Baseline]): List of baseline modules to use and record results for. 
+        baseline (Baseline): Baseline module to use and record results for. 
 
-        module_list (List[Module]): List of modules to use and record results for.
+        module_list (List[Tuple[Module, List[Dict[str, Any]]]]): List of (module, parameter list) pairs
+            to use and record results for. Each item in the parameter list should be a dictionary 
+            of parameters to pass to the module.
         
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
@@ -39,15 +41,15 @@ class Experiment:
         verbose (bool, optional): Allows for printing of status. Defaults to True.
     
     Attrs: 
-        result_dict (Dict[Tuple[str, str, int], List[float]): Dictionary with keys 
+        result_dict (Dict[Tuple[str, str, int], NDArray]): Dictionary with keys 
             as tuples of the form (measurement function name, module name, sample number),
-            and values which are lists of measurement results.
+            and values which are arrays of measurement results.
     """
     def __init__(
         self, 
         data : NDArray,
-        baseline_list : List[Baseline],
-        module_list : List[Module],
+        baseline : Baseline,
+        module_list : List[Tuple[Module, List[Dict[str, Any]]]],
         measurement_fns : List[Callable],
         n_samples : int,
         labels : List[List[int]] = None,
@@ -56,7 +58,7 @@ class Experiment:
     ):
         self.data = data
         self.labels = labels
-        self.baseline_list = baseline_list
+        self.baseline = baseline
         self.module_list = module_list
         self.measurement_fns = measurement_fns
         self.n_samples = n_samples
@@ -73,7 +75,7 @@ class Experiment:
         """
         pass 
     
-    def run_module(self):
+    def run_modules(self):
         """
         Runs the modules.
         """
@@ -105,10 +107,14 @@ class MaxRulesExperiment(Experiment):
 
     Args:
         data (np.ndarray): Input dataset.
+
+        n_rules_list (List[int]): List of maximum number of rules to use in the experiment.
         
         baseline (Baseline): Single baseline model to use and record results for. 
         
-        module (List[Module]): Modules to use and record results for.
+        module_list (List[Tuple[Module, List[Dict[str, Any]]]]): List of (module, parameter list) pairs
+            to use and record results for. Each item in the parameter list should be a dictionary 
+            of parameters to pass to the module.
         
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
@@ -121,13 +127,16 @@ class MaxRulesExperiment(Experiment):
         verbose (bool, optional): Allows for optional printing of status. Defaults to False.
         
     Attrs:
-        result_dict (Dict[str, List[float]): Dictionary to store costs for each module and baseline.
+        result_dict (Dict[Tuple[str, str, int], NDArray]): Dictionary with keys 
+            as tuples of the form (measurement function name, module name, sample number),
+            and values which are arrays of measurement results.
     """
     def __init__(
         self, 
         data : NDArray,
+        n_rules_list : List[int],
         baseline : Baseline,
-        module_list : List[Module],
+        module_list : List[Tuple[Module, List[Dict[str, Any]]]],
         measurement_fns : List[Callable],
         n_samples : int,
         labels : List[List[int]] = None,
@@ -135,9 +144,10 @@ class MaxRulesExperiment(Experiment):
         verbose : bool = False,
         thread_count : int = 1,
     ):
+        self.n_rules_list = n_rules_list
         super().__init__(
             data = data,
-            baseline_list = [baseline],
+            baseline = baseline,
             module_list = module_list,
             measurement_fns = measurement_fns,
             n_samples = n_samples,
@@ -150,41 +160,42 @@ class MaxRulesExperiment(Experiment):
         self.thread_count = thread_count
         
     
-    def run_baselines(self, n_steps : int):
+    def run_baseline(self):
         """
         Runs the baseline modules, simply finding their assignment matrices instead of 
         computing results.
         """
-        for base in self.baseline_list:
-            bassign = base.assign(self.data)
-            self.result_dict[("max-rule-length", base.name, 0)] = [
-                base.max_rule_length
-            ]*n_steps
-            self.result_dict[("weighted-average-rule-length", base.name, 0)] = [
-                base.weighted_average_rule_length
-            ]*n_steps
-            for fn in self.measurement_fns:
-                if fn.name == 'coverage-mistake-score':
-                    # Coverage mistake score uses original assignment.
-                    self.result_dict[(fn.name, base.name, 0)] = [
-                        coverage(assignment = bassign, percentage = False)
-                    ] * n_steps
-                else:
-                    self.result_dict[(fn.name, base.name, 0)] = [
-                        fn(data_to_cluster_assignment = bassign)
-                    ] * n_steps
+        bassign = self.baseline.assign(self.data)
+        self.result_dict[("max-rule-length", self.baseline.name, 0)] = {
+            i : self.baseline.max_rule_length for i in self.n_rules_list
+        }
+        self.result_dict[("weighted-average-rule-length", self.baseline.name, 0)] = {
+            i : self.baseline.weighted_average_rule_length for i in self.n_rules_list
+        }
+        for fn in self.measurement_fns:
+            if fn.name == 'coverage-mistake-score':
+                # Coverage mistake score uses original assignment.
+                cover = coverage(assignment = bassign, percentage = False)
+                self.result_dict[(fn.name, self.baseline.name, 0)] = {
+                    i : cover for i in self.n_rules_list
+                }
+            else:
+                fn_result = fn(data_to_cluster_assignment = bassign)
+                self.result_dict[(fn.name, self.baseline.name, 0)] = {
+                    i : fn_result for i in self.n_rules_list
+                }
 
             
     def run_modules(
             self,
-            module_list : List[Module],
-            n_steps : int
+            module_list : List[Tuple[Module, List[Dict[str, Any]]]]
         ) -> Dict[Tuple[str, str], List[float]]:
         """
         Runs the module, and the baseline alongside it. 
         
         Args:
-            module_list (List[Module]): List of experiment modules to run the experiment with. 
+            module_list (List[Tuple[Module, List[Dict[str, Any]]]]): List of experiment 
+                (module, module parameter list) pairs to run the experiment with. 
                 Once again, this should be a list containing a single module.
 
             n_steps (int): Number of steps to run the experiment for.
@@ -199,45 +210,42 @@ class MaxRulesExperiment(Experiment):
         """
         # Initialize result dictionaries
         module_result_dict = {}
-        for mod in module_list:
-            for base in self.baseline_list:
-                module_result_dict[("max-rule-length", mod.name)] = []
-                module_result_dict[("weighted-average-rule-length", mod.name)] = []
-                for fn in self.measurement_fns:
-                    module_result_dict[(fn.name, mod.name)] = []
+        for mod, param_list in module_list:
+            module_result_dict[("max-rule-length", mod.name)] = {}
+            module_result_dict[("weighted-average-rule-length", mod.name)] = {}
+            for fn in self.measurement_fns:
+                module_result_dict[(fn.name, mod.name)] = {}
 
-        for mod in module_list:
-            for base in self.baseline_list:
-                mod.reset()
-                for i in range(n_steps):
-                    (
-                        data_to_rule_assignment,
-                        rule_to_cluster_assignment,
-                        data_to_cluster_assignment
-                    ) = mod.step_n_rules(self.data, base.labels)
-                    
-                    # record rule lengths:
-                    module_result_dict[("max-rule-length", mod.name)].append(
-                        mod.max_rule_length
-                    )
-                    module_result_dict[("weighted-average-rule-length", mod.name)].append(
-                        mod.weighted_average_rule_length
-                    )
-                    
-                    # record results from measurement functions:
-                    for fn in self.measurement_fns:
-                        module_result_dict[(fn.name, mod.name)].append(
-                            fn(
-                                data_to_rule_assignment,
-                                rule_to_cluster_assignment,
-                                data_to_cluster_assignment
-                            )
+        for mod, param_list in module_list:
+            mod.reset()
+            for params in param_list:
+                print(mod.name + " with params: " + str(params))
+                print()
+                mod.update_fitting_params(params)
+                (
+                    data_to_rule_assignment,
+                    rule_to_cluster_assignment,
+                    data_to_cluster_assignment
+                ) = mod.fit(self.data, self.baseline.labels)
+                
+                # record rule lengths:
+                module_result_dict[("max-rule-length", mod.name)][mod.n_rules] = mod.max_rule_length
+                module_result_dict[("weighted-average-rule-length", mod.name)][mod.n_rules] = mod.weighted_average_rule_length
+                
+                # record results from measurement functions:
+                for fn in self.measurement_fns:
+                    module_result_dict[(fn.name, mod.name)][mod.n_rules] = (
+                        fn(
+                            data_to_rule_assignment,
+                            rule_to_cluster_assignment,
+                            data_to_cluster_assignment
                         )
+                    )
                         
         return module_result_dict
                     
         
-    def run(self, n_steps : int):
+    def run(self):
         """
         Runs the experiment.
             
@@ -247,12 +255,12 @@ class MaxRulesExperiment(Experiment):
         Returns:
             result_df (pd.DataFrame): DataFrame of the results.
         """
-        self.run_baselines(n_steps)
+        self.run_baseline()
 
         module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.run_modules)(mod_list, n_steps)
+                delayed(self.run_modules)(mod_list)
                 for mod_list in module_lists
         )
 
@@ -273,7 +281,7 @@ class MaxRulesExperiment(Experiment):
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
         fname = os.path.join(path, 'exp' + str(identifier) + '.csv')
-        result_df = pd.DataFrame(self.result_dict)
+        result_df = pd.DataFrame(self.result_dict, index=self.n_rules_list)
         result_df.to_csv(fname)
         
         

@@ -244,22 +244,16 @@ class DecisionTreeMod(Module):
         fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
             prior to fitting. 
         
-        min_rules (int): The minimum (starting) number of rules to use for the model.
-        
         name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
     """
     def __init__(
         self,
         model : Any,
-        fitting_params : Dict[str, Any],
-        min_rules : int = 1,
+        fitting_params : Dict[str, Any] = None,
         name : str = 'Decision-Tree'
     ):
         self.model = model
         self.fitting_params = fitting_params
-        if min_rules < 1:
-            raise ValueError("Minimum number of rules must be >= 1.")
-        self.min_rules = min_rules
         super().__init__(name)
         self.reset()
 
@@ -268,12 +262,22 @@ class DecisionTreeMod(Module):
         """
         Resets experiments by returning parametrs to their default values.
         """
-        self.n_rules = self.min_rules
+        self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
 
+    
+    def update_fitting_params(self, fitting_params : Dict[str, Any]):
+        """
+        Updates the fitting parameters for the model.
+        
+        Args:
+            kwargs (Dict[str, Any]): Dictionary of parameters to update.
+        """
+        self.fitting_params = fitting_params
 
-    def step_n_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+
+    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
@@ -296,7 +300,7 @@ class DecisionTreeMod(Module):
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
         # Fit the model with the current number of rules
-        dtree = self.model(max_leaf_nodes=self.n_rules, **self.fitting_params)
+        dtree = self.model(**self.fitting_params)
         dtree.fit(X, y)
         dtree_labels = dtree.predict(X)
         dtree_leaf_labels = dtree.get_leaf_labels()
@@ -308,9 +312,9 @@ class DecisionTreeMod(Module):
         dtree_data_to_cluster_assignment = labels_to_assignment(
             dtree_labels, n_labels = n_unique, ignore = {-1}
         )
-        
-        self.n_rules += 1
 
+        # A few data things to record:
+        self.n_rules = dtree.leaf_count
         self.max_rule_length = dtree.depth
         self.weighted_average_rule_length = dtree.get_weighted_average_depth(X)
 
@@ -332,24 +336,18 @@ class DecisionSetMod(Module):
         model (Any): Tree model. 
 
         fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
-            prior to fitting. 
-        
-        min_rules (int): The minimum (starting) number of rules to use for the model.
+            prior to fitting.
         
         name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
     """
     def __init__(
         self,
         model : Any,
-        fitting_params : Dict[str, Any],
-        min_rules : int = 1,
+        fitting_params : Dict[str, Any] = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
         self.fitting_params = fitting_params
-        if min_rules < 1:
-            raise ValueError("Minimum number of rules must be >= 1.")
-        self.min_rules = min_rules
         super().__init__(name)
         self.reset()
 
@@ -358,12 +356,22 @@ class DecisionSetMod(Module):
         """
         Resets experiments by returning parametrs to their default values.
         """
-        self.n_rules = self.min_rules
+        self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
 
 
-    def step_n_rules(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+    def update_fitting_params(self, fitting_params : Dict[str, Any]):
+        """
+        Updates the fitting parameters for the model.
+        
+        Args:
+            kwargs (Dict[str, Any]): Dictionary of parameters to update.
+        """
+        self.fitting_params = fitting_params
+
+
+    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
@@ -386,7 +394,7 @@ class DecisionSetMod(Module):
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
         # Fit the model with the current number of rules
-        dset = self.model(n_rules=self.n_rules, **self.fitting_params)
+        dset = self.model(**self.fitting_params)
         dset.fit(X, y)
         dset_labels = dset.predict(X)
         dset_rule_labels = dset.decision_set_labels
@@ -398,10 +406,9 @@ class DecisionSetMod(Module):
         dset_data_to_cluster_assignment = labels_to_assignment(
             dset_labels, n_labels = n_unique, ignore = {-1}
         )
-        
-        self.n_rules += 1
 
         # NOTE: I'm not sure if max rule length has been set properly
+        self.n_rules = len(dset.decision_set)
         self.max_rule_length = dset.max_rule_length
         self.weighted_average_rule_length = dset.get_weighted_average_rule_length(X)
 
@@ -410,6 +417,8 @@ class DecisionSetMod(Module):
             dset_rule_assignment,
             dset_data_to_cluster_assignment
         )
+    
+
 
 
 ####################################################################################################

@@ -36,7 +36,7 @@ class IdsSet(DecisionSet):
             search space for each lambda value when using coordinate ascent. 
             Each key should be a string 'l1' to 'l7', and each value should be a tuple (min, max).
             If None and lambdas is also None, default search spaces will be used. Defaults to None.
-        ternary_search_precision (int, optional): Precision for ternary search in coordinate 
+        ternary_search_precision (float, optional): Precision for ternary search in coordinate 
             ascent. Defaults to 1. For more information, see the absolute_precision parameter 
             used in the following pseudocode: https://en.wikipedia.org/wiki/Ternary_search
         quantiles (bool, optional): If True, uses quantiles for discretization so that each bucket 
@@ -50,7 +50,7 @@ class IdsSet(DecisionSet):
         n_mine : int,
         lambdas : list[float] = None,
         lambda_search_dict : dict[str, tuple[float, float]] = None,
-        ternary_search_precision : int = 1,
+        ternary_search_precision : float = 1.0,
         max_iterations : int = 50,
         quantiles : bool = True
     ):
@@ -81,8 +81,8 @@ class IdsSet(DecisionSet):
                 'l6': (0, 1000),
                 'l7': (0, 1000)
             }
-        if not isinstance(ternary_search_precision, int) or ternary_search_precision <= 0:
-            raise ValueError("ternary_search_precision must be a positive integer.")
+        if not isinstance(ternary_search_precision, float) or ternary_search_precision <= 0:
+            raise ValueError("ternary_search_precision must be a positive floating point.")
         if not isinstance(max_iterations, int) or max_iterations <= 0:
             raise ValueError("max_iterations must be a positive integer.")
         if not isinstance(quantiles, bool):

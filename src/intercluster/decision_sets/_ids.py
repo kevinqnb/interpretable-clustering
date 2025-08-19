@@ -167,6 +167,7 @@ def fit_ids(
                 quant_dataframe=quant_df,
                 lambda_array=list(lambda_dict.values())
             )
+
             auc = ids.score_auc(quant_df)
             return auc
 
@@ -181,7 +182,7 @@ def fit_ids(
     else:
         lambdas = lambdas
 
-    
+    print("Lambdas found:", lambdas)
     ids = IDS(algorithm="SLS")
     ids.fit(class_association_rules=cars, quant_dataframe=quant_df, lambda_array=lambdas)
     decision_set, decision_set_labels = ids_to_decision_set(ids.clf.rules)
