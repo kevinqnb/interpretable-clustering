@@ -10,6 +10,7 @@ from .utils import (
     divide_with_zeros,
     tiebreak
 )
+import warnings
 
 
 ####################################################################################################
@@ -343,7 +344,8 @@ def silhouette_score(
         raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n_}.")
 
     if k < 2 or (np.sum(assignment, axis = 0) > 0).sum() < 2:
-        raise ValueError("Assignment must have at least 2 non-empty clusters.")
+        warnings.warn("Silhoutte score is only defined for instances with two or more clusters.")
+        return np.nan
     
     
     covered = coverage(assignment, percentage = False)

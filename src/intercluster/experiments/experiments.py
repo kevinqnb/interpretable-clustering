@@ -112,9 +112,15 @@ class MaxRulesExperiment(Experiment):
         
         baseline (Baseline): Single baseline model to use and record results for. 
         
-        module_list (List[Tuple[Module, List[Dict[str, Any]]]]): List of (module, parameter list) pairs
-            to use and record results for. Each item in the parameter list should be a dictionary 
-            of parameters to pass to the module.
+        module_list (List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]]): List of 
+            (module, parameter dictionary) pairs to use and record results for. 
+            Each module should be a runnable experiment object, and each parameter dictionary 
+            should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
+            More specifically, each parameter dictionary key should be a tuple of integers 
+            representing items from n_rules_list. Each value should be a dictionary of 
+            of fitting parameters to pass to the module before running. The output of the 
+            fitting process for those parameters is then associated 
+            each of the items in the corresponding key list. 
         
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
@@ -136,7 +142,7 @@ class MaxRulesExperiment(Experiment):
         data : NDArray,
         n_rules_list : List[int],
         baseline : Baseline,
-        module_list : List[Tuple[Module, List[Dict[str, Any]]]],
+        module_list : List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]],
         measurement_fns : List[Callable],
         n_samples : int,
         labels : List[List[int]] = None,
@@ -188,15 +194,21 @@ class MaxRulesExperiment(Experiment):
             
     def run_modules(
             self,
-            module_list : List[Tuple[Module, List[Dict[str, Any]]]]
-        ) -> Dict[Tuple[str, str], List[float]]:
+            module_list : List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]]
+        ) -> Dict[Tuple[str, str], Dict[int, float]]:
         """
         Runs the module, and the baseline alongside it. 
         
         Args:
-            module_list (List[Tuple[Module, List[Dict[str, Any]]]]): List of experiment 
-                (module, module parameter list) pairs to run the experiment with. 
-                Once again, this should be a list containing a single module.
+            module_list (List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]]): List of experiment 
+                (module, module parameter dictionary) pairs to run the experiment with. 
+                The module should be a runnable experiment object, and each parameter dictionary 
+                should contain pairs {(i,j,k,...) : {fitting params}} to pass to the module.
+                More specifically, each parameter dictionary key should be a tuple of integers 
+                representing items from n_rules_list. Each value should be a dictionary of 
+                of fitting parameters to pass to the module before running. The output of the 
+                fitting process for those parameters is then associated 
+                each of the items in the corresponding key list. 
 
             n_steps (int): Number of steps to run the experiment for.
             
@@ -205,8 +217,8 @@ class MaxRulesExperiment(Experiment):
             sample_number (int): Current sample number (helpful for recording results).
 
         Returns:
-            module_result_dict (Dict[Tuple[str, str], List[float]]): Dictionary of results 
-                in the form  {(measurement name, module name): List of measurement results}
+            module_result_dict (Dict[Tuple[str, str], Dict[int, float]]): Dictionary of results 
+                in the form  {(measurement name, module name): {n_rules : measurement result}}
         """
         # Initialize result dictionaries
         module_result_dict = {}
@@ -216,31 +228,44 @@ class MaxRulesExperiment(Experiment):
             for fn in self.measurement_fns:
                 module_result_dict[(fn.name, mod.name)] = {}
 
-        for mod, param_list in module_list:
+        for mod, param_dict in module_list:
             mod.reset()
-            for params in param_list:
-                print(mod.name + " with params: " + str(params))
+            for n_rules_tuple, fitting_params in param_dict.items():
+                print(mod.name + " with params: " + str(fitting_params))
                 print()
-                mod.update_fitting_params(params)
-                (
-                    data_to_rule_assignment,
-                    rule_to_cluster_assignment,
-                    data_to_cluster_assignment
-                ) = mod.fit(self.data, self.baseline.labels)
+                mod.update_fitting_params(fitting_params)
+
+                try:
+                    (
+                        data_to_rule_assignment,
+                        rule_to_cluster_assignment,
+                        data_to_cluster_assignment
+                    ) = mod.fit(self.data, self.baseline.labels)
+                except:
+                    print("Data: ")
+                    print(self.data)
+                    print()
+                    print("Labels: ")
+                    print(self.baseline.labels)
+                    print()
+                    raise ValueError("Fitting failed.")
                 
                 # record rule lengths:
-                module_result_dict[("max-rule-length", mod.name)][mod.n_rules] = mod.max_rule_length
-                module_result_dict[("weighted-average-rule-length", mod.name)][mod.n_rules] = mod.weighted_average_rule_length
-                
-                # record results from measurement functions:
-                for fn in self.measurement_fns:
-                    module_result_dict[(fn.name, mod.name)][mod.n_rules] = (
-                        fn(
-                            data_to_rule_assignment,
-                            rule_to_cluster_assignment,
-                            data_to_cluster_assignment
-                        )
-                    )
+                for i in n_rules_tuple:
+                    # Record only if the module satisfies the given condition:
+                    if mod.n_rules <= i:
+                        module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
+                        module_result_dict[("weighted-average-rule-length", mod.name)][i] = mod.weighted_average_rule_length
+                        
+                        # record results from measurement functions:
+                        for fn in self.measurement_fns:
+                            module_result_dict[(fn.name, mod.name)][i] = (
+                                fn(
+                                    data_to_rule_assignment,
+                                    rule_to_cluster_assignment,
+                                    data_to_cluster_assignment
+                                )
+                            )
                         
         return module_result_dict
                     

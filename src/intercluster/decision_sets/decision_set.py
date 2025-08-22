@@ -115,6 +115,7 @@ class DecisionSet:
         self.decision_set, self.decision_set_labels = self._fitting(X, y)
         self.prune(X, y)
         self.trim()
+        self.max_rule_length = max([len(rule) for rule in self.decision_set]) if self.decision_set else 0
     
         
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
@@ -128,7 +129,7 @@ class DecisionSet:
             assignment (np.ndarray): n x n_rules boolean matrix with entry (i,j) being True
                 if point i is covered by rule j and False otherwise.
         """
-        assignment = np.zeros((X.shape[0], len(self.decision_set)))
+        assignment = np.zeros((X.shape[0], len(self.decision_set)), dtype = bool)
         for i, condition_list in enumerate(self.decision_set):
             data_points_satisfied = satisfies_conditions(X, condition_list)
             assignment[data_points_satisfied, i] = True

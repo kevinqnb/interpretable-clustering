@@ -149,9 +149,9 @@ def fit_ids(
     y_ = flatten_labels(y)
     df = pd.DataFrame(X)
     if quantiles:
-        bin_df = df.apply(pd.qcut, args = (bins,), axis = 0)
+        bin_df = df.apply(pd.qcut, args = (bins,), axis = 0, duplicates = 'drop')
     else:
-        bin_df = df.apply(pd.cut, args = (bins,), axis = 0)
+        bin_df = df.apply(pd.cut, args = (bins,), axis = 0, duplicates = 'drop')
     bin_df.columns = df.columns.astype(str)
     bin_df['class'] = y_
     bin_df = bin_df.astype(str)

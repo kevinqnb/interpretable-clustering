@@ -407,7 +407,6 @@ class DecisionSetMod(Module):
             dset_labels, n_labels = n_unique, ignore = {-1}
         )
 
-        # NOTE: I'm not sure if max rule length has been set properly
         self.n_rules = len(dset.decision_set)
         self.max_rule_length = dset.max_rule_length
         self.weighted_average_rule_length = dset.get_weighted_average_rule_length(X)
