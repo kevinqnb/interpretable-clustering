@@ -22,8 +22,8 @@ seed = 342
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_digits()
 data_labels = labels_format(data_labels)
-data = data[:50]
-data_labels = data_labels[:50]
+data = data
+data_labels = data_labels
 n,d = data.shape
 n_unique_labels = len(unique_labels(data_labels))
 
@@ -139,7 +139,7 @@ module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
     (exkmc_mod, exkmc_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod, dsclust_params)
 ]
 
@@ -238,7 +238,7 @@ baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod, dsclust_params)
 ]
 
