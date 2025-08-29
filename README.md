@@ -4,8 +4,8 @@
 To build a minimal installation, first ensure that poetry is installed 
 as a package manager. If you do not have poetry installed, 
 instructions and basic usage  may be found [here](https://python-poetry.org/docs/). 
-Importantly, this uses python version 3.9 in order to 
-satisfy all dependencies and we would recommend the stable 3.9.20. 
+This library uses python version 3.9 to satisfy its dependencies, 
+and specifically we recommend the stable 3.9.20 version. 
 
 Once poetry is installed, clone the repository
 and run:
@@ -15,20 +15,21 @@ poetry install
 ```
 
 This creates a virtual environment 
-with all the required dependencies and may be 
-activated witht the command `poetry shell`. 
+with all the required dependencies. 
 If you run into any issues with the `poetry.lock` file, it may be 
 because you are using an outdated version of poetry. In that case, 
 you may either consider updating, or deleting the lock file and 
 regenerating a new one with the `poetry lock` command.
 
-Additionally, you should
-install and use the original [ExKMC library](https://github.com/navefr/ExKMC/tree/master).
-Add this to your virtual environment by running
+Part of this library's functionality is to be a wrapper for 
+existing interpretable clustering methods. Aftering created a virtual environment,
+these need to be installed manually using the follwing commands:
 
 ```
-poetry run pip install ExKMC==0.0.3
+export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
+poetry run pip install ExKMC ShallowTree pyarc git+https://github.com/kevinqnb/pyIDS.git git+https://github.com/hlin117/mdlp-discretization
 ```
+
 For visualization of decision trees, this package uses pygraphviz 
 (which also requires installing graphviz), which can be tricky to install. 
 For MacOS, the following seems somewhat robust.
