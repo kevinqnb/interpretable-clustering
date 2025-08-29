@@ -21,6 +21,9 @@ from pyids.model_selection.coordinate_ascent import CoordinateAscent
 from pyids.data_structures.ids_rule import IDSRule
 from pyarc.qcba.data_structures import QuantitativeDataFrame
 
+# The same is true for the MDLP package, which is used for discretization.
+from mdlp.discretization import MDLP
+
 ####################################################################################################
 
 
@@ -147,12 +150,30 @@ def fit_ids(
             raise ValueError("Each data point must be assigned to a single label.")
         
     y_ = flatten_labels(y)
-    df = pd.DataFrame(X)
-    if quantiles:
-        bin_df = df.apply(pd.qcut, args = (bins,), axis = 0, duplicates = 'drop')
-    else:
-        bin_df = df.apply(pd.cut, args = (bins,), axis = 0, duplicates = 'drop')
-    bin_df.columns = df.columns.astype(str)
+    discretizer = MDLP()
+    data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
+    interval_data = {}
+    for i, col in enumerate(data_disc.T):
+        cut_points = discretizer.cut_points_[i]
+        cut_points = np.concatenate(([-np.inf], cut_points, [np.inf]))
+        intervals = pd.IntervalIndex.from_breaks(cut_points)
+        
+        interval_list = []
+        for val in col:
+            interval_list.append(intervals[val])
+        
+        interval_data[i] = interval_list
+
+    bin_df = pd.DataFrame(interval_data)
+    bin_df.columns = bin_df.columns.astype(str)
+
+    #df = pd.DataFrame(X)
+    #if quantiles:
+    #    bin_df = df.apply(pd.qcut, args = (bins,), axis = 0, duplicates = 'drop')
+    #else:
+    #    bin_df = df.apply(pd.cut, args = (bins,), axis = 0, duplicates = 'drop')
+    #bin_df.columns = df.columns.astype(str)
+
     bin_df['class'] = y_
     bin_df = bin_df.astype(str)
 

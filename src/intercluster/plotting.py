@@ -55,9 +55,9 @@ def plot_decision_boundaries(
     for l in unique_labs:
         ix = np.where(Z == l)
         if ax is None:
-            plt.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.2)
+            plt.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.25)
         else:
-            ax.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.2)
+            ax.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.25)
     
     '''
     # Plot the decision boundaries
@@ -124,7 +124,7 @@ def plot_rule_boxes(
                     y_bounds[1] - y_bounds[0],
                     fill=True,
                     color=color_dict[list(model.decision_set_labels[i])[0]],
-                    alpha=0.2,
+                    alpha=0.25,
                     linestyle='solid',
                     linecolor='k'
                 )
@@ -137,7 +137,7 @@ def plot_rule_boxes(
                     y_bounds[1] - y_bounds[0],
                     fill=True, 
                     color=color_dict[list(model.decision_set_labels[i])[0]],
-                    alpha=0.2,
+                    alpha=0.25,
                     linestyle='solid'
                 )
             )
