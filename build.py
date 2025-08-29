@@ -19,6 +19,7 @@ if platform.machine() == "x86_64":
 LINK_ARGS = []
 INCLUDE_DIRS = [numpy.get_include()]
 LIBRARIES = ["m"]
+DEFINE_MACROS = [("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 
 
 def build() -> None:
@@ -30,6 +31,7 @@ def build() -> None:
             extra_link_args=LINK_ARGS,
             include_dirs=INCLUDE_DIRS,
             libraries=LIBRARIES,
+            define_macros=DEFINE_MACROS,
         )
     ]
    

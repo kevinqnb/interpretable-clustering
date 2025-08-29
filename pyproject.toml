@@ -18,15 +18,9 @@ dependencies = [
     "networkx (==3.2.1)",
     "jupyter (>=1.1.1,<2.0.0)",
     "pytest (>=8.3.3,<9.0.0)",
-    "wheel (==0.45.1)",
-    "exkmc (==0.0.3)",
-    "shallowtree (>=0.0.11,<0.0.12)",
-    "mdlp-discretization @ git+https://github.com/hlin117/mdlp-discretization",
+    "wheel (==0.45.1)"
 ]
 
-
-[project.optional-dependencies]
-OPTIONAL = ["pyarc (>=1.1.4,<2.0.0)", "pyids @ git+https://github.com/kevinqnb/pyIDS.git"]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0", "setuptools", "cython", "numpy"]
 build-backend = "poetry.core.masonry.api"
