@@ -6,6 +6,7 @@ from intercluster import (
     satisfies_conditions,
     labels_to_assignment
 )
+from intercluster.mining import RuleMiner
 
 
 class DecisionSet:
@@ -13,10 +14,22 @@ class DecisionSet:
     Base class for a decision set.
     """
     def __init__(
-        self
+        self,
+        rule_miner : RuleMiner = None, 
+        rules : List[List[Condition]] = None,
+        rule_labels : List[Set[int]] = None
     ):
         
-        """            
+        """
+        Args:
+            rule_miner (RuleMiner, optional): Rule mining algorithm used to generate the rules.
+                If None, the rules must be provided directly. Defaults to None.
+            rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
+                If None, the rules will be generated using the rule_miner. Defaults to None.
+            rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
+                If None, the labels will be generated using the rule_miner. Defaults to None.
+
+
         Attributes:
             decision_set (List[Condition]): List of rules in the decision set.
             
@@ -35,6 +48,24 @@ class DecisionSet:
                 "Input pruner must be a valid instance of the Pruner object."
         self.pruner = pruner
         '''
+        if rule_miner is not None:
+            assert issubclass(type(rule_miner), RuleMiner), \
+                "Input rule_miner must be a valid instance of the RuleMiner object."
+        self.rule_miner = rule_miner
+
+        if rule_miner is None and (rules is None or rule_labels is None):
+            raise ValueError("If no rule_miner is provided, both rules and rule_labels must be provided.")
+       
+        if rules is not None:
+            for rule in rules:
+                assert isinstance(rule, list) and all(isinstance(cond, Condition) for cond in rule), \
+                    "Each rule must be a list of Condition objects."
+        self.rules = rules
+
+        if rule_labels is not None:
+            assert isinstance(rule_labels, list) and all(isinstance(lbl, set) for lbl in rule_labels), \
+                "rule_labels must be a list of sets."
+        self.rule_labels = rule_labels
 
         self.decision_set = None
         self.decision_set_labels = None
@@ -112,7 +143,10 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        self.decision_set, self.decision_set_labels = self._fitting(X, y)
+        if self.rule_miner is not None:
+            self.decision_set, self.decision_set_labels = self.rule_miner.fit(X, y)
+
+        #self.decision_set, self.decision_set_labels = self._fitting(X, y)
         self.prune(X, y)
         self.trim()
         self.max_rule_length = max([len(rule) for rule in self.decision_set]) if self.decision_set else 0
@@ -212,7 +246,10 @@ class DecisionSet:
             if len(r_covers) != 0:
                 wad += len(r_covers) * (len(rule))
             
-        return wad/total_covers
+        if total_covers == 0:
+            return np.nan
+        else:
+            return wad/total_covers
         
     
     

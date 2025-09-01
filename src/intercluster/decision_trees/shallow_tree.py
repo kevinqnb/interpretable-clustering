@@ -31,11 +31,7 @@ class ShallowTree(Tree):
         self,
         n_clusters : int,
         depth_factor : float = None,
-        kmeans_random_state : int = None,
-        max_leaf_nodes : int = None,
-        max_depth : int = None,
-        min_points_leaf : int = 1,
-        pruner : Callable = None, 
+        kmeans_random_state : int = None
     ):
         """
          Args:
@@ -47,18 +43,6 @@ class ShallowTree(Tree):
 
             kmeans_random_state (int, optional): Random state used to initialize the k-means
                 algorithm. If None, a new run of k-means will be done internally. Defaults to None.
-                
-            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
-                Defaults to None.
-                
-            max_depth (int, optional): Optional constraint for maximum depth. 
-                Defaults to None.
-                
-            min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
-                within a single leaf. Defaults to 1.
-
-            pruner (Callable, optional): Function/Object used to prune branches of the tree.
-                Defaults to None, in which case no pruning is performed.
             
         Attributes:
             root (Node): Root node of the tree.
@@ -91,20 +75,8 @@ class ShallowTree(Tree):
         splitter = DummySplitter()
 
         super().__init__(
-            splitter = splitter,
-            max_leaf_nodes=max_leaf_nodes,
-            max_depth=max_depth,
-            min_points_leaf=min_points_leaf,
-            pruner=pruner
+            splitter = splitter
         )
-
-        if self.pruner is not None:
-            supported_pruners = ['CoverageMistakePruner']
-            if self.pruner.__name__ not in supported_pruners:
-                raise ValueError(
-                    f"Pruner {pruner.__name__} is not supported. "
-                    "Supported pruners are: {supported_pruners}"
-                )
         
             
     def fit(

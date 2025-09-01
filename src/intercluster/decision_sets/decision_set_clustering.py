@@ -9,6 +9,7 @@ from intercluster import (
     labels_to_assignment,
     unique_labels
 )
+from intercluster.mining import RuleMiner
 from intercluster.pruning import CoverageMistakePruner
 from .decision_set import DecisionSet
 
@@ -24,26 +25,26 @@ class DSCluster(DecisionSet):
         self,
         lambd : float,
         n_rules : int,
-        n_features : int,
-        rules_per_point : int = 1
+        rule_miner : RuleMiner = None, 
+        rules : List[List[Condition]] = None,
+        rule_labels : List[Set[int]] = None
     ):
         """
         Args:
             lambd (float): Penalization factor for mistakes. Larger values penalize mistakes 
                 more heavily, resulting in rules which are more accurate, but may cover 
                 fewer points.
-
             n_rules (int): Number of rules to use in the decision set.
-            
-            n_features (int): Number of randomly chosen features to use for each rule.
-
-            rules_per_point (int): Number of random rules to create for each point in the dataset.
+            rule_miner (RuleMiner, optional): Rule mining algorithm used to generate the rules.
+                If None, the rules must be provided directly. Defaults to None.
+            rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
+                If None, the rules will be generated using the rule_miner. Defaults to None.
+            rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
+                If None, the labels will be generated using the rule_miner. Defaults to None.
         """
-        super().__init__()
+        super().__init__(rule_miner, rules, rule_labels)
         self.lambd = lambd
         self.n_rules = n_rules
-        self.n_features = n_features
-        self.rules_per_point = rules_per_point
         self.pruner = CoverageMistakePruner(n_rules=n_rules, lambda_val=lambd)
 
         '''
@@ -56,7 +57,7 @@ class DSCluster(DecisionSet):
                 )
         '''
     
-
+    '''
     def generate_rules(self, X : NDArray, y : List[Set[int]]) -> List[List[Condition]]:
         """
         Creates rules for the decision set by drawing boxes around dense sets of points 
@@ -191,7 +192,7 @@ class DSCluster(DecisionSet):
 
         return decision_set, decision_set_labels
 
-
+    
     def _fitting(
         self,
         X : NDArray,
@@ -218,6 +219,7 @@ class DSCluster(DecisionSet):
         
         decision_set, decision_set_labels = self.generate_rules(X, y)
         return decision_set, decision_set_labels
+    '''
     
 
     def prune(
@@ -232,6 +234,14 @@ class DSCluster(DecisionSet):
             X (np.ndarray): Input dataset.
             y (List[Set[int]]): Target labels.
         """
+        if self.decision_set is None or self.decision_set_labels is None:
+            raise ValueError('Decision set has not been fitted yet.')
+        
+        # Remove rules covering outliers
+        self.decision_set = [rule for i,rule in enumerate(self.decision_set) 
+                             if self.decision_set_labels[i] != {-1}]
+        self.decision_set_labels = [label for label in self.decision_set_labels if label != {-1}]
+        
         n_labels = len(unique_labels(y, ignore ={-1}))
         data_to_cluster_assignment = labels_to_assignment(
             y, n_labels = n_labels, ignore = {-1}

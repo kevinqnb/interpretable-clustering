@@ -6,7 +6,9 @@ from intercluster import (
     Condition,
     LinearCondition,
     can_flatten,
-    flatten_labels
+    flatten_labels,
+    entropy_bin,
+    interval_to_condition,
 )
 from .decision_set import DecisionSet
 
@@ -23,51 +25,6 @@ from pyarc.qcba.data_structures import QuantitativeDataFrame
 
 # The same is true for the MDLP package, which is used for discretization.
 from mdlp.discretization import MDLP
-
-####################################################################################################
-
-
-def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Condition]:
-    """
-    Convert an interval string to a Condition object.
-
-    Args:
-        interval (str): A string representing an interval, e.g., '(-3.151, -0.701]'.
-
-    Returns:
-        Condition: A Condition object representing the interval.
-    """
-    interval = interval.split(',')
-
-    # Lower bound:
-    lower_type = interval[0][0]
-    lower_bound = float(interval[0].strip('()[]'))
-
-    # Upper bound:
-    upper_type = interval[1][-1]
-    upper_bound = float(interval[1].strip('()[]'))
-
-    if lower_type == '(':
-        lower_condition = LinearCondition(
-            features = [feature],
-            weights = [1.0],
-            threshold = lower_bound,
-            direction = 1
-        )
-    else:
-        raise ValueError(f"Unsupported lower bound type: {lower_type}")
-    
-    if upper_type == ']':
-        upper_condition = LinearCondition(
-            features = [feature],
-            weights = [1.0],
-            threshold = upper_bound,
-            direction = -1
-        )
-    else:
-        raise ValueError(f"Unsupported upper bound type: {upper_type}")
-    
-    return lower_condition, upper_condition
 
 
 ####################################################################################################
@@ -106,13 +63,11 @@ def ids_to_decision_set(cars : List[IDSRule]) -> List[List[Condition]]:
 def fit_ids(
         X : NDArray,
         y : List[Set[int]],
-        bins : int,
         n_mine : int,
         lambdas : list[float],
         lambda_search_dict : dict[str, tuple[float, float]],
         ternary_search_precision : int,
         max_iterations : int,
-        quantiles : bool = True
 ):
     """
     Fits a decision set using the PyIDS package.
@@ -120,12 +75,6 @@ def fit_ids(
     Args:
         X (np.ndarray): Input dataset.
         y (List[Set[int]]): Target labels.
-        bins (int): We assume that the input dataset is real valued. Therefore, before 
-            applying the algorithm, each feature must be divided into categorical 'buckets'. 
-            This parameter specifies the number of buckets to use for discretization.
-            This is done using quantiles so that each bucket contains roughly the same number of 
-            data points. This parameter specifies the number of buckets to use for discretization. 
-        n_mine (int): Total number of rules to mine with the apriori algorithm.
         lambdas (list[float], optional): List of 7 lambda values for the submodular objective function.
             If None, a coordinate ascent search will be used to find good lambdas. Defaults to None.
         lambda_search_dict (dict[str, tuple[float, float]], optional): Dictionary specifying the 
@@ -137,9 +86,6 @@ def fit_ids(
             used in the following pseudocode: https://en.wikipedia.org/wiki/Ternary_search
         max_iterations (int, optional): Maximum number of iterations for coordinate ascent. 
             Defaults to 50.
-        quantiles (bool, optional): If True, uses quantiles for discretization so that each bucket 
-            contains roughly the same number of data points. If False, uses equal-width bins.
-            Defaults to True.
 
     returns:
         decision_set (List[Condition]): List of rules.
@@ -147,33 +93,11 @@ def fit_ids(
         decision_set_labels (List[int]): List of labels corresponding to each rule.
     """
     if not can_flatten(y):
-            raise ValueError("Each data point must be assigned to a single label.")
-        
+        raise ValueError("Each data point must be assigned to a single label.")
     y_ = flatten_labels(y)
-    discretizer = MDLP()
-    data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
-    interval_data = {}
-    for i, col in enumerate(data_disc.T):
-        cut_points = discretizer.cut_points_[i]
-        cut_points = np.concatenate(([-np.inf], cut_points, [np.inf]))
-        intervals = pd.IntervalIndex.from_breaks(cut_points)
-        
-        interval_list = []
-        for val in col:
-            interval_list.append(intervals[val])
-        
-        interval_data[i] = interval_list
 
-    bin_df = pd.DataFrame(interval_data)
+    bin_df = entropy_bin(X, y)
     bin_df.columns = bin_df.columns.astype(str)
-
-    #df = pd.DataFrame(X)
-    #if quantiles:
-    #    bin_df = df.apply(pd.qcut, args = (bins,), axis = 0, duplicates = 'drop')
-    #else:
-    #    bin_df = df.apply(pd.cut, args = (bins,), axis = 0, duplicates = 'drop')
-    #bin_df.columns = df.columns.astype(str)
-
     bin_df['class'] = y_
     bin_df = bin_df.astype(str)
 

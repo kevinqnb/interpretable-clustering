@@ -51,6 +51,10 @@ from .utils import (
     get_depth,
     satisfies_path,
     satisfies_conditions,
+    entropy_bin,
+    quantile_bin,
+    uniform_bin,
+    interval_to_condition,
 )
 
 

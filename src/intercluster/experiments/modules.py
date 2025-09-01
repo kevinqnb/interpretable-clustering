@@ -72,12 +72,14 @@ class KMeansBase(Baseline):
     def __init__(
         self,
         n_clusters : int,
+        random_seed : int = None,
         name : str = 'KMeans'
     ):
         super().__init__(name)
         self.n_clusters = n_clusters
         self.clustering = KMeans(
-            n_clusters=n_clusters
+            n_clusters=n_clusters,
+            random_state=random_seed
         )
         self.fitted = False
         self.assignment = None

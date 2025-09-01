@@ -1,8 +1,13 @@
 import copy
 import numpy as np
-from typing import List, Dict, Set, Tuple, Iterator
+import pandas as pd
+from typing import Any, List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from .node import Node
+from .conditions import Condition, LinearCondition
+
+from mdlp.discretization import MDLP
+
 
 ####################################################################################################
 
@@ -564,3 +569,146 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 
 
 ####################################################################################################
+
+
+def entropy_bin(
+        X : NDArray,
+        y : List[Set[int]]
+    ) -> pd.DataFrame:
+    """
+    Bins each feature of a real valued dataset to minimize the entropy of the resulting 
+    binned dataset.
+
+    This function makes use of the Minimum Description Length Principle (MDLP) 
+    python implementation: https://github.com/hlin117/mdlp-discretization?tab=readme-ov-file
+
+    Based upon the following work:
+    Fayyad, U. M., & Irani, K. B. (1993). 
+    Multi-interval discretization of continuous-valued attributes for classification learning.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        n_bins (int): Number of bins to use for each feature.
+        
+        quantiles (bool, optional): If true, uses quantile-based binning. 
+            Otherwise, uses uniform-width binning. Defaults to True.
+            
+    Returns:
+        binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
+            pandas Interval objects (start, stop].
+    """
+    if not can_flatten(y):
+        raise ValueError("Each data point must be assigned to a single label.")
+        
+    y_ = flatten_labels(y)
+    discretizer = MDLP()
+    data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
+    interval_data = {}
+    for i, col in enumerate(data_disc.T):
+        cut_points = discretizer.cut_points_[i]
+        cut_points = np.concatenate(([-np.inf], cut_points, [np.inf]))
+        intervals = pd.IntervalIndex.from_breaks(cut_points)
+        
+        interval_list = []
+        for val in col:
+            interval_list.append(intervals[val])
+        
+        interval_data[i] = interval_list
+
+    bin_df = pd.DataFrame(interval_data)
+    return bin_df
+
+
+####################################################################################################
+
+
+def quantile_bin(
+        X : NDArray,
+        n_bins : int
+    ) -> pd.DataFrame:
+    """
+    Bins each feature of a real valued dataset into quantile-based buckets.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        n_bins (int): Number of bins to use for each feature.
+        
+    Returns:
+        binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
+            pandas Interval objects (start, stop].
+    """
+    df = pd.DataFrame(X)
+    bin_df = df.apply(pd.qcut, args = (n_bins,), axis = 0, duplicates = 'drop')
+    return bin_df
+
+
+####################################################################################################
+
+
+def uniform_bin(
+        X : NDArray,
+        n_bins : int
+    ) -> pd.DataFrame:
+    """
+    Bins each feature of a real valued dataset into uniform-width buckets.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        n_bins (int): Number of bins to use for each feature.
+        
+    Returns:
+        binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
+            pandas Interval objects (start, stop].
+    """
+    df = pd.DataFrame(X)
+    bin_df = df.apply(pd.cut, args = (n_bins,), axis = 0, duplicates = 'drop')
+    return bin_df
+
+
+####################################################################################################
+
+
+def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Condition]:
+    """
+    Convert an interval string to a Condition object.
+
+    Args:
+        interval (str): A string representing an interval, e.g., '(-3.151, -0.701]'.
+
+    Returns:
+        Condition: A Condition object representing the interval.
+    """
+    interval = interval.split(',')
+
+    # Lower bound:
+    lower_type = interval[0][0]
+    lower_bound = float(interval[0].strip('()[]'))
+
+    # Upper bound:
+    upper_type = interval[1][-1]
+    upper_bound = float(interval[1].strip('()[]'))
+
+    if lower_type == '(':
+        lower_condition = LinearCondition(
+            features = [feature],
+            weights = [1.0],
+            threshold = lower_bound,
+            direction = 1
+        )
+    else:
+        raise ValueError(f"Unsupported lower bound type: {lower_type}")
+    
+    if upper_type == ']':
+        upper_condition = LinearCondition(
+            features = [feature],
+            weights = [1.0],
+            threshold = upper_bound,
+            direction = -1
+        )
+    else:
+        raise ValueError(f"Unsupported upper bound type: {upper_type}")
+    
+    return lower_condition, upper_condition

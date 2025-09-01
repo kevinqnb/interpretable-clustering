@@ -236,11 +236,15 @@ class MaxRulesExperiment(Experiment):
                 mod.update_fitting_params(fitting_params)
 
                 try:
+                    import time
+                    start = time.time()
                     (
                         data_to_rule_assignment,
                         rule_to_cluster_assignment,
                         data_to_cluster_assignment
                     ) = mod.fit(self.data, self.baseline.labels)
+                    end = time.time()
+                    print(mod.name + " fitting time: " + str(end - start))
                 except:
                     print("Data: ")
                     print(self.data)
