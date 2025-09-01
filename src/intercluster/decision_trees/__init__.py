@@ -17,6 +17,10 @@ from .removal_tree import (
     RemovalTree
 )
 
+from .shallow_tree import (
+    ShallowTree
+)
+
 from .density_tree import (
     DensityTree
 )
