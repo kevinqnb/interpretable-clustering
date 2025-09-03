@@ -190,10 +190,10 @@ module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
     (exkmc_mod, exkmc_params),
-    (shallow_tree_mod, shallow_tree_params),
-    (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
+    #(shallow_tree_mod, shallow_tree_params),
+    #(ids_mod, ids_params),
+    #(dsclust_mod1, dsclust_params1),
+    #(dsclust_mod2, dsclust_params2)
 ]
 
 coverage_mistake_measure = CoverageMistakeScore(
@@ -322,9 +322,9 @@ baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
-    (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
+    #(ids_mod, ids_params),
+    #(dsclust_mod1, dsclust_params1),
+    #(dsclust_mod2, dsclust_params2)
 ]
 
 coverage_mistake_measure = CoverageMistakeScore(

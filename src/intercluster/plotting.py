@@ -6,10 +6,11 @@ import networkx as nx
 #import pygraphviz
 #import graphviz as gv
 from IPython.display import Image
-from typing import Callable, List, Dict, Tuple, Any
+from typing import Callable, List, Dict, Tuple, Any, Set
 from numpy.typing import NDArray
 from .node import Node
 from .utils import can_flatten, flatten_labels, labels_to_assignment
+from .conditions import Condition
 
 
 ####################################################################################################
@@ -169,8 +170,9 @@ def build_networkx_graph(graph : Callable, node : Node):
 def draw_tree(
     root : Node,
     feature_labels : List[str] = None,
+    leaf_labels : List[str] = None,
     data_scaler : Callable = None,
-    cmap : Callable = None,
+    color_dict : Dict[int, Any] = None,
     display_node_info : bool = True,
     output_file : str = None,
 ):
@@ -201,18 +203,23 @@ def draw_tree(
     G = nx.DiGraph()
     build_networkx_graph(G, root)
     node_colors = [
-        cmap(node.label) if (node.type == 'leaf' and cmap is not None)
+        color_dict[node.label] if (node.type == 'leaf' and color_dict is not None)
         else 'white' for node in G.nodes
     ]
-    node_labels = {
-        node : node.condition.display(scaler = data_scaler, feature_labels = feature_labels)
-        if node.type == 'internal'
-        else "Cluster " + str(node.label)
-        for node in G.nodes
-    }
-    #node_labels = {node : "" for node in G.nodes}
+    node_labels = {}
+    for node in G.nodes:
+        if node.type == 'internal':
+            node_labels[node] = node.condition.display(
+                scaler = data_scaler, 
+                feature_labels = feature_labels
+            )
+        else:
+            if leaf_labels is not None:
+                node_labels[node] = leaf_labels[node.label]
+            else:
+                node_labels[node] = "Cluster " + str(node.label)
+
     node_sizes = [12500 if node.type == "internal" else 7500 for node in G.nodes]
-    #node_sizes = [100 if node.type == "internal" else 100 for node in G.nodes]
 
     fig,ax = plt.subplots(figsize = (12,12))
     pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
@@ -236,8 +243,8 @@ def draw_tree(
 
 
 def plot_decision_set(
-    decision_set : List[List[Node]],
-    rule_labels : List[List[int]],
+    decision_set : List[List[Condition]],
+    rule_labels : List[Set[int]],
     feature_labels : List[str] = None,
     data_scaler : Callable = None,
     color_dict : Dict[int, Any] = None,

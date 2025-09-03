@@ -236,7 +236,6 @@ class MaxRulesExperiment(Experiment):
                 mod.update_fitting_params(fitting_params)
 
                 try:
-                    import time
                     start = time.time()
                     (
                         data_to_rule_assignment,
