@@ -72,8 +72,9 @@ ids_max_iterations = 10
 '''
 
 # Decision Set Clustering
-dsclust_n_features = 3
-dsclust_rules_per_point = 50
+dsclust_n_samples = 3
+dsclust_prob_dim = 1/2
+dsclust_prob_mistake = 1/10
 
 ####################################################################################################
 
@@ -170,9 +171,9 @@ dsclust_mod1 = DecisionSetMod(
 
 # Decision Set Clustering (2) -- Pointwise Rules
 pointwise_rule_miner = PointwiseMiner(
-    lambd = lambda_val,
-    n_features = dsclust_n_features,
-    rules_per_point = dsclust_rules_per_point
+    samples = dsclust_n_samples,
+    prob_dim = dsclust_prob_dim,
+    prob_mistake = dsclust_prob_mistake,
 )
 dsclust_params2 = {
     (i,) : {
@@ -306,9 +307,9 @@ dsclust_mod1 = DecisionSetMod(
 
 # Decision Set Clustering (2) -- Pointwise Rules
 pointwise_rule_miner = PointwiseMiner(
-    lambd = lambda_val,
-    n_features = dsclust_n_features,
-    rules_per_point = dsclust_rules_per_point
+    samples = dsclust_n_samples,
+    prob_dim = dsclust_prob_dim,
+    prob_mistake = dsclust_prob_mistake,
 )
 dsclust_params2 = {
     (i,) : {
