@@ -46,6 +46,9 @@ euclidean_distances = pairwise_distances(data)
 #epsilon = min_inter_cluster_distance(density_distances, true_assignment) - 0.01
 epsilon = 1.5
 
+# Shallow Tree
+depth_factor = 0.03
+
 # IDS
 ids_n_mine = 10000
 ids_lambdas = [
@@ -116,7 +119,7 @@ exkmc_mod = DecisionTreeMod(
 shallow_tree_params = {
     tuple(kmeans_n_rules_list) : {
         'n_clusters' : kmeans_n_clusters,
-        'depth_factor' : 1.0,
+        'depth_factor' : depth_factor,
         'kmeans_random_state' : seed
     } for i in kmeans_n_rules_list
 }
@@ -126,18 +129,6 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 # IDS
-'''
-ids_params = {
-    tuple(kmeans_n_rules_list) : {
-        'bins' : ids_bins,
-        'n_mine' : ids_n_mine,
-        'lambda_search_dict' : ids_lambda_search_dict,
-        'ternary_search_precision' : ids_ternary_search_precision,
-        'max_iterations' : ids_max_iterations,
-        'quantiles' : ids_quantiles
-    }
-}
-'''
 association_rule_miner_ids = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
 ids_params = {
     tuple(kmeans_n_rules_list) : {
@@ -191,13 +182,13 @@ dsclust_mod2 = DecisionSetMod(
 
 baseline = kmeans_base
 module_list = [
-    #(decision_tree_mod, decision_tree_params),
-    #(rem_tree_mod, rem_tree_params),
-    #(exkmc_mod, exkmc_params),
-    #(shallow_tree_mod, shallow_tree_params),
+    (decision_tree_mod, decision_tree_params),
+    (rem_tree_mod, rem_tree_params),
+    (exkmc_mod, exkmc_params),
+    (shallow_tree_mod, shallow_tree_params),
     (ids_mod, ids_params),
-    #(dsclust_mod1, dsclust_params1),
-    #(dsclust_mod2, dsclust_params2)
+    (dsclust_mod1, dsclust_params1),
+    (dsclust_mod2, dsclust_params2)
 ]
 
 coverage_mistake_measure = CoverageMistakeScore(
@@ -235,7 +226,6 @@ print("Experiment 1 time:", end - start)
 
 ####################################################################################################
 
-'''
 # Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
@@ -264,17 +254,6 @@ rem_tree_mod = DecisionTreeMod(
 
 
 # IDS
-#ids_params = {
-#    tuple(kmeans_n_rules_list) : {
-#        'bins' : ids_bins,
-#        'n_mine' : ids_n_mine,
-#        'lambda_search_dict' : ids_lambda_search_dict,
-#        'ternary_search_precision' : ids_ternary_search_precision,
-#        'max_iterations' : ids_max_iterations,
-#        'quantiles' : ids_quantiles
-#    }
-#}
-
 association_rule_miner_ids = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
 ids_params = {
     tuple(dbscan_n_rules_list) : {
@@ -329,7 +308,7 @@ baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
-    #(ids_mod, ids_params),
+    (ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
     (dsclust_mod2, dsclust_params2)
 ]
@@ -368,4 +347,4 @@ end = time.time()
 print("Experiment 2 time:", end - start)
 
 ####################################################################################################
-'''
+
