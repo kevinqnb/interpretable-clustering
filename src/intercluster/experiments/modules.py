@@ -346,10 +346,12 @@ class DecisionSetMod(Module):
         self,
         model : Any,
         fitting_params : Dict[str, Any] = None,
+        rule_miner : Any = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
         self.fitting_params = fitting_params
+        self.rule_miner = rule_miner
         super().__init__(name)
         self.reset()
 
@@ -361,6 +363,8 @@ class DecisionSetMod(Module):
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
+        self.rules = None
+        self.rule_labels = None
 
 
     def update_fitting_params(self, fitting_params : Dict[str, Any]):
@@ -395,8 +399,15 @@ class DecisionSetMod(Module):
                 assigned to multiple clusters. 
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
+
+        # Mine for rules if they haven't been set yet
+        if self.rules is None or self.rule_labels is None:
+            self.rules, self.rule_labels = self.rule_miner.fit(X, y)
+
         # Fit the model with the current number of rules
-        dset = self.model(**self.fitting_params)
+        dset = self.model(
+            **self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels}
+        )
         dset.fit(X, y)
         dset_labels = dset.predict(X)
         dset_rule_labels = dset.decision_set_labels

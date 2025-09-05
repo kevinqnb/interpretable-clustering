@@ -143,8 +143,11 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        if self.rule_miner is not None:
+        if self.rules is None or self.rule_labels is None:
             self.decision_set, self.decision_set_labels = self.rule_miner.fit(X, y)
+        else:
+            self.decision_set = self.rules
+            self.decision_set_labels = self.rule_labels
 
         #self.decision_set, self.decision_set_labels = self._fitting(X, y)
         self.prune(X, y)

@@ -150,6 +150,9 @@ class IdsSet(DecisionSet):
 
         self.rule_miner.cars = [car for i,car in enumerate(self.rule_miner.cars) 
                                 if int(self.rule_miner.cars[i].consequent[1]) != -1]
+        if len(self.rule_miner.cars) == 0:
+            raise ValueError("No valid (non-outlier) class association rules found. " \
+            "Try increasing the number of mined rules.")
 
         if self.lambdas is None:
             def fmax(lambda_dict):

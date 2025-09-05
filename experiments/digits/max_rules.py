@@ -38,16 +38,16 @@ kmeans_n_clusters = n_unique_labels
 kmeans_n_rules_list = list(np.arange(kmeans_n_clusters, max_rules + 1))
 
 # DBSCAN
-n_core = 10
+n_core = 20
 # Use only if there is some ground truth labeling of the data:
 true_assignment = labels_to_assignment(data_labels, n_unique_labels)
 density_distances = density_distance(data, n_core = n_core)
 euclidean_distances = pairwise_distances(data)
 #epsilon = min_inter_cluster_distance(density_distances, true_assignment) - 0.01
-epsilon = 1.14
+epsilon = 1.5
 
 # IDS
-ids_n_mine = 100
+ids_n_mine = 10000
 ids_lambdas = [
     1/ids_n_mine,
     1/(2 * data.shape[1] * ids_n_mine),
@@ -191,7 +191,7 @@ module_list = [
     (rem_tree_mod, rem_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
     (dsclust_mod2, dsclust_params2)
 ]
@@ -322,7 +322,7 @@ baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
     (dsclust_mod2, dsclust_params2)
 ]
