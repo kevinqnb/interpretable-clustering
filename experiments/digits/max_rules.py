@@ -263,18 +263,17 @@ rem_tree_mod = DecisionTreeMod(
 
 
 # IDS
-'''
-ids_params = {
-    tuple(kmeans_n_rules_list) : {
-        'bins' : ids_bins,
-        'n_mine' : ids_n_mine,
-        'lambda_search_dict' : ids_lambda_search_dict,
-        'ternary_search_precision' : ids_ternary_search_precision,
-        'max_iterations' : ids_max_iterations,
-        'quantiles' : ids_quantiles
-    }
-}
-'''
+#ids_params = {
+#    tuple(kmeans_n_rules_list) : {
+#        'bins' : ids_bins,
+#        'n_mine' : ids_n_mine,
+#        'lambda_search_dict' : ids_lambda_search_dict,
+#        'ternary_search_precision' : ids_ternary_search_precision,
+#        'max_iterations' : ids_max_iterations,
+#        'quantiles' : ids_quantiles
+#    }
+#}
+
 association_rule_miner_ids = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
 ids_params = {
     tuple(dbscan_n_rules_list) : {
