@@ -147,6 +147,7 @@ ids_params = {
 
 ids_mod = DecisionSetMod(
     model = IdsSet,
+    rule_miner = association_rule_miner_ids,
     name = 'IDS'
 )
 
@@ -163,6 +164,7 @@ dsclust_params1 = {
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
+    rule_miner = association_rule_miner_dscluster,
     name = 'DSCluster-Association-Rules'
 )
 
@@ -182,6 +184,7 @@ dsclust_params2 = {
 }
 dsclust_mod2 = DecisionSetMod(
     model = DSCluster,
+    rule_miner = pointwise_rule_miner,
     name = 'DSCluster-Pointwise-Rules'
 )
 
@@ -280,6 +283,7 @@ ids_params = {
 }
 ids_mod = DecisionSetMod(
     model = IdsSet,
+    rule_miner = association_rule_miner_ids,
     name = 'IDS'
 )
 
@@ -296,6 +300,7 @@ dsclust_params1 = {
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
+    rule_miner = association_rule_miner_dscluster,
     name = 'DSCluster-Association-Rules'
 )
 
@@ -315,6 +320,7 @@ dsclust_params2 = {
 }
 dsclust_mod2 = DecisionSetMod(
     model = DSCluster,
+    rule_miner = pointwise_rule_miner,
     name = 'DSCluster-Pointwise-Rules'
 )
 

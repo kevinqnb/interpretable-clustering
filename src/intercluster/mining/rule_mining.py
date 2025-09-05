@@ -166,31 +166,33 @@ class PointwiseMiner(RuleMiner):
     """
     def __init__(
         self,
-        lambd : float = 1.0,
-        n_features : int = 2,
-        rules_per_point : int = 10,
+        samples : int = 10,
+        prob_dim : float = 1/2,
+        prob_stop : float = 1.0
     ):
         """
         Initialize the PointwiseMiner.
 
         Args:
-            lambd (float): Penalization factor for mistakes. Larger values penalize mistakes 
-                more heavily, resulting in rules which are more accurate, but may cover 
-                fewer points.
-            
-            n_features (int): Number of randomly chosen features to use for each rule.
-
-            rules_per_point (int): Number of random rules to create for each point in the dataset.
+            samples (int, optional): Number of samples to draw for each data point. 
+                Defaults to 10.
+            prob_dim (float, optional): Probability for a geometric distribution used to choose 
+                the number of dimensions to use in each rule. Defaults to 1/2, in which case 
+                the expected number of dimensions used is 2.
+            prob_stop (float, optional): Probability of stopping expansion in each 
+                dimension when a mistake is encountered (geometric distribution). 
+                Defaults to 1, in which case the expansion will always stop when a mistake 
+                is encountered.
         """
-        if not isinstance(lambd, float) or lambd < 0:
-            raise ValueError("lambd must be a non-negative floating point.")
-        if not isinstance(n_features, int) or n_features <= 0:
-            raise ValueError("n_features must be a positive integer.")
-        if not isinstance(rules_per_point, int) or rules_per_point <= 0:
-            raise ValueError("rules_per_point must be a positive integer.")
-        self.lambd = lambd
-        self.n_features = n_features
-        self.rules_per_point = rules_per_point
+        if not isinstance(samples, int) or samples <= 0:
+            raise ValueError("Number of samples must be a positive integer.")
+        if not isinstance(prob_dim, float) or prob_dim <= 0 or prob_dim > 1:
+            raise ValueError("prob_dim must be a floating point number in (0, 1].")
+        if not isinstance(prob_stop, float) or prob_stop <= 0 or prob_stop > 1:
+            raise ValueError("prob_stop must be a floating point number in (0, 1].")
+        self.samples = samples
+        self.prob_dim = prob_dim
+        self.prob_stop = prob_stop
         super().__init__()
     
 
@@ -218,84 +220,88 @@ class PointwiseMiner(RuleMiner):
         cars = []
         # Assuming for now that outliers are labeled as {-1} or set()
         non_outliers = [i for i, label in enumerate(y) if label != {-1} and label != set()]
-        for i in non_outliers:
-            for _ in range(self.rules_per_point):
+
+        for _ in range(self.samples):
+            for i in non_outliers:
                 # Randomly select features to create a box around the point
-                features = np.random.choice(d, self.n_features, replace=False)
-                satisfies = np.zeros((n, self.n_features), dtype=bool)
+                n_features = min(np.random.geometric(self.prob_dim), d)
+                features = np.random.choice(d, n_features, replace=False)
+                satisfies = np.zeros((n, n_features), dtype=bool)
                 satisfies[i, :] = True
 
                 # Expand the box around the point until no more points can be added
                 point_loc = np.where(X_sorted[:, features] == i)[0]
                 lower_idx = np.copy(point_loc)
-                lower_idx_is_moving = np.ones(self.n_features, dtype=bool)
                 upper_idx = np.copy(point_loc)
-                upper_idx_is_moving = np.ones(self.n_features, dtype=bool)
-                while (np.any(lower_idx_is_moving) or np.any(upper_idx_is_moving)):
-                    # Attempt to expand the box in each feature dimension
-                    for j, f in enumerate(features):
-                        feature_vec = X_sorted[:, f]
 
-                        # Attempt to take a step backwards
-                        if lower_idx_is_moving[j]:
-                            new_idx = lower_idx[j] - 1
-                            if new_idx >= 0:
-                                new_point = feature_vec[new_idx]
-                                satisfies[new_point, j] = True
-                                lower_idx[j] -= 1
-                                
-                                # Once a point has been satisfied in all dimensions, it is therefore
-                                # covered by the rule. At this point, we attempt to add it.
-                                if np.all(satisfies[new_point, :]):
-                                    if y[i] == y[new_point]:
-                                        # If the label of the new point matches the label of the 
-                                        # current point, we automatically add it.
-                                        pass
-                                    elif np.random.rand() < 2 ** (-self.lambd):
-                                        # If the label does not match, we only add it with a 
-                                        # probability of 2 ** (-lambd)
-                                        pass
-                                    else:
-                                        # If the point is not added, we stop moving backwards 
-                                        # in this dimension
-                                        lower_idx_is_moving[j] = False
-                                        satisfies[new_point, j] = False
-                                        lower_idx[j] += 1
+                # 2d array where row 0 indicates whether each dimension is moving its lower index,
+                # and row 1 indicates whether each dimension is moving its upper index.
+                is_moving = np.ones((2, n_features), dtype=bool)
 
-                            else:
-                                lower_idx[j] -= 1
-                                lower_idx_is_moving[j] = False
+                while np.any(is_moving):
+                    # Sample from moving dimensions:
+                    moving_indices = np.where(is_moving)
+                    dim_to_move = np.random.choice(len(moving_indices[0]))
+                    dim_type = moving_indices[0][dim_to_move]  # 0 for lower, 1 for upper
+                    dim_idx = moving_indices[1][dim_to_move]                    
 
+                    # Expand in the chosen dimension:
+                    if dim_type == 0:
+                        new_idx = lower_idx[dim_idx] - 1
+                        if new_idx >= 0:
+                            new_point = X_sorted[new_idx, features[dim_idx]]
+                            satisfies[new_point, dim_idx] = True
+                            lower_idx[dim_idx] -= 1
 
-                        # Attempt to take a step forwards
-                        if upper_idx_is_moving[j]:
-                            new_idx = upper_idx[j] + 1
-                            if new_idx < n:
-                                new_point = feature_vec[new_idx]
-                                satisfies[new_point, j] = True
-                                upper_idx[j] += 1
-                                
-                                # Once a point has been satisfied in all dimensions, it is therefore
-                                # covered by the rule. At this point, we attempt to add it.
-                                if np.all(satisfies[new_point, :]):
-                                    if y[i] == y[new_point]:
-                                        # If the label of the new point matches the label of the 
-                                        # current point, we automatically add it.
-                                        pass
-                                    elif np.random.rand() < 2 ** (-self.lambd):
-                                        # If the label does not match, we only add it with a 
-                                        # probability of 2 ** (-lambd)
-                                        pass
-                                    else:
-                                        # If the point is not added, we stop moving backwards 
-                                        # in this dimension
-                                        upper_idx_is_moving[j] = False
-                                        satisfies[new_point, j] = False
-                                        upper_idx[j] -= 1
-                            
-                            else:
-                                upper_idx[j] += 1
-                                upper_idx_is_moving[j] = False
+                            # Once a point has been satisfied in all dimensions, it is therefore
+                            # covered by the rule. At this point, we attempt to add it.
+                            if np.all(satisfies[new_point, :]):
+                                if y[i] == y[new_point]:
+                                    # If the label of the new point matches the label of the 
+                                    # current point, we automatically add it.
+                                    pass
+                                elif np.random.rand() < self.prob_stop:
+                                    # If the label does not match, we only add it with a 
+                                    # probability of prob_stop
+                                    pass
+                                else:
+                                    # If the point is not added, we stop moving backwards 
+                                    # in this dimension
+                                    is_moving[0, dim_idx] = False
+                                    satisfies[new_point, dim_idx] = False
+                                    lower_idx[dim_idx] += 1
+
+                        else:
+                            lower_idx[dim_idx] -= 1
+                            is_moving[0, dim_idx] = False
+                    else:
+                        new_idx = upper_idx[dim_idx] + 1
+                        if new_idx < n:
+                            new_point = X_sorted[new_idx, features[dim_idx]]
+                            satisfies[new_point, dim_idx] = True
+                            upper_idx[dim_idx] += 1
+
+                            # Once a point has been satisfied in all dimensions, it is therefore
+                            # covered by the rule. At this point, we attempt to add it.
+                            if np.all(satisfies[new_point, :]):
+                                if y[i] == y[new_point]:
+                                    # If the label of the new point matches the label of the 
+                                    # current point, we automatically add it.
+                                    pass
+                                elif np.random.rand() < self.prob_stop:
+                                    # If the label does not match, we only add it with a 
+                                    # probability of prob_stop
+                                    pass
+                                else:
+                                    # If the point is not added, we stop moving backwards 
+                                    # in this dimension
+                                    is_moving[1, dim_idx] = False
+                                    satisfies[new_point, dim_idx] = False
+                                    upper_idx[dim_idx] -= 1
+                        
+                        else:
+                            upper_idx[dim_idx] += 1
+                            is_moving[1, dim_idx] = False
                     
 
 

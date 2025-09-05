@@ -406,7 +406,7 @@ class DecisionSetMod(Module):
 
         # Fit the model with the current number of rules
         dset = self.model(
-            **self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels}
+            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
         )
         dset.fit(X, y)
         dset_labels = dset.predict(X)
