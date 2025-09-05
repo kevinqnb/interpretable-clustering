@@ -31,7 +31,7 @@ n_unique_labels = len(unique_labels(data_labels))
 # Parameters:
 lambda_val = 5.0
 max_rules = 20
-n_samples = 10
+n_samples = 1
 
 # KMeans:
 kmeans_n_clusters = n_unique_labels
@@ -190,13 +190,13 @@ dsclust_mod2 = DecisionSetMod(
 
 baseline = kmeans_base
 module_list = [
-    (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
-    (exkmc_mod, exkmc_params),
-    (shallow_tree_mod, shallow_tree_params),
-    #(ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
+    #(decision_tree_mod, decision_tree_params),
+    #(rem_tree_mod, rem_tree_params),
+    #(exkmc_mod, exkmc_params),
+    #(shallow_tree_mod, shallow_tree_params),
+    (ids_mod, ids_params),
+    #(dsclust_mod1, dsclust_params1),
+    #(dsclust_mod2, dsclust_params2)
 ]
 
 coverage_mistake_measure = CoverageMistakeScore(
@@ -221,19 +221,20 @@ exp1 = MaxRulesExperiment(
     baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
-    n_samples = 10,
+    n_samples = n_samples,
     cpu_count = experiment_cpu_count
 )
 
 import time 
 start = time.time()
 exp1_results = exp1.run()
-exp1.save_results('data/experiments/digits/max_rules/', '_kmeans')
+#exp1.save_results('data/experiments/digits/max_rules/', '_kmeans')
 end = time.time()
 print("Experiment 1 time:", end - start)
 
 ####################################################################################################
 
+'''
 # Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
@@ -367,3 +368,4 @@ end = time.time()
 print("Experiment 2 time:", end - start)
 
 ####################################################################################################
+'''

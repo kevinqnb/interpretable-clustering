@@ -168,7 +168,7 @@ class PointwiseMiner(RuleMiner):
         self,
         samples : int = 10,
         prob_dim : float = 1/2,
-        prob_stop : float = 1.0
+        prob_mistake : float = 0.0
     ):
         """
         Initialize the PointwiseMiner.
@@ -179,20 +179,20 @@ class PointwiseMiner(RuleMiner):
             prob_dim (float, optional): Probability for a geometric distribution used to choose 
                 the number of dimensions to use in each rule. Defaults to 1/2, in which case 
                 the expected number of dimensions used is 2.
-            prob_stop (float, optional): Probability of stopping expansion in each 
+            prob_mistake (float, optional): Probability of continuing expansion in each 
                 dimension when a mistake is encountered (geometric distribution). 
-                Defaults to 1, in which case the expansion will always stop when a mistake 
+                Defaults to 0, in which case the expansion will always stop when a mistake 
                 is encountered.
         """
         if not isinstance(samples, int) or samples <= 0:
             raise ValueError("Number of samples must be a positive integer.")
-        if not isinstance(prob_dim, float) or prob_dim <= 0 or prob_dim > 1:
-            raise ValueError("prob_dim must be a floating point number in (0, 1].")
-        if not isinstance(prob_stop, float) or prob_stop <= 0 or prob_stop > 1:
-            raise ValueError("prob_stop must be a floating point number in (0, 1].")
+        if not isinstance(prob_dim, float) or prob_dim < 0 or prob_dim > 1:
+            raise ValueError("prob_dim must be a floating point number in [0, 1].")
+        if not isinstance(prob_mistake, float) or prob_mistake < 0 or prob_mistake > 1:
+            raise ValueError("prob_mistake must be a floating point number in [0, 1].")
         self.samples = samples
         self.prob_dim = prob_dim
-        self.prob_stop = prob_stop
+        self.prob_mistake = prob_mistake
         super().__init__()
     
 
@@ -260,9 +260,9 @@ class PointwiseMiner(RuleMiner):
                                     # If the label of the new point matches the label of the 
                                     # current point, we automatically add it.
                                     pass
-                                elif np.random.rand() < self.prob_stop:
+                                elif np.random.rand() < self.prob_mistake:
                                     # If the label does not match, we only add it with a 
-                                    # probability of prob_stop
+                                    # probability of prob_mistake
                                     pass
                                 else:
                                     # If the point is not added, we stop moving backwards 
@@ -288,9 +288,9 @@ class PointwiseMiner(RuleMiner):
                                     # If the label of the new point matches the label of the 
                                     # current point, we automatically add it.
                                     pass
-                                elif np.random.rand() < self.prob_stop:
+                                elif np.random.rand() < self.prob_mistake:
                                     # If the label does not match, we only add it with a 
-                                    # probability of prob_stop
+                                    # probability of prob_mistake
                                     pass
                                 else:
                                     # If the point is not added, we stop moving backwards 
@@ -303,8 +303,6 @@ class PointwiseMiner(RuleMiner):
                             upper_idx[dim_idx] += 1
                             is_moving[1, dim_idx] = False
                     
-
-
                 # Add the conditions to the rule, and the rule to the decision set.
                 # Subtract 1 from the lower indices, since the lower bounds will be strict 
                 # greater-than indequalities (>)
