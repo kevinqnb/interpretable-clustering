@@ -31,7 +31,7 @@ n_unique_labels = len(unique_labels(data_labels))
 # Parameters:
 lambda_val = 5.0
 max_rules = 20
-n_samples = 1
+n_samples = 10
 
 # KMeans:
 kmeans_n_clusters = n_unique_labels
@@ -60,24 +60,11 @@ ids_lambdas = [
     1/(data.shape[0] * ids_n_mine),
     1/(data.shape[0])
 ]
-'''
-ids_lambda_search_dict = {
-    'l1': (0, 10000),
-    'l2': (0, 10000),
-    'l3': (0, 10000),
-    'l4': (0, 10000),
-    'l5': (0, 10000),
-    'l6': (0, 10000),
-    'l7': (0, 10000)
-}
-ids_ternary_search_precision = 10.0
-ids_max_iterations = 10
-'''
 
 # Decision Set Clustering
 dsclust_n_samples = 3
 dsclust_prob_dim = 1/2
-dsclust_prob_mistake = 1/10
+dsclust_prob_stop = 8/10
 
 ####################################################################################################
 
@@ -161,10 +148,10 @@ dsclust_mod1 = DecisionSetMod(
 )
 
 # Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMiner(
+pointwise_rule_miner = PointwiseMinerV2(
     samples = dsclust_n_samples,
     prob_dim = dsclust_prob_dim,
-    prob_mistake = dsclust_prob_mistake,
+    prob_stop = dsclust_prob_stop,
 )
 dsclust_params2 = {
     (i,) : {
@@ -186,7 +173,7 @@ module_list = [
     (rem_tree_mod, rem_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
     (dsclust_mod2, dsclust_params2)
 ]
@@ -285,10 +272,10 @@ dsclust_mod1 = DecisionSetMod(
 )
 
 # Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMiner(
+pointwise_rule_miner = PointwiseMinerV2(
     samples = dsclust_n_samples,
     prob_dim = dsclust_prob_dim,
-    prob_mistake = dsclust_prob_mistake,
+    prob_stop = dsclust_prob_stop,
 )
 dsclust_params2 = {
     (i,) : {
@@ -308,7 +295,7 @@ baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
     (dsclust_mod2, dsclust_params2)
 ]
