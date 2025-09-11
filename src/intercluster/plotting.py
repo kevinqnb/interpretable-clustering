@@ -248,6 +248,8 @@ def plot_decision_set(
     feature_labels : List[str] = None,
     data_scaler : Callable = None,
     color_dict : Dict[int, Any] = None,
+    vertical : bool = True,
+    size_factor : float = None,
     filename : str = None
 ):
     """
@@ -269,6 +271,12 @@ def plot_decision_set(
 
         color_dict (Dict[int, Any]): Dictionary mapping cluster labels to colors.
             If None, does not use any colors for plotting.
+
+        vertical (bool): If True, plots the rules vertically. If False, plots horizontally. 
+            Defaults to True.
+
+        size_factor (int): Factor to scale the size of the plot based on the length of the rules.
+            Defaults to None, which automatically scales based on the maximum rule length.
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
@@ -276,11 +284,19 @@ def plot_decision_set(
     rule_label_array = flatten_labels(rule_labels)
 
     max_rule_length = np.max([len(r) for r in decision_set])
-    size_factor = max(1, max_rule_length // 2)
 
-    fig,ax = plt.subplots(figsize = (4, len(decision_set) * size_factor), dpi = 300)
-    ax.set_xlim(0, 5)
-    ax.set_ylim(0.9, (len(decision_set) + 0.1) * size_factor)
+    if size_factor is None:
+        size_factor = max(1, max_rule_length // 2)
+
+    if vertical:
+        fig,ax = plt.subplots(figsize = (4, len(decision_set) * size_factor), dpi = 300)
+        ax.set_xlim(0, 5)
+        ax.set_ylim(0.0, (len(decision_set) + 0.2) * size_factor)
+    else:
+        fig,ax = plt.subplots(figsize = (len(decision_set) * size_factor, 4), dpi = 300)
+        ax.set_xlim(-2, (len(decision_set) + 0.1) * size_factor)
+        ax.set_ylim(0, 0.6)
+
     ax.axis('off')
     #ax.set_aspect('equal')
     
@@ -302,6 +318,7 @@ def plot_decision_set(
             
             if j >= len(rule) - 1:
                 rule_string += f'\n'
+            #elif j % 1 == 0: 
             elif j % 2 == 1:
                 rule_string += r" $\&$ " + f'\n'
             else:
@@ -311,26 +328,49 @@ def plot_decision_set(
 
         if color_dict is not None:
             rule_color = color_dict[rule_label_array[idx]]
-            ax.scatter(
-                x = 0.25,
-                y = (len(decision_set) - i) * size_factor,
-                color = rule_color,
-                s = 100, 
-                marker = 's',
-                edgecolors='black'
-            )
+            if vertical:
+                ax.scatter(
+                    x = 0.25,
+                    y = (len(decision_set) - i) * size_factor,
+                    color = rule_color,
+                    s = 100, 
+                    marker = 's',
+                    edgecolors='black'
+                )
+            else:
+                ax.scatter(
+                    x = i * size_factor - 0.5,
+                    y = 0.5 - 0.075,
+                    color = rule_color,
+                    s = 2000, 
+                    marker = 's',
+                    edgecolors='black'
+                )
         
-        ax.text(
-            s = rule_string,
-            x = 0.5,
-            y = ((len(decision_set) - i)) * size_factor + 0.1,
-            color = 'black',
-            alpha = 1,
-            fontweight = 'extra bold',
-            fontsize = 18,
-            va = 'top',
-            ha = 'left'
-        )
+        if vertical:
+            ax.text(
+                s = rule_string,
+                x = 0.5,
+                y = ((len(decision_set) - i)) * size_factor + 0.1,
+                color = 'black',
+                alpha = 1,
+                fontweight = 'extra bold',
+                fontsize = 12,
+                va = 'top',
+                ha = 'left'
+            )
+        else:
+            ax.text(
+                s = rule_string,
+                x = i * size_factor + 0.1,
+                y = 0.5,
+                color = 'black',
+                alpha = 1,
+                fontweight = 'extra bold',
+                fontsize = 64,
+                va = 'top',
+                ha = 'left'
+            )
         
     if filename is not None:
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
