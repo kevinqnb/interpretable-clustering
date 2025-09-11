@@ -49,22 +49,25 @@ epsilon = 1.5
 # Shallow Tree
 depth_factor = 0.03
 
-# IDS
-ids_n_mine = 10000
+# Association Rule Mining:
+association_n_mine = 10000
+
+# Pointwise Rule Mining:
+pointwise_samples_per_point = 10
+pointwise_prob_dim = 1/2
+pointwise_prob_stop = 8/10
+
+# IDS:
 ids_lambdas = [
-    1/ids_n_mine,
-    1/(2 * data.shape[1] * ids_n_mine),
-    1/(len(data) * (ids_n_mine**2)),
-    1/(len(data) * (ids_n_mine**2)),
+    1/association_n_mine,
+    1/(2 * data.shape[1] * association_n_mine),
+    1/(len(data) * (association_n_mine**2)),
+    1/(len(data) * (association_n_mine**2)),
     0,
-    1/(data.shape[0] * ids_n_mine),
+    1/(data.shape[0] * association_n_mine),
     1/(data.shape[0])
 ]
 
-# Decision Set Clustering
-dsclust_n_samples = 3
-dsclust_prob_dim = 1/2
-dsclust_prob_stop = 8/10
 
 ####################################################################################################
 
@@ -116,7 +119,7 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 # IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
+association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 ids_params = {
     tuple(kmeans_n_rules_list) : {
         'lambdas' : ids_lambdas,
@@ -132,7 +135,7 @@ ids_mod = DecisionSetMod(
 
 
 # Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
+association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 dsclust_params1 = {
     (i,) : {
         'lambd' : lambda_val,
@@ -149,9 +152,9 @@ dsclust_mod1 = DecisionSetMod(
 
 # Decision Set Clustering (2) -- Pointwise Rules
 pointwise_rule_miner = PointwiseMinerV2(
-    samples = dsclust_n_samples,
-    prob_dim = dsclust_prob_dim,
-    prob_stop = dsclust_prob_stop,
+    samples = pointwise_samples_per_point,
+    prob_dim = pointwise_prob_dim,
+    prob_stop = pointwise_prob_stop,
 )
 dsclust_params2 = {
     (i,) : {
@@ -241,7 +244,7 @@ rem_tree_mod = DecisionTreeMod(
 
 
 # IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
+association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 ids_params = {
     tuple(dbscan_n_rules_list) : {
         'lambdas' : ids_lambdas,
@@ -256,7 +259,7 @@ ids_mod = DecisionSetMod(
 
 
 # Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = ids_n_mine, bin_type = 'mdlp')
+association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 dsclust_params1 = {
     (i,) : {
         'lambd' : lambda_val,
@@ -273,9 +276,9 @@ dsclust_mod1 = DecisionSetMod(
 
 # Decision Set Clustering (2) -- Pointwise Rules
 pointwise_rule_miner = PointwiseMinerV2(
-    samples = dsclust_n_samples,
-    prob_dim = dsclust_prob_dim,
-    prob_stop = dsclust_prob_stop,
+    samples = pointwise_samples_per_point,
+    prob_dim = pointwise_prob_dim,
+    prob_stop = pointwise_prob_stop,
 )
 dsclust_params2 = {
     (i,) : {
