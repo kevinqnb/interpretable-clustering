@@ -2,12 +2,12 @@ import os
 import pandas as pd
 import copy
 from joblib import Parallel, delayed, parallel_config
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Set
 from numpy.typing import NDArray
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.utils import covered_mask, update_centers
-from intercluster.measurements import coverage
+from intercluster.measurements import coverage, coverage_mistake_score
 from .modules import *
 import time
 
@@ -313,6 +313,194 @@ class MaxRulesExperiment(Experiment):
         result_df.to_csv(fname)
         
         
+####################################################################################################
+
+
+class LambdaExperiment(Experiment):
+    """ 
+    Perfroms an experiment on an input dataset which measures performance as
+    the maximum number of allowed rules is increased. 
+    
+    Every step forward in this experiment should call 
+    a .step_n_rules() method of its modules, which increases the number of rules used by 1.
+
+    Args:
+        data (np.ndarray): Input dataset.
+
+        ground_truth_assignment (np.ndarray): Ground truth assignment for the input dataset.
+
+        lambda_array (np.ndarray): Array of lambda values to use in the experiment.
+        
+        baseline (Baseline): Single baseline model to use and record results for. 
+        
+        module_list (List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]]): List of 
+            (module, parameter dictionary) pairs to use and record results for. 
+            Each module should be a runnable experiment object, and each parameter dictionary 
+            should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
+            More specifically, each parameter dictionary key should be a tuple of integers
+            representing indices to items from lambda_array. Each value should be a dictionary of 
+            of fitting parameters to pass to the module before running. The output of the 
+            fitting process for those parameters is then associated 
+            each of the items in the corresponding key list. 
+        
+        measurement_fns (List[Callable]): List of MeasurementFunction objects
+            used to compute results.
+
+        n_samples (int): Number of sample trials to run the experiment for.
+        
+        labels (np.ndarray): Labels for the input dataset (if any). Defaults to None in which case
+            data is taken to be unlabeled.
+        
+        verbose (bool, optional): Allows for optional printing of status. Defaults to False.
+        
+    Attrs:
+        result_dict (Dict[Tuple[str, str, int], NDArray]): Dictionary with keys 
+            as tuples of the form (measurement function name, module name, sample number),
+            and values which are arrays of measurement results.
+    """
+    def __init__(
+        self, 
+        data : NDArray,
+        ground_truth_assignment : NDArray,
+        lambda_array : NDArray,
+        baseline : Baseline,
+        module_list : List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]],
+        n_samples : int,
+        cpu_count : int = 1,
+        verbose : bool = False,
+    ):
+        self.ground_truth_assignment = ground_truth_assignment
+        self.lambda_array = lambda_array
+        super().__init__(
+            data = data,
+            baseline = baseline,
+            module_list = module_list,
+            n_samples = n_samples,
+            cpu_count = cpu_count,
+            verbose = verbose
+        )
+        
+    
+    def run_baseline(self):
+        """
+        Runs the baseline modules, simply finding their assignment matrices instead of 
+        computing results.
+        """
+        bassign = self.baseline.assign(self.data)
+        self.result_dict[("max-rule-length", self.baseline.name, 0)] = {
+            i : self.baseline.max_rule_length for i in self.lambda_array
+        }
+        self.result_dict[("weighted-average-rule-length", self.baseline.name, 0)] = {
+            i : self.baseline.weighted_average_rule_length for i in self.lambda_array
+        }
+        cover = coverage(assignment = bassign, percentage = False)
+        self.result_dict[('coverage-mistake-score', self.baseline.name, 0)] = {
+            l : cover for l in self.lambda_array
+        }
+
+            
+    def run_modules(
+            self,
+            module_list : List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]]
+        ) -> Dict[Tuple[str, str], Dict[int, float]]:
+        """
+        Runs the module, and the baseline alongside it. 
+        
+        Args:
+            module_list (List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]]): List of 
+                (module, parameter dictionary) pairs to use and record results for. 
+                Each module should be a runnable experiment object, and each parameter dictionary 
+                should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
+                More specifically, each parameter dictionary key should be a tuple of integers
+                representing indices for items from lambda_array. Each value should be a dictionary of 
+                of fitting parameters to pass to the module before running. The output of the 
+                fitting process for those parameters is then associated 
+                each of the items in the corresponding key list. 
+
+        Returns:
+            module_result_dict (Dict[Tuple[str, str], Dict[int, float]]): Dictionary of results 
+                in the form  {(measurement name, module name): {lambda_val : measurement result}}
+        """
+        # Initialize result dictionaries
+        module_result_dict = {}
+        for mod, param_list in module_list:
+            module_result_dict[("max-rule-length", mod.name)] = {}
+            module_result_dict[("weighted-average-rule-length", mod.name)] = {}
+            module_result_dict[('coverage-mistake-score', mod.name)] = {}
+
+        for mod, param_dict in module_list:
+            for n_lambda_tuple, fitting_params in param_dict.items():
+                mod.update_fitting_params(fitting_params)
+                try:
+                    (
+                        data_to_rule_assignment,
+                        rule_to_cluster_assignment,
+                        data_to_cluster_assignment
+                    ) = mod.fit(self.data, self.baseline.labels)
+                except:
+                    print("Data: ")
+                    print(self.data)
+                    print()
+                    print("Labels: ")
+                    print(self.baseline.labels)
+                    print()
+                    raise ValueError("Fitting failed.")
+                
+                # record measurements:
+                for i in n_lambda_tuple:
+                    module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
+                    module_result_dict[("weighted-average-rule-length", mod.name)][i] = mod.weighted_average_rule_length
+                    module_result_dict[('coverage-mistake-score', mod.name)][i] = coverage_mistake_score(
+                        lambda_val = self.lambda_array[i],
+                        ground_truth_assignment = self.ground_truth_assignment,
+                        data_to_rule_assignment = data_to_rule_assignment,
+                        rule_to_cluster_assignment = rule_to_cluster_assignment
+                    )
+                        
+        return module_result_dict
+                    
+        
+    def run(self):
+        """
+        Runs the experiment.
+            
+        Args:
+            n_steps (int): Number of steps to run the experiment for.
+            
+        Returns:
+            result_df (pd.DataFrame): DataFrame of the results.
+        """
+        self.run_baseline()
+
+        module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+
+        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                delayed(self.run_modules)(mod_list)
+                for mod_list in module_lists
+        )
+
+        for i, module_result_dict in enumerate(module_results):
+            for key,value in module_result_dict.items():
+                self.result_dict[key + (i,)] = value
+            
+        return pd.DataFrame(self.result_dict, index=self.lambda_array)
+    
+    
+    def save_results(self, path, identifier = ''):
+        """
+        Saves the results of the experiment.
+        
+        Args:
+            path (str): File path to save the results to.
+            
+            identifier (str, optional): Unique identifier for the results. Defaults to blank.
+        """
+        fname = os.path.join(path, 'exp' + str(identifier) + '.csv')
+        result_df = pd.DataFrame(self.result_dict, index=self.lambda_array)
+        result_df.to_csv(fname)
+        
+
+
 ####################################################################################################
 
 '''

@@ -3,7 +3,7 @@ import networkx as nx
 from itertools import combinations
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.metrics import silhouette_score as sklearn_silhouette_score
-from typing import List
+from typing import List, Set
 from numpy.typing import NDArray
 from .utils import (
     covered_mask,
@@ -572,6 +572,9 @@ def coverage_mistake_score(
         rule_to_cluster_assignment : NDArray
 ):
     """
+    Sum of covered points minus lambda times the number of mistakes made by a given 
+    point to cluster assignment, with respect to a ground truth.
+
     Args:
         lambda_val (float): Weighting factor for the mistakes term in the objective function.
         ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
@@ -604,3 +607,90 @@ def coverage_mistake_score(
             mistakes += np.sum(rule_points & ~cluster_points)
 
     return cover - lambda_val * mistakes
+
+
+####################################################################################################
+
+
+def uncovered_mistake_score(
+        ground_truth_assignment : NDArray,
+        data_to_rule_assignment : NDArray,
+        rule_to_cluster_assignment : NDArray
+):
+    """
+    Sum of uncovered points and the number of mistakes made by a given 
+    point to cluster assignment, with respect to a ground truth.
+
+    Args:
+        ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+            otherwise. This should correspond to a ground truth labeling of the data. 
+        rule_to_cluster_assignment (np.ndarray: bool): m x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if rule i belongs to cluster j and False (0) 
+            otherwise. NOTE: each rule must belong to exactly one cluster.
+        data_to_rules_assignment (np.ndarray: bool): n x m boolean (or binary) matrix 
+            with entry (i,j)  being True (1) if point i satisfies rule j and False (0) 
+            otherwise.
+    """
+    n, k = ground_truth_assignment.shape
+    m = rule_to_cluster_assignment.shape[0]
+    assert rule_to_cluster_assignment.shape[1] == k, \
+        "The number of clusters in the rule assignment must match the data assignment."
+    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
+        "Each rule must belong to exactly one cluster."
+    assert data_to_rule_assignment.shape == (n, m), \
+        ("The data to rules assignment must have shape (n, m) where n is the number of data "
+        "points and m is the number of rules.")
+    
+    uncovered = n - coverage(data_to_rule_assignment, percentage = False)
+    
+    mistakes = 0
+    for i, rule_points in enumerate(data_to_rule_assignment.T):
+        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
+        if len(rule_clusters) > 0:
+            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
+            mistakes += np.sum(rule_points & ~cluster_points)
+
+    return uncovered + mistakes
+
+
+####################################################################################################
+
+
+def label_differences(
+        true_labels : list[Set[int]],
+        pred_labels : list[Set[int]],
+        percentage : bool = False,
+        ignore : Set[int] = {-1}
+) -> int:
+    """
+    Computes the number of points which are assigned differently in two labelings.
+    This is a helper function for computing the robustness of a clustering.
+
+    Args:
+        true_labels (np.ndarray): Length n array of ground truth labels.
+        
+        pred_labels (np.ndarray): Length n array of predicted labels.
+
+        percentage (bool, optional): If True, returns the fraction of points which differ
+            between the two labelings. If False, returns the total number of points which differ.
+            Defaults to False.
+
+    Returns:
+        differences (int): Number of points assigned to different clusters in the two labelings.
+    """
+    if len(true_labels) != len(pred_labels):
+        raise ValueError("Label arrays must have the same length.")
+    
+    differences = 0
+    for i in range(len(true_labels)):
+        if true_labels[i] == ignore or pred_labels[i] == ignore:
+            continue
+        else:
+            if true_labels[i] != pred_labels[i]:
+                differences += 1
+
+    if percentage:
+        return differences / len([l for l in true_labels if l not in ignore])
+    else:
+        return differences

@@ -29,13 +29,12 @@ n,d = data.shape
 n_unique_labels = len(unique_labels(data_labels))
 
 # Parameters:
-lambda_val = 5.0
-max_rules = 20
+n_rules = 15
+lambda_array = list(np.linspace(0, 10, num = 11))
 n_samples = 10
 
 # KMeans:
 kmeans_n_clusters = n_unique_labels
-kmeans_n_rules_list = list(np.arange(kmeans_n_clusters, max_rules + 1))
 
 # DBSCAN
 n_core = 20
@@ -79,14 +78,14 @@ kmeans_base = KMeansBase(n_clusters = kmeans_n_clusters, random_seed = seed)
 kmeans_assignment = kmeans_base.assign(data)
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in kmeans_n_rules_list}
+decision_tree_params = {tuple(range(len(lambda_array))) : {'max_leaf_nodes' : n_rules}}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
 # Removal Tree
-rem_tree_params = {tuple(kmeans_n_rules_list) : {'num_clusters' : kmeans_n_clusters}}
+rem_tree_params = {tuple(range(len(lambda_array))) : {'num_clusters' : kmeans_n_clusters}}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
     name = 'Removal-Tree'
@@ -94,11 +93,11 @@ rem_tree_mod = DecisionTreeMod(
 
 # ExKMC
 exkmc_params = {
-    (i,) : {
+    tuple(range(len(lambda_array))) : {
         'k' : kmeans_n_clusters,
         'kmeans': kmeans_base.clustering,
-        'max_leaf_nodes': i
-    } for i in kmeans_n_rules_list
+        'max_leaf_nodes': n_rules
+    }
 }
 exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
@@ -107,11 +106,11 @@ exkmc_mod = DecisionTreeMod(
 
 # Shallow Tree
 shallow_tree_params = {
-    tuple(kmeans_n_rules_list) : {
+    tuple(range(len(lambda_array))) : {
         'n_clusters' : kmeans_n_clusters,
         'depth_factor' : depth_factor,
         'kmeans_random_state' : seed
-    } for i in kmeans_n_rules_list
+    }
 }
 shallow_tree_mod = DecisionTreeMod(
     model = ShallowTree,
@@ -121,7 +120,7 @@ shallow_tree_mod = DecisionTreeMod(
 # IDS
 association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 ids_params = {
-    tuple(kmeans_n_rules_list) : {
+    tuple(range(len(lambda_array))) : {
         'lambdas' : ids_lambdas,
         'rule_miner' : association_rule_miner_ids,
     }
@@ -138,11 +137,11 @@ ids_mod = DecisionSetMod(
 association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 dsclust_params1 = {
     (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
+        'lambd' : lambda_array[i],
+        'n_rules' : n_rules,
         'rule_miner' : association_rule_miner_dscluster,
     }
-    for i in kmeans_n_rules_list
+    for i in range(len(lambda_array))
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
@@ -158,11 +157,11 @@ pointwise_rule_miner = PointwiseMinerV2(
 )
 dsclust_params2 = {
     (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
+        'lambd' : lambda_array[i],
+        'n_rules' : n_rules,
         'rule_miner' : pointwise_rule_miner,
     }
-    for i in kmeans_n_rules_list
+    for i in range(len(lambda_array))
 }
 dsclust_mod2 = DecisionSetMod(
     model = DSCluster,
@@ -181,28 +180,12 @@ module_list = [
     (dsclust_mod2, dsclust_params2)
 ]
 
-coverage_mistake_measure = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = kmeans_assignment,
-    name = 'Coverage-Mistake-Score'
-)
-
-silhouette_measure = Silhouette(
-    distances = euclidean_distances,
-    name = 'Silhouette-Score'
-)
-
-measurement_fns = [
-    coverage_mistake_measure,
-    silhouette_measure,
-]
-
-exp1 = MaxRulesExperiment(
+exp1 = LambdaExperiment(
     data = data,
-    n_rules_list = kmeans_n_rules_list,
+    ground_truth_assignment = kmeans_assignment,
+    lambda_array = lambda_array,
     baseline = baseline,
     module_list = module_list,
-    measurement_fns = measurement_fns,
     n_samples = n_samples,
     cpu_count = experiment_cpu_count
 )
@@ -210,7 +193,7 @@ exp1 = MaxRulesExperiment(
 import time 
 start = time.time()
 exp1_results = exp1.run()
-exp1.save_results('data/experiments/digits/max_rules/', '_kmeans')
+exp1.save_results('data/experiments/digits/lambdas/', '_kmeans')
 end = time.time()
 print("Experiment 1 time:", end - start)
 
@@ -223,20 +206,19 @@ np.random.seed(seed)
 dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
 dbscan_assignment = dbscan_base.assign(data)
 dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
-dbscan_n_rules_list = list(np.arange(dbscan_n_clusters, max_rules + 1))
 
 if dbscan_n_clusters < 2:
     raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in dbscan_n_rules_list}
+decision_tree_params = {tuple(range(len(lambda_array))) : {'max_leaf_nodes' : n_rules}}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
 # Removal Tree
-rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
+rem_tree_params = {tuple(range(len(lambda_array))) : {'num_clusters' : dbscan_n_clusters}}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
     name = 'Removal-Tree'
@@ -246,7 +228,7 @@ rem_tree_mod = DecisionTreeMod(
 # IDS
 association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 ids_params = {
-    tuple(dbscan_n_rules_list) : {
+    tuple(range(len(lambda_array))) : {
         'lambdas' : ids_lambdas,
         'rule_miner' : association_rule_miner_ids,
     }
@@ -262,11 +244,11 @@ ids_mod = DecisionSetMod(
 association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 dsclust_params1 = {
     (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
+        'lambd' : lambda_array[i],
+        'n_rules' : n_rules,
         'rule_miner' : association_rule_miner_dscluster,
     }
-    for i in dbscan_n_rules_list
+    for i in range(len(lambda_array))
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
@@ -282,11 +264,11 @@ pointwise_rule_miner = PointwiseMinerV2(
 )
 dsclust_params2 = {
     (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
+        'lambd' : lambda_array[i],
+        'n_rules' : n_rules,
         'rule_miner' : pointwise_rule_miner,
     }
-    for i in dbscan_n_rules_list
+    for i in range(len(lambda_array))
 }
 dsclust_mod2 = DecisionSetMod(
     model = DSCluster,
@@ -303,28 +285,12 @@ module_list = [
     (dsclust_mod2, dsclust_params2)
 ]
 
-coverage_mistake_measure = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = dbscan_assignment,
-    name = 'Coverage-Mistake-Score'
-)
-
-silhouette_measure = Silhouette(
-    distances = density_distances,
-    name = 'Silhouette-Score'
-)
-
-measurement_fns = [
-    coverage_mistake_measure,
-    silhouette_measure
-]
-
 exp2 = MaxRulesExperiment(
     data = data,
-    n_rules_list = dbscan_n_rules_list,
+    ground_truth_assignment = dbscan_assignment,
+    lambda_array = lambda_array,
     baseline = baseline,
     module_list = module_list,
-    measurement_fns = measurement_fns,
     n_samples = n_samples,
     cpu_count = experiment_cpu_count
 )
@@ -332,7 +298,7 @@ exp2 = MaxRulesExperiment(
 import time 
 start = time.time()
 exp2_results = exp2.run()
-exp2.save_results('data/experiments/digits/max_rules/', '_dbscan')
+exp2.save_results('data/experiments/digits/lambdas/', '_dbscan')
 end = time.time()
 print("Experiment 2 time:", end - start)
 

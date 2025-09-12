@@ -17,7 +17,8 @@ from .modules import (
 )
 
 from .experiments import (
-    MaxRulesExperiment
+    MaxRulesExperiment,
+    LambdaExperiment,
 )
 
 
