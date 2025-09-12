@@ -50,8 +50,8 @@ class Experiment:
         data : NDArray,
         baseline : Baseline,
         module_list : List[Tuple[Module, List[Dict[str, Any]]]],
-        measurement_fns : List[Callable],
-        n_samples : int,
+        measurement_fns : List[Callable] = None,
+        n_samples : int = None,
         labels : List[List[int]] = None,
         cpu_count : int = 1,
         verbose : bool = False
