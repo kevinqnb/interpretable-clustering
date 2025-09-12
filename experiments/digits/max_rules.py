@@ -89,7 +89,7 @@ decision_tree_mod = DecisionTreeMod(
 rem_tree_params = {tuple(kmeans_n_rules_list) : {'num_clusters' : kmeans_n_clusters}}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
-    name = 'Removal-Tree'
+    name = 'Exp-Tree'
 )
 
 # ExKMC
@@ -239,7 +239,7 @@ decision_tree_mod = DecisionTreeMod(
 rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
-    name = 'Removal-Tree'
+    name = 'Exp-Tree'
 )
 
 

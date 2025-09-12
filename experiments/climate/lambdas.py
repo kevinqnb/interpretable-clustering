@@ -21,29 +21,24 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_digits()
-data_labels = labels_format(data_labels)
-data = data
-data_labels = data_labels
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 n,d = data.shape
-n_unique_labels = len(unique_labels(data_labels))
 
 # Parameters:
-n_rules = 10
+n_clusters = 6
 lambda_array = list(np.linspace(0, 10, num = 11))
+n_rules = n_clusters
 n_samples = 10
 
 # KMeans:
-kmeans_n_clusters = n_unique_labels
+kmeans_n_clusters = n_clusters
 
 # DBSCAN
-n_core = 20
-# Use only if there is some ground truth labeling of the data:
-true_assignment = labels_to_assignment(data_labels, n_unique_labels)
+n_core = 5
+epsilon = 1.9
+
 density_distances = density_distance(data, n_core = n_core)
 euclidean_distances = pairwise_distances(data)
-#epsilon = min_inter_cluster_distance(density_distances, true_assignment) - 0.01
-epsilon = 1.5
 
 # Shallow Tree
 depth_factor = 0.03
@@ -193,7 +188,7 @@ exp1 = LambdaExperiment(
 import time 
 start = time.time()
 exp1_results = exp1.run()
-exp1.save_results('data/experiments/digits/lambdas/', '_kmeans')
+exp1.save_results('data/experiments/climate/lambdas/', '_kmeans')
 end = time.time()
 print("Experiment 1 time:", end - start)
 
@@ -298,7 +293,7 @@ exp2 = LambdaExperiment(
 import time 
 start = time.time()
 exp2_results = exp2.run()
-exp2.save_results('data/experiments/digits/lambdas/', '_dbscan')
+exp2.save_results('data/experiments/climate/lambdas/', '_dbscan')
 end = time.time()
 print("Experiment 2 time:", end - start)
 

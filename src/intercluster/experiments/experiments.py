@@ -175,7 +175,7 @@ class MaxRulesExperiment(Experiment):
         self.result_dict[("max-rule-length", self.baseline.name, 0)] = {
             i : self.baseline.max_rule_length for i in self.n_rules_list
         }
-        self.result_dict[("weighted-average-rule-length", self.baseline.name, 0)] = {
+        self.result_dict[("Weighted-Avg-Length", self.baseline.name, 0)] = {
             i : self.baseline.weighted_average_rule_length for i in self.n_rules_list
         }
         for fn in self.measurement_fns:
@@ -224,7 +224,7 @@ class MaxRulesExperiment(Experiment):
         module_result_dict = {}
         for mod, param_list in module_list:
             module_result_dict[("max-rule-length", mod.name)] = {}
-            module_result_dict[("weighted-average-rule-length", mod.name)] = {}
+            module_result_dict[("Weighted-Avg-Length", mod.name)] = {}
             for fn in self.measurement_fns:
                 module_result_dict[(fn.name, mod.name)] = {}
 
@@ -258,7 +258,7 @@ class MaxRulesExperiment(Experiment):
                     # Record only if the module satisfies the given condition:
                     if mod.n_rules <= i:
                         module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
-                        module_result_dict[("weighted-average-rule-length", mod.name)][i] = mod.weighted_average_rule_length
+                        module_result_dict[("Weighted-Avg-Length", mod.name)][i] = mod.weighted_average_rule_length
                         
                         # record results from measurement functions:
                         for fn in self.measurement_fns:
@@ -390,7 +390,7 @@ class LambdaExperiment(Experiment):
         self.result_dict[("max-rule-length", self.baseline.name, 0)] = {
             i : self.baseline.max_rule_length for i in self.lambda_array
         }
-        self.result_dict[("weighted-average-rule-length", self.baseline.name, 0)] = {
+        self.result_dict[("Weighted-Avg-Length", self.baseline.name, 0)] = {
             i : self.baseline.weighted_average_rule_length for i in self.lambda_array
         }
         cover = coverage(assignment = bassign, percentage = False)
@@ -425,7 +425,7 @@ class LambdaExperiment(Experiment):
         module_result_dict = {}
         for mod, param_list in module_list:
             module_result_dict[("max-rule-length", mod.name)] = {}
-            module_result_dict[("weighted-average-rule-length", mod.name)] = {}
+            module_result_dict[("Weighted-Avg-Length", mod.name)] = {}
             module_result_dict[('coverage-mistake-score', mod.name)] = {}
 
         for mod, param_dict in module_list:
@@ -449,7 +449,7 @@ class LambdaExperiment(Experiment):
                 # record measurements:
                 for i in n_lambda_tuple:
                     module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
-                    module_result_dict[("weighted-average-rule-length", mod.name)][i] = mod.weighted_average_rule_length
+                    module_result_dict[("Weighted-Avg-Length", mod.name)][i] = mod.weighted_average_rule_length
                     module_result_dict[('coverage-mistake-score', mod.name)][i] = coverage_mistake_score(
                         lambda_val = self.lambda_array[i],
                         ground_truth_assignment = self.ground_truth_assignment,
@@ -570,7 +570,7 @@ class RelativeCoverageExperiment(Experiment):
             bassign, bcenters = b.assign(self.data)
             for fn in self.measurement_fns:
                 self.result_dict[("max-rule-length", b.name, b.name, 0)] = [b.max_rule_length]*n_steps
-                self.result_dict[("weighted-average-rule-length", b.name, b.name, 0)] = [
+                self.result_dict[("Weighted-Avg-Length", b.name, b.name, 0)] = [
                     b.weighted_average_rule_length
                 ]*n_steps
                 
@@ -612,13 +612,13 @@ class RelativeCoverageExperiment(Experiment):
         module_result_dict = {}
         for mod in self.module_list:
             module_result_dict[("max-rule-length", mod.name, mod.name)] = []
-            module_result_dict[("weighted-average-rule-length", mod.name, mod.name)] = []
+            module_result_dict[("Weighted-Avg-Length", mod.name, mod.name)] = []
             for fn in self.measurement_fns:
                 module_result_dict[(fn.name, mod.name, mod.name)] = []
 
             for base in self.baseline_list:
                 module_result_dict[("max-rule-length", mod.name, base.name)] = []
-                module_result_dict[("weighted-average-rule-length", mod.name, base.name)] = []
+                module_result_dict[("Weighted-Avg-Length", mod.name, base.name)] = []
                 for fn in self.measurement_fns:
                     module_result_dict[(fn.name, mod.name, base.name)] = []
 
@@ -641,7 +641,7 @@ class RelativeCoverageExperiment(Experiment):
                 module_result_dict[("max-rule-length", mod.name, mod.name)].append(
                     mod.max_rule_length
                 )
-                module_result_dict[("weighted-average-rule-length", mod.name, mod.name)].append(
+                module_result_dict[("Weighted-Avg-Length", mod.name, mod.name)].append(
                     mod.weighted_average_rule_length
                 )
                 
@@ -677,7 +677,7 @@ class RelativeCoverageExperiment(Experiment):
                     module_result_dict[("max-rule-length", mod.name, base.name)].append(
                         base.max_rule_length
                     )
-                    module_result_dict[("weighted-average-rule-length", mod.name, base.name)].append(
+                    module_result_dict[("Weighted-Avg-Length", mod.name, base.name)].append(
                         base.weighted_average_rule_length
                     )
                     
