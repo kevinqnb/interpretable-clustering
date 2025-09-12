@@ -285,7 +285,7 @@ module_list = [
     (dsclust_mod2, dsclust_params2)
 ]
 
-exp2 = MaxRulesExperiment(
+exp2 = LambdaExperiment(
     data = data,
     ground_truth_assignment = dbscan_assignment,
     lambda_array = lambda_array,
