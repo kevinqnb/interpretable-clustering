@@ -661,7 +661,7 @@ def label_differences(
         true_labels : list[Set[int]],
         pred_labels : list[Set[int]],
         percentage : bool = False,
-        ignore : Set[int] = {-1}
+        ignore : Set[int] = None
 ) -> int:
     """
     Computes the number of points which are assigned differently in two labelings.
@@ -684,13 +684,16 @@ def label_differences(
     
     differences = 0
     for i in range(len(true_labels)):
-        if true_labels[i] == ignore or pred_labels[i] == ignore:
+        if ignore is not None and (true_labels[i] == ignore or pred_labels[i] == ignore):
             continue
         else:
             if true_labels[i] != pred_labels[i]:
                 differences += 1
 
     if percentage:
-        return differences / len([l for l in true_labels if l not in ignore])
+        if ignore is None:
+            return differences / len(true_labels)
+        else:
+            return differences / len([l for l in true_labels if l not in ignore])
     else:
         return differences
