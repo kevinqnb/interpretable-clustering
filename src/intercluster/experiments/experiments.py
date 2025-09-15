@@ -446,7 +446,7 @@ class LambdaExperiment(Experiment):
                 # record measurements:
                 for i in n_lambda_tuple:
                     module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
-                    module_result_dict[("Weighted-Avg-Length", mod.name)][i] = mod.weighted_average_rule_length
+                    module_result_dict[("weighted-avg-length", mod.name)][i] = mod.weighted_average_rule_length
                     module_result_dict[('coverage-mistake-score', mod.name)][i] = coverage_mistake_score(
                         lambda_val = self.lambda_array[i],
                         ground_truth_assignment = self.ground_truth_assignment,

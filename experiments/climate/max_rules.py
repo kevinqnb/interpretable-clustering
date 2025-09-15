@@ -179,12 +179,12 @@ module_list = [
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
     ground_truth_assignment = kmeans_assignment,
-    name = 'Coverage-Mistake-Score'
+    name = 'coverage-mistake-score'
 )
 
 silhouette_measure = Silhouette(
     distances = euclidean_distances,
-    name = 'Silhouette-Score'
+    name = 'silhouette-score'
 )
 
 measurement_fns = [
@@ -301,12 +301,12 @@ module_list = [
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
     ground_truth_assignment = dbscan_assignment,
-    name = 'Coverage-Mistake-Score'
+    name = 'coverage-mistake-score'
 )
 
 silhouette_measure = Silhouette(
     distances = density_distances,
-    name = 'Silhouette-Score'
+    name = 'silhouette-score'
 )
 
 measurement_fns = [

@@ -18,7 +18,7 @@ ctypedef cnp.int64_t DTYPE_int_t
 ####################################################################################################
 
 
-cpdef float cost_cy(
+cpdef double cost_cy(
     cnp.ndarray[DTYPE_int_t, ndim = 1] indices,
     cnp.ndarray[DTYPE_int_t, ndim = 1] labels,
 ):
@@ -29,11 +29,11 @@ cpdef float cost_cy(
         indices (NDArray, optional): Indices of points to compute score with.
             
     Returns:
-        (float): Score of the given data.
+        (double): Score of the given data.
     """
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] sublabels
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] unique_labels, counts
-    cdef float entropy_score
+    cdef double entropy_score
     if len(indices) == 0:
         return 0
     else:
@@ -44,12 +44,12 @@ cpdef float cost_cy(
 #####################################################################################################
 
 
-cpdef float gain_cy(
+cpdef double gain_cy(
     int n,
     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
     cnp.ndarray[DTYPE_int_t, ndim = 1] left_indices,
     cnp.ndarray[DTYPE_int_t, ndim = 1] right_indices,
-    float parent_cost
+    double parent_cost
 ):
     """
     Computes the gain associated with a split.
@@ -59,14 +59,14 @@ cpdef float gain_cy(
         
         right_indices (np.ndarray): Indices for the right child of the split.
         
-        parent_cost (float, optional): The cost of the parent node. Defaults to None.
+        parent_cost (double, optional): The cost of the parent node. Defaults to None.
     
     Returns:
-        gain (float): The gain associated with the split.
+        gain (double): The gain associated with the split.
     """
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] parent_indices
-    cdef float left_cost, right_cost
-    cdef float gain_val
+    cdef double left_cost, right_cost
+    cdef double gain_val
     cdef int total_indices = len(left_indices) + len(right_indices)
     
     # This calculates the relative reduction in impurity, based on the 
@@ -85,7 +85,7 @@ def split_cy(
     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
     cnp.ndarray[DTYPE_int_t, ndim = 1] indices,
     int min_points_leaf,
-) -> Tuple[float, Condition]:
+) -> Tuple[double, Condition]:
     """
     Computes the best split of a leaf node.
     
@@ -93,7 +93,7 @@ def split_cy(
         indices (np.ndarray, optional): Indices for a subset of the original dataset.
     
     Returns:
-        gain (float): The gain associated with the split.
+        gain (double): The gain associated with the split.
         
         condition (Condition): Logical or functional condition for evaluating and 
             splitting the data points.
@@ -101,11 +101,11 @@ def split_cy(
     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
     cdef int n = X_.shape[0]
     cdef int d = X_.shape[1]
-    cdef float parent_cost = cost_cy(indices, y)
+    cdef double parent_cost = cost_cy(indices, y)
     
     cdef int i,j
     cdef cnp.ndarray[DTYPE_float_t, ndim = 1] unique_values
-    cdef float threshold, gain_val, best_gain_val
+    cdef double threshold, gain_val, best_gain_val
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] evals, left_indices, right_indices
     cdef object condition, best_condition
     cdef list best_conditions
@@ -152,7 +152,7 @@ def oblique_split_cy(
     #object get_split_indices_fn,
     #object cost_fn, 
     #object gain_fn,
-) -> Tuple[float, Condition]:
+) -> Tuple[double, Condition]:
     """
     Computes the best split of a leaf node.
     
@@ -160,7 +160,7 @@ def oblique_split_cy(
         indices (np.ndarray, optional): Indices for a subset of the original dataset.
     
     Returns:
-        gain (float): The gain associated with the split.
+        gain (double): The gain associated with the split.
         
         condition (Condition): Logical or functional condition for evaluating and 
             splitting the data points.
@@ -168,10 +168,10 @@ def oblique_split_cy(
     cdef cnp.ndarray[DTYPE_float_t, ndim = 2] X_ = X[indices, :]
     cdef int n = X_.shape[0]
     cdef int d = X_.shape[1]
-    cdef float parent_cost = cost_cy(indices, y)
+    cdef double parent_cost = cost_cy(indices, y)
     
     cdef int feature
-    cdef float threshold, gain_val, best_gain_val
+    cdef double threshold, gain_val, best_gain_val
     #cdef object condition, best_condition
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] evals, left_indices, right_indices
     cdef list best_conditions

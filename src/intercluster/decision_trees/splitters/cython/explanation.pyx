@@ -153,7 +153,7 @@ cpdef cnp.ndarray[DTYPE_int_t, ndim=1] get_split_outliers_cy(
 ####################################################################################################
 
 
-cpdef float gain_cy(
+cpdef double gain_cy(
     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
     cnp.ndarray[DTYPE_int_t, ndim = 1] left_indices,
     cnp.ndarray[DTYPE_int_t, ndim = 1] right_indices
@@ -162,15 +162,13 @@ cpdef float gain_cy(
     Computes the gain associated with a split.
     
     Args:
+        y (np.ndarray): Integer labels describing cluster membership for each data point.
+
         left_indices (np.ndarray): Indices for the left child of the split.
         
         right_indices (np.ndarray): Indices for the right child of the split.
-        
-        parent_cost (float, optional): The cost of the parent node. Dummy variable, 
-            Defaults to None.
-    
     Returns:
-        gain (float): The gain associated with the split.
+        gain (double): The gain associated with the split.
     """    
     # If only a single cluster is present, no gain to be had.
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] parent_indices = np.concatenate(
@@ -182,11 +180,11 @@ cpdef float gain_cy(
 
     # Setting this to 0 simply minimizes the number of outliers removed without considering 
     # what happened in the parent node.
-    cdef float parent_cost = 0
+    cdef double parent_cost = 0
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] split_outliers = get_split_outliers_cy(
         y, left_indices, right_indices
     )
-    cdef float split_cost = len(split_outliers)
+    cdef double split_cost = len(split_outliers)
     return parent_cost - (split_cost)
 
 
@@ -198,7 +196,7 @@ def split_cy(
     cnp.ndarray[DTYPE_int_t, ndim = 1] y,
     cnp.ndarray[DTYPE_int_t, ndim = 1] indices,
     int min_points_leaf,
-) -> Tuple[float, Condition]:
+) -> Tuple[double, Condition]:
     """
     Computes the best split of a leaf node.
     
@@ -206,7 +204,7 @@ def split_cy(
         indices (np.ndarray, optional): Indices for a subset of the original dataset.
     
     Returns:
-        gain (float): The gain associated with the split.
+        gain (double): The gain associated with the split.
         
         condition (Condition): Logical or functional condition for evaluating and 
             splitting the data points.
@@ -217,7 +215,7 @@ def split_cy(
     
     cdef int i,j
     cdef cnp.ndarray[DTYPE_float_t, ndim = 1] unique_values
-    cdef float threshold, gain_val, best_gain_val
+    cdef double threshold, gain_val, best_gain_val
     cdef cnp.ndarray[DTYPE_int_t, ndim = 1] evals, left_indices, right_indices
     cdef object condition, best_condition
     cdef list best_conditions
@@ -230,6 +228,7 @@ def split_cy(
 
             # Split condition:
             threshold = unique_values[j]
+            print(threshold)
             evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)
             left_indices = indices[np.where(evals)[0]]
             right_indices = indices[np.where(1 - evals)[0]]
