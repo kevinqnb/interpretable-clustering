@@ -90,12 +90,6 @@ class Experiment:
         """
         pass
     
-    def save_results(self):
-        """
-        Saves a dataframe of experiment results.
-        """
-        pass
-    
     
 ####################################################################################################
 
@@ -627,10 +621,20 @@ class RobustnessExperiment(Experiment):
         self.run_baseline()
         module_results = self.run_modules(self.module_list)
         return pd.DataFrame(module_results)
+    
 
-
-
-
+    def save_results(self, path, identifier = ''):
+        """
+        Saves the results of the experiment.
+        
+        Args:
+            path (str): File path to save the results to.
+            
+            identifier (str, optional): Unique identifier for the results. Defaults to blank.
+        """
+        fname = os.path.join(path, 'exp' + str(identifier) + '.csv')
+        result_df = pd.DataFrame(self.result_dict)
+        result_df.to_csv(fname)
 
 
 ####################################################################################################
