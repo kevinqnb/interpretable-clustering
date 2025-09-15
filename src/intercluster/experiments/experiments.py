@@ -620,6 +620,7 @@ class RobustnessExperiment(Experiment):
         """
         self.run_baseline()
         module_results = self.run_modules(self.module_list)
+        self.result_dict = module_results
         return pd.DataFrame(module_results)
     
 
