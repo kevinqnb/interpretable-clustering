@@ -19,6 +19,7 @@ from .modules import (
 from .experiments import (
     MaxRulesExperiment,
     LambdaExperiment,
+    RobustnessExperiment,
 )
 
 

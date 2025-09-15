@@ -6,7 +6,8 @@ from intercluster.measurements import (
     coverage,
     center_dists,
     silhouette_score,
-    coverage_mistake_score
+    coverage_mistake_score,
+    clustering_distance
 )
 from intercluster.utils import divide_with_zeros
 
@@ -291,4 +292,5 @@ class CoverageMistakeScore(MeasurementFunction):
             data_to_rule_assignment = data_to_rule_assignment,
             rule_to_cluster_assignment= rule_to_cluster_assignment
         )
+    
         

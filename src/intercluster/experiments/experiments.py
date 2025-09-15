@@ -6,9 +6,12 @@ from typing import List, Callable, Any, Set
 from numpy.typing import NDArray
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.utils import covered_mask, update_centers
-from intercluster.measurements import coverage, coverage_mistake_score
+from intercluster.utils import covered_mask, update_centers, assignment_to_labels
+from intercluster.measurements import (
+    coverage, coverage_mistake_score, clustering_distance
+)
 from .modules import *
+from .measurements import *
 import time
 
 ####################################################################################################
@@ -499,6 +502,135 @@ class LambdaExperiment(Experiment):
         result_df = pd.DataFrame(self.result_dict, index=self.lambda_array)
         result_df.to_csv(fname)
         
+
+
+####################################################################################################
+
+
+class RobustnessExperiment(Experiment):
+    """
+    Performs an experiment in which the robustness of a clustering is measured 
+    by its consistency with respect to small perturbations of the data. Specifically,
+    consistency is measured as the fraction of pairs of points which are assigned to the same
+    cluster in one clustering and different clusters in the other.
+
+    Args:
+        data (np.ndarray): Input dataset.
+        
+        module_list (List[Tuple[Module, Dict[str, Any]]]): List of 
+            (module, parameter dictionary) pairs to use and record results for. 
+            Each module should be a runnable experiment object, and each parameter dictionary 
+            should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
+            More specifically, each parameter dictionary key should be a tuple of integers
+            representing indices to items from lambda_array. Each value should be a dictionary of 
+            of fitting parameters to pass to the module before running. The output of the 
+            fitting process for those parameters is then associated 
+            each of the items in the corresponding key list. 
+
+        std_dev (float): Standard deviation of the Gaussian noise to add to the data. Note that 
+            sampled noise is added to every data point and every feature independently.
+
+        n_samples (int): Number of sample trials to run the experiment for.
+        
+    Attrs:
+        result_dict (Dict[Tuple[str, str, int], NDArray]): Dictionary with keys 
+            as tuples of the form (measurement function name, module name, sample number),
+            and values which are arrays of measurement results.
+    """
+    def __init__(
+        self, 
+        data : NDArray,
+        baseline : Baseline,
+        module_list : List[Tuple[Module, Dict[str, Any]]],
+        std_dev : float,
+        n_samples : int
+    ):
+        self.std_dev = std_dev
+        super().__init__(
+            data = data,
+            baseline = baseline,
+            module_list = module_list,
+            n_samples = n_samples
+        )
+
+
+    def run_baseline(self):
+        """
+        Runs the baseline modules, simply finding their assignment matrices instead of 
+        computing results.
+        """
+        bassign = self.baseline.assign(self.data)
+
+
+    def run_modules(
+            self,
+            module_list : List[Tuple[Module, Dict[str, Any]]]
+        ) -> Dict[Tuple[str, str], Dict[float, float]]:
+        """
+        Runs the module, and the baseline alongside it. 
+        
+        Args:
+            module_list (List[Tuple[Module, Dict[str, Any]]]): List of 
+                (module, parameter dictionary) pairs to use and record results for. 
+                Each module should be a runnable experiment object, and each parameter dictionary 
+                should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
+                More specifically, each parameter dictionary key should be a tuple of integers
+                representing indices for items from lambda_array. Each value should be a dictionary of 
+                of fitting parameters to pass to the module before running. The output of the 
+                fitting process for those parameters is then associated 
+                each of the items in the corresponding key list.
+        Returns:
+            module_result_dict (Dict[Tuple[str, str], Dict[float, float]]): Dictionary of results 
+                in the form  {(measurement name, module name): {std_dev : measurement result}}
+        """
+        # Initialize result dictionaries
+        module_result_dict = {}
+        module_label_dict = {}
+        for mod, param_list in module_list:
+            module_result_dict[("clustering-distance", mod.name)] = {}
+            module_label_dict[mod.name] = {}
+
+        for mod, fitting_params in module_list:
+            mod.update_fitting_params(fitting_params)
+            (
+            data_to_rule_assignment,
+            rule_to_cluster_assignment,
+            data_to_cluster_assignment
+            ) = mod.fit(self.data, self.baseline.labels)
+            module_label_dict[mod.name] = assignment_to_labels(data_to_cluster_assignment)
+        
+        for i in range(self.n_samples):
+            noisy_data = self.data + np.random.normal(
+                loc = 0.0,
+                scale = self.std_dev,
+                size = self.data.shape
+            )
+            for mod, fitting_params in module_list:
+                noisy_labels = mod.predict(noisy_data)
+                dist = clustering_distance(
+                    labels1 = module_label_dict[mod.name],
+                    labels2 = noisy_labels,
+                    percentage = True
+                )
+                module_result_dict[("clustering-distance", mod.name)][i] = dist
+                        
+        return module_result_dict
+    
+    
+    def run(self):
+        """
+        Runs the experiment.
+            
+        Returns:
+            result_df (pd.DataFrame): DataFrame of the results.
+        """
+        self.run_baseline()
+        module_results = self.run_modules(self.module_list)
+        return pd.DataFrame(module_results)
+
+
+
+
 
 
 ####################################################################################################

@@ -697,3 +697,45 @@ def label_differences(
             return differences / len([l for l in true_labels if l not in ignore])
     else:
         return differences
+    
+
+####################################################################################################
+
+
+def clustering_distance(
+    labels1 : List[Set[int]],
+    labels2 : List[Set[int]],
+    percentage : bool = False
+) -> float:
+    """
+    Computes the distance between two clusterings as the number (or percentage) of pairs which are 
+    assigned to the same cluster in one clustering and different clusters in the other.
+
+    Args:
+        labels1 (list[set[int]]): Length n list of ground truth labels.
+        
+        labels2 (list[set[int]]): Length n list of predicted labels.
+
+        percentage (bool, optional): If True, returns the fraction of pairs which differ
+            between the two labelings. If False, returns the total number. Defaults to False.
+
+    Returns:
+        distance (float): Number (or percentage) of pairs assigned to different clusters 
+            in the two labelings.
+    """
+    n = len(labels1)
+    if n != len(labels2):
+        raise ValueError("Label arrays must have the same length.")
+    n_pairs = n * (n - 1) / 2
+    
+    differences = 0
+    for (i,j) in combinations(list(range(n)), 2):
+        same1 = True if (labels1[i] & labels1[j]) else False
+        same2 = True if (labels2[i] & labels2[j]) else False
+        if same1 != same2:
+            differences += 1
+
+    if percentage:
+        return differences / n_pairs
+    else:
+        return differences

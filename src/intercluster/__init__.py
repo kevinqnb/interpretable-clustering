@@ -21,6 +21,7 @@ from .measurements import (
     coverage_mistake_score,
     uncovered_mistake_score,
     label_differences,
+    clustering_distance,
 )
 
 from .objectives import (

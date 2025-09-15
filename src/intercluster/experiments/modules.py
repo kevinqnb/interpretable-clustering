@@ -3,6 +3,7 @@ from sklearn.cluster import KMeans, DBSCAN
 from ExKMC.Tree import Tree as ExTree
 from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
+from typing import List, Set, Any
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.pruning import *
@@ -267,6 +268,7 @@ class DecisionTreeMod(Module):
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
+        self.tree = None
 
     
     def update_fitting_params(self, fitting_params : Dict[str, Any]):
@@ -302,29 +304,42 @@ class DecisionTreeMod(Module):
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
         # Fit the model with the current number of rules
-        dtree = self.model(**self.fitting_params)
-        dtree.fit(X, y)
-        dtree_labels = dtree.predict(X)
-        dtree_leaf_labels = dtree.get_leaf_labels()
+        self.tree = self.model(**self.fitting_params)
+        self.tree.fit(X, y)
+        tree_labels = self.tree.predict(X)
+        tree_leaf_labels = self.tree.get_leaf_labels()
         # This should ignore any rules which are assigned to the outlier class 
-        dtree_rule_assignment = labels_to_assignment(
-            dtree_leaf_labels, n_labels = n_unique, ignore = {-1}
+        tree_rule_assignment = labels_to_assignment(
+            tree_leaf_labels, n_labels = n_unique, ignore = {-1}
         )
-        dtree_data_to_rule_assignment = dtree.get_data_to_rules_assignment(X)
-        dtree_data_to_cluster_assignment = labels_to_assignment(
-            dtree_labels, n_labels = n_unique, ignore = {-1}
+        tree_data_to_rule_assignment = self.tree.get_data_to_rules_assignment(X)
+        tree_data_to_cluster_assignment = labels_to_assignment(
+            tree_labels, n_labels = n_unique, ignore = {-1}
         )
 
         # A few data things to record:
-        self.n_rules = dtree.leaf_count
-        self.max_rule_length = dtree.depth
-        self.weighted_average_rule_length = dtree.get_weighted_average_depth(X)
+        self.n_rules = self.tree.leaf_count
+        self.max_rule_length = self.tree.depth
+        self.weighted_average_rule_length = self.tree.get_weighted_average_depth(X)
 
         return (
-            dtree_data_to_rule_assignment,
-            dtree_rule_assignment,
-            dtree_data_to_cluster_assignment
+            tree_data_to_rule_assignment,
+            tree_rule_assignment,
+            tree_data_to_cluster_assignment
         )
+    
+    def predict(self, X : NDArray) -> List[Set[int]]:
+        """
+        Predicts cluster assignments for new data points.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+        Returns:
+            labels (List[Set[int]]): Length n list of predicted labels.
+        """
+        if self.tree is None:
+            raise ValueError("Model has not been fit yet.")
+        return self.tree.predict(X)
 
 
 ####################################################################################################
@@ -365,6 +380,7 @@ class DecisionSetMod(Module):
         self.weighted_average_rule_length = np.nan
         self.rules = None
         self.rule_labels = None
+        self.dset = None
 
 
     def update_fitting_params(self, fitting_params : Dict[str, Any]):
@@ -405,30 +421,44 @@ class DecisionSetMod(Module):
             self.rules, self.rule_labels = self.rule_miner.fit(X, y)
 
         # Fit the model with the current number of rules
-        dset = self.model(
+        self.dset = self.model(
             **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
         )
-        dset.fit(X, y)
-        dset_labels = dset.predict(X)
-        dset_rule_labels = dset.decision_set_labels
+        self.dset.fit(X, y)
+        dset_labels = self.dset.predict(X)
+        dset_rule_labels = self.dset.decision_set_labels
         # This should ignore any rules which are assigned to the outlier class 
         dset_rule_assignment = labels_to_assignment(
             dset_rule_labels, n_labels = n_unique, ignore = {-1}
         )
-        dset_data_to_rule_assignment = dset.get_data_to_rules_assignment(X)
+        dset_data_to_rule_assignment = self.dset.get_data_to_rules_assignment(X)
         dset_data_to_cluster_assignment = labels_to_assignment(
             dset_labels, n_labels = n_unique, ignore = {-1}
         )
 
-        self.n_rules = len(dset.decision_set)
-        self.max_rule_length = dset.max_rule_length
-        self.weighted_average_rule_length = dset.get_weighted_average_rule_length(X)
+        self.n_rules = len(self.dset.decision_set)
+        self.max_rule_length = self.dset.max_rule_length
+        self.weighted_average_rule_length = self.dset.get_weighted_average_rule_length(X)
 
         return (
             dset_data_to_rule_assignment,
             dset_rule_assignment,
             dset_data_to_cluster_assignment
         )
+    
+
+    def predict(self, X : NDArray) -> List[Set[int]]:
+        """
+        Predicts cluster assignments for new data points.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+        Returns:
+            labels (List[Set[int]]): Length n list of predicted labels.
+        """
+        if self.dset is None:
+            raise ValueError("Model has not been fit yet.")
+        return self.dset.predict(X)
     
 
 
