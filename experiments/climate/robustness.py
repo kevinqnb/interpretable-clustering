@@ -159,16 +159,31 @@ module_list = [
     (dsclust_mod2, dsclust_params2)
 ]
 
+'''
 exp1 = RobustnessExperiment(
     data = data,
     baseline = baseline,
     module_list = module_list,
     std_dev = std_dev,
-    n_samples = n_samples
+    n_samples = n_samples,
+    ignore = None
 )
 
 exp1_results = exp1.run()
 exp1.save_results('data/experiments/climate/robustness/', '_kmeans')
+'''
+
+exp1_no_outliers = RobustnessExperiment(
+    data = data,
+    baseline = baseline,
+    module_list = module_list,
+    std_dev = std_dev,
+    n_samples = n_samples,
+    ignore = {-1}
+)
+
+exp1_no_outliers_results = exp1_no_outliers.run()
+exp1_no_outliers.save_results('data/experiments/climate/robustness/', '_kmeans_no_outliers')
 
 ####################################################################################################
 '''

@@ -173,6 +173,18 @@ exp1 = RobustnessExperiment(
 exp1_results = exp1.run()
 exp1.save_results('data/experiments/digits/robustness/', '_kmeans')
 
+exp1_no_outliers = RobustnessExperiment(
+    data = data,
+    baseline = baseline,
+    module_list = module_list,
+    std_dev = std_dev,
+    n_samples = n_samples,
+    ignore = {-1}
+)
+
+exp1_no_outliers_results = exp1_no_outliers.run()
+exp1_no_outliers.save_results('data/experiments/digits/robustness/', '_kmeans_no_outliers')
+
 ####################################################################################################
 
 # Experiment 2: DBSCAN reference clustering:
@@ -263,6 +275,19 @@ exp2 = RobustnessExperiment(
 
 exp2_results = exp2.run()
 exp2.save_results('data/experiments/digits/robustness/', '_dbscan')
+
+
+exp2_no_outliers = RobustnessExperiment(
+    data = data,
+    baseline = baseline,
+    module_list = module_list,
+    std_dev = std_dev,
+    n_samples = n_samples,
+    ignore = {-1}
+)
+
+exp2_no_outliers_results = exp2_no_outliers.run()
+exp2_no_outliers.save_results('data/experiments/digits/robustness/', '_dbscan_no_outliers')
 
 ####################################################################################################
 

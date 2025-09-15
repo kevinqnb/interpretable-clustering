@@ -537,9 +537,11 @@ class RobustnessExperiment(Experiment):
         baseline : Baseline,
         module_list : List[Tuple[Module, Dict[str, Any]]],
         std_dev : float,
-        n_samples : int
+        n_samples : int,
+        ignore = {-1}
     ):
         self.std_dev = std_dev
+        self.ignore = ignore
         super().__init__(
             data = data,
             baseline = baseline,
@@ -604,7 +606,8 @@ class RobustnessExperiment(Experiment):
                 dist = clustering_distance(
                     labels1 = module_label_dict[mod.name],
                     labels2 = noisy_labels,
-                    percentage = True
+                    percentage = True,
+                    ignore = self.ignore
                 )
                 module_result_dict[("clustering-distance", mod.name)][i] = dist
                         
