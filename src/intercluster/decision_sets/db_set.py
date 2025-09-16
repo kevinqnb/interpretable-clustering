@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import labels_format, satisfies_conditions, density_distance, pairwise_distance_threshold
 from intercluster import Condition, LinearCondition
-from intercluster.pruning import greedy
+#from intercluster.pruning import greedy
 from .decision_set import DecisionSet
 
 class DBSet(DecisionSet):
