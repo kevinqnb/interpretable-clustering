@@ -15,8 +15,6 @@ from intercluster.utils import (
 
 try:
     from intercluster.pruning.coverage_mistake_prune import coverage_mistake_prune_cy
-    from intercluster.pruning.ids_prune import ids_prune_cy
-    from intercluster.pruning.drs_prune import drs_prune_cy
     CYTHON_AVAILABLE = True
 except ImportError:
     CYTHON_AVAILABLE = False
@@ -99,7 +97,7 @@ class CoverageMistakePruner(Pruner):
         
         # Use Cython implementation if available
         if CYTHON_AVAILABLE:
-            return prune_cy(
+            return coverage_mistake_prune_cy(
                 data_to_cluster_assignment.astype(np.bool_),
                 rule_to_cluster_assignment.astype(np.bool_),
                 data_to_rules_assignment.astype(np.bool_),
@@ -157,72 +155,5 @@ class CoverageMistakePruner(Pruner):
         return np.array(list(selected_rules))
         
 
-
-####################################################################################################
-
-
-class IdsPruner(Pruner):
-    """
-    Pruner that selects rules based on the IDS objective function.
-
-    For more information, see the following paper:
-    "Interpretable Decision Sets: A Joint Framework for Description and Prediction"
-    by Lakkaraju et al., KDD 2016.
-    """
-    def __init__(self, n_rules : int, lambda_vals : NDArray[np.float64]):
-        """
-        Args:
-            n_rules (int): The maximum number of rules to select.
-            
-            lambda_vals (NDArray): Array of length 7, where each entry is a hyperparameter
-                for the IDS objective function.
-        """
-
-    def prune(
-        self,
-        data_to_cluster_assignment : NDArray,
-        rule_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : NDArray[np.int64]
-    ) -> NDArray[np.int64]:
-        """
-        Prunes the rules based on the given assignment using the IDS objective function.
-
-        Args:
-            data_to_cluster_assignment (NDArray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            
-            rule_to_cluster_assignment (NDArray): Size (r x k) boolean array where entry (i,j) is 
-                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
-                be assigned to a single cluster.
-            
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-
-            rule_lengths (NDArray): Array of length r, where each entry is the length of the rule.
-
-            n_rules (int): The maximum number of rules to select.
-            
-            lambda_vals (NDArray): Array of length 7, where each entry is a hyperparameter
-                for the IDS objective function.
-
-        Returns:
-            NDArray: An array of integers representing the indices of the selected rules.
-        """
-        n,k = data_to_cluster_assignment.shape
-        r,k2 = rule_to_cluster_assignment.shape
-        assert k == k2, "Data and Rule assignment arrays do not match in shape along axis 1."
-        assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Rules must be assigned "
-                                                                        "to exactly one cluster.")
-
-        return ids_prune_cy(
-            data_to_cluster_assignment.astype(np.bool_),
-            rule_to_cluster_assignment.astype(np.bool_),
-            data_to_rules_assignment.astype(np.bool_),
-            rule_lengths,
-            self.n_rules,
-            self.lambda_vals
-        )
 
 ####################################################################################################

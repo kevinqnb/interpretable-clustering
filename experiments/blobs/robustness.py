@@ -21,7 +21,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('../data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
+data = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
 n,d = data.shape
 
 # Parameters:
