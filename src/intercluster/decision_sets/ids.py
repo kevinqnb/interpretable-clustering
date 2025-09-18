@@ -16,7 +16,7 @@ from .decision_set import DecisionSet
 # Since PyIDS is not a dependency of Intercluster, it must be installed separately.
 
 from pyids.algorithms.ids_classifier import mine_CARs
-from pyids.algorithms.ids import IDS
+from pyids.algorithms.ids import IDS as IDS_pyids
 from pyids.model_selection.coordinate_ascent import CoordinateAscent
 from pyids.data_structures.ids_rule import IDSRule
 from pyarc.qcba.data_structures import QuantitativeDataFrame
@@ -156,7 +156,7 @@ class IDS(DecisionSet):
 
         if self.lambdas is None:
             def fmax(lambda_dict):
-                ids = IDS(algorithm="SLS")
+                ids = IDS_pyids(algorithm="SLS")
                 ids.fit(
                     class_association_rules=valid_cars,
                     quant_dataframe=quant_df,
@@ -178,7 +178,7 @@ class IDS(DecisionSet):
             lambdas = self.lambdas
 
         #print("Lambdas found:", lambdas)
-        ids = IDS(algorithm="SLS")
+        ids = IDS_pyids(algorithm="SLS")
         ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
         decision_set, decision_set_labels = self.ids_to_decision_set(ids.clf.rules)
         return decision_set, decision_set_labels
