@@ -21,7 +21,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('../data/synthetic/aniso.csv', index_col = 0).to_numpy()
+data = pd.read_csv('data/synthetic/aniso.csv', index_col = 0).to_numpy()
 n,d = data.shape
 
 # Parameters:

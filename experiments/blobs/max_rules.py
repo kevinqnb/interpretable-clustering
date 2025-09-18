@@ -22,18 +22,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/aniso.csv', index_col = 0).to_numpy()
+data = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
 n,d = data.shape
 
 # Parameters:
 lambda_val = 2.0
-max_rules = 20
+max_rules = 50
 n_samples = 10
 
-# DBSCAN
-n_core = 10
-epsilon = 0.35
-density_distances = density_distance(data, n_core = n_core)
+# KMeans
+n_clusters = 31
+kmeans_n_rules_list = list(np.arange(n_clusters, max_rules + 1))
+euclidean_distances = pairwise_distances(data)
 
 # Shallow Tree
 depth_factor = 0.03
@@ -63,35 +63,57 @@ ids_lambdas = [1,0,0,0,0,1,1]
 
 ####################################################################################################
 
-# DBSCAN reference clustering:
+# Experiment 1: KMeans reference clustering:
 np.random.seed(seed)
 
-# Baseline DBSCAN
-dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
-dbscan_assignment = dbscan_base.assign(data)
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
-dbscan_n_rules_list = list(np.arange(dbscan_n_clusters, max_rules + 1))
-
-if dbscan_n_clusters < 2:
-    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
+# Baseline KMeans
+kmeans_base = KMeansBase(n_clusters = n_clusters, random_seed = seed)
+kmeans_assignment = kmeans_base.assign(data)
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in dbscan_n_rules_list}
+decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in kmeans_n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
 # Removal Tree
-rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
+rem_tree_params = {tuple(kmeans_n_rules_list) : {'num_clusters' : n_clusters}}
 rem_tree_mod = DecisionTreeMod(
     model = RemovalTree,
     name = 'Exp-Tree'
 )
 
+# ExKMC
+exkmc_params = {
+    (i,) : {
+        'k' : n_clusters,
+        'kmeans': kmeans_base.clustering,
+        'max_leaf_nodes': i
+    } for i in kmeans_n_rules_list
+}
+exkmc_mod = DecisionTreeMod(
+    model = ExkmcTree,
+    name = 'ExKMC'
+)
+
+# Shallow Tree
+shallow_tree_params = {
+    tuple(kmeans_n_rules_list) : {
+        'n_clusters' : n_clusters,
+        'depth_factor' : depth_factor,
+        'kmeans_random_state' : seed
+    } for i in kmeans_n_rules_list
+}
+shallow_tree_mod = DecisionTreeMod(
+    model = ShallowTree,
+    name = 'Shallow-Tree'
+)
+
+
 # CBA
 cba_params = {
-    tuple(dbscan_n_rules_list) : {
+    tuple(kmeans_n_rules_list) : {
         'rule_miner' : association_rule_miner,
     }
 }
@@ -104,11 +126,12 @@ cba_mod = DecisionSetMod(
 
 # IDS
 ids_params = {
-    tuple(dbscan_n_rules_list) : {
+    tuple(kmeans_n_rules_list) : {
         'lambdas' : ids_lambdas,
         'rule_miner' : association_rule_miner,
     }
 }
+
 ids_mod = DecisionSetMod(
     model = IDS,
     rule_miner = association_rule_miner,
@@ -123,7 +146,7 @@ dsclust_params1 = {
         'n_rules' : i,
         'rule_miner' : association_rule_miner,
     }
-    for i in dbscan_n_rules_list
+    for i in kmeans_n_rules_list
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
@@ -138,7 +161,7 @@ dsclust_params2 = {
         'n_rules' : i,
         'rule_miner' : pointwise_rule_miner,
     }
-    for i in dbscan_n_rules_list
+    for i in kmeans_n_rules_list
 }
 dsclust_mod2 = DecisionSetMod(
     model = DSCluster,
@@ -146,11 +169,12 @@ dsclust_mod2 = DecisionSetMod(
     name = 'DSCluster-Pointwise-Rules'
 )
 
-
-baseline = dbscan_base
+baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (rem_tree_mod, rem_tree_params),
+    (exkmc_mod, exkmc_params),
+    (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),
@@ -159,23 +183,23 @@ module_list = [
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
-    ground_truth_assignment = dbscan_assignment,
+    ground_truth_assignment = kmeans_assignment,
     name = 'coverage-mistake-score'
 )
 
 silhouette_measure = Silhouette(
-    distances = density_distances,
+    distances = euclidean_distances,
     name = 'silhouette-score'
 )
 
 measurement_fns = [
     coverage_mistake_measure,
-    silhouette_measure
+    silhouette_measure,
 ]
 
 exp = MaxRulesExperiment(
     data = data,
-    n_rules_list = dbscan_n_rules_list,
+    n_rules_list = kmeans_n_rules_list,
     baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
@@ -183,8 +207,7 @@ exp = MaxRulesExperiment(
     cpu_count = experiment_cpu_count
 )
 
-exp_results = exp.run()
-exp.save_results('data/experiments/aniso/max_rules/', '_dbscan')
+exp1_results = exp.run()
+exp.save_results('data/experiments/blobs/max_rules/', '_kmeans')
 
 ####################################################################################################
-

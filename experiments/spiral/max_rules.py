@@ -22,7 +22,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/aniso.csv', index_col = 0).to_numpy()
+data = pd.read_csv('data/synthetic/spiral.csv', index_col = 0).to_numpy()[:,0:2]
 n,d = data.shape
 
 # Parameters:
@@ -32,7 +32,7 @@ n_samples = 10
 
 # DBSCAN
 n_core = 10
-epsilon = 0.35
+epsilon = 1.65
 density_distances = density_distance(data, n_core = n_core)
 
 # Shallow Tree
@@ -115,7 +115,6 @@ ids_mod = DecisionSetMod(
     name = 'IDS'
 )
 
-
 # Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
 dsclust_params1 = {
     (i,) : {
@@ -146,7 +145,7 @@ dsclust_mod2 = DecisionSetMod(
     name = 'DSCluster-Pointwise-Rules'
 )
 
-
+# Experiment:
 baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
@@ -184,7 +183,8 @@ exp = MaxRulesExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/max_rules/', '_dbscan')
+exp.save_results('data/experiments/spiral/max_rules/', '_dbscan')
+
 
 ####################################################################################################
 
