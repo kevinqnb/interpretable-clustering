@@ -10,6 +10,10 @@ from .decision_set_clustering import (
     DSCluster
 )
 
-from .ids_set import (
-    IdsSet
+from .ids import (
+    IDS
+)
+
+from .cba import (
+    CBA
 )

@@ -25,7 +25,7 @@ from pyarc.qcba.data_structures import QuantitativeDataFrame
 ####################################################################################################
 
 
-class IdsSet(DecisionSet):
+class IDS(DecisionSet):
     """
     A Decision Set mined with an apriori search, then pruned using a combination of submodular 
     objective functions.
@@ -148,9 +148,9 @@ class IdsSet(DecisionSet):
         
         quant_df = QuantitativeDataFrame(self.rule_miner.bin_df)
 
-        self.rule_miner.cars = [car for i,car in enumerate(self.rule_miner.cars) 
+        valid_cars = [car for i,car in enumerate(self.rule_miner.cars) 
                                 if int(self.rule_miner.cars[i].consequent[1]) != -1]
-        if len(self.rule_miner.cars) == 0:
+        if len(valid_cars) == 0:
             raise ValueError("No valid (non-outlier) class association rules found. " \
             "Try increasing the number of mined rules.")
 
@@ -158,7 +158,7 @@ class IdsSet(DecisionSet):
             def fmax(lambda_dict):
                 ids = IDS(algorithm="SLS")
                 ids.fit(
-                    class_association_rules=self.rule_miner.cars,
+                    class_association_rules=valid_cars,
                     quant_dataframe=quant_df,
                     lambda_array=list(lambda_dict.values())
                 )
@@ -177,52 +177,11 @@ class IdsSet(DecisionSet):
         else:
             lambdas = self.lambdas
 
-        print("Lambdas found:", lambdas)
+        #print("Lambdas found:", lambdas)
         ids = IDS(algorithm="SLS")
-        ids.fit(class_association_rules=self.rule_miner.cars, quant_dataframe=quant_df, lambda_array=lambdas)
+        ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
         decision_set, decision_set_labels = self.ids_to_decision_set(ids.clf.rules)
         return decision_set, decision_set_labels
-
-    '''
-    def _fitting(
-        self,
-        X : NDArray,
-        y : List[Set[int]] = None
-    ) -> Tuple[List[List[Condition]], List[Set[int]]]:
-        """
-        Privately used, custom fitting function.
-        Fits a decision set to an input dataset. 
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            y (List[Set[int]], optional): Target labels. Defaults to None.
-            
-        returns:
-            decision_set (List[Condition]): List of rules.
-            
-            decision_set_labels (List[int]): List of labels corresponding to each rule.
-        """
-        try:
-            from ._ids import fit_ids
-        except ImportError:
-            raise ImportError(
-                "This class requires proper installation of PyIDS. "
-                "Please see the documentation for instructions."
-        )
-        decision_set, decision_set_labels = fit_ids(
-            X=X,
-            y=y,
-            bins=self.bins,
-            n_mine=self.n_mine,
-            lambdas=self.lambdas,
-            lambda_search_dict=self.lambda_search_dict,
-            ternary_search_precision=self.ternary_search_precision,
-            max_iterations=self.max_iterations,
-            quantiles=self.quantiles
-        )
-        return decision_set, decision_set_labels
-    '''
     
 
 ####################################################################################################

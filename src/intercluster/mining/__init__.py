@@ -1,6 +1,6 @@
 from .rule_mining import (
     RuleMiner,
-    AssociationRuleMiner,
+    ClassAssociationMiner,
     PointwiseMiner,
     PointwiseMinerV2,
 )

@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pyarc
 from pyids.algorithms.ids_classifier import mine_CARs
+from pyarc import TransactionDB
+from pyarc.algorithms.rule_generation import generateCARs
 from mdlp.discretization import MDLP
 from typing import List, Set, Tuple, Any, Dict
 from numpy.typing import NDArray
@@ -51,41 +53,37 @@ class RuleMiner:
 ####################################################################################################
 
 
-class AssociationRuleMiner(RuleMiner):
+class ClassAssociationMiner(RuleMiner):
     """
+    Classification Association Rule Miner
     Rule miner that uses association rule mining to generate rules.
 
     This is a wrapper around the PyIDS package [https://github.com/jirifilip/pyIDS/tree/master],
-    which implements a classifcationa and association rule mining algorithm based upon:
-    Liu, B., Hsu, W., & Ma, Y. (1998, July). Integrating classification and association rule mining.
+    which implements a classifcation and association rule mining algorithm based upon:
+    Liu, B., Hsu, W., & Ma, Y. (1998, July). Integrating Classification and Association Rule Mining.
     """
     def __init__(
         self,
-        max_rules : int = 100,
-        bin_type : str = 'mdlp',
-        n_bins : int = None
+        min_support : float = 0.1,
+        min_confidence : float = 0.8,
+        max_length : int = 10
     ):
         """
         Initialize the AssociationRuleMiner.
 
         Args:
-            max_rules (int, optional): Maximum number of rules to mine. Defaults to 100.
-            bin_type (str, optional): Type of binning to use 
-                ('mdlp', 'quantile', or 'uniform'). Defaults to 'mdlp' in which case bins are 
-                chosen to minimize entropy.
-            n_bins (int, optional): Number of bins to use if bin_type is 'uniform'. Defaults to None.
+            min_support (float, optional): Minimum support for a rule. Defaults to 0.1.
+            min_confidence (float, optional): Minimum confidence for a rule. Defaults to 0.8.
         """
-        if not isinstance(max_rules, int) or max_rules <= 0:
-            raise ValueError("max_rules must be a positive integer.")
-        if bin_type not in ['mdlp', 'quantile', 'uniform']:
-            raise ValueError("bin_type must be one of 'mdlp', 'quantile', or 'uniform'.")
-        if bin_type == 'uniform' and (not isinstance(n_bins, int) or n_bins <= 1):
-            raise ValueError("n_bins must be an integer greater than 1 when bin_type is 'uniform'.")
-        if bin_type == 'quantile' and (not isinstance(n_bins, int) or n_bins <= 1):
-            raise ValueError("n_bins must be an integer greater than 1 when bin_type is 'quantile'.")
-        self.max_rules = max_rules
-        self.bin_type = bin_type
-        self.n_bins = n_bins
+        if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
+            raise ValueError("min_support must be a floating point number in [0, 1].")
+        if not isinstance(min_confidence, float) or min_confidence < 0 or min_confidence > 1:
+            raise ValueError("min_confidence must be a floating point number in [0, 1].")
+        if not isinstance(max_length, int) or max_length <= 0:
+            raise ValueError("max_length must be a positive integer.")
+        self.min_support = min_support
+        self.min_confidence = min_confidence
+        self.max_length = max_length
         super().__init__()
 
 
@@ -136,21 +134,20 @@ class AssociationRuleMiner(RuleMiner):
         """
         if not can_flatten(y):
             raise ValueError("Each data point must be assigned to a single label.")
-        
         y_ = flatten_labels(y)
-
-        if self.bin_type == 'mdlp':
-            bin_df = entropy_bin(X, y)
-        elif self.bin_type == 'quantile':
-            bin_df = quantile_bin(X, self.n_bins)
-        elif self.bin_type == 'uniform':
-            bin_df = uniform_bin(X, self.n_bins)
+        bin_df = entropy_bin(X, y)
         bin_df.columns = bin_df.columns.astype(str)
         bin_df['class'] = y_
         bin_df = bin_df.astype(str)
         self.bin_df = bin_df
 
-        self.cars = mine_CARs(bin_df, self.max_rules)
+        txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
+        self.cars = generateCARs(
+            txns,
+            support = int(self.min_support * 100),
+            confidence = int(self.min_confidence * 100),
+            maxlen = self.max_length
+        )
         self.decision_set, self.decision_set_labels = self.cars_to_decision_set(self.cars)
         return self.decision_set, self.decision_set_labels
     
