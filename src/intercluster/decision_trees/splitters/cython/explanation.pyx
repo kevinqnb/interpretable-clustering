@@ -228,7 +228,6 @@ def split_cy(
 
             # Split condition:
             threshold = unique_values[j]
-            print(threshold)
             evals = np.array(X_[:, i] <= threshold, dtype = DTYPE_int)
             left_indices = indices[np.where(evals)[0]]
             right_indices = indices[np.where(1 - evals)[0]]

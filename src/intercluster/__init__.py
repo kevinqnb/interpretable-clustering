@@ -18,6 +18,7 @@ from .measurements import (
     pairwise_distance_threshold,
     max_intra_cluster_distance,
     min_inter_cluster_distance,
+    mistakes,
     coverage_mistake_score,
     uncovered_mistake_score,
     label_differences,

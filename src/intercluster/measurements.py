@@ -564,6 +564,36 @@ def min_inter_cluster_distance(
 
 ####################################################################################################
 
+def mistakes(
+    ground_truth_assignment : NDArray,
+    data_to_rule_assignment : NDArray,
+    rule_to_cluster_assignment : NDArray
+) -> int:
+    """
+    Computes the number of mistakes made by a given point to cluster assignment, with respect to a ground truth.
+    """
+    n, k = ground_truth_assignment.shape
+    m = rule_to_cluster_assignment.shape[0]
+    assert rule_to_cluster_assignment.shape[1] == k, \
+        "The number of clusters in the rule assignment must match the data assignment."
+    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
+        "Each rule must belong to exactly one cluster."
+    assert data_to_rule_assignment.shape == (n, m), \
+        ("The data to rules assignment must have shape (n, m) where n is the number of data "
+        "points and m is the number of rules.")
+    
+    mistakes = 0
+    for i, rule_points in enumerate(data_to_rule_assignment.T):
+        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
+        if len(rule_clusters) > 0:
+            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
+            mistakes += np.sum(rule_points & ~cluster_points)
+            
+    return mistakes
+
+
+####################################################################################################
+
 
 def coverage_mistake_score(
         lambda_val : float,
