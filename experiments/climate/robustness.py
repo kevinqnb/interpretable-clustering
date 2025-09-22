@@ -41,23 +41,28 @@ epsilon = 1.5
 depth_factor = 0.03
 
 # Association Rule Mining:
-association_n_mine = 10000
+min_support = 0.01
+min_confidence = 0.5
+max_length = 10
+association_rule_miner = ClassAssociationMiner(
+    min_support = min_support,
+    min_confidence = min_confidence,
+    max_length = max_length
+)
+
 
 # Pointwise Rule Mining:
 pointwise_samples_per_point = 10
 pointwise_prob_dim = 1/2
 pointwise_prob_stop = 8/10
+pointwise_rule_miner = PointwiseMinerV2(
+    samples = pointwise_samples_per_point,
+    prob_dim = pointwise_prob_dim,
+    prob_stop = pointwise_prob_stop
+)
 
 # IDS:
-ids_lambdas = [
-    1/association_n_mine,
-    1/(2 * data.shape[1] * association_n_mine),
-    1/(len(data) * (association_n_mine**2)),
-    1/(len(data) * (association_n_mine**2)),
-    0,
-    1/(data.shape[0] * association_n_mine),
-    1/(data.shape[0])
-]
+ids_lambdas = [1,0,0,0,0,1,1]
 
 
 ####################################################################################################
@@ -105,38 +110,39 @@ shallow_tree_mod = DecisionTreeMod(
     name = 'Shallow-Tree'
 )
 
+# CBA
+cba_params = {'rule_miner' : association_rule_miner}
+cba_mod = DecisionSetMod(
+    model = CBA,
+    rule_miner = association_rule_miner,
+    name = 'CBA'
+)
+
 # IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 ids_params = {
     'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner_ids,
+    'rule_miner' : association_rule_miner,
 }
 ids_mod = DecisionSetMod(
-    model = IdsSet,
-    rule_miner = association_rule_miner_ids,
+    model = IDS,
+    rule_miner = association_rule_miner,
     name = 'IDS'
 )
 
 
 # Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
 dsclust_params1 = {
     'lambd' : lambda_val,
     'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner_dscluster
+    'rule_miner' : association_rule_miner
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner_dscluster,
+    rule_miner = association_rule_miner,
     name = 'DSCluster-Association-Rules'
 )
 
 # Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop,
-)
 dsclust_params2 = {
     'lambd' : lambda_val,
     'n_rules' : n_rules,
@@ -159,8 +165,9 @@ module_list = [
     (dsclust_mod2, dsclust_params2)
 ]
 
-'''
-exp1 = RobustnessExperiment(
+
+# Run with all data points:
+exp = RobustnessExperiment(
     data = data,
     baseline = baseline,
     module_list = module_list,
@@ -169,10 +176,10 @@ exp1 = RobustnessExperiment(
     ignore = None
 )
 
-exp1_results = exp1.run()
-exp1.save_results('data/experiments/climate/robustness/', '_kmeans')
-'''
+exp_results = exp.run()
+exp.save_results('data/experiments/climate/robustness/', '_kmeans')
 
+# Run with outliers removed:
 exp1_no_outliers = RobustnessExperiment(
     data = data,
     baseline = baseline,
@@ -186,95 +193,3 @@ exp1_no_outliers_results = exp1_no_outliers.run()
 exp1_no_outliers.save_results('data/experiments/climate/robustness/', '_kmeans_no_outliers')
 
 ####################################################################################################
-'''
-# Experiment 2: DBSCAN reference clustering:
-np.random.seed(seed)
-
-# Baseline DBSCAN
-dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
-dbscan_assignment = dbscan_base.assign(data)
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
-
-if dbscan_n_clusters < 2:
-    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
-
-# Decision Tree
-decision_tree_params = {'max_leaf_nodes' : n_rules}
-decision_tree_mod = DecisionTreeMod(
-    model = DecisionTree,
-    name = 'Decision-Tree'
-)
-
-# Removal Tree
-rem_tree_params = {'num_clusters' : dbscan_n_clusters}
-rem_tree_mod = DecisionTreeMod(
-    model = RemovalTree,
-    name = 'Exp-Tree'
-)
-
-
-# IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-ids_params = {
-    'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner_ids,
-}
-ids_mod = DecisionSetMod(
-    model = IdsSet,
-    rule_miner = association_rule_miner_ids,
-    name = 'IDS'
-)
-
-
-# Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-dsclust_params1 = {
-    'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner_dscluster,
-}
-dsclust_mod1 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = association_rule_miner_dscluster,
-    name = 'DSCluster-Association-Rules'
-)
-
-# Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop,
-)
-dsclust_params2 = {
-    'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : pointwise_rule_miner,
-}
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise-Rules'
-)
-
-baseline = dbscan_base
-module_list = [
-    (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
-    #(ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
-]
-
-exp2 = RobustnessExperiment(
-    data = data,
-    baseline = baseline,
-    module_list = module_list,
-    std_dev = std_dev,
-    n_samples = n_samples
-)
-
-exp2_results = exp2.run()
-exp2.save_results('data/experiments/climate/robustness/', '_dbscan')
-'''
-####################################################################################################
-
