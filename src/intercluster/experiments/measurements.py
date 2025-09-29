@@ -9,7 +9,10 @@ from intercluster.measurements import (
     coverage_mistake_score,
     clustering_distance
 )
-from intercluster.utils import divide_with_zeros
+from intercluster.utils import (
+    assignment_to_labels,
+    divide_with_zeros
+)
 
 class MeasurementFunction:
     def __init__(self, name):
@@ -192,7 +195,7 @@ class Silhouette(MeasurementFunction):
     """
     Computes the silhouette score of a clustering.
     """
-    def __init__(self, distances : NDArray, name : str = 'Silhouette'):
+    def __init__(self, distances : NDArray, name : str = 'silhouette'):
         """
         Args:
             distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
@@ -232,7 +235,7 @@ class CoverageMistakeScore(MeasurementFunction):
     """
     Computes the silhouette score of a clustering.
     """
-    def __init__(self, lambda_val : float, ground_truth_assignment : NDArray, name : str = 'Coverage-Mistake-Score'):
+    def __init__(self, lambda_val : float, ground_truth_assignment : NDArray, name : str = 'coverage-mistake-score'):
         """
         Args:
             lambda_val (float): Weighting factor for the mistakes term in the objective function.
@@ -291,6 +294,59 @@ class CoverageMistakeScore(MeasurementFunction):
             ground_truth_assignment = self.ground_truth_assignment,
             data_to_rule_assignment = data_to_rule_assignment,
             rule_to_cluster_assignment= rule_to_cluster_assignment
+        )
+    
+
+####################################################################################################
+
+
+class ClusteringDistance(MeasurementFunction):
+    """
+    Computes the distance between a reference clustering and a new, interpretable clustering.
+    """
+    def __init__(self, lambda_val : float, ground_truth_assignment : NDArray, name : str = 'clustering-distance'):
+        """
+        Args:
+            ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+                with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+                otherwise. This should correspond to a ground truth labeling of the data. 
+        """
+        super().__init__(name = name)
+        self.lambda_val = lambda_val
+        self.ground_truth_assignment = ground_truth_assignment
+        self.ground_truth_labels = assignment_to_labels(ground_truth_assignment)
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed coverage mistake score.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        
+        new_labels = assignment_to_labels(data_to_cluster_assignment)
+        return clustering_distance(
+            self.ground_truth_labels,
+            new_labels,
+            percentage = True,
+            ignore = {-1}
         )
     
         
