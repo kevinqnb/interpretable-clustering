@@ -102,14 +102,13 @@ association_n_mine = len(association_rule_miner.decision_set)
 
 # CBA
 cba_params = {
-    tuple(dbscan_n_rules_list) : {
-        'rules' : association_rule_miner.decision_set,
-        'rule_labels' : association_rule_miner.decision_set_labels,
-        'rule_miner' : association_rule_miner, # Note that CBA needs to access the rule miner for its bin df
-    }
+    tuple(dbscan_n_rules_list) : None #{
+    #    'rule_miner' : association_rule_miner, # Note that CBA needs to access the rule miner for its bin df
+    #}
 }
 cba_mod = DecisionSetMod(
     model = CBA,
+    rule_miner = association_rule_miner,
     name = 'CBA'
 )
 
@@ -128,13 +127,12 @@ ids_lambdas = [
 ids_params = {
     tuple(dbscan_n_rules_list) : {
         'lambdas' : ids_lambdas,
-        'rules' : association_rule_miner.decision_set,
-        'rule_labels' : association_rule_miner.decision_set_labels,
-        'rule_miner' : association_rule_miner, # Note that IDS needs to access the rule miner for its bin df
+        #'rule_miner' : association_rule_miner, # Note that IDS needs to access the rule miner for its bin df
     }
 }
 ids_mod = DecisionSetMod(
     model = IDS,
+    rule_miner = association_rule_miner,
     name = 'IDS'
 )
 
@@ -144,14 +142,13 @@ dsclust_params1 = {
     (i,) : {
         'lambd' : lambda_val,
         'n_rules' : i,
-        'rules' : association_rule_miner.decision_set,
-        'rule_labels' : association_rule_miner.decision_set_labels,
-        'rule_miner' : association_rule_miner
+        #'rule_miner' : association_rule_miner
     }
     for i in dbscan_n_rules_list
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
+    rule_miner = association_rule_miner,
     name = 'DSCluster'
 )
 

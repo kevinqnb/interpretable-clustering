@@ -352,9 +352,7 @@ class DecisionSetMod(Module):
     Args:
         model (Any): Decision Set Model to use.
 
-        rules (List[List[Condition]]): Pre-generated set of rules to select from.
-
-        rule_labels (List[Set[int]]): List of sets of labels corresponding to each rule.
+        rule_miner (Any): Rule miner used to generate the rules.
 
         fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
             prior to fitting.
@@ -364,12 +362,12 @@ class DecisionSetMod(Module):
     def __init__(
         self,
         model : Any,
+        rule_miner : Any,
         fitting_params : Dict[str, Any] = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
-        #self.rules = rules
-        #self.rule_labels = rule_labels
+        self.rule_miner = rule_miner
         self.fitting_params = fitting_params
         super().__init__(name)
         self.reset()
@@ -382,6 +380,8 @@ class DecisionSetMod(Module):
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
+        self.rules = None
+        self.rule_labels = None
         self.dset = None
 
 
@@ -418,10 +418,13 @@ class DecisionSetMod(Module):
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
 
+        if self.rules is None or self.rule_labels is None:
+            self.rules, self.rule_labels = self.rule_miner.fit(X, y)
+
         # Fit the model with the current number of rules
         self.dset = self.model(
-            #**(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
-            **self.fitting_params
+            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
+            #**self.fitting_params
         )
         self.dset.fit(X, y)
         dset_labels = self.dset.predict(X)

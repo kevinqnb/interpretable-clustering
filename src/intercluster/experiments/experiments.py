@@ -122,7 +122,8 @@ class MaxRulesExperiment(Experiment):
         measurement_fns (List[Callable]): List of MeasurementFunction objects
             used to compute results.
 
-        n_samples (int): Number of sample trials to run the experiment for.
+        n_samples (List[int]): List in which each entry i represents the 
+            number of sample trials to run module i for.
         
         labels (np.ndarray): Labels for the input dataset (if any). Defaults to None in which case
             data is taken to be unlabeled.
@@ -141,7 +142,7 @@ class MaxRulesExperiment(Experiment):
         baseline : Baseline,
         module_list : List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]],
         measurement_fns : List[Callable],
-        n_samples : int,
+        n_samples : List[int],
         labels : List[List[int]] = None,
         cpu_count : int = 1,
         verbose : bool = False
@@ -281,7 +282,11 @@ class MaxRulesExperiment(Experiment):
         """
         self.run_baseline()
 
-        module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+        module_lists = [
+            [copy.deepcopy(self.module_list[i])] * self.n_samples[i]
+            for i in range(len(self.module_list))
+        ]
+        #module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
                 delayed(self.run_modules)(mod_list)
