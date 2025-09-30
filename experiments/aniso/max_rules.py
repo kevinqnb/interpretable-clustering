@@ -108,7 +108,7 @@ association_rule_miner = ClassAssociationMiner(
 
 # CBA
 cba_params = {
-    tuple(dbscan_n_rules_list) : None #{
+    tuple(dbscan_n_rules_list) : {} #{
     #    'rule_miner' : association_rule_miner, # Note that CBA needs to access the rule miner for its bin df
     #}
 }
