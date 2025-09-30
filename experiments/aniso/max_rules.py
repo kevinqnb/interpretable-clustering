@@ -29,7 +29,6 @@ n,d = data.shape
 # General
 lambda_val = 5.0
 max_rules = 20
-n_samples = 10
 
 # DBSCAN
 n_core = 10
@@ -179,6 +178,7 @@ module_list = [
     (dsclust_mod1, dsclust_params1),
     #(dsclust_mod2, dsclust_params2)
 ]
+n_samples = [1,1,1,10,1]
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
