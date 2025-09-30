@@ -217,7 +217,8 @@ exp = MaxRulesExperiment(
     module_list = module_list,
     measurement_fns = measurement_fns,
     n_samples = n_samples,
-    cpu_count = experiment_cpu_count
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 exp_results = exp.run()

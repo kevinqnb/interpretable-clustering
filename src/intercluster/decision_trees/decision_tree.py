@@ -33,7 +33,7 @@ class DecisionTree(Tree):
         max_depth : int = None,
         min_points_leaf : int = 1,
         random_state : int = None,
-        pruner : Callable = None, 
+        selector : Callable = None, 
     ):
         """
          Args:
@@ -52,7 +52,7 @@ class DecisionTree(Tree):
             random_state (int, optional): Seed used by the random number generator.
                 Defaults to None.
 
-            pruner (Callable, optional): Function/Object used to prune branches of the tree.
+            selector (Callable, optional): Function/Object used to prune branches of the tree.
                 Defaults to None, in which case no pruning is performed.
             
         Attributes:
@@ -75,16 +75,8 @@ class DecisionTree(Tree):
             max_leaf_nodes=max_leaf_nodes,
             max_depth=max_depth,
             min_points_leaf=min_points_leaf,
-            pruner=pruner
+            selector=selector
         )
-
-        if self.pruner is not None:
-            supported_pruners = ['CoverageMistakePruner']
-            if self.pruner.__name__ not in supported_pruners:
-                raise ValueError(
-                    f"Pruner {pruner.__name__} is not supported. "
-                    "Supported pruners are: {supported_pruners}"
-                )
         
             
     def fit(
