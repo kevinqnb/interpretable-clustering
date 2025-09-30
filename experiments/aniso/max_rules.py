@@ -84,7 +84,7 @@ decision_tree_mod = DecisionTreeMod(
 # Removal Tree
 rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
 rem_tree_mod = DecisionTreeMod(
-    model = RemovalTree,
+    model = ExplanationTree,
     name = 'Exp-Tree'
 )
 
