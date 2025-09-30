@@ -80,9 +80,9 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 
-# Removal Tree
-rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
-rem_tree_mod = DecisionTreeMod(
+# Explanation Tree
+exp_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
+exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
 )
@@ -179,7 +179,7 @@ dsclust_mod2 = DecisionSetMod(
 baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
+    (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1),

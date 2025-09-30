@@ -67,8 +67,8 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 # Removal Tree
-rem_tree_params = {'num_clusters' : dbscan_n_clusters}
-rem_tree_mod = DecisionTreeMod(
+exp_tree_params = {'num_clusters' : dbscan_n_clusters}
+exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
 )
@@ -84,13 +84,19 @@ association_rule_miner = ClassAssociationMiner(
 association_rule_miner.fit(data, dbscan_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
+association_rule_miner = ClassAssociationMiner(
+    min_support = min_support,
+    min_confidence = min_confidence,
+    max_length = max_length,
+    random_state = seed
+)
+
 
 # CBA
-cba_params = {'rule_miner' : association_rule_miner}
+cba_params = {}
 cba_mod = DecisionSetMod(
     model = CBA,
-    rules = association_rule_miner.decision_set,
-    rule_labels = association_rule_miner.decision_set_labels,
+    rule_miner = association_rule_miner,
     name = 'CBA'
 )
 
@@ -107,13 +113,11 @@ ids_lambdas = [
 ]
 
 ids_params = {
-    'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner,
+    'lambdas' : ids_lambdas
 }
 ids_mod = DecisionSetMod(
     model = IDS,
-    rules = association_rule_miner.decision_set,
-    rule_labels = association_rule_miner.decision_set_labels,
+    rule_miner = association_rule_miner,
     name = 'IDS'
 )
 
@@ -124,15 +128,14 @@ dsclust_params1 = {
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
-    rules = association_rule_miner.decision_set,
-    rule_labels = association_rule_miner.decision_set_labels,
+    rule_miner = association_rule_miner,
     name = 'DSCluster-Association-Rules'
 )
 
 baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
+    (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
     (dsclust_mod1, dsclust_params1)
