@@ -364,14 +364,12 @@ class DecisionSetMod(Module):
     def __init__(
         self,
         model : Any,
-        rules : List[List[Condition]],
-        rule_labels : List[Set[int]],
         fitting_params : Dict[str, Any] = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
-        self.rules = rules
-        self.rule_labels = rule_labels
+        #self.rules = rules
+        #self.rule_labels = rule_labels
         self.fitting_params = fitting_params
         super().__init__(name)
         self.reset()
@@ -422,7 +420,8 @@ class DecisionSetMod(Module):
 
         # Fit the model with the current number of rules
         self.dset = self.model(
-            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
+            #**(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
+            **self.fitting_params
         )
         self.dset.fit(X, y)
         dset_labels = self.dset.predict(X)
