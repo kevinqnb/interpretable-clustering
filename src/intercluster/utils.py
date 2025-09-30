@@ -573,7 +573,8 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 
 def entropy_bin(
         X : NDArray,
-        y : List[Set[int]]
+        y : List[Set[int]],
+        random_state : int = None
     ) -> pd.DataFrame:
     """
     Bins each feature of a real valued dataset to minimize the entropy of the resulting 
@@ -589,10 +590,11 @@ def entropy_bin(
     Args:
         X (np.ndarray): Input (n x d) dataset.
         
-        n_bins (int): Number of bins to use for each feature.
-        
-        quantiles (bool, optional): If true, uses quantile-based binning. 
-            Otherwise, uses uniform-width binning. Defaults to True.
+        y (List[Set[int]]): Input list of labels associated with each data point.
+            NOTE: Each data point must have exactly one label.
+
+        random_state (int, optional): Seed used by the random number generator.
+            Defaults to None.
             
     Returns:
         binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
@@ -602,7 +604,7 @@ def entropy_bin(
         raise ValueError("Each data point must be assigned to a single label.")
         
     y_ = flatten_labels(y)
-    discretizer = MDLP()
+    discretizer = MDLP(random_state = random_state)
     data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
     interval_data = {}
     for i, col in enumerate(data_disc.T):

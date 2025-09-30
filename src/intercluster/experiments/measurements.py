@@ -304,7 +304,7 @@ class ClusteringDistance(MeasurementFunction):
     """
     Computes the distance between a reference clustering and a new, interpretable clustering.
     """
-    def __init__(self, lambda_val : float, ground_truth_assignment : NDArray, name : str = 'clustering-distance'):
+    def __init__(self, ground_truth_assignment : NDArray, name : str = 'clustering-distance'):
         """
         Args:
             ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
@@ -312,7 +312,6 @@ class ClusteringDistance(MeasurementFunction):
                 otherwise. This should correspond to a ground truth labeling of the data. 
         """
         super().__init__(name = name)
-        self.lambda_val = lambda_val
         self.ground_truth_assignment = ground_truth_assignment
         self.ground_truth_labels = assignment_to_labels(ground_truth_assignment)
         

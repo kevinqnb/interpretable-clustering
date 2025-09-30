@@ -2,7 +2,7 @@ import numpy as np
 import math
 import heapq
 from ExKMC.Tree import Tree as ExTree
-from typing import List, Set, Tuple, Callable
+from typing import List, Set, Callable
 from numpy.typing import NDArray
 from intercluster import Condition, LinearCondition
 from intercluster import (
@@ -10,8 +10,6 @@ from intercluster import (
     labels_format,
     can_flatten,
     flatten_labels,
-    center_dists,
-    distance_ratio,
     get_decision_paths,
     satisfies_path
 )

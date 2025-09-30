@@ -9,7 +9,7 @@ from .information_gain import (
 
 
 from .removal import (
-    RemovalSplitter
+    ExplanationSplitter
 )
 
 from ._splitter import (

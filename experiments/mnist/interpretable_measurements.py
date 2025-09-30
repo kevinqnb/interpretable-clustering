@@ -9,7 +9,7 @@ from matplotlib.colors import ListedColormap
 import seaborn as sns
 from intercluster import *
 from intercluster.rules import *
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.experiments import *
 
 # This assumes tex is installed in your system, 

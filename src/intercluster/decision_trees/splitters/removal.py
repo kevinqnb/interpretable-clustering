@@ -1,8 +1,6 @@
 import numpy as np
-from joblib import Parallel, delayed, parallel_config
-from intercluster.utils import tiebreak
 from numpy.typing import NDArray
-from typing import List, Set, Tuple
+from typing import Set, Tuple
 from ._splitter import Splitter
 from intercluster import Condition, LinearCondition
 from .cython.explanation import get_split_outliers_cy, gain_cy, split_cy
@@ -10,7 +8,7 @@ from .cython.explanation import get_split_outliers_cy, gain_cy, split_cy
 ####################################################################################################
 
 
-class RemovalSplitter(Splitter):
+class ExplanationSplitter(Splitter):
     """
     Splits leaf nodes and removes outliers, in order to create an explainable clustering 
     for the remaining set of points. This follows the explainable clustering 

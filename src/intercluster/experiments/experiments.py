@@ -1,12 +1,12 @@
 import os
 import pandas as pd
 import copy
-from joblib import Parallel, delayed, parallel_config
-from typing import List, Callable, Any, Set
+from joblib import Parallel, delayed
+from typing import List, Callable, Any
 from numpy.typing import NDArray
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.utils import covered_mask, update_centers, assignment_to_labels
+from intercluster.utils import assignment_to_labels
 from intercluster.measurements import (
     coverage, coverage_mistake_score, clustering_distance
 )
@@ -144,8 +144,7 @@ class MaxRulesExperiment(Experiment):
         n_samples : int,
         labels : List[List[int]] = None,
         cpu_count : int = 1,
-        verbose : bool = False,
-        thread_count : int = 1,
+        verbose : bool = False
     ):
         self.n_rules_list = n_rules_list
         super().__init__(
@@ -158,9 +157,6 @@ class MaxRulesExperiment(Experiment):
             cpu_count = cpu_count,
             verbose = verbose
         )
-        # NOTE: After testing, this should really be a part of 
-        # the main experiment class
-        self.thread_count = thread_count
         
     
     def run_baseline(self):
@@ -228,8 +224,9 @@ class MaxRulesExperiment(Experiment):
         for mod, param_dict in module_list:
             mod.reset()
             for n_rules_tuple, fitting_params in param_dict.items():
-                print(mod.name + " with params: " + str(fitting_params))
-                print()
+                if self.verbose:
+                    print(mod.name + " with params: " + str(fitting_params))
+                    print()
                 mod.update_fitting_params(fitting_params)
 
                 try:
@@ -240,14 +237,16 @@ class MaxRulesExperiment(Experiment):
                         data_to_cluster_assignment
                     ) = mod.fit(self.data, self.baseline.labels)
                     end = time.time()
-                    print(mod.name + " fitting time: " + str(end - start))
+                    if self.verbose:
+                        print(mod.name + " fitting time: " + str(end - start))
                 except:
-                    print("Data: ")
-                    print(self.data)
-                    print()
-                    print("Labels: ")
-                    print(self.baseline.labels)
-                    print()
+                    if self.verbose:
+                        print("Data: ")
+                        print(self.data)
+                        print()
+                        print("Labels: ")
+                        print(self.baseline.labels)
+                        print()
                     raise ValueError("Fitting failed.")
                 
                 # record rule lengths:

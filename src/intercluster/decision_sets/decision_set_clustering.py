@@ -3,14 +3,12 @@ from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
-    LinearCondition,
     satisfies_conditions,
-    can_flatten,
     labels_to_assignment,
     unique_labels
 )
 from intercluster.mining import RuleMiner
-from intercluster.pruning import CoverageMistakePruner
+from intercluster.selection import CoverageMistakeSelector
 from .decision_set import DecisionSet
 
 
@@ -45,16 +43,16 @@ class DSCluster(DecisionSet):
         super().__init__(rule_miner, rules, rule_labels)
         self.lambd = lambd
         self.n_rules = n_rules
-        self.pruner = CoverageMistakePruner(n_rules=n_rules, lambda_val=lambd)
+        self.selector = CoverageMistakeSelector(n_rules=n_rules, lambda_val=lambd)
     
 
-    def prune(
+    def select(
             self,
             X : NDArray,
             y : List[Set[int]]
         ) -> List[List[Condition]]:
         """
-        Prunes the decision set by removing rules that do not cover any points in the dataset.
+        selects the decision set by removing rules that do not cover any points in the dataset.
 
         Args:
             X (np.ndarray): Input dataset.
@@ -76,7 +74,7 @@ class DSCluster(DecisionSet):
             self.decision_set_labels, n_labels = n_labels, ignore = {-1}
         )
         data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.decision_set)
-        selected_rules = self.pruner.prune(
+        selected_rules = self.selector.select(
             data_to_cluster_assignment = data_to_cluster_assignment,
             rule_to_cluster_assignment = rule_to_cluster_assignment,
             data_to_rules_assignment = data_to_rules_assignment

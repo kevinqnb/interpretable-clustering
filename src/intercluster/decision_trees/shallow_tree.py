@@ -3,7 +3,7 @@ from ShallowTree.ShallowTree import ShallowTree as ShallowTree_
 from typing import List, Set, Callable
 from numpy.typing import NDArray
 import warnings
-from intercluster import Condition, LinearCondition
+from intercluster import LinearCondition
 from intercluster import (
     Node,
     mode,
@@ -14,7 +14,7 @@ from intercluster import (
     get_decision_paths,
     satisfies_path
 )
-from .splitters import InformationGainSplitter, DummySplitter, ObliqueInformationGainSplitter
+from .splitters import DummySplitter
 from .tree import Tree
 
 

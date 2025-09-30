@@ -1,18 +1,14 @@
 import numpy as np
 import pandas as pd
 import pyarc
-from pyids.algorithms.ids_classifier import mine_CARs
 from pyarc import TransactionDB
 from pyarc.algorithms.rule_generation import generateCARs
-from mdlp.discretization import MDLP
-from typing import List, Set, Tuple, Any, Dict
+from typing import List, Set, Tuple, Any
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
     LinearCondition,
     entropy_bin,
-    quantile_bin,
-    uniform_bin,
     interval_to_condition,
     can_flatten,
     flatten_labels,
@@ -66,7 +62,9 @@ class ClassAssociationMiner(RuleMiner):
         self,
         min_support : float = 0.1,
         min_confidence : float = 0.8,
-        max_length : int = 10
+        max_length : int = 10,
+        ignore : Set[Any] = {-1},
+        random_state : int = None
     ):
         """
         Initialize the AssociationRuleMiner.
@@ -74,6 +72,10 @@ class ClassAssociationMiner(RuleMiner):
         Args:
             min_support (float, optional): Minimum support for a rule. Defaults to 0.1.
             min_confidence (float, optional): Minimum confidence for a rule. Defaults to 0.8.
+            max_length (int, optional): Maximum length of a rule (number of conditions). Defaults to 10.
+            ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
+            random_state (int, optional): Seed used by the random number generator.
+                Defaults to None.
         """
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
             raise ValueError("min_support must be a floating point number in [0, 1].")
@@ -84,6 +86,8 @@ class ClassAssociationMiner(RuleMiner):
         self.min_support = min_support
         self.min_confidence = min_confidence
         self.max_length = max_length
+        self.ignore = ignore
+        self.random_state = random_state
         super().__init__()
 
 
@@ -135,7 +139,7 @@ class ClassAssociationMiner(RuleMiner):
         if not can_flatten(y):
             raise ValueError("Each data point must be assigned to a single label.")
         y_ = flatten_labels(y)
-        bin_df = entropy_bin(X, y)
+        bin_df = entropy_bin(X, y, random_state = self.random_state)
         bin_df.columns = bin_df.columns.astype(str)
         bin_df['class'] = y_
         bin_df = bin_df.astype(str)
@@ -149,6 +153,12 @@ class ClassAssociationMiner(RuleMiner):
             maxlen = self.max_length
         )
         self.decision_set, self.decision_set_labels = self.cars_to_decision_set(self.cars)
+
+        # remove rules covering outliers
+        self.decision_set = [rule for i,rule in enumerate(self.decision_set) 
+                             if self.decision_set_labels[i] not in self.ignore]
+        self.decision_set_labels = [label for label in self.decision_set_labels 
+                                    if label not in self.ignore]
         return self.decision_set, self.decision_set_labels
     
 

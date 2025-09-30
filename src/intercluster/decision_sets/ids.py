@@ -1,6 +1,4 @@
-import numpy as np
-import pandas as pd
-from typing import List, Set, Tuple, Any
+from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
@@ -15,7 +13,6 @@ from .decision_set import DecisionSet
 # NOTE: The following code is a private submodule used to interface with the PyIDS package.
 # Since PyIDS is not a dependency of Intercluster, it must be installed separately.
 
-from pyids.algorithms.ids_classifier import mine_CARs
 from pyids.algorithms.ids import IDS as IDS_pyids
 from pyids.model_selection.coordinate_ascent import CoordinateAscent
 from pyids.data_structures.ids_rule import IDSRule
@@ -27,7 +24,7 @@ from pyarc.qcba.data_structures import QuantitativeDataFrame
 
 class IDS(DecisionSet):
     """
-    A Decision Set mined with an apriori search, then pruned using a combination of submodular 
+    A Decision Set mined with an apriori search, then selected using a combination of submodular 
     objective functions.
 
     This algorithm is based upon the paper:
@@ -134,9 +131,9 @@ class IDS(DecisionSet):
         return decision_set, decision_set_labels
 
 
-    def prune(self, X : NDArray, y : List[Set[int]] = None):
+    def select(self, X : NDArray, y : List[Set[int]] = None):
         """
-        Prunes the decision set using the pruner.
+        selects the decision set using the selectr.
         
         Args:
             X (np.ndarray): Input dataset.

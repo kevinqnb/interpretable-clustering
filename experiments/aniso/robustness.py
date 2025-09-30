@@ -4,7 +4,7 @@ import numpy as np
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.mining import *
 from intercluster.experiments import *
 
@@ -25,14 +25,14 @@ data = pd.read_csv('data/synthetic/aniso.csv', index_col = 0).to_numpy()
 n,d = data.shape
 
 # Parameters:
-lambda_val = 2.0
+lambda_val = 5.0
 n_rules = 6
 n_samples = 10000
-std_dev = 0.1
+std_dev = np.std(data) / 20
 
 # DBSCAN
 n_core = 10
-epsilon = 0.35
+epsilon = 0.09
 density_distances = density_distance(data, n_core = n_core)
 
 # Shallow Tree
@@ -42,24 +42,6 @@ depth_factor = 0.03
 min_support = 0.01
 min_confidence = 0.5
 max_length = 10
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length
-)
-
-# Pointwise Rule Mining:
-pointwise_samples_per_point = 10
-pointwise_prob_dim = 1/2
-pointwise_prob_stop = 8/10
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop
-)
-
-# IDS:
-ids_lambdas = [1,0,0,0,0,1,1]
 
 
 ####################################################################################################
@@ -70,13 +52,15 @@ np.random.seed(seed)
 # Baseline DBSCAN
 dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
 dbscan_assignment = dbscan_base.assign(data)
+dbscan_labels = dbscan_base.labels
 dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
 
 if dbscan_n_clusters < 2:
     raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
 
+
 # Decision Tree
-decision_tree_params = {'max_leaf_nodes' : n_rules}
+decision_tree_params = {'max_leaf_nodes' : n_rules, 'random_state' : seed}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
@@ -90,49 +74,59 @@ rem_tree_mod = DecisionTreeMod(
 )
 
 
+# Rule Generation 
+association_rule_miner = ClassAssociationMiner(
+    min_support = min_support,
+    min_confidence = min_confidence,
+    max_length = max_length,
+    random_state = seed
+)
+association_rule_miner.fit(data, dbscan_labels)
+association_n_mine = len(association_rule_miner.decision_set)
+
+
 # CBA
 cba_params = {'rule_miner' : association_rule_miner}
 cba_mod = DecisionSetMod(
     model = CBA,
-    rule_miner = association_rule_miner,
+    rules = association_rule_miner.decision_set,
+    rule_labels = association_rule_miner.decision_set_labels,
     name = 'CBA'
 )
 
 
 # IDS
+ids_lambdas = [
+    1/association_n_mine,
+    1/(2 * data.shape[1] * association_n_mine),
+    1/(len(data) * (association_n_mine**2)),
+    1/(len(data) * (association_n_mine**2)),
+    1/dbscan_n_clusters,
+    1/(data.shape[0] * association_n_mine),
+    1/(data.shape[0])
+]
+
 ids_params = {
     'lambdas' : ids_lambdas,
     'rule_miner' : association_rule_miner,
 }
 ids_mod = DecisionSetMod(
     model = IDS,
-    rule_miner = association_rule_miner,
+    rules = association_rule_miner.decision_set,
+    rule_labels = association_rule_miner.decision_set_labels,
     name = 'IDS'
 )
-
 
 # Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
 dsclust_params1 = {
     'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner,
+    'n_rules' : n_rules
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
+    rules = association_rule_miner.decision_set,
+    rule_labels = association_rule_miner.decision_set_labels,
     name = 'DSCluster-Association-Rules'
-)
-
-# Decision Set Clustering (2) -- Pointwise Rules
-dsclust_params2 = {
-    'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : pointwise_rule_miner,
-}
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise-Rules'
 )
 
 baseline = dbscan_base
@@ -141,9 +135,9 @@ module_list = [
     (rem_tree_mod, rem_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
+    (dsclust_mod1, dsclust_params1)
 ]
+
 
 exp = RobustnessExperiment(
     data = data,

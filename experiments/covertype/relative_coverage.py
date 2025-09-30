@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from intercluster.rules import *
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.utils import *
 from intercluster.experiments import *
 

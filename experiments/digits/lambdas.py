@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.mining import *
 from intercluster.experiments import *
 

@@ -2,14 +2,12 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from typing import List, Set, Callable
 from numpy.typing import NDArray
-from intercluster import Condition, LinearCondition
+from intercluster import LinearCondition
 from intercluster import (
     Node,
-    mode,
     labels_format,
     can_flatten,
     flatten_labels,
-    traverse,
     get_decision_paths,
     satisfies_path
 )
@@ -50,6 +48,9 @@ class DecisionTree(Tree):
                 
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
+
+            random_state (int, optional): Seed used by the random number generator.
+                Defaults to None.
 
             pruner (Callable, optional): Function/Object used to prune branches of the tree.
                 Defaults to None, in which case no pruning is performed.
@@ -224,7 +225,7 @@ class DecisionTree(Tree):
             self.node_count += 2
 
     
-    def prune(self):
+    def select(self):
         """
         Prunes the decision tree by selecting a subset of leaf nodes which best satisfy the 
         pruning objective.

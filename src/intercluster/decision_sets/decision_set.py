@@ -38,16 +38,10 @@ class DecisionSet:
 
             rule_length (int): Maximum rule length.
 
-            pruner (Callable, optional): Function/Object used to prune rules. 
+            selector (Callable, optional): Function/Object used to select rules. 
                 Defaults to None, in which case no pruning is performed.
             
         """
-        '''
-        if pruner is not None:
-            assert issubclass(pruner, Pruner), \
-                "Input pruner must be a valid instance of the Pruner object."
-        self.pruner = pruner
-        '''
         if rule_miner is not None:
             assert issubclass(type(rule_miner), RuleMiner), \
                 "Input rule_miner must be a valid instance of the RuleMiner object."
@@ -70,7 +64,7 @@ class DecisionSet:
         self.decision_set = None
         self.decision_set_labels = None
         self.max_rule_length = 0
-        self.pruner = None
+        self.selector = None
         
         
     def _fitting(
@@ -95,16 +89,16 @@ class DecisionSet:
         raise NotImplementedError('Method not implemented.')
     
 
-    def prune(self, X : NDArray, y : List[Set[int]] = None):
+    def select(self, X : NDArray, y : List[Set[int]] = None):
         """
-        Prunes the decision set using the pruner.
+        selects the decision set using the selector.
         
         Args:
             X (np.ndarray): Input dataset.
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        if self.pruner is not None:
+        if self.selector is not None:
             if self.decision_set is None or self.decision_set_labels is None:
                 raise ValueError('Decision set has not been fitted yet.')
             
@@ -150,7 +144,7 @@ class DecisionSet:
             self.decision_set_labels = self.rule_labels
 
         #self.decision_set, self.decision_set_labels = self._fitting(X, y)
-        self.prune(X, y)
+        self.select(X, y)
         self.trim()
         self.max_rule_length = max([len(rule) for rule in self.decision_set]) if self.decision_set else 0
     
@@ -228,8 +222,8 @@ class DecisionSet:
         Finds the weighted average length of the rules, which is adjusted by the number 
         data points which fall into each rule. 
 
-        NOTE: If the decision set has been pruned this will automatically use the 
-            pruned decision set.
+        NOTE: If the decision set has been selectd this will automatically use the 
+            selectd decision set.
 
         Args:
             X : Input dataset to predict with. 

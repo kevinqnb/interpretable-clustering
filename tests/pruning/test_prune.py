@@ -1,5 +1,5 @@
 import numpy as np 
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.utils import assignment_to_labels
 
 

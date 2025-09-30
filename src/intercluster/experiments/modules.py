@@ -1,18 +1,18 @@
 import numpy as np
 from sklearn.cluster import KMeans, DBSCAN
-from ExKMC.Tree import Tree as ExTree
 from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from typing import List, Set, Any
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.pruning import *
+from intercluster.selection import *
 from intercluster.utils import (
     labels_format,
     labels_to_assignment,
     update_centers,
     unique_labels,
 )
+from intercluster import Condition
 
 
 ####################################################################################################
@@ -350,7 +350,11 @@ class DecisionSetMod(Module):
     Experiment module for a decision tree clustering method.
     
     Args:
-        model (Any): Tree model. 
+        model (Any): Decision Set Model to use.
+
+        rules (List[List[Condition]]): Pre-generated set of rules to select from.
+
+        rule_labels (List[Set[int]]): List of sets of labels corresponding to each rule.
 
         fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
             prior to fitting.
@@ -360,13 +364,15 @@ class DecisionSetMod(Module):
     def __init__(
         self,
         model : Any,
+        rules : List[List[Condition]],
+        rule_labels : List[Set[int]],
         fitting_params : Dict[str, Any] = None,
-        rule_miner : Any = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
+        self.rules = rules
+        self.rule_labels = rule_labels
         self.fitting_params = fitting_params
-        self.rule_miner = rule_miner
         super().__init__(name)
         self.reset()
 
@@ -378,12 +384,10 @@ class DecisionSetMod(Module):
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
-        self.rules = None
-        self.rule_labels = None
         self.dset = None
 
 
-    def update_fitting_params(self, fitting_params : Dict[str, Any]):
+    def update_fitting_params(self, fitting_params : Dict[str, Any] = None):
         """
         Updates the fitting parameters for the model.
         
@@ -415,10 +419,6 @@ class DecisionSetMod(Module):
                 assigned to multiple clusters. 
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
-
-        # Mine for rules if they haven't been set yet
-        if self.rules is None or self.rule_labels is None:
-            self.rules, self.rule_labels = self.rule_miner.fit(X, y)
 
         # Fit the model with the current number of rules
         self.dset = self.model(

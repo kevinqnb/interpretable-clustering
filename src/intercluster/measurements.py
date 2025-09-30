@@ -2,7 +2,6 @@ import numpy as np
 import networkx as nx
 from itertools import combinations
 from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.metrics import silhouette_score as sklearn_silhouette_score
 from typing import List, Set
 from numpy.typing import NDArray
 from .utils import (

@@ -14,15 +14,9 @@ from .decision_set import DecisionSet
 
 ####################################################################################################
 
-# NOTE: The following code is a private submodule used to interface with the PyIDS package.
-# Since PyIDS is not a dependency of Intercluster, it must be installed separately.
-
-from pyids.algorithms.ids_classifier import mine_CARs
-from pyids.algorithms.ids import IDS
-from pyids.model_selection.coordinate_ascent import CoordinateAscent
+# NOTE: The following code is a private submodule used to interface with the PyArc and PyIds packages.
+# These must be installed separately.
 from pyids.data_structures.ids_rule import IDSRule
-from pyarc.qcba.data_structures import QuantitativeDataFrame
-
 
 ####################################################################################################
 
@@ -87,9 +81,9 @@ class CBA(DecisionSet):
         return decision_set, decision_set_labels
 
 
-    def prune(self, X : NDArray, y : List[Set[int]] = None):
+    def select(self, X : NDArray, y : List[Set[int]] = None):
         """
-        Prunes the decision set using the pruner.
+        selects the decision set using the selector.
         
         Args:
             X (np.ndarray): Input dataset.

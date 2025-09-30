@@ -13,14 +13,10 @@ from .decision_tree import (
     ObliqueTree,
 )
 
-from .removal_tree import (
-    RemovalTree
+from .explanation_tree import (
+    ExplanationTree
 )
 
 from .shallow_tree import (
     ShallowTree
-)
-
-from .density_tree import (
-    DensityTree
 )

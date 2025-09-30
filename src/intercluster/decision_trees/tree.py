@@ -13,7 +13,7 @@ from intercluster import (
     collect_nodes,
     collect_leaves
 )
-from intercluster.pruning import Pruner
+from intercluster.selection import Selector
 from .splitters import Splitter
 from ..node import Node
 
@@ -29,7 +29,7 @@ class Tree():
         max_leaf_nodes : int = None,
         max_depth : int = None,
         min_points_leaf : int = 1,
-        pruner : Callable = None
+        selector : Callable = None
     ):
         """
         Args:
@@ -47,7 +47,7 @@ class Tree():
             min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
                 within a single leaf. Defaults to 1.
 
-            pruner (Callable, optional): Function/Object used to prune branches of the tree. 
+            selector (Callable, optional): Function/Object used to select branches of the tree. 
                 Defaults to None, in which case no pruning is performed.
             
         Attributes:            
@@ -67,11 +67,7 @@ class Tree():
         self.max_leaf_nodes = max_leaf_nodes
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
-
-        if pruner is not None:
-            assert issubclass(pruner, Pruner), \
-                "Input pruner must be a valid instance of the Pruner object."
-        self.pruner = pruner
+        self.selector = selector
 
         self.root = None
         self.heap = []
@@ -289,9 +285,9 @@ class Tree():
             self.branch(node, condition)
 
     
-    def prune(self):
+    def select(self):
         """
-        Prunes the decision tree by selecting a subset of leaf nodes which best satisfy the 
+        selects the decision tree by selecting a subset of leaf nodes which best satisfy the 
         pruning objective.
         """
         pass

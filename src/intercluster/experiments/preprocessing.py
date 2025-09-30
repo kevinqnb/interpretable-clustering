@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import sklearn.datasets as datasets
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
-from typing import List
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 ####################################################################################################

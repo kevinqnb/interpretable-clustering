@@ -1,5 +1,4 @@
 from numpy.typing import NDArray
-from typing import List
 from intercluster import Condition
 
 class Node():

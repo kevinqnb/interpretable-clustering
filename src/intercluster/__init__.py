@@ -11,7 +11,6 @@ from .measurements import (
     center_dists,
     kmeans_cost,
     distance_ratio,
-    #_point_silhouette,
     silhouette_score,
     mutual_reachability_distance,
     density_distance,
@@ -25,13 +24,6 @@ from .measurements import (
     clustering_distance,
 )
 
-from .objectives import (
-    PruningObjective,
-    CoverageObjective,
-    CoverageMistakeObjective,
-    KmeansObjective,
-)
-
 from .node import Node
 
 from .utils import (
@@ -39,7 +31,6 @@ from .utils import (
     divide_with_zeros,
     covered_mask,
     update_centers,
-    #outlier_mask,
     labels_format,
     can_flatten,
     flatten_labels,
