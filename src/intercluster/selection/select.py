@@ -15,16 +15,16 @@ from intercluster.utils import (
 
 class Selector:
     """
-    Base class for a pruner, which is used to prune rules based on a given objective.
+    Base class for a selector, which is used to select rules based on a given objective.
     """
     def __init__(self):
         pass
 
-    def prune(
+    def select(
         self
     ) -> NDArray[np.int64]:
         """
-        Prunes the rules based on the given assignment.
+        selects the rules based on the given assignment.
                 
         Returns:
             selected (NDArray): An array of integers representing the indices of the selected rules.
@@ -37,7 +37,7 @@ class Selector:
 
 class CoverageMistakeSelector(Selector):
     """
-    Pruner that selects rules based on a coverage and mistake objective.
+    Selector that selects rules based on a coverage and mistake objective.
     This makes use of a distorted greedy approach to select rules.
     
     For more information, see the following paper:
@@ -56,14 +56,14 @@ class CoverageMistakeSelector(Selector):
         self.lambda_val = lambda_val
 
 
-    def prune(
+    def select(
         self,
         data_to_cluster_assignment : NDArray,
         rule_to_cluster_assignment : NDArray,
         data_to_rules_assignment : NDArray
     ) -> NDArray[np.int64]:
         """
-        Prunes the rules based on the given assignment using the coverage and mistake objective.
+        selects the rules based on the given assignment using the coverage and mistake objective.
         
         Args:            
             data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
