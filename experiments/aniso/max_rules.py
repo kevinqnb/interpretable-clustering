@@ -222,7 +222,7 @@ exp = MaxRulesExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/max_rules/', '_dbscan')
+exp.save_results('data/experiments/aniso/max_rules/', '_dbscan2')
 
 ####################################################################################################
 

@@ -129,7 +129,7 @@ dsclust_params1 = {
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
     rule_miner = association_rule_miner,
-    name = 'DSCluster-Association-Rules'
+    name = 'DSCluster'
 )
 
 baseline = dbscan_base
@@ -151,7 +151,7 @@ exp = RobustnessExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/robustness/', '_dbscan')
+exp.save_results('data/experiments/aniso/robustness/', '_dbscan2')
 
 
 exp_no_outliers = RobustnessExperiment(
@@ -164,7 +164,7 @@ exp_no_outliers = RobustnessExperiment(
 )
 
 exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_dbscan_no_outliers')
+exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_dbscan_no_outliers2')
 
 ####################################################################################################
 

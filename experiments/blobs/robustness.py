@@ -22,16 +22,17 @@ seed = 342
 ####################################################################################################
 # Read and process data:
 data = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
+labels = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,2]
 n,d = data.shape
 
 # Parameters:
-lambda_val = 2.0
-n_rules = 31
+lambda_val = 5.0
+n_rules = len(np.unique(labels))
 n_samples = 10000
-std_dev = 0.1
+std_dev = np.std(data) / 20
 
 # KMeans
-n_clusters = 31
+n_clusters = len(np.unique(labels))
 
 # Shallow Tree
 depth_factor = 0.03
@@ -40,49 +41,30 @@ depth_factor = 0.03
 min_support = 0.01
 min_confidence = 0.5
 max_length = 10
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length
-)
-
-# Pointwise Rule Mining:
-pointwise_samples_per_point = 10
-pointwise_prob_dim = 1/2
-pointwise_prob_stop = 8/10
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop
-)
-
-# IDS:
-ids_lambdas = [1,0,0,0,0,1,1]
 
 
 ####################################################################################################
 
-# Experiment 1: KMeans reference clustering:
 np.random.seed(seed)
 
 
 # Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = n_clusters, random_seed = seed)
 kmeans_assignment = kmeans_base.assign(data)
+kmeans_labels = kmeans_base.labels
 
 
 # Decision Tree
-decision_tree_params = {'max_leaf_nodes' : n_rules}
+decision_tree_params = {'max_leaf_nodes' : n_rules, 'random_state' : seed}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
-
 # Removal Tree
-rem_tree_params = {'num_clusters' : n_clusters}
-rem_tree_mod = DecisionTreeMod(
-    model = RemovalTree,
+exp_tree_params = {'num_clusters' : n_clusters}
+exp_tree_mod = DecisionTreeMod(
+    model = ExplanationTree,
     name = 'Exp-Tree'
 )
 
@@ -111,10 +93,27 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 
+# Rule Generation 
+# Run once to get estimate for the number of mined rules (this is mostly a deterministic process anyways)
+association_rule_miner = ClassAssociationMiner(
+    min_support = min_support,
+    min_confidence = min_confidence,
+    max_length = max_length,
+    random_state = seed
+)
+association_rule_miner.fit(data, kmeans_labels)
+association_n_mine = len(association_rule_miner.decision_set)
+
+association_rule_miner = ClassAssociationMiner(
+    min_support = min_support,
+    min_confidence = min_confidence,
+    max_length = max_length,
+    random_state = seed
+)
+
+
 # CBA
-cba_params = {
-    'rule_miner' : association_rule_miner,
-}
+cba_params = {}
 cba_mod = DecisionSetMod(
     model = CBA,
     rule_miner = association_rule_miner,
@@ -123,9 +122,18 @@ cba_mod = DecisionSetMod(
 
 
 # IDS
+ids_lambdas = [
+    1/association_n_mine,
+    1/(2 * data.shape[1] * association_n_mine),
+    1/(len(data) * (association_n_mine**2)),
+    1/(len(data) * (association_n_mine**2)),
+    1/n_clusters,
+    1/(data.shape[0] * association_n_mine),
+    1/(data.shape[0])
+]
+
 ids_params = {
-    'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner,
+    'lambdas' : ids_lambdas
 }
 ids_mod = DecisionSetMod(
     model = IDS,
@@ -133,44 +141,28 @@ ids_mod = DecisionSetMod(
     name = 'IDS'
 )
 
-
-# Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
+# Decision Set Clustering
 dsclust_params1 = {
     'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner
+    'n_rules' : n_rules
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
     rule_miner = association_rule_miner,
-    name = 'DSCluster-Association-Rules'
+    name = 'DSCluster'
 )
-
-
-# Decision Set Clustering (2) -- Pointwise Rules
-dsclust_params2 = {
-    'lambd' : lambda_val,
-    'n_rules' : n_rules,
-    'rule_miner' : pointwise_rule_miner,
-}
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise-Rules'
-)
-
 
 baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
+    (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
+    (dsclust_mod1, dsclust_params1)
 ]
+
 
 exp = RobustnessExperiment(
     data = data,
@@ -181,7 +173,8 @@ exp = RobustnessExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/blobs/robustness/', '_kmeans')
+exp.save_results('data/experiments/blobs/robustness/', '_dbscan')
+
 
 exp_no_outliers = RobustnessExperiment(
     data = data,
@@ -193,7 +186,7 @@ exp_no_outliers = RobustnessExperiment(
 )
 
 exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/blobs/robustness/', '_kmeans_no_outliers')
-
+exp_no_outliers.save_results('data/experiments/blobs/robustness/', '_dbscan_no_outliers')
 
 ####################################################################################################
+
