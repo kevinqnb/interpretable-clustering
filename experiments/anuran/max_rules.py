@@ -22,13 +22,13 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_ansio()
+data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
 n,d = data.shape
 
 ##### Parameters #####
 
 # Agglomerative Clustering
-n_clusters = 12
+n_clusters = 6
 euclidean_distances = pairwise_distances(data)
 
 # General
@@ -144,10 +144,10 @@ module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
-    (ids_mod, ids_params),
-    (dsclust_mod, dsclust_params),
+    #(ids_mod, ids_params),
+    (dsclust_mod, dsclust_params)
 ]
-n_samples = [1,1,1,10,1]
+n_samples = [1,1,1,1]
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
@@ -184,7 +184,7 @@ exp = MaxRulesExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/max_rules/', '_agglo')
+exp.save_results('data/experiments/anuran/max_rules/', '_agglo')
 
 ####################################################################################################
 

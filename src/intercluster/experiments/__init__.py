@@ -13,6 +13,7 @@ from .modules import (
     Module,
     KMeansBase,
     DBSCANBase,
+    AgglomerativeBase,
     DecisionTreeMod,
     DecisionSetMod,
 )
@@ -25,6 +26,10 @@ from .experiments import (
 
 
 from .preprocessing import (
+    load_preprocessed_ansio,
+    load_preprocessed_protein,
+    load_preprocessed_blobs,
+    load_preprocessed_spiral,
     load_preprocessed_climate,
     load_preprocessed_digits,
     load_preprocessed_mnist,

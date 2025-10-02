@@ -21,19 +21,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/aniso.csv', index_col = 0).to_numpy()
+data, labels, feature_labels, scaler = load_preprocessed_ansio()
 n,d = data.shape
 
-# Parameters:
+##### Parameters #####
+
+# Agglomerative Clustering
+n_clusters = 12
+
 lambda_val = 5.0
-n_rules = 6
+n_rules = n_clusters + 5
 n_samples = 10000
 std_dev = np.std(data) / 20
-
-# DBSCAN
-n_core = 10
-epsilon = 0.09
-density_distances = density_distance(data, n_core = n_core)
 
 # Shallow Tree
 depth_factor = 0.03
@@ -49,14 +48,11 @@ max_length = 10
 # Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
-# Baseline DBSCAN
-dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
-dbscan_assignment = dbscan_base.assign(data)
-dbscan_labels = dbscan_base.labels
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
 
-if dbscan_n_clusters < 2:
-    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
+# Agglomerative reference clustering:
+agglomerative_base = AgglomerativeBase(n_clusters=n_clusters, linkage='single')
+agglo_assignment = agglomerative_base.assign(data)
+agglo_labels = agglomerative_base.labels
 
 
 # Decision Tree
@@ -67,7 +63,7 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 # Removal Tree
-exp_tree_params = {'num_clusters' : dbscan_n_clusters}
+exp_tree_params = {'num_clusters' : n_clusters}
 exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
@@ -81,7 +77,7 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, dbscan_labels)
+association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 association_rule_miner = ClassAssociationMiner(
@@ -107,7 +103,7 @@ ids_lambdas = [
     1/(2 * data.shape[1] * association_n_mine),
     1/(len(data) * (association_n_mine**2)),
     1/(len(data) * (association_n_mine**2)),
-    1/dbscan_n_clusters,
+    1/n_clusters,
     1/(data.shape[0] * association_n_mine),
     1/(data.shape[0])
 ]
@@ -121,24 +117,24 @@ ids_mod = DecisionSetMod(
     name = 'IDS'
 )
 
-# Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-dsclust_params1 = {
+# Decision Set Clustering
+dsclust_params = {
     'lambd' : lambda_val,
     'n_rules' : n_rules
 }
-dsclust_mod1 = DecisionSetMod(
+dsclust_mod = DecisionSetMod(
     model = DSCluster,
     rule_miner = association_rule_miner,
     name = 'DSCluster'
 )
 
-baseline = dbscan_base
+baseline = agglomerative_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1)
+    (dsclust_mod, dsclust_params)
 ]
 
 
@@ -151,7 +147,7 @@ exp = RobustnessExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/robustness/', '_dbscan2')
+exp.save_results('data/experiments/aniso/robustness/', '_agglo')
 
 
 exp_no_outliers = RobustnessExperiment(
@@ -164,7 +160,7 @@ exp_no_outliers = RobustnessExperiment(
 )
 
 exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_dbscan_no_outliers2')
+exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_agglo_no_outliers')
 
 ####################################################################################################
 

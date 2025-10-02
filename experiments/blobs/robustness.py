@@ -21,18 +21,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
-labels = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,2]
+data, labels, feature_labels, scaler = load_preprocessed_blobs('data/synthetic')
 n,d = data.shape
 
-# Parameters:
-lambda_val = 5.0
-n_rules = len(np.unique(labels))
-n_samples = 10000
-std_dev = np.std(data) / 20
+### Parameters: ###
 
 # KMeans
 n_clusters = len(np.unique(labels))
+
+lambda_val = 5.0
+n_rules = n_clusters + 5
+n_samples = 10000
+std_dev = np.std(data) / 20
 
 # Shallow Tree
 depth_factor = 0.03

@@ -21,19 +21,19 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/spiral_noisy.csv', index_col = 0).to_numpy()[:,0:2]
+data, labels, feature_labels, scaler = load_preprocessed_spiral('data/synthetic')
 n,d = data.shape
 
-# Parameters:
+### Parameters: ###
+# DBSCAN
+epsilon = 0.18
+n_core = 6
+density_distances = density_distance(data, n_core = n_core)
+
+# General
 lambda_val = 5.0
-n_rules = 6
 n_samples = 10000
 std_dev = np.std(data) / 20
-
-# DBSCAN
-epsilon = 0.225
-n_core = 10
-density_distances = density_distance(data, n_core = n_core)
 
 # Shallow Tree
 depth_factor = 0.03
@@ -53,7 +53,9 @@ np.random.seed(seed)
 dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
 dbscan_assignment = dbscan_base.assign(data)
 dbscan_labels = dbscan_base.labels
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
+dbscan_n_clusters = len(unique_labels(dbscan_base.labels, ignore = {-1}))
+
+n_rules = dbscan_n_clusters + 5
 
 if dbscan_n_clusters < 2:
     raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")

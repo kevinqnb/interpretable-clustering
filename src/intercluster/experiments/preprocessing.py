@@ -3,10 +3,119 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import sklearn.datasets as datasets
+from ucimlrepo import fetch_ucirepo
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
+
 ####################################################################################################
+
+
+def load_preprocessed_ansio():
+    """
+    Loads a preprocessed anisotropicly distributed synthetic dataset. Values are 
+    normalized to the range with standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    random_state = 1902
+    n_samples = 1000
+    X_ansio, y_ansio = datasets.make_blobs(n_samples=n_samples, centers = 8, random_state=random_state)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X_ansio = np.dot(X_ansio, transformation)
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(X_ansio)
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, y_ansio, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_anuran(filepath):
+    """
+    Loads a preprocessed anuran dataset. Values are normalized via standard scaling.
+
+    Args:
+        filepath (str): This should be the filepath to the common folder in which the 
+            all of the digits data is contained. I.e. 'data/anuran' or some variation 
+            on this depending upon the current working directory. 
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points. In this case, 
+            the dataset does not have any labels and will return None. 
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data_filepath = os.path.join(filepath, 'Frogs_MFCCs.csv')
+    anuran = pd.read_csv(data_filepath)
+    anuran = anuran.iloc[:, :-4]
+    anuran = anuran.to_numpy()
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(anuran)
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, None, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_blobs(filepath = "data/synthetic"):
+    """
+    Loads a preprocessed isotropicly distributed synthetic dataset. Values are 
+    normalized to the range with standard scaling.
+
+    Args:
+        filepath (str): This should be the filepath to the common folder in which the 
+            all of the synthetic data is contained. I.e. 'data/synthetic'.
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    filename = os.path.join(filepath, 'blobs.csv')
+    X_blobs = pd.read_csv(filename, index_col = 0).to_numpy()[:,0:2]
+    y_blobs = pd.read_csv(filename, index_col = 0).to_numpy()[:,2]
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(X_blobs)
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, y_blobs, feature_labels, scaler
+
+
+#####################################################################################################
 
 
 def load_preprocessed_climate(filepath):
@@ -93,6 +202,45 @@ def load_preprocessed_climate(filepath):
 ####################################################################################################
 
 
+def load_preprocessed_covtype():
+    """
+    Loads a preprocessed Forest Cover type dataset. Values are normalized with standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    D = datasets.fetch_covtype()
+    data = D['data']
+    data_labels = D['target']
+    feature_labels = D['feature_names']
+
+    # Only taking non-categorical features.
+    data = data[:,:10]
+    feature_labels = feature_labels[:10]
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(data)
+
+    #feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
 def load_preprocessed_digits():
     """
     Loads a preprocessed sklearn digits dataset. Values are normalized to the range 
@@ -113,6 +261,43 @@ def load_preprocessed_digits():
             its original values. 
     """
     data, data_labels = datasets.load_digits(return_X_y=True)
+
+    scaler = MinMaxScaler()
+
+    scaled_data = scaler.fit_transform(data)
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, data_labels, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_fashion():
+    """
+    Loads a preprocessed Fashion MNIST dataset. Values are normalized to the range [0,1].
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data, data_labels = datasets.fetch_openml(
+        name = 'Fashion-MNIST',
+        return_X_y=True,
+        as_frame=False
+    )
+    data_labels = data_labels.astype(int)
 
     scaler = MinMaxScaler()
 
@@ -164,9 +349,12 @@ def load_preprocessed_mnist():
 ####################################################################################################
 
 
-def load_preprocessed_fashion():
+def load_preprocessed_protein():
     """
-    Loads a preprocessed Fashion MNIST dataset. Values are normalized to the range [0,1].
+    Loads a preprocessed protein dataset. Values are normalized with standard scaling.
+
+    NOTE: This dataset is not scaled, since its geometric structure is more interesting 
+    without scaling.
 
     Args:
 
@@ -182,78 +370,38 @@ def load_preprocessed_fashion():
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-    data, data_labels = datasets.fetch_openml(
-        name = 'Fashion-MNIST',
-        return_X_y=True,
-        as_frame=False
-    )
-    data_labels = data_labels.astype(int)
+    # fetch dataset 
+    protein = fetch_ucirepo(id=342) 
+    
+    # data (as pandas dataframes) 
+    df_protein = protein.data.features
+    df_protein = df_protein.iloc[:, :-3].apply(pd.to_numeric, errors='coerce')
+    df_protein = df_protein.dropna(how = 'any')
+    keeps = df_protein.index
+    X_protein = df_protein.to_numpy()
+    y_protein = pd.factorize(protein.data.targets.iloc[:,0])[0]
+    y_protein = y_protein[keeps]
 
-    scaler = MinMaxScaler()
-
-    scaled_data = scaler.fit_transform(data)
-
-    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
-
-    return scaled_data, data_labels, feature_labels, scaler
-
-
-####################################################################################################
+    return X_protein, y_protein, list(df_protein.columns), None
 
 
-def load_preprocessed_covtype():
+#####################################################################################################
+
+
+def load_preprocessed_spiral(filepath = "data/synthetic"):
     """
-    Loads a preprocessed Forest Cover type dataset. Values are normalized with standard scaling.
-
-    Args:
-
-
-    Returns:
-        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
-
-        data_labels (np.ndarray): Array of labels associated with data points.
-        
-        feature_labels (List[str]): List of feature names associated 
-            with each of the columns in the scaled data array.
-
-        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
-            its original values. 
-    """
-    D = datasets.fetch_covtype()
-    data = D['data']
-    data_labels = D['target']
-    feature_labels = D['feature_names']
-
-    # Only taking non-categorical features.
-    data = data[:,:10]
-    feature_labels = feature_labels[:10]
-
-    scaler = StandardScaler()
-
-    scaled_data = scaler.fit_transform(data)
-
-    #feature_labels = [str(i) for i in range(scaled_data.shape[1])]
-
-    return scaled_data, data_labels, feature_labels, scaler
-
-
-####################################################################################################
-
-
-def load_preprocessed_anuran(filepath):
-    """
-    Loads a preprocessed anuran dataset. Values are normalized via standard scaling.
+    Loads a preprocessed spiral synthetic dataset. Values are normalized to the range 
+    with standard scaling.
 
     Args:
         filepath (str): This should be the filepath to the common folder in which the 
-            all of the digits data is contained. I.e. 'data/anuran' or some variation 
-            on this depending upon the current working directory. 
+            all of the synthetic data is contained. I.e. 'data/synthetic'.
+
 
     Returns:
         data (np.ndarray): (samples x features) numpy array of preprocessed data. 
 
-        data_labels (np.ndarray): Array of labels associated with data points. In this case, 
-            the dataset does not have any labels and will return None. 
+        data_labels (np.ndarray): Array of labels associated with data points.
         
         feature_labels (List[str]): List of feature names associated 
             with each of the columns in the scaled data array.
@@ -261,18 +409,29 @@ def load_preprocessed_anuran(filepath):
         scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
             its original values. 
     """
-    data_filepath = os.path.join(filepath, 'Frogs_MFCCs.csv')
-    anuran = pd.read_csv(data_filepath)
-    anuran = anuran.iloc[:, :-4]
-    anuran = anuran.to_numpy()
+    filename = os.path.join(filepath, 'spiral.csv')
+    X_spiral = pd.read_csv(filename, index_col = 0).to_numpy()[:,0:2]
+    y_spiral = pd.read_csv(filename, index_col = 0).to_numpy()[:,2]
+    np.random.seed(170)
+    noisy_points = 1000
+    X_noisy = np.zeros((noisy_points, 2))
+    y_noisy = -1 * np.ones(noisy_points)
+    for i in range(noisy_points):
+        rnd_idx = np.random.randint(0, len(X_spiral))
+        X_noisy[i,:] = X_spiral[rnd_idx,:] + np.random.normal(0,0.5)
+        y_noisy[i] = y_spiral[rnd_idx]
+
+    X_spiral_noisy = np.concatenate([X_spiral, X_noisy], axis = 0)
+    y_spiral_noisy = np.concatenate([y_spiral, y_noisy], axis = 0)
 
     scaler = StandardScaler()
-
-    scaled_data = scaler.fit_transform(anuran)
-
+    scaled_data = scaler.fit_transform(X_spiral_noisy)
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
-    return scaled_data, None, feature_labels, scaler
+    return scaled_data, y_spiral_noisy, feature_labels, scaler
+
+
+####################################################################################################
 
 
 

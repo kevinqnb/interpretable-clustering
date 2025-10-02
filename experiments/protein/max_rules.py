@@ -22,18 +22,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_ansio()
+data, labels, feature_labels, scaler = load_preprocessed_protein()
 n,d = data.shape
 
 ##### Parameters #####
 
-# Agglomerative Clustering
-n_clusters = 12
-euclidean_distances = pairwise_distances(data)
+# DBSCAN
+epsilon = 0.72
+n_core = 1
+density_distances = density_distance(data, n_core = n_core)
 
 # General
 lambda_val = 5.0
-max_rules = n_clusters + 20
 
 # Shallow Tree
 depth_factor = 0.03
@@ -45,18 +45,25 @@ max_length = 10
 
 ####################################################################################################
 
+# DBSCAN reference clustering:
 np.random.seed(seed)
 
-# Agglomerative reference clustering:
-agglomerative_base = AgglomerativeBase(n_clusters=n_clusters, linkage='single')
-agglo_assignment = agglomerative_base.assign(data)
-agglo_labels = agglomerative_base.labels
-agglo_n_rules_list = list(np.arange(n_clusters, max_rules + 1))
+# Baseline DBSCAN
+dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
+dbscan_assignment = dbscan_base.assign(data)
+dbscan_labels = dbscan_base.labels
+dbscan_n_clusters = len(unique_labels(dbscan_labels, ignore = {-1})) # number of non-outlier clusters
+
+max_rules = dbscan_n_clusters + 20
+dbscan_n_rules_list = list(np.arange(dbscan_n_clusters, max_rules + 1))
+
+if dbscan_n_clusters < 2:
+    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
 
 
 # Decision Tree
 decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : seed}
-                        for i in agglo_n_rules_list}
+                        for i in dbscan_n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
@@ -64,7 +71,7 @@ decision_tree_mod = DecisionTreeMod(
 
 
 # Explanation Tree
-exp_tree_params = {tuple(agglo_n_rules_list) : {'num_clusters' : n_clusters}}
+exp_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
 exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
@@ -78,7 +85,7 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, agglo_labels)
+association_rule_miner.fit(data, dbscan_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 association_rule_miner = ClassAssociationMiner(
@@ -91,7 +98,7 @@ association_rule_miner = ClassAssociationMiner(
 
 # CBA
 cba_params = {
-    tuple(agglo_n_rules_list) : {}
+    tuple(dbscan_n_rules_list) : {}
 }
 cba_mod = DecisionSetMod(
     model = CBA,
@@ -106,13 +113,13 @@ ids_lambdas = [
     1/(2 * data.shape[1] * association_n_mine),
     1/(len(data) * (association_n_mine**2)),
     1/(len(data) * (association_n_mine**2)),
-    1/n_clusters,
+    1/dbscan_n_clusters,
     1/(data.shape[0] * association_n_mine),
     1/(data.shape[0])
 ]
 
 ids_params = {
-    tuple(agglo_n_rules_list) : {
+    tuple(dbscan_n_rules_list) : {
         'lambdas' : ids_lambdas,
     }
 }
@@ -127,9 +134,9 @@ ids_mod = DecisionSetMod(
 dsclust_params = {
     (i,) : {
         'lambd' : lambda_val,
-        'n_rules' : i,
+        'n_rules' : i
     }
-    for i in agglo_n_rules_list
+    for i in dbscan_n_rules_list
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
@@ -138,30 +145,29 @@ dsclust_mod = DecisionSetMod(
 )
 
 
-
-baseline = agglomerative_base
+baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
-    (ids_mod, ids_params),
-    (dsclust_mod, dsclust_params),
+    #(ids_mod, ids_params),
+    (dsclust_mod, dsclust_params)
 ]
-n_samples = [1,1,1,10,1]
+n_samples = [1,1,1,1]
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
-    ground_truth_assignment = agglo_assignment,
+    ground_truth_assignment = dbscan_assignment,
     name = 'coverage-mistake-score'
 )
 
 silhouette_measure = Silhouette(
-    distances = euclidean_distances,
+    distances = density_distances,
     name = 'silhouette-score'
 )
 
 clustering_dist = ClusteringDistance(
-    ground_truth_assignment = agglo_assignment,
+    ground_truth_assignment = dbscan_assignment,
     name = 'clustering-distance'
 )
 
@@ -174,7 +180,7 @@ measurement_fns = [
 
 exp = MaxRulesExperiment(
     data = data,
-    n_rules_list = agglo_n_rules_list,
+    n_rules_list = dbscan_n_rules_list,
     baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
@@ -184,7 +190,7 @@ exp = MaxRulesExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/aniso/max_rules/', '_agglo')
+exp.save_results('data/experiments/protein/max_rules/', '_dbscan')
 
 ####################################################################################################
 

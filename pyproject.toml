@@ -18,7 +18,8 @@ dependencies = [
     "networkx (==3.2.1)",
     "jupyter (>=1.1.1,<2.0.0)",
     "pytest (>=8.3.3,<9.0.0)",
-    "wheel (==0.45.1)"
+    "wheel (==0.45.1)",
+    "ucimlrepo (>=0.0.7,<0.0.8)"
 ]
 
 [build-system]

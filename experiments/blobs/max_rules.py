@@ -22,18 +22,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,0:2]
-labels = pd.read_csv('data/synthetic/D31.csv', index_col = 0).to_numpy()[:,2]
+data, labels, feature_labels, scaler = load_preprocessed_blobs('data/synthetic')
 n,d = data.shape
 
 ##### Parameters #####
-# General
-lambda_val = 5.0
-max_rules = 50
 
 # KMeans
 n_clusters = len(np.unique(labels))
 euclidean_distances = pairwise_distances(data)
+
+# General
+lambda_val = 5.0
+max_rules = n_clusters + 20
 kmeans_n_rules_list = list(np.arange(n_clusters, max_rules + 1))
 
 # Shallow Tree

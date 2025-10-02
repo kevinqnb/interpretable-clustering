@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from typing import Tuple, Dict, Any
 from numpy.typing import NDArray
 from typing import List, Set, Any
@@ -147,6 +147,61 @@ class DBSCANBase(Baseline):
     def assign(self, X : NDArray) -> NDArray:
         """
         Fits the DBSCAN model and returns the cluster assignment.
+        
+        Args:
+            X (np.ndarray): Data matrix.
+            
+        Returns:
+            assignment (np.ndarray): Cluster assignment boolean array of size n x k
+                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
+        """
+        if not self.fitted:
+            self.clustering.fit(X)
+            self.labels = labels_format(self.clustering.labels_)
+            n_unique = len(unique_labels(self.labels, ignore = {-1}))
+            self.assignment = labels_to_assignment(
+                self.labels,
+                n_labels = n_unique,
+                ignore = {-1}
+            )
+            self.fitted = True
+        
+        return self.assignment
+    
+
+####################################################################################################
+
+
+class AgglomerativeBase(Baseline):
+    """
+    Baseline Agglomerative clustering method.
+    
+    Args:
+        n_clusters (int): Number of clusters.
+
+        linkage (str): Linkage criterion to use.
+        
+        name (str, optional): Name of the baseline method. Defaults to 'DBSCAN'.
+    """
+    def __init__(
+        self,
+        n_clusters : int,
+        linkage : str = 'single',
+        name : str = 'Agglomerative'
+    ):
+        super().__init__(name)
+        self.n_clusters = n_clusters
+        self.linkage = linkage
+        self.clustering = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage)
+        self.fitted = False
+        self.assignment = None
+        self.max_rule_length = np.nan
+        self.weighted_average_rule_length = np.nan
+
+        
+    def assign(self, X : NDArray) -> NDArray:
+        """
+        Fits the Agglomerative model and returns the cluster assignment.
         
         Args:
             X (np.ndarray): Data matrix.
