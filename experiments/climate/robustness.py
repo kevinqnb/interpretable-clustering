@@ -104,6 +104,8 @@ association_rule_miner = ClassAssociationMiner(
 association_rule_miner.fit(data, kmeans_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
+import pdb; pdb.set_trace()
+
 association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
@@ -142,11 +144,11 @@ ids_mod = DecisionSetMod(
 )
 
 # Decision Set Clustering
-dsclust_params1 = {
+dsclust_params = {
     'lambd' : lambda_val,
     'n_rules' : n_rules
 }
-dsclust_mod1 = DecisionSetMod(
+dsclust_mod = DecisionSetMod(
     model = DSCluster,
     rule_miner = association_rule_miner,
     name = 'DSCluster'
@@ -160,7 +162,7 @@ module_list = [
     (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
     (ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1)
+    (dsclust_mod, dsclust_params)
 ]
 
 
