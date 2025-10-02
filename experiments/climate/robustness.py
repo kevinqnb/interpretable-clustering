@@ -104,8 +104,6 @@ association_rule_miner = ClassAssociationMiner(
 association_rule_miner.fit(data, kmeans_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
-import pdb; pdb.set_trace()
-
 association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
