@@ -54,7 +54,7 @@ np.random.seed(seed)
 dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
 dbscan_assignment = dbscan_base.assign(data)
 dbscan_labels = dbscan_base.labels
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels), ignore = {-1})
+dbscan_n_clusters = len(unique_labels(dbscan_base.labels, ignore = {-1})) # number of non-outlier clusters
 
 n_rules = dbscan_n_clusters + 5
 
