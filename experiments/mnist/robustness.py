@@ -39,8 +39,8 @@ depth_factor = 0.03
 
 # Association Rule Mining:
 min_support = 0.05
-min_confidence = 0.8
-max_length = 10
+min_confidence = 0.9
+max_length = 4
 
 
 ####################################################################################################
@@ -103,6 +103,8 @@ association_rule_miner = ClassAssociationMiner(
 )
 association_rule_miner.fit(data, kmeans_labels)
 association_n_mine = len(association_rule_miner.decision_set)
+
+print(f'Mined {association_n_mine} rules.')
 
 association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
