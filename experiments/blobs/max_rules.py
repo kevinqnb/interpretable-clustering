@@ -42,7 +42,7 @@ depth_factor = 0.03
 # Association Rule Mining:
 min_support = 0.01
 min_confidence = 0.5
-max_length = 10
+max_length = 4
 
 ####################################################################################################
 

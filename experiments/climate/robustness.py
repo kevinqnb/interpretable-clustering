@@ -38,9 +38,9 @@ std_dev = np.std(data) / 20
 depth_factor = 0.03
 
 # Association Rule Mining:
-min_support = 0.05
-min_confidence = 0.8
-max_length = 10
+min_support = 0.01
+min_confidence = 0.9
+max_length = 4
 
 
 ####################################################################################################
