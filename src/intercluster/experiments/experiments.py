@@ -589,6 +589,7 @@ class RobustnessExperiment(Experiment):
         for mod, param_list in module_list:
             module_result_dict[("clustering-distance", mod.name)] = {}
             module_label_dict[mod.name] = {}
+            
 
         for mod, fitting_params in module_list:
             mod.update_fitting_params(fitting_params)
@@ -598,7 +599,37 @@ class RobustnessExperiment(Experiment):
             data_to_cluster_assignment
             ) = mod.fit(self.data, self.baseline.labels)
             module_label_dict[mod.name] = assignment_to_labels(data_to_cluster_assignment)
+
+
+        def dist_sample():
+            sample_dict = {}
+            noisy_data = self.data + np.random.normal(
+                loc = 0.0,
+                scale = self.std_dev,
+                size = self.data.shape
+            )
+            for mod, fitting_params in module_list:
+                noisy_labels = mod.predict(noisy_data)
+                dist = clustering_distance(
+                    labels1 = module_label_dict[mod.name],
+                    labels2 = noisy_labels,
+                    percentage = True,
+                    ignore = self.ignore
+                )
+                sample_dict[mod.name] = dist
+            return sample_dict
         
+        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                delayed(dist_sample)
+                for i in range(self.n_samples)
+        )
+
+        for i in range(self.n_samples):
+            for mod, fitting_params in module_list:
+                dist = module_results[i][mod.name]
+                module_result_dict[("clustering-distance", mod.name)][i] = dist
+
+        '''
         for i in range(self.n_samples):
             noisy_data = self.data + np.random.normal(
                 loc = 0.0,
@@ -614,6 +645,7 @@ class RobustnessExperiment(Experiment):
                     ignore = self.ignore
                 )
                 module_result_dict[("clustering-distance", mod.name)][i] = dist
+        '''
                         
         return module_result_dict
     
