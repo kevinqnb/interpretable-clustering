@@ -620,7 +620,7 @@ class RobustnessExperiment(Experiment):
             return sample_dict
         
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(dist_sample)
+                delayed(dist_sample)()
                 for i in range(self.n_samples)
         )
 
