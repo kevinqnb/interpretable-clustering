@@ -285,7 +285,7 @@ class MaxRulesExperiment(Experiment):
         module_samples = []
         for i in range(len(self.module_list)):
             for j in range(self.n_samples[i]):
-                module_samples.append(copy.deepcopy([self.module_list[i]]))
+                module_samples.append(copy.deepcopy(self.module_list[i]))
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
                 delayed(self.run_modules)([mod])

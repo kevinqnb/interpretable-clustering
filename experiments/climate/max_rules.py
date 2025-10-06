@@ -44,6 +44,11 @@ min_support = 0.01
 min_confidence = 0.9
 max_length = 4
 
+# Pointwise Rule Mining:
+samples_per_point = 5
+prob_dim = 1/2
+prob_stop = 3/4
+
 ####################################################################################################
 
 np.random.seed(seed)
