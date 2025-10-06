@@ -145,7 +145,7 @@ dsclust_mod_assoc = DecisionSetMod(
 
 # Pointwise Rule generation
 pointwise_rule_miner = PointwiseMinerV2(
-    samples_per_point = samples_per_point,
+    samples = samples_per_point,
     prob_dim = prob_dim,
     prob_stop = prob_stop
 )
