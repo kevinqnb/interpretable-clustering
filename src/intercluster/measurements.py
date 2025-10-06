@@ -7,10 +7,12 @@ from numpy.typing import NDArray
 from .utils import (
     covered_mask,
     divide_with_zeros,
-    tiebreak
+    tiebreak,
+    labels_to_assignment,
+    unique_labels
 )
 import warnings
-
+from .measurements_cython import clustering_distance_cython
 
 ####################################################################################################
 
@@ -780,3 +782,32 @@ def clustering_distance(
         return differences / n_pairs
     else:
         return differences
+    
+
+
+def clustering_distance_cythonized(
+    labels1 : List[Set[int]],
+    labels2 : List[Set[int]],
+    percentage : bool = False,
+    ignore : Set[int] = None
+) -> float:
+    """
+    Computes the distance between two clusterings as the number (or percentage) of pairs which are 
+    assigned to the same cluster in one clustering and different clusters in the other.
+
+    Args:
+        labels1 (list[set[int]]): Length n list of ground truth labels.
+        
+        labels2 (list[set[int]]): Length n list of predicted labels.
+
+        percentage (bool, optional): If True, returns the fraction of pairs which differ
+            between the two labelings. If False, returns the total number. Defaults to False.
+
+        ignore (set[int], optional): If provided, ignores points with this label in both
+            labelings. Defaults to None.
+
+    Returns:
+        distance (float): Number (or percentage) of pairs assigned to different clusters 
+            in the two labelings.
+    """
+    return clustering_distance_cython(labels1, labels2, percentage, ignore)

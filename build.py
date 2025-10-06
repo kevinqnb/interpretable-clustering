@@ -23,10 +23,15 @@ DEFINE_MACROS = [("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 
 
 def build() -> None:
+    sources = glob("src/intercluster/**/*.pyx", recursive=True)
+    if not sources:
+        raise FileNotFoundError("No .pyx files found under src/intercluster/")
+
     extensions = [
         Extension(
             "*",
-            ["src/intercluster/***/*.pyx"],
+            #["src/intercluster/***/*.pyx", "src/intercluster/*.pyx"],
+            sources,
             extra_compile_args=COMPILE_ARGS,
             extra_link_args=LINK_ARGS,
             include_dirs=INCLUDE_DIRS,

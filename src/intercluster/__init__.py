@@ -22,6 +22,7 @@ from .measurements import (
     uncovered_mistake_score,
     label_differences,
     clustering_distance,
+    clustering_distance_cythonized
 )
 
 from .node import Node

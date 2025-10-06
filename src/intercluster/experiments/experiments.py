@@ -8,7 +8,7 @@ from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.utils import assignment_to_labels
 from intercluster.measurements import (
-    coverage, coverage_mistake_score, clustering_distance
+    coverage, coverage_mistake_score, clustering_distance, clustering_distance_cythonized
 )
 from .modules import *
 from .measurements import *
@@ -613,7 +613,7 @@ class RobustnessExperiment(Experiment):
             )
             for mod, fitting_params in module_list:
                 noisy_labels = mod.predict(noisy_data)
-                dist = clustering_distance(
+                dist = clustering_distance_cythonized(
                     labels1 = module_label_dict[mod.name],
                     labels2 = noisy_labels,
                     percentage = True,

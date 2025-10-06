@@ -43,6 +43,11 @@ min_support = 0.05
 min_confidence = 0.9
 max_length = 4
 
+# Pointwise Rule Mining:
+samples_per_point = 5
+prob_dim = 1/2
+prob_stop = 3/4
+
 ####################################################################################################
 
 np.random.seed(seed)
@@ -154,6 +159,28 @@ ids_mod = DecisionSetMod(
 
 
 # Decision Set Clustering
+dsclust_params_assoc = {
+    (i,) : {
+        'lambd' : lambda_val,
+        'n_rules' : i,
+    }
+    for i in kmeans_n_rules_list
+}
+dsclust_mod_assoc = DecisionSetMod(
+    model = DSCluster,
+    rule_miner = association_rule_miner,
+    name = 'DSCluster-Assoc'
+)
+
+
+# Pointwise Rule generation
+pointwise_rule_miner = PointwiseMinerV2(
+    samples = samples_per_point,
+    prob_dim = prob_dim,
+    prob_stop = prob_stop
+)
+
+# Decision Set Clustering : Pointwise Rules
 dsclust_params = {
     (i,) : {
         'lambd' : lambda_val,
@@ -163,7 +190,7 @@ dsclust_params = {
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
+    rule_miner = pointwise_rule_miner,
     name = 'DSCluster'
 )
 
@@ -176,9 +203,10 @@ module_list = [
     (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
     #(ids_mod, ids_params),
+    (dsclust_mod_assoc, dsclust_params_assoc),
     (dsclust_mod, dsclust_params),
 ]
-n_samples = [1,1,1,1,1,1]
+n_samples = [1,1,1,1,1,1,10]
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
