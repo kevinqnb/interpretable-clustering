@@ -282,20 +282,23 @@ class MaxRulesExperiment(Experiment):
         """
         self.run_baseline()
 
-        module_lists = [
-            [copy.deepcopy(self.module_list[i])] * self.n_samples[i]
-            for i in range(len(self.module_list))
-        ]
-        #module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+        module_samples = []
+        for i in range(len(self.module_list)):
+            for j in range(self.n_samples[i]):
+                module_samples.append(copy.deepcopy([self.module_list[i]]))
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.run_modules)(mod_list)
-                for mod_list in module_lists
+                delayed(self.run_modules)([mod])
+                for mod in module_samples
         )
 
-        for i, module_result_dict in enumerate(module_results):
-            for key,value in module_result_dict.items():
-                self.result_dict[key + (i,)] = value
+        idx = 0
+        for i in range(len(self.module_list)):
+            for j in range(self.n_samples[i]):
+                module_result_dict = module_results[idx]
+                for key,value in module_result_dict.items():
+                    self.result_dict[key + (j,)] = value
+                idx += 1
             
         return pd.DataFrame(self.result_dict)
     
