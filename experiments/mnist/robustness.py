@@ -157,7 +157,7 @@ dsclust_params_assoc = {
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
     rule_miner = association_rule_miner,
-    name = 'DSCluster'
+    name = 'DSCluster-Assoc'
 )
 
 
@@ -176,7 +176,7 @@ dsclust_params = {
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
     rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise'
+    name = 'DSCluster'
 )
 
 
