@@ -169,24 +169,14 @@ exp = RobustnessExperiment(
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = None
+    ignore = None,
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 exp_results = exp.run()
 exp.save_results('data/experiments/anuran/robustness/', '_agglo')
 
-
-exp_no_outliers = RobustnessExperiment(
-    data = data,
-    baseline = baseline,
-    module_list = module_list,
-    std_dev = std_dev,
-    n_samples = n_samples,
-    ignore = {-1}
-)
-
-exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/anuran/robustness/', '_agglo_no_outliers')
 
 ####################################################################################################
 

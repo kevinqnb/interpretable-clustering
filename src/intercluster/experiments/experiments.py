@@ -127,6 +127,8 @@ class MaxRulesExperiment(Experiment):
         
         labels (np.ndarray): Labels for the input dataset (if any). Defaults to None in which case
             data is taken to be unlabeled.
+
+        cpu_count (int, optional): Number of CPU cores to use. Defaults to 1.
         
         verbose (bool, optional): Allows for optional printing of status. Defaults to False.
         
@@ -185,6 +187,10 @@ class MaxRulesExperiment(Experiment):
                     i : fn_result for i in self.n_rules_list
                 }
 
+        if self.verbose:
+            print(self.baseline.name + " baseline assignment fitted.")
+            print()
+
             
     def run_modules(
             self,
@@ -226,29 +232,19 @@ class MaxRulesExperiment(Experiment):
             mod.reset()
             for n_rules_tuple, fitting_params in param_dict.items():
                 if self.verbose:
-                    print(mod.name + " with params: " + str(fitting_params))
+                    print("Fitting " + mod.name + + "for rules" + str(n_rules_tuple))
                     print()
                 mod.update_fitting_params(fitting_params)
 
-                try:
-                    start = time.time()
-                    (
-                        data_to_rule_assignment,
-                        rule_to_cluster_assignment,
-                        data_to_cluster_assignment
-                    ) = mod.fit(self.data, self.baseline.labels)
-                    end = time.time()
-                    if self.verbose:
-                        print(mod.name + " fitting time: " + str(end - start))
-                except:
-                    if self.verbose:
-                        print("Data: ")
-                        print(self.data)
-                        print()
-                        print("Labels: ")
-                        print(self.baseline.labels)
-                        print()
-                    raise ValueError("Fitting failed.")
+                start = time.time()
+                (
+                    data_to_rule_assignment,
+                    rule_to_cluster_assignment,
+                    data_to_cluster_assignment
+                ) = mod.fit(self.data, self.baseline.labels)
+                end = time.time()
+                if self.verbose:
+                    print(mod.name + " fitted in " + str(end - start) + "(s).")
                 
                 # record rule lengths:
                 for i in n_rules_tuple:
@@ -280,7 +276,13 @@ class MaxRulesExperiment(Experiment):
         Returns:
             result_df (pd.DataFrame): DataFrame of the results.
         """
+        if self.verbose:
+            print("Running baseline...")
+
         self.run_baseline()
+
+        if self.verbose:
+            print(f"Running modules in parallel with {self.cpu_count} cores...")
 
         module_samples = []
         for i in range(len(self.module_list)):
@@ -517,6 +519,8 @@ class RobustnessExperiment(Experiment):
 
     Args:
         data (np.ndarray): Input dataset.
+
+        baseline (Baseline): Single reference, baseline model to use and record results for.
         
         module_list (List[Tuple[Module, Dict[str, Any]]]): List of 
             (module, parameter dictionary) pairs to use and record results for. 
@@ -532,6 +536,13 @@ class RobustnessExperiment(Experiment):
             sampled noise is added to every data point and every feature independently.
 
         n_samples (int): Number of sample trials to run the experiment for.
+
+        ignore (Set[int], optional): Set of labels to ignore when computing clustering distance. 
+            Defaults to {-1}.
+
+        cpu_count (int, optional): Number of CPU cores to use. Defaults to 1.
+
+        verbose (bool, optional): Allows for optional printing of status. Defaults to False.
         
     Attrs:
         result_dict (Dict[Tuple[str, str, int], NDArray]): Dictionary with keys 
@@ -545,7 +556,9 @@ class RobustnessExperiment(Experiment):
         module_list : List[Tuple[Module, Dict[str, Any]]],
         std_dev : float,
         n_samples : int,
-        ignore = {-1}
+        ignore = {-1},
+        cpu_count : int = 1,
+        verbose : bool = False,
     ):
         self.std_dev = std_dev
         self.ignore = ignore
@@ -553,7 +566,9 @@ class RobustnessExperiment(Experiment):
             data = data,
             baseline = baseline,
             module_list = module_list,
-            n_samples = n_samples
+            n_samples = n_samples,
+            cpu_count = cpu_count,
+            verbose = verbose
         )
 
 
@@ -563,6 +578,9 @@ class RobustnessExperiment(Experiment):
         computing results.
         """
         bassign = self.baseline.assign(self.data)
+        if self.verbose:
+            print(self.baseline.name + " baseline assignment fitted.")
+            print()
 
 
     def run_modules(
@@ -595,22 +613,31 @@ class RobustnessExperiment(Experiment):
             
 
         for mod, fitting_params in module_list:
+            if self.verbose:
+                print("Fitting " + mod.name + " with params: " + str(fitting_params))
+            
+            start = time.time()
             mod.update_fitting_params(fitting_params)
             (
             data_to_rule_assignment,
             rule_to_cluster_assignment,
             data_to_cluster_assignment
             ) = mod.fit(self.data, self.baseline.labels)
+            end = time.time()
             module_label_dict[mod.name] = assignment_to_labels(data_to_cluster_assignment)
+            if self.verbose:
+                print(mod.name + " fitted in " + str(end - start) + "(s).")
+                print()
 
 
-        def dist_sample():
+        def dist_sample(sample_number : int):
             sample_dict = {}
             noisy_data = self.data + np.random.normal(
                 loc = 0.0,
                 scale = self.std_dev,
                 size = self.data.shape
             )
+            start = time.time()
             for mod, fitting_params in module_list:
                 noisy_labels = mod.predict(noisy_data)
                 dist = clustering_distance_cythonized(
@@ -620,10 +647,16 @@ class RobustnessExperiment(Experiment):
                     ignore = self.ignore
                 )
                 sample_dict[mod.name] = dist
+            end = time.time()
+            if self.verbose:
+                print(f"Robustness sample {sample_number} computed in " + str(end - start) + "(s).")
+                print()
             return sample_dict
         
+        if self.verbose:
+            print(f"Running robustness samples in parallel with {self.cpu_count} cores...")
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(dist_sample)()
+                delayed(dist_sample)(i)
                 for i in range(self.n_samples)
         )
 
@@ -631,24 +664,6 @@ class RobustnessExperiment(Experiment):
             for mod, fitting_params in module_list:
                 dist = module_results[i][mod.name]
                 module_result_dict[("clustering-distance", mod.name)][i] = dist
-
-        '''
-        for i in range(self.n_samples):
-            noisy_data = self.data + np.random.normal(
-                loc = 0.0,
-                scale = self.std_dev,
-                size = self.data.shape
-            )
-            for mod, fitting_params in module_list:
-                noisy_labels = mod.predict(noisy_data)
-                dist = clustering_distance(
-                    labels1 = module_label_dict[mod.name],
-                    labels2 = noisy_labels,
-                    percentage = True,
-                    ignore = self.ignore
-                )
-                module_result_dict[("clustering-distance", mod.name)][i] = dist
-        '''
                         
         return module_result_dict
     
@@ -660,6 +675,8 @@ class RobustnessExperiment(Experiment):
         Returns:
             result_df (pd.DataFrame): DataFrame of the results.
         """
+        if self.verbose:
+            print("Running baseline...")
         self.run_baseline()
         module_results = self.run_modules(self.module_list)
         self.result_dict = module_results

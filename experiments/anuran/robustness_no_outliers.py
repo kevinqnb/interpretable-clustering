@@ -21,12 +21,12 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
 n,d = data.shape
 
-### Parameters: ###
+##### Parameters #####
 
-# KMeans
+# Agglomerative Clustering
 n_clusters = 6
 
 lambda_val = 5.0
@@ -50,13 +50,14 @@ prob_stop = 3/4
 
 ####################################################################################################
 
+# Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
 
-# Baseline KMeans
-kmeans_base = KMeansBase(n_clusters = n_clusters, random_seed = seed)
-kmeans_assignment = kmeans_base.assign(data)
-kmeans_labels = kmeans_base.labels
+# Agglomerative reference clustering:
+agglomerative_base = AgglomerativeBase(n_clusters=n_clusters, linkage='single')
+agglo_assignment = agglomerative_base.assign(data)
+agglo_labels = agglomerative_base.labels
 
 
 # Decision Tree
@@ -74,39 +75,14 @@ exp_tree_mod = DecisionTreeMod(
 )
 
 
-# ExKMC
-exkmc_params = {
-    'k' : n_clusters,
-    'kmeans': kmeans_base.clustering,
-    'max_leaf_nodes': n_rules
-}
-exkmc_mod = DecisionTreeMod(
-    model = ExkmcTree,
-    name = 'ExKMC'
-)
-
-
-# Shallow Tree
-shallow_tree_params = {
-    'n_clusters' : n_clusters,
-    'depth_factor' : depth_factor,
-    'kmeans_random_state' : seed
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-
 # Rule Generation 
-# Run once to get estimate for the number of mined rules (this is mostly a deterministic process anyways)
 association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, kmeans_labels)
+association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 association_rule_miner = ClassAssociationMiner(
@@ -146,7 +122,6 @@ ids_mod = DecisionSetMod(
     name = 'IDS'
 )
 
-
 # Decision Set Clustering
 dsclust_params_assoc = {
     'lambd' : lambda_val,
@@ -177,34 +152,29 @@ dsclust_mod = DecisionSetMod(
     name = 'DSCluster'
 )
 
-
-baseline = kmeans_base
+baseline = agglomerative_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
-    (exkmc_mod, exkmc_params),
-    (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
     (dsclust_mod, dsclust_params)
 ]
 
-
-exp = RobustnessExperiment(
+exp_no_outliers = RobustnessExperiment(
     data = data,
     baseline = baseline,
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = None,
+    ignore = {-1},
     cpu_count = experiment_cpu_count,
     verbose = True
 )
 
-exp_results = exp.run()
-exp.save_results('data/experiments/climate/robustness/', '_dbscan')
-
+exp_no_outliers_results = exp_no_outliers.run()
+exp_no_outliers.save_results('data/experiments/anuran/robustness/', '_agglo_no_outliers')
 
 ####################################################################################################
 
