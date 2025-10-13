@@ -125,6 +125,9 @@ dsclust_params_assoc = {
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
 

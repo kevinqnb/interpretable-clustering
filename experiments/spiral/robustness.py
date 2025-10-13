@@ -91,13 +91,6 @@ association_rule_miner = ClassAssociationMiner(
 association_rules, association_rule_labels = association_rule_miner.fit(data, dbscan_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length,
-    random_state = seed
-)
-
 
 # CBA
 cba_params = {}

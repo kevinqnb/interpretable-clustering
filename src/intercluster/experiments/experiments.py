@@ -307,7 +307,7 @@ class MaxRulesExperiment(Experiment):
         #        idx += 1
         for i in range(len(self.module_list)):
             module_result_dict = module_results[i]
-            result_dict = result_dict | module_result_dict
+            self.result_dict = self.result_dict | module_result_dict
             
         return pd.DataFrame(self.result_dict)
     
