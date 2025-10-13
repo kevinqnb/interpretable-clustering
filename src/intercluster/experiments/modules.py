@@ -431,6 +431,9 @@ class DecisionSetMod(Module):
     ):
         self.model = model
         self.fitting_params = fitting_params
+        self.rules = rules
+        self.rule_labels = rule_labels
+        self.rule_miner = rule_miner
         super().__init__(name)
         self.reset()
     
