@@ -407,10 +407,16 @@ class DecisionSetMod(Module):
     Args:
         model (Any): Decision Set Model to use.
 
-        rule_miner (Any): Rule miner used to generate the rules.
-
         fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
             prior to fitting.
+
+        rules (List[List[Condition]], optional): Pre-mined rules to use. If None, rules will be mined
+            using the rule_miner. Defaults to None.
+
+        rule_labels (List[Set[int]], optional): Pre-mined rule labels to use. If None, rule labels
+            will be mined using the rule_miner. Defaults to None.
+
+        rule_miner (Any): Rule miner used to generate the rules.
         
         name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
     """
@@ -418,6 +424,9 @@ class DecisionSetMod(Module):
         self,
         model : Any,
         fitting_params : Dict[str, Any] = None,
+        rules : List[List[Condition]] = None,
+        rule_labels : List[Set[int]] = None,
+        rule_miner : Any = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
@@ -474,8 +483,7 @@ class DecisionSetMod(Module):
 
         # Fit the model with the current number of rules
         self.dset = self.model(
-            #**(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
-            **self.fitting_params
+            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
         )
         self.dset.fit(X, y)
         dset_labels = self.dset.predict(X)

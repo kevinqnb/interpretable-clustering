@@ -84,20 +84,19 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, agglo_labels)
+association_rules, association_rule_labels = association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 
 # CBA
 cba_params = {
-    tuple(agglo_n_rules_list) : {
-        'rule_miner': association_rule_miner,
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels,
-    }
+    tuple(agglo_n_rules_list) : {}
 }
 cba_mod = DecisionSetMod(
     model = CBA,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'CBA'
 )
 
@@ -115,14 +114,14 @@ ids_lambdas = [
 
 ids_params = {
     tuple(agglo_n_rules_list) : {
-        'lambdas' : ids_lambdas,
-        'rule_miner': association_rule_miner,
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels,
+        'lambdas' : ids_lambdas
     }
 }
 ids_mod = DecisionSetMod(
     model = IDS,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'IDS'
 )
 
@@ -131,15 +130,15 @@ ids_mod = DecisionSetMod(
 dsclust_params_assoc = {
     (i,) : {
         'lambd' : lambda_val,
-        'n_rules' : i,
-        'rule_miner': association_rule_miner,
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels,
+        'n_rules' : i
     }
     for i in agglo_n_rules_list
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
 
@@ -153,21 +152,21 @@ for s in range(pointwise_generation_samples):
         prob_dim = prob_dim,
         prob_stop = prob_stop
     )
-    pointwise_rule_miner.fit(data, agglo_labels)
+    pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, agglo_labels)
 
     # Decision Set Clustering : Pointwise Rules
     dsclust_params = {
         (i,) : {
             'lambd' : lambda_val,
-            'n_rules' : i,
-            'rule_miner': pointwise_rule_miner,
-            'rules': pointwise_rule_miner.decision_set, 
-            'rule_labels': pointwise_rule_miner.decision_set_labels,
+            'n_rules' : i
         }
         for i in agglo_n_rules_list
     }
     dsclust_mod = DecisionSetMod(
         model = DSCluster,
+        rules = pointwise_rules,
+        rule_labels = pointwise_rule_labels,
+        rule_miner = pointwise_rule_miner,
         name = f"DSCluster_{s}"
     )
 
