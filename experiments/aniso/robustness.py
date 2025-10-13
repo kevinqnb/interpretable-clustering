@@ -95,7 +95,6 @@ cba_params = {
 }
 cba_mod = DecisionSetMod(
     model = CBA,
-    rule_miner = association_rule_miner,
     name = 'CBA'
 )
 
@@ -119,7 +118,6 @@ ids_params = {
 }
 ids_mod = DecisionSetMod(
     model = IDS,
-    rule_miner = association_rule_miner,
     name = 'IDS'
 )
 
@@ -133,7 +131,6 @@ dsclust_params_assoc = {
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
 
@@ -156,7 +153,6 @@ dsclust_params = {
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
-    rule_miner = pointwise_rule_miner,
     name = 'DSCluster'
 )
 
