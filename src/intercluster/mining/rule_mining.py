@@ -176,7 +176,7 @@ class ClassAssociationMiner(RuleMiner):
             txns,
             support = int(self.min_support * 100),
             confidence = int(self.min_confidence * 100),
-            maxlen = self.max_length,
+            maxlen = self.max_length + 1, # +1 to account for the class label
             zmin = 1 # force rules with length at least 1
         )
         self.decision_set, self.decision_set_labels = self.cars_to_decision_set(self.cars)

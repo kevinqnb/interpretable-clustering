@@ -287,11 +287,16 @@ class MaxRulesExperiment(Experiment):
         #    for j in range(self.n_samples[i]):
         #        module_samples.append(copy.deepcopy(self.module_list[i]))
 
-        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(self.run_modules)([mod])
-                #for mod in module_samples
-                for mod in self.module_list
-        )
+        #module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+        #        delayed(self.run_modules)([mod])
+        #        #for mod in module_samples
+        #        for mod in self.module_list
+        #)
+
+        module_results = []
+        for mod in self.module_list:
+            mod_result = self.run_modules([mod])
+            module_results.append(mod_result)
 
         idx = 0
         #for i in range(len(self.module_list)):
@@ -657,10 +662,14 @@ class RobustnessExperiment(Experiment):
         
         if self.verbose:
             print(f"Running robustness samples in parallel with {self.cpu_count} cores...")
-        module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
-                delayed(dist_sample)(i)
-                for i in range(self.n_samples)
-        )
+        #module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+        #        delayed(dist_sample)(i)
+        #        for i in range(self.n_samples)
+        #)
+        module_results = []
+        for i in range(self.n_samples):
+            sample_result = dist_sample(i)
+            module_results.append(sample_result)
 
         for i in range(self.n_samples):
             for mod, fitting_params in module_list:
