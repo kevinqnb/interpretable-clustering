@@ -88,21 +88,16 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, dbscan_labels)
+association_rules, association_rule_labels = association_rule_miner.fit(data, dbscan_labels)
 association_n_mine = len(association_rule_miner.decision_set)
-
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length,
-    random_state = seed
-)
 
 
 # CBA
 cba_params = {}
 cba_mod = DecisionSetMod(
     model = CBA,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'CBA'
 )
@@ -124,6 +119,8 @@ ids_params = {
 }
 ids_mod = DecisionSetMod(
     model = IDS,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'IDS'
 )
@@ -135,6 +132,8 @@ dsclust_params_assoc = {
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
@@ -146,6 +145,7 @@ pointwise_rule_miner = PointwiseMinerV2(
     prob_dim = prob_dim,
     prob_stop = prob_stop
 )
+pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, dbscan_labels)
 
 # Decision Set Clustering : Pointwise Rules
 dsclust_params = {
@@ -154,6 +154,8 @@ dsclust_params = {
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
+    rules = pointwise_rules,
+    rule_labels = pointwise_rule_labels,
     rule_miner = pointwise_rule_miner,
     name = 'DSCluster'
 )
@@ -175,24 +177,13 @@ exp = RobustnessExperiment(
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = None
+    ignore = None,
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 exp_results = exp.run()
 exp.save_results('data/experiments/protein/robustness/', '_dbscan')
-
-
-exp_no_outliers = RobustnessExperiment(
-    data = data,
-    baseline = baseline,
-    module_list = module_list,
-    std_dev = std_dev,
-    n_samples = n_samples,
-    ignore = {-1}
-)
-
-exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/protein/robustness/', '_dbscan_no_outliers')
 
 ####################################################################################################
 

@@ -179,7 +179,6 @@ dsclust_mod_assoc = DecisionSetMod(
 
 # Pre-generated pointwise rules
 pointwise_module_list = []
-pointwise_sample_list = []
 for s in range(pointwise_generation_samples):
     pointwise_rule_miner = PointwiseMinerV2(
         samples = samples_per_point,
@@ -204,7 +203,6 @@ for s in range(pointwise_generation_samples):
         name = f"DSCluster_{s}"
     )
     pointwise_module_list.append((dsclust_mod, dsclust_params))
-    pointwise_sample_list.append(1)
 
 
 baseline = kmeans_base
@@ -214,7 +212,6 @@ module_list = [
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
     (cba_mod, cba_params),
-    (ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc)
 ] + pointwise_module_list
 #n_samples = [1,1,1,1,1,10,1] + pointwise_sample_list

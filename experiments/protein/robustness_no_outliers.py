@@ -21,16 +21,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_ansio()
+data, labels, feature_labels, scaler = load_preprocessed_protein()
 n,d = data.shape
 
-##### Parameters #####
+### Parameters: ###
 
-# Agglomerative Clustering
-n_clusters = 12
+# DBSCAN
+epsilon = 0.72
+n_core = 1
+density_distances = density_distance(data, n_core = n_core)
 
+# General
 lambda_val = 5.0
-n_rules = n_clusters + 5
 n_samples = 10000
 std_dev = np.std(data) / 20
 
@@ -38,27 +40,30 @@ std_dev = np.std(data) / 20
 depth_factor = 0.03
 
 # Association Rule Mining:
-min_support = 0.001
-min_confidence = 0.5
+min_support = 0.01
+min_confidence = 0.9
 max_length = 4
-
 
 # Pointwise Rule Mining:
 samples_per_point = 5
 prob_dim = 1/2
 prob_stop = 3/4
 
-
 ####################################################################################################
 
 # Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
+# Baseline DBSCAN
+dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
+dbscan_assignment = dbscan_base.assign(data)
+dbscan_labels = dbscan_base.labels
+dbscan_n_clusters = len(unique_labels(dbscan_base.labels, ignore = {-1})) # number of non-outlier clusters
 
-# Agglomerative reference clustering:
-agglomerative_base = AgglomerativeBase(n_clusters=n_clusters, linkage='single')
-agglo_assignment = agglomerative_base.assign(data)
-agglo_labels = agglomerative_base.labels
+n_rules = dbscan_n_clusters + 5
+
+if dbscan_n_clusters < 2:
+    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
 
 
 # Decision Tree
@@ -69,7 +74,7 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 # Removal Tree
-exp_tree_params = {'num_clusters' : n_clusters}
+exp_tree_params = {'num_clusters' : dbscan_n_clusters}
 exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
@@ -83,7 +88,7 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rules, association_rule_labels = association_rule_miner.fit(data, agglo_labels)
+association_rules, association_rule_labels = association_rule_miner.fit(data, dbscan_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 
@@ -104,13 +109,13 @@ ids_lambdas = [
     1/(2 * data.shape[1] * association_n_mine),
     1/(len(data) * (association_n_mine**2)),
     1/(len(data) * (association_n_mine**2)),
-    1/n_clusters,
+    1/dbscan_n_clusters,
     1/(data.shape[0] * association_n_mine),
     1/(data.shape[0])
 ]
 
 ids_params = {
-    'lambdas' : ids_lambdas,
+    'lambdas' : ids_lambdas
 }
 ids_mod = DecisionSetMod(
     model = IDS,
@@ -140,12 +145,12 @@ pointwise_rule_miner = PointwiseMinerV2(
     prob_dim = prob_dim,
     prob_stop = prob_stop
 )
-pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, agglo_labels)
+pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, dbscan_labels)
 
 # Decision Set Clustering : Pointwise Rules
 dsclust_params = {
     'lambd' : lambda_val,
-    'n_rules' : n_rules,
+    'n_rules' : n_rules
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
@@ -155,8 +160,7 @@ dsclust_mod = DecisionSetMod(
     name = 'DSCluster'
 )
 
-
-baseline = agglomerative_base
+baseline = dbscan_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
@@ -167,20 +171,19 @@ module_list = [
 ]
 
 
-exp = RobustnessExperiment(
+exp_no_outliers = RobustnessExperiment(
     data = data,
     baseline = baseline,
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = None,
+    ignore = {-1},
     cpu_count = experiment_cpu_count,
     verbose = True
 )
 
-exp_results = exp.run()
-exp.save_results('data/experiments/aniso/robustness/', '_agglo')
-
+exp_no_outliers_results = exp_no_outliers.run()
+exp_no_outliers.save_results('data/experiments/protein/robustness/', '_dbscan_no_outliers')
 
 ####################################################################################################
 

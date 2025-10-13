@@ -82,7 +82,7 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, agglo_labels)
+association_rules, association_rule_labels = association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 association_rule_miner = ClassAssociationMiner(
@@ -97,6 +97,8 @@ association_rule_miner = ClassAssociationMiner(
 cba_params = {}
 cba_mod = DecisionSetMod(
     model = CBA,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'CBA'
 )
@@ -118,6 +120,8 @@ ids_params = {
 }
 ids_mod = DecisionSetMod(
     model = IDS,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'IDS'
 )
@@ -129,6 +133,8 @@ dsclust_params_assoc = {
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
     rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
@@ -141,6 +147,8 @@ pointwise_rule_miner = PointwiseMinerV2(
     prob_stop = prob_stop
 )
 
+pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, agglo_labels)
+
 # Decision Set Clustering : Pointwise Rules
 dsclust_params = {
     'lambd' : lambda_val,
@@ -148,6 +156,8 @@ dsclust_params = {
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
+    rules = pointwise_rules,
+    rule_labels = pointwise_rule_labels,
     rule_miner = pointwise_rule_miner,
     name = 'DSCluster'
 )
@@ -156,7 +166,7 @@ baseline = agglomerative_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
-    #(cba_mod, cba_params),
+    (cba_mod, cba_params),
     #(ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
     (dsclust_mod, dsclust_params)
