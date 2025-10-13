@@ -79,7 +79,7 @@ class ClassAssociationMiner(RuleMiner):
         self,
         min_support : float = 0.1,
         min_confidence : float = 0.8,
-        max_length : int = 10,
+        max_length : int = 2,
         ignore : Set[Any] = {-1},
         random_state : int = None
     ):
@@ -176,7 +176,8 @@ class ClassAssociationMiner(RuleMiner):
             txns,
             support = int(self.min_support * 100),
             confidence = int(self.min_confidence * 100),
-            maxlen = self.max_length
+            maxlen = self.max_length,
+            zmin = 1 # force rules with length at least 1
         )
         self.decision_set, self.decision_set_labels = self.cars_to_decision_set(self.cars)
 

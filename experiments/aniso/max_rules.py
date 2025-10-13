@@ -41,7 +41,7 @@ depth_factor = 0.03
 # Association Rule Mining:
 min_support = 0.001
 min_confidence = 0.5
-max_length = 4
+max_length = 2
 
 # IDS:
 ids_samples = 10
