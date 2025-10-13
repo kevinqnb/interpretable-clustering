@@ -44,6 +44,9 @@ min_support = 0.05
 min_confidence = 0.9
 max_length = 4
 
+# IDS:
+ids_samples = 10
+
 # Pointwise Rule Mining:
 pointwise_generation_samples = 10
 samples_per_point = 5
@@ -112,20 +115,19 @@ association_rule_miner = ClassAssociationMiner(
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, kmeans_labels)
+association_rules, association_rule_labels = association_rule_miner.fit(data, kmeans_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
 
 # CBA
 cba_params = {
-    tuple(kmeans_n_rules_list) : {
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels, 
-        'rule_miner': association_rule_miner
-    }
+    tuple(kmeans_n_rules_list) : {}
 }
 cba_mod = DecisionSetMod(
     model = CBA,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'CBA'
 )
 
@@ -141,18 +143,21 @@ ids_lambdas = [
     1/(data.shape[0])
 ]
 
-ids_params = {
-    tuple(kmeans_n_rules_list) : {
-        'lambdas' : ids_lambdas,
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels, 
-        'rule_miner': association_rule_miner
+ids_module_list = []
+for s in range(ids_samples):
+    ids_params = {
+        tuple(kmeans_n_rules_list) : {
+            'lambdas' : ids_lambdas
+        }
     }
-}
-ids_mod = DecisionSetMod(
-    model = IDS,
-    name = 'IDS'
-)
+    ids_mod = DecisionSetMod(
+        model = IDS,
+        rules = association_rules,
+        rule_labels = association_rule_labels,
+        rule_miner = association_rule_miner,
+        name = f"IDS_{s}"
+    )
+    ids_module_list.append((ids_mod, ids_params))
 
 
 # Decision Set Clustering
@@ -160,14 +165,14 @@ dsclust_params_assoc = {
     (i,) : {
         'lambd' : lambda_val,
         'n_rules' : i,
-        'rules': association_rule_miner.decision_set, 
-        'rule_labels': association_rule_miner.decision_set_labels, 
-        'rule_miner': association_rule_miner
     }
     for i in kmeans_n_rules_list
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
+    rules = association_rules,
+    rule_labels = association_rule_labels,
+    rule_miner = association_rule_miner,
     name = 'DSCluster-Assoc'
 )
 
@@ -181,21 +186,21 @@ for s in range(pointwise_generation_samples):
         prob_dim = prob_dim,
         prob_stop = prob_stop
     )
-    pointwise_rule_miner.fit(data, kmeans_labels)
+    pointwise_rules, pointwise_rule_labels = pointwise_rule_miner.fit(data, kmeans_labels)
 
     # Decision Set Clustering : Pointwise Rules
     dsclust_params = {
         (i,) : {
             'lambd' : lambda_val,
             'n_rules' : i,
-            'rules': pointwise_rule_miner.decision_set, 
-            'rule_labels': pointwise_rule_miner.decision_set_labels, 
-            'rule_miner': pointwise_rule_miner
         }
         for i in kmeans_n_rules_list
     }
     dsclust_mod = DecisionSetMod(
         model = DSCluster,
+        rules = pointwise_rules,
+        rule_labels = pointwise_rule_labels,
+        rule_miner = pointwise_rule_miner,
         name = f"DSCluster_{s}"
     )
     pointwise_module_list.append((dsclust_mod, dsclust_params))
@@ -212,7 +217,7 @@ module_list = [
     (ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc)
 ] + pointwise_module_list
-n_samples = [1,1,1,1,1,10,1] + pointwise_sample_list
+#n_samples = [1,1,1,1,1,10,1] + pointwise_sample_list
 
 
 coverage_mistake_measure = CoverageMistakeScore(
@@ -244,7 +249,6 @@ exp = MaxRulesExperiment(
     baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
-    n_samples = n_samples,
     cpu_count = experiment_cpu_count,
     verbose = True
 )

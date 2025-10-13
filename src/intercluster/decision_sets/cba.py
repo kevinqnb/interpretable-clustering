@@ -96,7 +96,8 @@ class CBA(DecisionSet):
         transactions = TransactionDB.from_DataFrame(self.rule_miner.bin_df, target = 'class')
 
         valid_cars = [car for i,car in enumerate(self.rule_miner.cars) 
-                                if int(self.rule_miner.cars[i].consequent[1]) != -1]
+                                 if int(self.rule_miner.cars[i].consequent[1]) != -1]
+        #valid_cars = self.rule_miner.cars
         if len(valid_cars) == 0:
             raise ValueError("No valid (non-outlier) class association rules found. " \
             "Try increasing the number of mined rules.")

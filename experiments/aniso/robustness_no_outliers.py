@@ -122,9 +122,6 @@ ids_mod = DecisionSetMod(
 dsclust_params_assoc = {
     'lambd' : lambda_val,
     'n_rules' : n_rules,
-    'rule_miner': association_rule_miner,
-    'rules': association_rule_miner.decision_set,
-    'rule_labels': association_rule_miner.decision_set_labels
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
