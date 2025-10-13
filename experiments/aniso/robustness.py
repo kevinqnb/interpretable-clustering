@@ -178,7 +178,9 @@ exp = RobustnessExperiment(
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = None
+    ignore = None,
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 exp_results = exp.run()

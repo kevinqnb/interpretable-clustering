@@ -178,7 +178,9 @@ exp_no_outliers = RobustnessExperiment(
     module_list = module_list,
     std_dev = std_dev,
     n_samples = n_samples,
-    ignore = {-1}
+    ignore = {-1},
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 exp_no_outliers_results = exp_no_outliers.run()
