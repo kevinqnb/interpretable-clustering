@@ -43,6 +43,9 @@ min_support = 0.001
 min_confidence = 0.5
 max_length = 4
 
+# IDS:
+ids_samples = 10
+
 # Pointwise Rule Mining:
 pointwise_generation_samples = 10
 samples_per_point = 5
@@ -112,18 +115,21 @@ ids_lambdas = [
     1/(data.shape[0])
 ]
 
-ids_params = {
-    tuple(agglo_n_rules_list) : {
-        'lambdas' : ids_lambdas
+ids_module_list = []
+for s in range(ids_samples):
+    ids_params = {
+        tuple(agglo_n_rules_list) : {
+            'lambdas' : ids_lambdas
+        }
     }
-}
-ids_mod = DecisionSetMod(
-    model = IDS,
-    rules = association_rules,
-    rule_labels = association_rule_labels,
-    rule_miner = association_rule_miner,
-    name = 'IDS'
-)
+    ids_mod = DecisionSetMod(
+        model = IDS,
+        rules = association_rules,
+        rule_labels = association_rule_labels,
+        rule_miner = association_rule_miner,
+        name = f"IDS_{s}"
+    )
+    ids_module_list.append((ids_mod, ids_params))
 
 
 # Decision Set Clustering
@@ -145,7 +151,6 @@ dsclust_mod_assoc = DecisionSetMod(
 
 # Pre-generated pointwise rules
 pointwise_module_list = []
-pointwise_sample_list = []
 for s in range(pointwise_generation_samples):
     pointwise_rule_miner = PointwiseMinerV2(
         samples = samples_per_point,
@@ -171,7 +176,6 @@ for s in range(pointwise_generation_samples):
     )
 
     pointwise_module_list.append((dsclust_mod, dsclust_params))
-    pointwise_sample_list.append(1)
 
 
 
@@ -180,10 +184,9 @@ module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
-    (ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc)
-] + pointwise_module_list
-n_samples = [1,1,1,10,1] + pointwise_sample_list
+] + ids_module_list + pointwise_module_list
+#n_samples = [1,1,1,10,1] + pointwise_sample_list
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
@@ -214,7 +217,6 @@ exp = MaxRulesExperiment(
     baseline = baseline,
     module_list = module_list,
     measurement_fns = measurement_fns,
-    n_samples = n_samples,
     cpu_count = experiment_cpu_count,
     verbose = True
 )

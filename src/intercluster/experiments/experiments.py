@@ -144,7 +144,6 @@ class MaxRulesExperiment(Experiment):
         baseline : Baseline,
         module_list : List[Tuple[Module, Dict[Tuple[int], Dict[str, Any]]]],
         measurement_fns : List[Callable],
-        n_samples : List[int],
         labels : List[List[int]] = None,
         cpu_count : int = 1,
         verbose : bool = False
@@ -155,7 +154,6 @@ class MaxRulesExperiment(Experiment):
             baseline = baseline,
             module_list = module_list,
             measurement_fns = measurement_fns,
-            n_samples = n_samples,
             labels = labels,
             cpu_count = cpu_count,
             verbose = verbose
@@ -284,23 +282,27 @@ class MaxRulesExperiment(Experiment):
         if self.verbose:
             print(f"Running modules in parallel with {self.cpu_count} cores...")
 
-        module_samples = []
-        for i in range(len(self.module_list)):
-            for j in range(self.n_samples[i]):
-                module_samples.append(copy.deepcopy(self.module_list[i]))
+        #module_samples = []
+        #for i in range(len(self.module_list)):
+        #    for j in range(self.n_samples[i]):
+        #        module_samples.append(copy.deepcopy(self.module_list[i]))
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
                 delayed(self.run_modules)([mod])
-                for mod in module_samples
+                #for mod in module_samples
+                for mod in self.module_list
         )
 
         idx = 0
+        #for i in range(len(self.module_list)):
+        #    for j in range(self.n_samples[i]):
+        #        module_result_dict = module_results[idx]
+        #        for key,value in module_result_dict.items():
+        #            self.result_dict[key + (j,)] = value
+        #        idx += 1
         for i in range(len(self.module_list)):
-            for j in range(self.n_samples[i]):
-                module_result_dict = module_results[idx]
-                for key,value in module_result_dict.items():
-                    self.result_dict[key + (j,)] = value
-                idx += 1
+            module_result_dict = module_results[i]
+            result_dict = result_dict | module_result_dict
             
         return pd.DataFrame(self.result_dict)
     
