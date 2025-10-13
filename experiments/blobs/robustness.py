@@ -182,8 +182,8 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    (cba_mod, cba_params),
-    (ids_mod, ids_params),
+    #(cba_mod, cba_params),
+    #(ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
     (dsclust_mod, dsclust_params)
 ]
