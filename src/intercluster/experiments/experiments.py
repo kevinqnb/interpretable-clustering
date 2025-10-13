@@ -232,7 +232,7 @@ class MaxRulesExperiment(Experiment):
             mod.reset()
             for n_rules_tuple, fitting_params in param_dict.items():
                 if self.verbose:
-                    print("Fitting " + mod.name + + "for rules" + str(n_rules_tuple))
+                    print("Fitting " + mod.name + "for rules" + str(n_rules_tuple))
                     print()
                 mod.update_fitting_params(fitting_params)
 
