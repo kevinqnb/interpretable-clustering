@@ -629,6 +629,10 @@ class RobustnessExperiment(Experiment):
                 print(mod.name + " fitted in " + str(end - start) + "(s).")
                 print()
 
+            # Clear the full set of rules to save memory,
+            # keeps only the fitted decision set.
+            mod.clear_rules()
+
 
         def dist_sample(sample_number : int):
             sample_dict = {}

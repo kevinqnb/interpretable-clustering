@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
@@ -22,19 +21,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_blobs('data/synthetic')
+data, labels, feature_labels, scaler = load_preprocessed_ansio()
 n,d = data.shape
 
 ##### Parameters #####
 
-# KMeans
-n_clusters = len(np.unique(labels))
-euclidean_distances = pairwise_distances(data)
+# Agglomerative Clustering
+n_clusters = 12
 
-# General
 lambda_val = 5.0
-max_rules = n_clusters + 20
-kmeans_n_rules_list = list(np.arange(n_clusters, max_rules + 1))
+n_rules = n_clusters + 5
+n_samples = 10000
+std_dev = np.std(data) / 20
 
 # Shallow Tree
 depth_factor = 0.03
@@ -44,6 +42,7 @@ min_support = 0.001
 min_confidence = 0.5
 max_length = 4
 
+
 # Pointwise Rule Mining:
 samples_per_point = 5
 prob_dim = 1/2
@@ -52,81 +51,47 @@ prob_stop = 3/4
 
 ####################################################################################################
 
+# Experiment 2: DBSCAN reference clustering:
 np.random.seed(seed)
 
-# Baseline KMeans
-kmeans_base = KMeansBase(n_clusters = n_clusters, random_seed = seed)
-kmeans_assignment = kmeans_base.assign(data)
-kmeans_labels = kmeans_base.labels
+
+# Agglomerative reference clustering:
+agglomerative_base = AgglomerativeBase(n_clusters=n_clusters, linkage='single')
+agglo_assignment = agglomerative_base.assign(data)
+agglo_labels = agglomerative_base.labels
 
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : seed}
-                        for i in kmeans_n_rules_list}
+decision_tree_params = {'max_leaf_nodes' : n_rules, 'random_state' : seed}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
-
-# Explanation Tree
-exp_tree_params = {tuple(kmeans_n_rules_list) : {'num_clusters' : n_clusters}}
+# Removal Tree
+exp_tree_params = {'num_clusters' : n_clusters}
 exp_tree_mod = DecisionTreeMod(
     model = ExplanationTree,
     name = 'Exp-Tree'
 )
 
 
-# ExKMC
-exkmc_params = {
-    (i,) : {
-        'k' : n_clusters,
-        'kmeans': kmeans_base.clustering,
-        'max_leaf_nodes': i
-    } for i in kmeans_n_rules_list
-}
-exkmc_mod = DecisionTreeMod(
-    model = ExkmcTree,
-    name = 'ExKMC'
-)
-
-
-# Shallow Tree
-shallow_tree_params = {
-    tuple(kmeans_n_rules_list) : {
-        'n_clusters' : n_clusters,
-        'depth_factor' : depth_factor,
-        'kmeans_random_state' : seed
-    } for i in kmeans_n_rules_list
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-
 # Rule Generation 
-# Run once to get estimate for the number of mined rules (this is mostly a deterministic process anyways)
 association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
     max_length = max_length,
     random_state = seed
 )
-association_rule_miner.fit(data, kmeans_labels)
+association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
-
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length,
-    random_state = seed
-)
 
 
 # CBA
 cba_params = {
-    tuple(kmeans_n_rules_list) : {}
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels,
+    'rule_miner': association_rule_miner
 }
 cba_mod = DecisionSetMod(
     model = CBA,
@@ -147,9 +112,10 @@ ids_lambdas = [
 ]
 
 ids_params = {
-    tuple(kmeans_n_rules_list) : {
-        'lambdas' : ids_lambdas,
-    }
+    'lambdas' : ids_lambdas,
+    'rule_miner': association_rule_miner,
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels
 }
 ids_mod = DecisionSetMod(
     model = IDS,
@@ -157,14 +123,13 @@ ids_mod = DecisionSetMod(
     name = 'IDS'
 )
 
-
 # Decision Set Clustering
 dsclust_params_assoc = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-    }
-    for i in kmeans_n_rules_list
+    'lambd' : lambda_val,
+    'n_rules' : n_rules,
+    'rule_miner': association_rule_miner,
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
@@ -179,14 +144,15 @@ pointwise_rule_miner = PointwiseMinerV2(
     prob_dim = prob_dim,
     prob_stop = prob_stop
 )
+pointwise_rule_miner.fit(data, agglo_labels)
 
 # Decision Set Clustering : Pointwise Rules
 dsclust_params = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-    }
-    for i in kmeans_n_rules_list
+    'lambd' : lambda_val,
+    'n_rules' : n_rules,
+    'rule_miner': pointwise_rule_miner,
+    'rules': pointwise_rule_miner.decision_set,
+    'rule_labels': pointwise_rule_miner.decision_set_labels
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
@@ -195,57 +161,28 @@ dsclust_mod = DecisionSetMod(
 )
 
 
-
-baseline = kmeans_base
+baseline = agglomerative_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
-    (exkmc_mod, exkmc_params),
-    (shallow_tree_mod, shallow_tree_params),
-    #(cba_mod, cba_params),
-    #(ids_mod, ids_params),
+    (cba_mod, cba_params),
+    (ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
-    (dsclust_mod, dsclust_params),
-]
-#n_samples = [1,1,1,1,1,10,1,10]
-n_samples = [1,1,1,1,1,10]
-
-coverage_mistake_measure = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = kmeans_assignment,
-    name = 'coverage-mistake-score'
-)
-
-silhouette_measure = Silhouette(
-    distances = euclidean_distances,
-    name = 'silhouette-score'
-)
-
-clustering_dist = ClusteringDistance(
-    ground_truth_assignment = kmeans_assignment,
-    name = 'clustering-distance'
-)
-
-
-measurement_fns = [
-    coverage_mistake_measure,
-    silhouette_measure,
-    clustering_dist
+    (dsclust_mod, dsclust_params)
 ]
 
-exp = MaxRulesExperiment(
+
+exp_no_outliers = RobustnessExperiment(
     data = data,
-    n_rules_list = kmeans_n_rules_list,
     baseline = baseline,
     module_list = module_list,
-    measurement_fns = measurement_fns,
+    std_dev = std_dev,
     n_samples = n_samples,
-    cpu_count = experiment_cpu_count,
-    verbose = True
+    ignore = {-1}
 )
 
-exp_results = exp.run()
-exp.save_results('data/experiments/blobs/max_rules/', '_kmeans')
+exp_no_outliers_results = exp_no_outliers.run()
+exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_agglo_no_outliers')
 
 ####################################################################################################
 

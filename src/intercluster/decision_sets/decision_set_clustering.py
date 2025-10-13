@@ -80,8 +80,9 @@ class DSCluster(DecisionSet):
             data_to_rules_assignment = data_to_rules_assignment
         )
 
-        self.decision_set = [self.decision_set[i] for i in selected_rules]
-        self.decision_set_labels = [self.decision_set_labels[i] for i in selected_rules]
+        selected_set = [self.decision_set[i] for i in selected_rules]
+        selected_set_labels = [self.decision_set_labels[i] for i in selected_rules]
+        return selected_set, selected_set_labels
 
 
     def get_data_to_rules_assignment(

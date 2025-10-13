@@ -86,16 +86,13 @@ association_rule_miner = ClassAssociationMiner(
 association_rule_miner.fit(data, agglo_labels)
 association_n_mine = len(association_rule_miner.decision_set)
 
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length,
-    random_state = seed
-)
-
 
 # CBA
-cba_params = {}
+cba_params = {
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels,
+    'rule_miner': association_rule_miner
+}
 cba_mod = DecisionSetMod(
     model = CBA,
     rule_miner = association_rule_miner,
@@ -115,7 +112,10 @@ ids_lambdas = [
 ]
 
 ids_params = {
-    'lambdas' : ids_lambdas
+    'lambdas' : ids_lambdas,
+    'rule_miner': association_rule_miner,
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels
 }
 ids_mod = DecisionSetMod(
     model = IDS,
@@ -126,7 +126,10 @@ ids_mod = DecisionSetMod(
 # Decision Set Clustering
 dsclust_params_assoc = {
     'lambd' : lambda_val,
-    'n_rules' : n_rules
+    'n_rules' : n_rules,
+    'rule_miner': association_rule_miner,
+    'rules': association_rule_miner.decision_set,
+    'rule_labels': association_rule_miner.decision_set_labels
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
@@ -141,11 +144,15 @@ pointwise_rule_miner = PointwiseMinerV2(
     prob_dim = prob_dim,
     prob_stop = prob_stop
 )
+pointwise_rule_miner.fit(data, agglo_labels)
 
 # Decision Set Clustering : Pointwise Rules
 dsclust_params = {
     'lambd' : lambda_val,
-    'n_rules' : n_rules
+    'n_rules' : n_rules,
+    'rule_miner': pointwise_rule_miner,
+    'rules': pointwise_rule_miner.decision_set,
+    'rule_labels': pointwise_rule_miner.decision_set_labels
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
@@ -177,18 +184,6 @@ exp = RobustnessExperiment(
 exp_results = exp.run()
 exp.save_results('data/experiments/aniso/robustness/', '_agglo')
 
-
-exp_no_outliers = RobustnessExperiment(
-    data = data,
-    baseline = baseline,
-    module_list = module_list,
-    std_dev = std_dev,
-    n_samples = n_samples,
-    ignore = {-1}
-)
-
-exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/aniso/robustness/', '_agglo_no_outliers')
 
 ####################################################################################################
 

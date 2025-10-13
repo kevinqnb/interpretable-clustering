@@ -417,26 +417,22 @@ class DecisionSetMod(Module):
     def __init__(
         self,
         model : Any,
-        rule_miner : Any,
         fitting_params : Dict[str, Any] = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
-        self.rule_miner = rule_miner
         self.fitting_params = fitting_params
         super().__init__(name)
         self.reset()
-
+    
 
     def reset(self):
         """
-        Resets experiments by returning parametrs to their default values.
+        Resets experiments by giving previous outputs their default values.
         """
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
-        self.rules = None
-        self.rule_labels = None
         self.dset = None
 
 
@@ -473,13 +469,13 @@ class DecisionSetMod(Module):
         """
         n_unique = len(unique_labels(y, ignore = {-1}))
 
-        if self.rules is None or self.rule_labels is None:
-            self.rules, self.rule_labels = self.rule_miner.fit(X, y)
+        #if self.rules is None or self.rule_labels is None:
+        #    self.rules, self.rule_labels = self.rule_miner.fit(X, y)
 
         # Fit the model with the current number of rules
         self.dset = self.model(
-            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
-            #**self.fitting_params
+            #**(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
+            **self.fitting_params
         )
         self.dset.fit(X, y)
         dset_labels = self.dset.predict(X)

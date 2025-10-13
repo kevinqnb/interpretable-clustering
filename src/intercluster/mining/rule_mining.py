@@ -22,9 +22,26 @@ from intercluster import (
 class RuleMiner:
     """
     Base class for rule mining algorithms.
+
+    Attributes:
+        decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+        decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
+        cars (List[Any]): Decision set and labels in the classification association rule format 
+            used by the IDS and CBA packages and algorithms.
     """
     def __init__(self):
-        pass
+        self.decision_set = None
+        self.decision_set_labels = None
+        self.cars = None
+
+
+    def clear_cache(self):
+        """
+        Clear the currently stored rules.
+        """
+        self.decision_set = None
+        self.decision_set_labels = None
+        self.cars = None
 
     
     def fit(
@@ -76,6 +93,13 @@ class ClassAssociationMiner(RuleMiner):
             ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
             random_state (int, optional): Seed used by the random number generator.
                 Defaults to None.
+
+        Attributes:
+            decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+            decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
+            cars (List[Any]): Decision set and labels in the classification association rule format 
+                used by the IDS and CBA packages and algorithms.
+            bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
         """
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
             raise ValueError("min_support must be a floating point number in [0, 1].")
@@ -89,6 +113,8 @@ class ClassAssociationMiner(RuleMiner):
         self.ignore = ignore
         self.random_state = random_state
         super().__init__()
+
+        self.bin_df = None
 
 
     def cars_to_decision_set(
@@ -189,6 +215,12 @@ class PointwiseMinerV2(RuleMiner):
             prob_stop (float, optional): Probability of stopping expansion when a 
                 mistake is encountered (geometric distribution). Defaults to 1.0, in which case
                 the expansion will always stop when a mistake is encountered.
+
+        Attributes:
+            decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+            decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
+            cars (List[Any]): Decision set and labels in the classification association rule format 
+                used by the IDS and CBA packages and algorithms.
         """
         if not isinstance(samples, int) or samples <= 0:
             raise ValueError("Number of samples must be a positive integer.")

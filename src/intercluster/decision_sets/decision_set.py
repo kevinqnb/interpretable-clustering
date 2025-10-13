@@ -123,8 +123,7 @@ class DecisionSet:
                 trimmed_set.append(trimmed_rule)
                 trimmed_labels.append(self.decision_set_labels[i])
         
-        self.decision_set = trimmed_set
-        self.decision_set_labels = trimmed_labels
+        return trimmed_set, trimmed_labels
         
         
     def fit(self, X : NDArray, y : List[Set[int]] = None):
@@ -143,9 +142,8 @@ class DecisionSet:
             self.decision_set = self.rules
             self.decision_set_labels = self.rule_labels
 
-        #self.decision_set, self.decision_set_labels = self._fitting(X, y)
-        self.select(X, y)
-        self.trim()
+        self.decision_set, self.decision_set_labels = self.select(X, y)
+        self.decision_set, self.decision_set_labels = self.trim()
         self.max_rule_length = max([len(rule) for rule in self.decision_set]) if self.decision_set else 0
     
         
@@ -203,7 +201,6 @@ class DecisionSet:
         
         labels = [set() for _ in range(len(X))]
         for i in range(len(self.decision_set)):
-            #r_covers = np.where(data_to_rules_assignment[:,i])[0]
             r_covers = data_to_rules_assignment[:,i].nonzero()[0]
             for j in r_covers:
                 if rule_labels:
@@ -237,7 +234,6 @@ class DecisionSet:
         wad = 0
         total_covers = 0
         for i, rule in enumerate(decision_set):
-            #r_covers = np.where(data_to_rules_assignment[:,i])[0]
             r_covers = data_to_rules_assignment[:,i].nonzero()[0]
             total_covers += len(r_covers)
             if len(r_covers) != 0:
