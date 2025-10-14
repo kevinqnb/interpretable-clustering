@@ -165,7 +165,7 @@ module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
-    #(ids_mod, ids_params),
+    (ids_mod, ids_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
     (dsclust_mod, dsclust_params)
 ]
