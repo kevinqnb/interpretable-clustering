@@ -205,7 +205,7 @@ exp_no_outliers = RobustnessExperiment(
 )
 
 exp_no_outliers_results = exp_no_outliers.run()
-exp_no_outliers.save_results('data/experiments/climate/robustness/', '_dbscan_no_outliers')
+exp_no_outliers.save_results('data/experiments/climate/robustness/', '_kmeans_no_outliers')
 
 ####################################################################################################
 

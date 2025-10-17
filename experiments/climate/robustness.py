@@ -205,7 +205,7 @@ exp = RobustnessExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/robustness/', '_dbscan')
+exp.save_results('data/experiments/climate/robustness/', '_kmeans')
 
 
 ####################################################################################################

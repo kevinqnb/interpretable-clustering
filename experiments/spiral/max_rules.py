@@ -190,7 +190,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (cba_mod, cba_params),
     (dsclust_mod_assoc, dsclust_params_assoc),
-] + ids_module_list + pointwise_module_list
+] + pointwise_module_list
 
 coverage_mistake_measure = CoverageMistakeScore(
     lambda_val = lambda_val,
