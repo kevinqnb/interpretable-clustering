@@ -203,7 +203,7 @@ exp = RobustnessExperiment(
 )
 
 exp_results = exp.run()
-exp.save_results('data/experiments/blobs/robustness/', '_kmeans')
+exp.save_results('data/experiments/blobs/robustness/', '_kmeans_no_outliers')
 
 
 ####################################################################################################
