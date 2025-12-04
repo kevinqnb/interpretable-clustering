@@ -176,8 +176,12 @@ class IDS(DecisionSet):
             lambdas = self.lambdas
 
         #print("Lambdas found:", lambdas)
-        ids = IDS_pyids(algorithm="SLS")
+        print('Starting IDS selection...')
+        import time; start_time = time.time()
+        ids = IDS_pyids(algorithm="DLS")
         ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
+        end = time.time()
+        print(f"IDS selection finished in {end - start_time:.2f} seconds.")
         decision_set, decision_set_labels = self.ids_to_decision_set(ids.clf.rules)
         return decision_set, decision_set_labels
     
