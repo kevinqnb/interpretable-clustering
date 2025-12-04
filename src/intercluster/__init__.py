@@ -51,6 +51,7 @@ from .utils import (
     quantile_bin,
     uniform_bin,
     interval_to_condition,
+    oned_cluster,
 )
 
 

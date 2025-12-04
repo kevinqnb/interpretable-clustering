@@ -7,6 +7,7 @@ from .node import Node
 from .conditions import Condition, LinearCondition
 
 #from mdlp.discretization import MDLP
+from .oned_cluster_cy import oned_cluster_cy
 
 
 ####################################################################################################
@@ -714,3 +715,33 @@ def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Con
         raise ValueError(f"Unsupported upper bound type: {upper_type}")
     
     return lower_condition, upper_condition
+
+
+####################################################################################################
+
+
+def oned_cluster(
+        x : NDArray,
+        cluster_cost : float = 0.0,
+        method : str = "kmeans"
+    ) -> NDArray:
+    """
+    Clusters a 1d array into segments.
+
+    Args:
+        x (np.ndarray): 1d array of data points to cluster.
+        
+        cluster_cost (float, optional): Cost associated with adding a new cluster. 
+            Must be between 0.0 and 1.0. Defaults to 0.0.
+            
+        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
+            Defaults to "kmeans".
+
+    Returns:
+        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
+            of data points and k is the number of clusters found.
+    """
+    return oned_cluster_cy(x, cluster_cost, method)
+
+
+####################################################################################################
