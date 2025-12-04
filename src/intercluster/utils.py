@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from .node import Node
 from .conditions import Condition, LinearCondition
 
-from mdlp.discretization import MDLP
+#from mdlp.discretization import MDLP
 
 
 ####################################################################################################

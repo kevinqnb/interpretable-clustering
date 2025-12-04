@@ -1,46 +1,40 @@
 [project]
 name = "intercluster"
 version = "0.1.0"
-description = "Clustering with Rules"
-authors = [
-    {name = "Kevin Quinn"}
-]
-license = {text = "MIT"}
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9,<3.10"
+requires-python = "==3.12.4"
 dependencies = [
-    "numpy (==1.26.4)",
-    "pandas (==2.2.3)",
-    "scikit-learn (==1.5.2)",
-    "geopandas (==1.0.1)",
-    "matplotlib (==3.9.3)",
-    "seaborn (==0.13.2)",
-    "networkx (==3.2.1)",
-    "jupyter (>=1.1.1,<2.0.0)",
-    "pytest (>=8.3.3,<9.0.0)",
-    "wheel (==0.45.1)",
-    "ucimlrepo (>=0.0.7,<0.0.8)"
+    "cython>=3.2.2",
+    "exkmc",
+    "geopandas>=1.1.1",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.7",
+    "networkx>=3.6",
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
+    "pyarc>=1.1.4",
+    "pyids",
+    "pytest>=9.0.1",
+    "scikit-learn>=1.7.2",
+    "seaborn>=0.13.2",
+    "setuptools>=80.9.0",
+    "shallowtree>=0.0.11",
+    "ucimlrepo>=0.0.7",
+    "wheel>=0.45.1",
 ]
+
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0", "setuptools", "cython", "numpy"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools", "cython", "wheel", "numpy"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry]
-packages = [
-    { include = "intercluster", from = "src"},
-]
-include = [
-    { path = "intercluster/**/*.so", format = "wheel" },
-]
-# if not already excluded via .gitignore
-exclude = [
-    "**/*.c"
-]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.poetry.build]
-script = "build.py"
+[tool.uv.extra-build-dependencies]
+exkmc = ["numpy"]
 
-[tool.poetry.group.build.dependencies]
-setuptools = "^75.1.0"
-cython = "^3.0.12"
+[tool.uv.sources]
+exkmc = { git = "https://github.com/kevinqnb/ExKMC.git" }
+pyids = { git = "https://github.com/kevinqnb/pyIDS.git" }
