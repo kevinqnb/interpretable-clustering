@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from typing import Any, List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
+from pyarc.data_structures import Consequent, Item, Antecedent, ClassAssocationRule
 from .node import Node
 from .conditions import Condition, LinearCondition
 
@@ -571,7 +572,7 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 
 ####################################################################################################
 
-
+'''
 def entropy_bin(
         X : NDArray,
         y : List[Set[int]],
@@ -621,7 +622,7 @@ def entropy_bin(
 
     bin_df = pd.DataFrame(interval_data)
     return bin_df
-
+'''
 
 ####################################################################################################
 
@@ -674,6 +675,33 @@ def uniform_bin(
 ####################################################################################################
 
 
+def oned_cluster(
+        x : NDArray,
+        cluster_cost : float = 0.0,
+        method : str = "kmeans"
+    ) -> NDArray:
+    """
+    Clusters a 1d array into segments.
+
+    Args:
+        x (np.ndarray): 1d array of data points to cluster.
+        
+        cluster_cost (float, optional): Cost associated with adding a new cluster. 
+            Must be between 0.0 and 1.0. Defaults to 0.0.
+            
+        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
+            Defaults to "kmeans".
+
+    Returns:
+        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
+            of data points and k is the number of clusters found.
+    """
+    return oned_cluster_cy(x, cluster_cost, method)
+
+
+####################################################################################################
+
+
 def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Condition]:
     """
     Convert an interval string to a Condition object.
@@ -717,31 +745,120 @@ def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Con
     return lower_condition, upper_condition
 
 
-####################################################################################################
+#####################################################################################################
 
 
-def oned_cluster(
-        x : NDArray,
-        cluster_cost : float = 0.0,
-        method : str = "kmeans"
-    ) -> NDArray:
+def decision_set_to_cars(
+    X: np.ndarray,
+    y: list[set[int]],
+    decision_set: list[list[Condition]],
+    decision_set_labels: list[set[int]]
+) -> list[ClassAssocationRule]:   
     """
-    Clusters a 1d array into segments.
+    Convert a decision set into a list of class association rules.
+    Class association rules are represented using the `pyarc` library.
 
     Args:
-        x (np.ndarray): 1d array of data points to cluster.
-        
-        cluster_cost (float, optional): Cost associated with adding a new cluster. 
-            Must be between 0.0 and 1.0. Defaults to 0.0.
-            
-        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
-            Defaults to "kmeans".
+        X (np.ndarray): Input data array.
+        y (list[set[int]]): List of label sets for each instance.
+            Each label set should contain only a single label.
+        decision_set (list[list[Condition]]): Decision set represented as a list of rules,
+            where each rule is a list of conditions.
+        decision_set_labels (list[set[int]]): List of label sets corresponding to each rule
+            in the decision set. Each label set should contain only a single label.
 
-    Returns:
-        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
-            of data points and k is the number of clusters found.
+    Returns: 
+        cars (list[ClassAssocationRule]): List of class association rules.
     """
-    return oned_cluster_cy(x, cluster_cost, method)
+    if not can_flatten(y):
+        raise ValueError("Each label in y must be a single label set.")
+    if not can_flatten(decision_set_labels):
+        raise ValueError("Each label in y must be a single label set.")
+    
+    for rule in decision_set:
+        for condition in rule:
+            if len(condition.features) != 1:
+                raise ValueError("Each condition must have a single feature.")
+            
+    cars = []
+    for i, rule in enumerate(decision_set):
+        consequent = f"class:=:{list(decision_set_labels[i])[0]}"
+        antecedent_dict = {}
+        support_bool = np.ones(X.shape[0], dtype=bool)
+        for condition in rule:
+            feature = condition.features[0]
+            if feature not in antecedent_dict:
+                antecedent_dict[feature] = [-np.inf, np.inf]
+            
+            direction = condition.direction
+            threshold = condition.threshold
+
+            if direction == -1:
+                antecedent_dict[feature][1] = threshold
+            elif direction == 1:
+                antecedent_dict[feature][0] = threshold
+            else:
+                raise ValueError("Condition direction must be -1 or 1.")
+            
+            evals = condition.evaluate(X)
+            support_bool = support_bool & evals
+            
+        antecedent = [
+            f"{feature}:=:({interval[0]}, {interval[1]})"
+            for feature, interval in antecedent_dict.items()
+        ]
+        antecedent = sorted(list(antecedent))
+        antecedent_items = [Item(*i.split(":=:")) for i in antecedent]
+
+        support = np.sum(support_bool)/X.shape[0]
+        confidence = 0
+        for idx in np.where(support_bool)[0]:
+            if y[idx] == decision_set_labels[i]:
+                confidence += 1
+        confidence /= np.sum(support_bool)
+
+        car = ClassAssocationRule(
+            Antecedent(antecedent_items),
+            Consequent(*consequent.split(":=:")),
+            support = support,
+            confidence = confidence
+        )
+        cars.append(car)
+        
+    return cars
 
 
-####################################################################################################
+#####################################################################################################
+
+
+def cars_to_decision_set(
+    cars: list[ClassAssocationRule]
+) -> tuple[list[list[Condition]], list[set[int]]]:
+    """
+    Convert a list of class association rules into a decision set.
+
+    Args:
+        cars (list[ClassAssocationRule]): List of class association rules.
+    Returns:
+        decision_set (list[list[Condition]]): Decision set represented as a list of rules,
+            where each rule is a list of conditions.
+        decision_set_labels (list[set[int]]): List of label sets corresponding to each rule
+            in the decision set. Each label set should contain only a single label.
+    """
+    decision_set = []
+    decision_set_labels = []
+    for car in cars:
+        rule = []
+        for item in car.antecedent:
+            feature = int(item[0])
+            interval = item[1][:-1] + ']'
+            condition = interval_to_condition(feature, interval)
+            rule.append(condition)
+            
+        decision_set.append(rule)
+        label = int(car.consequent.value)
+        decision_set_labels.append(set([label]))
+    return decision_set, decision_set_labels
+
+
+######################################################################################################

@@ -40,8 +40,6 @@ class BoxMiner(RuleMiner):
         Attributes:
             decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
             decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
-            cars (List[Any]): Decision set and labels in the classification association rule format 
-                used by the IDS and CBA packages and algorithms.
         """
         if not isinstance(samples, int) or samples <= 0:
             raise ValueError("Number of samples must be a positive integer.")
@@ -76,7 +74,6 @@ class BoxMiner(RuleMiner):
         X_sorted = np.argsort(X, axis=0)
         decision_set = []
         decision_set_labels = []
-        cars = []
         # Assuming for now that outliers are labeled as {-1} or set()
         non_outliers = [i for i, label in enumerate(y) if label != {-1} and label != set()]
 
@@ -166,7 +163,6 @@ class BoxMiner(RuleMiner):
                 # greater-than indequalities (>)
                 lower_idx -= 1
                 rule = []
-                antecedent = []
                 for j, f in enumerate(features):
                     feature_vec = X_sorted[:, f]
                     lower_bound = (
@@ -193,24 +189,13 @@ class BoxMiner(RuleMiner):
                     rule.append(condition1)
                     rule.append(condition2)
 
-                    antecedent.append((f, str('(' + str(lower_bound) + ', ' + str(upper_bound) + ']')))
-
 
                 decision_set.append(rule)
                 decision_set_labels.append(y[i])
 
-                antecedent = pyarc.data_structures.antecedent.Antecedent(items = antecedent)
-                consequent = pyarc.data_structures.consequent.Consequent(attribute = 'class', value = str(list(y[i])[0]))
-                sat = satisfies_conditions(X, rule)
-                support = len(sat) / len(X)
-                confidence = len([idx for idx in sat if y[idx] == y[i]]) / len(sat) if len(sat) > 0 else 0
-                car = pyarc.data_structures.car.ClassAssocationRule(antecedent, consequent, support, confidence)
-                cars.append(car)
-
 
         self.decision_set = decision_set
         self.decision_set_labels = decision_set_labels
-        self.cars = cars
         return self.decision_set, self.decision_set_labels
 
 

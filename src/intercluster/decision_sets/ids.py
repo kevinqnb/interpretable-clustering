@@ -70,6 +70,10 @@ class IDS(DecisionSet):
         super().__init__(rule_miner, rules, rule_labels)
         if self.rule_miner is None:
             raise ValueError("A rule_miner must be provided for this decision set.")
+        
+            # NOTE: You need to make sure this is either a Clustering or FrequentItemset miner!!
+            # Need to be able to make a quantitative dataframe from bin_df!
+            
         if lambdas is not None:
             if not isinstance(lambdas, list):
                 raise ValueError("lambdas must be a list of floats.")

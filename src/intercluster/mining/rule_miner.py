@@ -15,12 +15,11 @@ class RuleMiner:
     Attributes:
         decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
         decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
-        cars (List[Any]): Decision set and labels in the classification association rule format 
-            used by the IDS and CBA packages and algorithms.
     """
     def __init__(self):
         self.decision_set = None
         self.decision_set_labels = None
+        self.bin_df = None
         self.cars = None
 
 
@@ -30,6 +29,7 @@ class RuleMiner:
         """
         self.decision_set = None
         self.decision_set_labels = None
+        self.bin_df = None
         self.cars = None
 
     

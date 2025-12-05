@@ -8,6 +8,7 @@ from intercluster import (
     interval_to_condition,
     can_flatten,
     flatten_labels,
+    cars_to_decision_set
 )
 
 from .rule_miner import RuleMiner
@@ -47,8 +48,6 @@ class AssociationRuleMiner(RuleMiner):
         Attributes:
             decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
             decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
-            cars (List[Any]): Decision set and labels in the classification association rule format 
-                used by the IDS and CBA packages and algorithms.
             bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
         """
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
@@ -65,35 +64,6 @@ class AssociationRuleMiner(RuleMiner):
         super().__init__()
 
         self.bin_df = None
-
-
-    def cars_to_decision_set(
-            self,
-            cars : List[Any]
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
-        """
-        Convert a list of rules found with PyIDS to a list of Conditions and label sets.
-        Args:
-            cars (List[Any]): A list of Class Association Rules (CARs).
-        Returns:
-            decision_set (List[Condition]): List of rules.
-            decision_set_labels (List[Set[int]]): List of labels corresponding to each rule.
-        """
-        decision_set = []
-        decision_set_labels = []
-        for car in cars:
-            antecedent = car.antecedent
-            consequent = car.consequent
-            rule_conditions = []
-            for a in antecedent:
-                feature = int(a[0])
-                interval = a[1]
-                lower_condition, upper_condition = interval_to_condition(feature, interval)
-                rule_conditions.append(lower_condition)
-                rule_conditions.append(upper_condition)
-            decision_set.append(rule_conditions)
-            decision_set_labels.append({int(consequent[1])})
-        return decision_set, decision_set_labels
 
 
     def fit(
@@ -122,14 +92,14 @@ class AssociationRuleMiner(RuleMiner):
         self.bin_df = bin_df
 
         txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
-        self.cars = generateCARs(
+        cars = generateCARs(
             txns,
             support = int(self.min_support * 100),
             confidence = int(self.min_confidence * 100),
             maxlen = self.max_length + 1, # +1 to account for the class label
             zmin = 1 # force rules with length at least 1
         )
-        self.decision_set, self.decision_set_labels = self.cars_to_decision_set(self.cars)
+        self.decision_set, self.decision_set_labels = cars_to_decision_set(cars)
 
         # remove rules covering outliers
         self.decision_set = [rule for i,rule in enumerate(self.decision_set) 
