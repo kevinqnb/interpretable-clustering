@@ -18,7 +18,8 @@ class DecisionSet:
         self,
         rule_miner : RuleMiner = None, 
         rules : List[List[Condition]] = None,
-        rule_labels : List[Set[int]] = None
+        rule_labels : List[Set[int]] = None,
+        ignore = set()
     ):
         
         """
@@ -29,6 +30,8 @@ class DecisionSet:
                 If None, the rules will be generated using the rule_miner. Defaults to None.
             rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
                 If None, the labels will be generated using the rule_miner. Defaults to None.
+            ignore (Set[int], optional): Set of labels to ignore when fitting the decision set.
+                Defaults to to the empty set.
 
 
         Attributes:
@@ -61,6 +64,10 @@ class DecisionSet:
             assert isinstance(rule_labels, list) and all(isinstance(lbl, set) for lbl in rule_labels), \
                 "rule_labels must be a list of sets."
         self.rule_labels = rule_labels
+        
+        if not isinstance(ignore, set):
+            raise ValueError("ignore must be a set of labels.")
+        self.ignore = ignore
 
         self.decision_set = None
         self.decision_set_labels = None
@@ -84,8 +91,9 @@ class DecisionSet:
         new_decision_set_labels = []
         for i, rule in enumerate(self.decision_set):
             for label in uni_labels:
-                new_decision_set.append(rule)
-                new_decision_set_labels.append({label})
+                if label not in self.ignore:
+                    new_decision_set.append(rule)
+                    new_decision_set_labels.append({label})
         return new_decision_set, new_decision_set_labels
     
         
