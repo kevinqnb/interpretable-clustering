@@ -8,7 +8,7 @@ from intercluster import (
     unique_labels
 )
 from .mining import RuleMiner
-from .objectives import CoverageMistakeObjective
+from .objectives import Objective
 from .decision_set import DecisionSet
 
 
@@ -21,18 +21,14 @@ class DSCluster(DecisionSet):
     """
     def __init__(
         self,
-        lambd : float,
-        n_rules : int,
+        objective : Objective,
         rule_miner : RuleMiner = None, 
         rules : List[List[Condition]] = None,
         rule_labels : List[Set[int]] = None
     ):
         """
         Args:
-            lambd (float): Penalization factor for mistakes. Larger values penalize mistakes 
-                more heavily, resulting in rules which are more accurate, but may cover 
-                fewer points.
-            n_rules (int): Number of rules to use in the decision set.
+            objective (Objective): Objective function class used to select the rules.
             rule_miner (RuleMiner, optional): Rule mining algorithm used to generate the rules.
                 If None, the rules must be provided directly. Defaults to None.
             rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
@@ -41,9 +37,7 @@ class DSCluster(DecisionSet):
                 If None, the labels will be generated using the rule_miner. Defaults to None.
         """
         super().__init__(rule_miner, rules, rule_labels)
-        self.lambd = lambd
-        self.n_rules = n_rules
-        self.selector = CoverageMistakeSelector(n_rules=n_rules, lambda_val=lambd)
+        self.objective = objective
     
 
     def select(
@@ -74,7 +68,8 @@ class DSCluster(DecisionSet):
             self.decision_set_labels, n_labels = n_labels, ignore = {-1}
         )
         data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.decision_set)
-        selected_rules = self.selector.select(
+        selected_rules = self.objective.select(
+            data = X,
             data_to_cluster_assignment = data_to_cluster_assignment,
             rule_to_cluster_assignment = rule_to_cluster_assignment,
             data_to_rules_assignment = data_to_rules_assignment
