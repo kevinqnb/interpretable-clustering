@@ -27,6 +27,16 @@ class Objective:
         self.n_rules = n_rules
         self.lambda_val = lambda_val
         self.cluster_centers = cluster_centers
+
+
+    def set_lambda_val(self, lambda_val : float):
+        """
+        Sets the lambda value for the objective.
+
+        Args:
+            lambda_val (float): The new lambda value.
+        """
+        self.lambda_val = lambda_val
     
     
     def marginal_gain(
@@ -83,6 +93,82 @@ class Objective:
         pass
 
 
+    def compute_lambda(
+        self,
+        data : NDArray,
+        data_to_cluster_assignment : NDArray,
+        data_to_rules_assignment : NDArray
+    ) -> float:
+        """
+        Computes minimum value of lambda necessary for an approximation algorithm.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+            
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+                
+        Returns:
+            float: The computed lambda value.
+        """
+        n,d = data.shape
+        self.data = data
+        n2,k = data_to_cluster_assignment.shape
+        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        n3,r = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        
+        if self.cluster_centers is not None:
+            assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
+            assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
+
+        rule_list = list(np.arange(r))
+        rule_points = assignment_to_dict(data_to_rules_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        selected_cluster_coverage = {l: set() for l in range(k)}
+
+        max_ratio = 0.0
+        for rule in rule_list:
+            r_points = rule_points[rule]
+            c_ratios = []
+            for cluster in range(k):
+                r_coverage = r_points.intersection(cluster_points[cluster])
+                g = self.marginal_gain(
+                    rule,
+                    cluster,
+                    {rule: r_points},
+                    {rule: r_coverage},
+                    selected_cluster_coverage
+                )
+
+                h = self.marginal_cost(
+                    rule,
+                    cluster,
+                    {rule: r_points},
+                    {rule: r_coverage},
+                    selected_cluster_coverage
+                )
+
+                if h > 0:
+                    ratio = g / h
+                    c_ratios.append(ratio)
+                else:
+                    ratio = np.inf
+                    c_ratios.append(ratio)
+
+            if len(c_ratios) >= 2:
+                second_largest = np.sort(c_ratios)[-2]
+                if second_largest > max_ratio:
+                    max_ratio = second_largest
+
+        return max_ratio
+        
+
+
     def select(
         self,
         data : NDArray,
@@ -121,6 +207,9 @@ class Objective:
         assert k == k2, "Data and Rule assignment arrays do not match in shape along axis 1."
         assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Rules must be assigned "
                                                                         "to exactly one cluster.")
+        n3,r2 = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        assert r == r2, "Number of rules in Rule assignment must match number of rules in Data to Rule assignment."
         
         if self.cluster_centers is not None:
             assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."

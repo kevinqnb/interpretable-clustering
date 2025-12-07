@@ -675,3 +675,303 @@ class TestEdgeCases:
         
         gain = obj.marginal_gain(0, 0, rule_points, rule_cluster_coverage, selected_cluster_coverage)
         assert gain == 0
+
+
+####################################################################################################
+# compute_lambda Tests
+####################################################################################################
+
+
+class TestComputeLambda:
+    """Tests for the compute_lambda method across all objective types."""
+    
+    def test_compute_lambda_coverage_mistake_basic(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules
+    ):
+        """Test compute_lambda with CoverageMistakeObjective."""
+        obj = CoverageMistakeObjective(n_rules=3)
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_coverage_mistake_with_mistakes(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        mistake_data_to_rules
+    ):
+        """Test compute_lambda when rules have mistakes."""
+        obj = CoverageMistakeObjective(n_rules=3, lambda_val=1.0)
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            mistake_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_total_coverage_mistake(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules
+    ):
+        """Test compute_lambda with TotalCoverageMistakeObjective."""
+        obj = TotalCoverageMistakeObjective(n_rules=3, lambda_val=1.0)
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_coverage_cost_kmeans(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test compute_lambda with CoverageCostObjective using kmeans."""
+        obj = CoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=cluster_centers,
+            method="kmeans"
+        )
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_coverage_cost_kmedians(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test compute_lambda with CoverageCostObjective using kmedians."""
+        obj = CoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=cluster_centers,
+            method="kmedians"
+        )
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_total_coverage_cost_kmeans(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test compute_lambda with TotalCoverageCostObjective using kmeans."""
+        obj = TotalCoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=cluster_centers,
+            method="kmeans"
+        )
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_total_coverage_cost_kmedians(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test compute_lambda with TotalCoverageCostObjective using kmedians."""
+        obj = TotalCoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=cluster_centers,
+            method="kmedians"
+        )
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_with_overlapping_clusters(
+        self,
+        simple_data,
+        overlapping_data_to_cluster,
+        simple_data_to_rules
+    ):
+        """Test compute_lambda with overlapping cluster assignments."""
+        obj = CoverageMistakeObjective(n_rules=3, lambda_val=1.0)
+        
+        lambda_val = obj.compute_lambda(
+            simple_data,
+            overlapping_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val >= 0
+        
+    def test_compute_lambda_single_cluster(self):
+        """Test compute_lambda with only one cluster."""
+        data = np.array([[0, 0], [1, 1], [2, 2]], dtype=np.float64)
+        data_to_cluster = np.array([[1], [1], [1]], dtype=bool)
+        data_to_rules = np.array([[1, 0], [1, 1], [0, 1]], dtype=bool)
+        
+        obj = CoverageMistakeObjective(n_rules=2, lambda_val=1.0)
+        
+        lambda_val = obj.compute_lambda(
+            data,
+            data_to_cluster,
+            data_to_rules
+        )
+        
+        assert isinstance(lambda_val, (int, float))
+        assert lambda_val == 0.0  # No second largest ratio possible
+        
+    def test_compute_lambda_no_coverage(self):
+        """Test compute_lambda when rules have no coverage."""
+        data = np.array([[0, 0], [1, 1]], dtype=np.float64)
+        data_to_cluster = np.array([[1, 0], [0, 1]], dtype=bool)
+        data_to_rules = np.array([[0, 0], [0, 0]], dtype=bool)
+        
+        obj = CoverageMistakeObjective(n_rules=2)
+        
+        lambda_val = obj.compute_lambda(
+            data,
+            data_to_cluster,
+            data_to_rules
+        )
+        
+        assert lambda_val == np.inf  # No coverage means infinite lambda (no mistakes can be made!)
+
+        
+    def test_compute_lambda_validates_data_shape(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules
+    ):
+        """Test that compute_lambda validates input data shapes."""
+        obj = CoverageMistakeObjective(n_rules=3, lambda_val=1.0)
+        
+        # Mismatched data and cluster assignment
+        with pytest.raises(AssertionError):
+            bad_data = simple_data[:5]
+            obj.compute_lambda(
+                bad_data,
+                simple_data_to_cluster,
+                simple_data_to_rules
+            )
+            
+    def test_compute_lambda_validates_cluster_centers(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test that compute_lambda validates cluster centers shape."""
+        # Wrong number of cluster centers
+        bad_centers = cluster_centers[:2]  # Only 2 centers instead of 3
+        obj = CoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=bad_centers,
+            method="kmeans"
+        )
+        
+        with pytest.raises(AssertionError):
+            obj.compute_lambda(
+                simple_data,
+                simple_data_to_cluster,
+                simple_data_to_rules
+            )
+            
+    def test_compute_lambda_validates_cluster_centers_dimension(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules,
+        cluster_centers
+    ):
+        """Test that compute_lambda validates cluster centers dimension."""
+        # Wrong dimension for cluster centers
+        bad_centers = np.array([[1], [10], [20]], dtype=np.float64)  # 1D instead of 2D
+        obj = CoverageCostObjective(
+            n_rules=3,
+            lambda_val=1.0,
+            cluster_centers=bad_centers,
+            method="kmeans"
+        )
+        
+        with pytest.raises(AssertionError):
+            obj.compute_lambda(
+                simple_data,
+                simple_data_to_cluster,
+                simple_data_to_rules
+            )
+        
+    def test_compute_lambda_multiple_calls_same_result(
+        self,
+        simple_data,
+        simple_data_to_cluster,
+        simple_data_to_rules
+    ):
+        """Test that compute_lambda returns same result on multiple calls."""
+        obj = CoverageMistakeObjective(n_rules=3, lambda_val=1.0)
+        
+        lambda1 = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        lambda2 = obj.compute_lambda(
+            simple_data,
+            simple_data_to_cluster,
+            simple_data_to_rules
+        )
+        
+        assert lambda1 == lambda2
