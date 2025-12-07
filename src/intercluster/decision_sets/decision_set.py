@@ -7,7 +7,7 @@ from intercluster import (
     labels_to_assignment,
     unique_labels
 )
-from intercluster.mining import RuleMiner
+from .mining import RuleMiner
 
 
 class DecisionSet:

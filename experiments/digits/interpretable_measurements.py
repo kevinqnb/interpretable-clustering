@@ -8,8 +8,8 @@ import matplotlib.lines as mlines
 from matplotlib.colors import ListedColormap
 import seaborn as sns
 from intercluster import *
-from intercluster.rules import *
-from intercluster.selection import *
+from intercluster.decision_sets.rules import *
+from intercluster.decision_sets.objectives import *
 from intercluster.experiments import *
 
 # This assumes tex is installed in your system, 

@@ -572,7 +572,7 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 
 ####################################################################################################
 
-'''
+
 def entropy_bin(
         X : NDArray,
         y : List[Set[int]],
@@ -622,7 +622,6 @@ def entropy_bin(
 
     bin_df = pd.DataFrame(interval_data)
     return bin_df
-'''
 
 ####################################################################################################
 

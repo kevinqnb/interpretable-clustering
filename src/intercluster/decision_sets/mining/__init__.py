@@ -13,3 +13,7 @@ from .frequent_itemset_miner import (
 from .oned_cluster_miner import (
     ClusterMiner
 )
+
+from .rule_miner import (
+    RuleMiner
+)

@@ -4,7 +4,7 @@ from intercluster import (
     Condition,
     interval_to_condition,
 )
-from intercluster.mining import RuleMiner
+from .mining import RuleMiner
 from .decision_set import DecisionSet
 
 

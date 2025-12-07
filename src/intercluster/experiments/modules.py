@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from typing import List, Set, Any
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
-from intercluster.selection import *
+from intercluster.decision_sets.objectives import *
 from intercluster.utils import (
     labels_format,
     labels_to_assignment,

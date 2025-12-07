@@ -7,8 +7,8 @@ from intercluster import (
     labels_to_assignment,
     unique_labels
 )
-from intercluster.mining import RuleMiner
-from intercluster.selection import CoverageMistakeSelector
+from .mining import RuleMiner
+from .objectives import CoverageMistakeObjective
 from .decision_set import DecisionSet
 
 

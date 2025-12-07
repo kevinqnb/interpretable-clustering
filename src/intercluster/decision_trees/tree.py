@@ -13,7 +13,6 @@ from intercluster import (
     collect_nodes,
     collect_leaves
 )
-from intercluster.selection import Selector
 from .splitters import Splitter
 from ..node import Node
 
