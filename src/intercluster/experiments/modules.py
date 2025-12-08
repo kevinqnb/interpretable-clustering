@@ -85,6 +85,7 @@ class KMeansBase(Baseline):
         self.fitted = False
         self.assignment = None
         self.centers = None
+        self.labels = None
         self.max_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         

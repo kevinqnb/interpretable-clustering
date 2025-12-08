@@ -331,11 +331,8 @@ class MaxRulesExperiment(Experiment):
 
 class LambdaExperiment(Experiment):
     """ 
-    Perfroms an experiment on an input dataset which measures performance as
-    the maximum number of allowed rules is increased. 
-    
-    Every step forward in this experiment should call 
-    a .step_n_rules() method of its modules, which increases the number of rules used by 1.
+    Perfroms an experiment on an input dataset which measures performance as the 
+    parameter for lambda is changed.
 
     Args:
         data (np.ndarray): Input dataset.
@@ -378,7 +375,7 @@ class LambdaExperiment(Experiment):
         lambda_array : NDArray,
         baseline : Baseline,
         module_list : List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]],
-        n_samples : int,
+        measurement_fns : List[Callable],
         cpu_count : int = 1,
         verbose : bool = False,
     ):
@@ -388,12 +385,12 @@ class LambdaExperiment(Experiment):
             data = data,
             baseline = baseline,
             module_list = module_list,
-            n_samples = n_samples,
+            measurement_fns = measurement_fns,
             cpu_count = cpu_count,
             verbose = verbose
         )
-        
-    
+
+
     def run_baseline(self):
         """
         Runs the baseline modules, simply finding their assignment matrices instead of 
@@ -406,10 +403,13 @@ class LambdaExperiment(Experiment):
         self.result_dict[("weighted-avg-length", self.baseline.name, 0)] = {
             i : self.baseline.weighted_average_rule_length for i in self.lambda_array
         }
-        cover = coverage(assignment = bassign, percentage = False)
-        self.result_dict[('coverage-mistake-score', self.baseline.name, 0)] = {
-            l : cover for l in self.lambda_array
-        }
+
+        # Baseline measurement functions?
+        # Something is different about the coverage mistake score?
+
+        if self.verbose:
+            print(self.baseline.name + " baseline assignment fitted.")
+            print()
 
             
     def run_modules(
@@ -439,36 +439,32 @@ class LambdaExperiment(Experiment):
         for mod, param_list in module_list:
             module_result_dict[("max-rule-length", mod.name)] = {}
             module_result_dict[("weighted-avg-length", mod.name)] = {}
-            module_result_dict[('coverage-mistake-score', mod.name)] = {}
+            for fn in self.measurement_fns:
+                module_result_dict[(fn.name, mod.name)] = {}
 
         for mod, param_dict in module_list:
             for n_lambda_tuple, fitting_params in param_dict.items():
                 mod.update_fitting_params(fitting_params)
-                try:
-                    (
-                        data_to_rule_assignment,
-                        rule_to_cluster_assignment,
-                        data_to_cluster_assignment
-                    ) = mod.fit(self.data, self.baseline.labels)
-                except:
-                    print("Data: ")
-                    print(self.data)
-                    print()
-                    print("Labels: ")
-                    print(self.baseline.labels)
-                    print()
-                    raise ValueError("Fitting failed.")
+                (
+                    data_to_rule_assignment,
+                    rule_to_cluster_assignment,
+                    data_to_cluster_assignment
+                ) = mod.fit(self.data, self.baseline.labels)
                 
                 # record measurements:
                 for i in n_lambda_tuple:
                     module_result_dict[("max-rule-length", mod.name)][i] = mod.max_rule_length
                     module_result_dict[("weighted-avg-length", mod.name)][i] = mod.weighted_average_rule_length
-                    module_result_dict[('coverage-mistake-score', mod.name)][i] = coverage_mistake_score(
-                        lambda_val = self.lambda_array[i],
-                        ground_truth_assignment = self.ground_truth_assignment,
-                        data_to_rule_assignment = data_to_rule_assignment,
-                        rule_to_cluster_assignment = rule_to_cluster_assignment
-                    )
+                    
+                    # record results from measurement functions:
+                    for fn in self.measurement_fns:
+                        module_result_dict[(fn.name, mod.name)][i] = (
+                            fn(
+                                data_to_rule_assignment,
+                                rule_to_cluster_assignment,
+                                data_to_cluster_assignment
+                            )
+                        )
                         
         return module_result_dict
                     
@@ -483,9 +479,13 @@ class LambdaExperiment(Experiment):
         Returns:
             result_df (pd.DataFrame): DataFrame of the results.
         """
+        if self.verbose:
+            print("Running baseline...")
+
         self.run_baseline()
 
-        module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+        #module_lists = [copy.deepcopy(self.module_list) for _ in range(self.n_samples)]
+        module_lists = [self.module_list]
 
         module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
                 delayed(self.run_modules)(mod_list)

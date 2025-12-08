@@ -17,6 +17,10 @@ class Objective:
             Defaults to 1.0.
         cluster_centers (NDArray): (k x d) array where each row i is the given 
             representative for cluster i.
+
+    Attrs:
+        name (str): Name of the objective.
+        value (float): The value of the objective function for the selected rules.
     """
     def __init__(
         self,
@@ -29,7 +33,17 @@ class Objective:
         self.cluster_centers = cluster_centers
 
 
-    def set_lambda_val(self, lambda_val : float):
+    def set_data(self, data : NDArray):
+        """
+        Sets the data for the objective.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+        """
+        self.data = data
+
+
+    def set_lambda(self, lambda_val : float):
         """
         Sets the lambda value for the objective.
 
@@ -37,6 +51,146 @@ class Objective:
             lambda_val (float): The new lambda value.
         """
         self.lambda_val = lambda_val
+
+
+    def gain(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the gain from the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            gain (float): The gain from the selected rules.
+        """
+        pass
+
+
+    def cost(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        pass
+
+
+    def compute_objective(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the objective value for the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            objective (float): The objective value for the selected rules.
+        """
+        g = self.gain(selected_rule_labels, selected_rule_points, selected_rule_coverage)
+        h = self.cost(selected_rule_labels, selected_rule_points, selected_rule_coverage)
+        return g - self.lambda_val * h
+    
+
+    def compute_lambda(
+        self,
+        data : NDArray,
+        data_to_cluster_assignment : NDArray,
+        data_to_rules_assignment : NDArray
+    ) -> float:
+        """
+        Computes minimum value of lambda necessary for an approximation algorithm.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+            
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+                
+        Returns:
+            float: The computed lambda value.
+        """
+        n,d = data.shape
+        self.data = data
+        n2,k = data_to_cluster_assignment.shape
+        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
+                                                                        "assigned to at most one cluster.")
+
+        n3,r = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        
+        if self.cluster_centers is not None:
+            assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
+            assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
+
+        rule_list = list(np.arange(r))
+        
+        rule_points = assignment_to_dict(data_to_rules_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+
+        max_ratio = 0.0
+        for rule in rule_list:
+            r_points = {rule: rule_points[rule]}
+            c_ratios = []
+            for cluster in range(k):
+                r_labels = {rule: cluster}
+                r_coverage = {rule: rule_points[rule].intersection(cluster_points[cluster])}
+                g = self.gain(
+                    r_labels,
+                    r_points,
+                    r_coverage
+                )
+
+                h = self.cost(
+                    r_labels,
+                    r_points,
+                    r_coverage
+                )
+
+                if h > 0:
+                    ratio = g / h
+                    c_ratios.append(ratio)
+                else:
+                    ratio = np.inf
+                    c_ratios.append(ratio)
+
+            if len(c_ratios) >= 2:
+                second_largest = np.sort(c_ratios)[-2]
+                if second_largest > max_ratio:
+                    max_ratio = second_largest
+
+        return max_ratio
     
     
     def marginal_gain(
@@ -90,83 +244,7 @@ class Objective:
         Returns:
             cost (float): The cost of the selected rules.
         """
-        pass
-
-
-    def compute_lambda(
-        self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray
-    ) -> float:
-        """
-        Computes minimum value of lambda necessary for an approximation algorithm.
-
-        Args:
-            data (NDArray): (n x d) Data array.
-
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-                
-        Returns:
-            float: The computed lambda value.
-        """
-        n,d = data.shape
-        self.data = data
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        n3,r = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        
-        if self.cluster_centers is not None:
-            assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
-            assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
-
-        rule_list = list(np.arange(r))
-        rule_points = assignment_to_dict(data_to_rules_assignment)
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        selected_cluster_coverage = {l: set() for l in range(k)}
-
-        max_ratio = 0.0
-        for rule in rule_list:
-            r_points = rule_points[rule]
-            c_ratios = []
-            for cluster in range(k):
-                r_coverage = r_points.intersection(cluster_points[cluster])
-                g = self.marginal_gain(
-                    rule,
-                    cluster,
-                    {rule: r_points},
-                    {rule: r_coverage},
-                    selected_cluster_coverage
-                )
-
-                h = self.marginal_cost(
-                    rule,
-                    cluster,
-                    {rule: r_points},
-                    {rule: r_coverage},
-                    selected_cluster_coverage
-                )
-
-                if h > 0:
-                    ratio = g / h
-                    c_ratios.append(ratio)
-                else:
-                    ratio = np.inf
-                    c_ratios.append(ratio)
-
-            if len(c_ratios) >= 2:
-                second_largest = np.sort(c_ratios)[-2]
-                if second_largest > max_ratio:
-                    max_ratio = second_largest
-
-        return max_ratio
-        
+        pass        
 
 
     def select(
@@ -203,6 +281,8 @@ class Objective:
         self.data = data
         n2,k = data_to_cluster_assignment.shape
         assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
+                                                                        "assigned to at most one cluster.")
         r,k2 = rule_to_cluster_assignment.shape
         assert k == k2, "Data and Rule assignment arrays do not match in shape along axis 1."
         assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Rules must be assigned "
@@ -216,9 +296,10 @@ class Objective:
             assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
 
         rule_list = list(np.arange(r))
-        rule_labels = np.array(
-            [np.where(rule_to_cluster_assignment[i,:])[0][0] for i in range(r)]
-        )
+        #rule_labels = np.array(
+        #    [np.where(rule_to_cluster_assignment[i,:])[0][0] for i in range(r)]
+        #)
+        rule_labels = {i: rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
 
         cluster_points = assignment_to_dict(data_to_cluster_assignment)
         selected_cluster_coverage = {l: set() for l in range(k)}
@@ -285,7 +366,17 @@ class Objective:
                 ].union(
                     best_rule_coverage
                 )
-                
+
+        
+        # Compute final objective value
+        selected_rule_labels = {rule: rule_labels[rule] for rule in selected_rules}
+        selected_rule_points = {rule: rule_points[rule] for rule in selected_rules}
+        selected_rule_coverage = {rule: rule_cluster_coverage[rule] for rule in selected_rules}
+        self.value = self.compute_objective(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )       
         return np.array(list(selected_rules))
 
 
@@ -312,6 +403,64 @@ class CoverageMistakeObjective(Objective):
             n_rules = n_rules,
             lambda_val = lambda_val
         )
+
+
+    def gain(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the gain from the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            gain (float): The gain from the selected rules.
+        """
+        per_cluster_coverage = {}
+        for rule, label in selected_rule_labels.items():
+            if label not in per_cluster_coverage:
+                per_cluster_coverage[label] = set()
+            per_cluster_coverage[label] = per_cluster_coverage[label].union(
+                selected_rule_coverage[rule]
+            )
+        total_coverage = 0
+        for l, covered in per_cluster_coverage.items():
+            total_coverage += len(covered)
+        return total_coverage
+
+
+    def cost(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        total_mistakes = 0
+        for rule, label in selected_rule_labels.items():
+            r_points = selected_rule_points[rule]
+            r_coverage = selected_rule_coverage[rule]
+            mistakes = r_points.difference(r_coverage)
+            total_mistakes += len(mistakes)
+        return total_mistakes
 
 
     def marginal_gain(
@@ -400,6 +549,58 @@ class TotalCoverageMistakeObjective(Objective):
             lambda_val = lambda_val
         )
 
+
+    def gain(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the gain from the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            gain (float): The gain from the selected rules.
+        """
+        total_coverage = set()
+        for rule, label in selected_rule_labels.items():
+            r_coverage = selected_rule_points[rule]
+            total_coverage = total_coverage.union(r_coverage)
+        return len(total_coverage)
+
+
+    def cost(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        total_mistakes = 0
+        for rule, label in selected_rule_labels.items():
+            r_points = selected_rule_points[rule]
+            r_coverage = selected_rule_coverage[rule]
+            mistakes = r_points.difference(r_coverage)
+            total_mistakes += len(mistakes)
+        return total_mistakes
+
     
     def marginal_gain(
         self,
@@ -481,9 +682,9 @@ class CoverageCostObjective(Objective):
     """
     def __init__(
             self,
-            n_rules : int,
-            lambda_val : float,
             cluster_centers : NDArray,
+            n_rules : int,
+            lambda_val : float = 1.0,
             method : str = "kmeans"
         ):
         super().__init__(
@@ -495,6 +696,67 @@ class CoverageCostObjective(Objective):
         if method not in ["kmeans", "kmedians"]:
             raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
         self.method = method
+
+
+    def gain(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the gain from the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            gain (float): The gain from the selected rules.
+        """
+        per_cluster_coverage = {}
+        for rule, label in selected_rule_labels.items():
+            if label not in per_cluster_coverage:
+                per_cluster_coverage[label] = set()
+            per_cluster_coverage[label] = per_cluster_coverage[label].union(
+                selected_rule_coverage[rule]
+            )
+        total_coverage = 0
+        for l, covered in per_cluster_coverage.items():
+            total_coverage += len(covered)
+        return total_coverage
+
+
+    def cost(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        total_cost = 0.0
+        for rule, label in selected_rule_labels.items():
+            r_points = selected_rule_points[rule]
+            r_center = self.cluster_centers[label]
+            if self.method == "kmeans":
+                cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
+            else:  # self.method == "kmedians"
+                cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+            total_cost += cluster_cost
+        return total_cost
 
 
     def marginal_gain(
@@ -580,9 +842,9 @@ class TotalCoverageCostObjective(Objective):
     """
     def __init__(
             self,
-            n_rules : int,
-            lambda_val : float,
             cluster_centers : NDArray,
+            n_rules : int,
+            lambda_val : float = 1.0,
             method : str = "kmeans"
         ):
         """
@@ -606,6 +868,61 @@ class TotalCoverageCostObjective(Objective):
         if method not in ["kmeans", "kmedians"]:
             raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
         self.method = method
+
+
+    def gain(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the gain from the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            gain (float): The gain from the selected rules.
+        """
+        total_coverage = set()
+        for rule, label in selected_rule_labels.items():
+            r_coverage = selected_rule_points[rule]
+            total_coverage = total_coverage.union(r_coverage)
+        return len(total_coverage)
+
+
+    def cost(
+        self,
+        selected_rule_labels : dict[int, set[int]],
+        selected_rule_points : dict[int, set[int]],
+        selected_rule_coverage: dict[int, set[int]]
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_rule_labels (dict[int, set[int]]): A dictionary mapping each selected rule index
+            selected_rule_points (dict[int, set[int]]): A dictionary mapping each selected rule index 
+                to the full set of data points it covers.
+            selected_rule_coverage (dict[int, set[int]]): A dictionary mapping each selected rule index
+                to the set of data points it covers within its assigned cluster.
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        total_cost = 0.0
+        for rule, label in selected_rule_labels.items():
+            r_points = selected_rule_points[rule]
+            r_center = self.cluster_centers[label]
+            if self.method == "kmeans":
+                cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
+            else:  # self.method == "kmedians"
+                cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+            total_cost += cluster_cost
+        return total_cost
 
 
     def marginal_gain(

@@ -38,7 +38,53 @@ class DSCluster(DecisionSet):
         """
         super().__init__(rule_miner, rules, rule_labels)
         self.objective = objective
+
+
+    def set_lambda(
+        self,
+        lambda_val : float
+    ) -> None:
+        """
+        Sets the lambda value for the objective function.
+
+        Args:
+            lambda_val (float): The lambda value to set.
+        """
+        self.objective.set_lambda(lambda_val)
+
     
+    def compute_lambda(
+        self,
+        X : NDArray,
+        y : List[Set[int]]
+    ) -> float:
+        """
+        Computes the lambda value for the objective function based on the dataset.
+
+        Args:
+            X (np.ndarray): Input dataset.
+            y (List[Set[int]]): Target labels.
+
+        Returns:
+            lambda_val (float): The computed lambda value.
+        """
+        if self.rules is None:
+            raise ValueError('Rules have not been mined yet.')
+        
+
+        # DO I NEED TO WORRY about {-1} labels here??
+        
+        n_labels = len(unique_labels(y, ignore ={-1}))
+        data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = n_labels, ignore = {-1}
+        )
+        data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.rules)
+        lambda_val = self.objective.compute_lambda(
+            data = X,
+            data_to_cluster_assignment = data_to_cluster_assignment,
+            data_to_rules_assignment = data_to_rules_assignment
+        )
+        return lambda_val
 
     def select(
             self,

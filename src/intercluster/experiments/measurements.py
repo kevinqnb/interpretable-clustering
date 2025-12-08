@@ -11,8 +11,10 @@ from intercluster.measurements import (
 )
 from intercluster.utils import (
     assignment_to_labels,
+    assignment_to_dict,
     divide_with_zeros
 )
+from intercluster.decision_sets.objectives import Objective
 
 class MeasurementFunction:
     def __init__(self, name):
@@ -347,5 +349,189 @@ class ClusteringDistance(MeasurementFunction):
             percentage = True,
             ignore = {-1}
         )
+    
+
+####################################################################################################
+
+
+class ObjectiveValue(MeasurementFunction):
+    """
+    Records the value of the objective function used to fit the decision set.
+    """
+    def __init__(
+        self,
+        objective : Objective,
+        name : str = 'objective-value'
+    ):
+        super().__init__(name = name)
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed objective value.
+        """
+        n,d = data_to_rule_assignment.shape
+        r,k = rule_to_cluster_assignment.shape
+        n2,k2 = data_to_cluster_assignment.shape
+        if (n != n2) or (k != k2):
+            raise ValueError("Incompatible assignment matrix dimensions.")
+        
+        selected_rule_labels = {i: rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
+        selected_rule_points = assignment_to_dict(data_to_rule_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        selected_rule_coverage = {
+            i : r_points.intersection(
+                cluster_points[selected_rule_labels[i]]
+            )
+            for i, r_points in selected_rule_points.items()
+        }
+        return self.objective.compute_objective(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )
+    
+
+####################################################################################################
+
+
+class ObjectiveGain(MeasurementFunction):
+    """
+    Records the gain portion of the objective function used to fit the decision set.
+    """
+    def __init__(
+        self,
+        objective : Objective,
+        name : str = 'objective-value'
+    ):
+        super().__init__(name = name)
+        self.objective = objective
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed objective value.
+        """
+        n,d = data_to_rule_assignment.shape
+        r,k = rule_to_cluster_assignment.shape
+        n2,k2 = data_to_cluster_assignment.shape
+        if (n != n2) or (k != k2):
+            raise ValueError("Incompatible assignment matrix dimensions.")
+        
+        selected_rule_labels = {i: rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
+        selected_rule_points = assignment_to_dict(data_to_rule_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        selected_rule_coverage = {
+            i : r_points.intersection(
+                cluster_points[selected_rule_labels[i]]
+            )
+            for i, r_points in selected_rule_points.items()
+        }
+        return self.objective.gain(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )
+    
+
+####################################################################################################
+
+
+class ObjectiveCost(MeasurementFunction):
+    """
+    Records the value of the objective function used to fit the decision set.
+    """
+    def __init__(
+        self,
+        objective : Objective,
+        name : str = 'objective-value'
+    ):
+        super().__init__(name = name)
+        self.objective = objective
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed objective value.
+        """
+        n,d = data_to_rule_assignment.shape
+        r,k = rule_to_cluster_assignment.shape
+        n2,k2 = data_to_cluster_assignment.shape
+        if (n != n2) or (k != k2):
+            raise ValueError("Incompatible assignment matrix dimensions.")
+        
+        selected_rule_labels = {i: rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
+        selected_rule_points = assignment_to_dict(data_to_rule_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        selected_rule_coverage = {
+            i : r_points.intersection(
+                cluster_points[selected_rule_labels[i]]
+            )
+            for i, r_points in selected_rule_points.items()
+        }
+        return self.objective.cost(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )
+    
+
+####################################################################################################
+
+
+
+
+
     
         

@@ -6,6 +6,9 @@ from .measurements import (
     Silhouette,
     CoverageMistakeScore,
     ClusteringDistance,
+    ObjectiveGain,
+    ObjectiveCost,
+    ObjectiveValue,
 )
 
 from .modules import (

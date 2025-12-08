@@ -425,7 +425,7 @@ wheels = [
 [[package]]
 name = "intercluster"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "cython" },
     { name = "exkmc" },
