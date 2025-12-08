@@ -50,6 +50,7 @@ from .utils import (
     entropy_bin,
     quantile_bin,
     uniform_bin,
+    oned_cluster_bin,
     interval_to_condition,
     oned_cluster,
     decision_set_to_cars,

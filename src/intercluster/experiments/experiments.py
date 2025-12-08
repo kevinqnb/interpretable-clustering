@@ -495,6 +495,8 @@ class LambdaExperiment(Experiment):
         for i, module_result_dict in enumerate(module_results):
             for key,value in module_result_dict.items():
                 self.result_dict[key + (i,)] = value
+
+        #import pdb; pdb.set_trace()
             
         return pd.DataFrame(self.result_dict, index=self.lambda_array)
     

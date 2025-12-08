@@ -701,6 +701,49 @@ def oned_cluster(
 ####################################################################################################
 
 
+def oned_cluster_bin(
+        x : NDArray,
+        cluster_cost : float = 0.0,
+        method : str = "kmeans"
+    ) -> NDArray:
+    """
+    Clusters a 1d array into segments.
+
+    Args:
+        x (np.ndarray): 1d array of data points to cluster.
+        
+        cluster_cost (float, optional): Cost associated with adding a new cluster. 
+            Must be between 0.0 and 1.0. Defaults to 0.0.
+            
+        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
+            Defaults to "kmeans".
+
+    Returns:
+        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
+            of data points and k is the number of clusters found.
+    """
+    bin_df = {}
+    for i in range(x.shape[1]):
+        xi = x[:,i]
+        xi_labels = oned_cluster_cy(xi, cluster_cost, method)
+        xi_intervals = [None for _ in range(len(xi))]
+        for l in np.unique(xi_labels):
+            label_points = np.where(xi_labels == l)[0]
+            label_min = np.min(xi[xi_labels == l])
+            if label_min == np.min(xi):
+                label_min = -np.inf
+            label_max = np.max(xi[xi_labels == l])
+            for idx in label_points:
+                xi_intervals[idx] = pd.Interval(left = label_min, right = label_max, closed = 'right')
+
+        bin_df[i] = xi_intervals
+
+    return pd.DataFrame(bin_df)
+
+
+####################################################################################################
+
+
 def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Condition]:
     """
     Convert an interval string to a Condition object.

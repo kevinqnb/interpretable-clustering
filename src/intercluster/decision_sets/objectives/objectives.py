@@ -372,7 +372,17 @@ class Objective:
         selected_rule_labels = {rule: rule_labels[rule] for rule in selected_rules}
         selected_rule_points = {rule: rule_points[rule] for rule in selected_rules}
         selected_rule_coverage = {rule: rule_cluster_coverage[rule] for rule in selected_rules}
-        self.value = self.compute_objective(
+        self.gain_value = self.gain(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )
+        self.cost_value = self.cost(
+            selected_rule_labels,
+            selected_rule_points,
+            selected_rule_coverage
+        )
+        self.objective_value = self.compute_objective(
             selected_rule_labels,
             selected_rule_points,
             selected_rule_coverage

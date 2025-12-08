@@ -5,6 +5,7 @@ from typing import List, Set
 from intercluster import (
     uniform_bin,
     quantile_bin,
+    oned_cluster_bin,
     interval_to_condition,
 )
 
@@ -23,9 +24,10 @@ class FrequentItemsetMiner(RuleMiner):
 
     Args:
         min_support (float, optional): Minimum support for a rule. Defaults to 0.1.
-        n_bins (int, optional): Number of bins to use for discretization. Defaults to 10.   
         binning_method (str, optional): Binning method to use. Options are "uniform" or "quantile".
             Defaults to "uniform".
+        bin_params (dict, optional): Parameters for the binning method. Defaults to standard 
+            uniform binning parameters.
 
     Attrs:
          decision_set (List[List[Condition]]): The mined decision set,
@@ -35,20 +37,19 @@ class FrequentItemsetMiner(RuleMiner):
     def __init__(
         self,
         min_support : float = 0.1,
-        n_bins : int = 10,
-        binning_method : str = "uniform"
+        binning_method : str = "uniform",
+        bin_params : dict = {'n_bins': 5}
     ):
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
             raise ValueError("min_support must be a floating point number in [0, 1].")
         self.min_support = min_support
 
-        if not isinstance(n_bins, int) or n_bins <= 0:
-            raise ValueError("n_bins must be a positive integer.")
-        self.n_bins = n_bins
-
-        if binning_method not in ["uniform", "quantile"]:
-            raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile'.")
+        if binning_method not in ["uniform", "quantile", "cluster"]:
+            raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile' or 'cluster'.")
         self.binning_method = binning_method
+
+        self.bin_params = bin_params
+
         super().__init__()
 
     def fit(
@@ -68,9 +69,11 @@ class FrequentItemsetMiner(RuleMiner):
             rule_labels (List[Set[int]]): None, dummy variable.
         """
         if self.binning_method == "quantile":
-            bin_df = quantile_bin(X, self.n_bins)
+            bin_df = quantile_bin(X, **self.bin_params)
+        elif self.binning_method == "uniform":
+            bin_df = uniform_bin(X, **self.bin_params)
         else:
-            bin_df = uniform_bin(X, self.n_bins)
+            bin_df = oned_cluster_bin(X, **self.bin_params)
 
         bin_df.columns = bin_df.columns.astype(str)
         bin_df = bin_df.astype(str)

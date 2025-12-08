@@ -46,25 +46,26 @@ np.random.seed(seed)
 kmeans_base = KMeansBase(n_clusters = n_clusters, random_seed = seed)
 kmeans_assignment = kmeans_base.assign(data)
 
-# Objective function:
-objective = CoverageMistakeObjective(
-    n_rules = n_rules
-)
-
-objective2 = TotalCoverageCostObjective(
-    cluster_centers = kmeans_base.centers,
-    n_rules = n_rules,
-    method = "kmeans"
-)
-objective2.set_data(data)
-
-rule_miner = ClusterMiner(
-    cluster_cost=per_cluster_cost,
-    method = "kmeans"
+# Rule Mining:
+rule_miner = FrequentItemsetMiner(
+    min_support = 0.1,
+    binning_method = "cluster",
+    bin_params = {
+        'cluster_cost': per_cluster_cost,
+        'method': 'kmeans'
+    }
 )
 
 rules, rule_labels = rule_miner.fit(
     X = data, y = kmeans_base.labels
+)
+
+####################################################################################################
+
+
+# Decision Set Clustering: Coverage Mistake Objective
+objective = CoverageMistakeObjective(
+    n_rules = n_rules
 )
 
 # Find minimum lambda value:
@@ -77,19 +78,20 @@ dsclust = DSCluster(
 
 min_lambda_val = dsclust.compute_lambda(data, kmeans_base.labels) + 1e-10
 
-# Lambda array:
-lambda_array = np.linspace(min_lambda_val, min_lambda_val * 2, 100)
+print("Minimum lambda value:", min_lambda_val)
 
-# Decision Set Clustering Modules:
+# Lambda array:
+lambda_array = np.linspace(min_lambda_val, min_lambda_val * 10, 100)
+
+# Decision Set Clustering:
 dsclust_params = {
-    (i,) : {
+    (l,) : {
         'objective' : CoverageMistakeObjective(
             n_rules = n_rules,
-            lambda_val = lambda_array[i]
-        ),
-        'rule_miner' : rule_miner,
+            lambda_val = l
+        )
     }
-    for i in range(len(lambda_array))
+    for i,l in enumerate(lambda_array)
 }
 dsclust_mod = DecisionSetMod(
     model = DSCluster,
@@ -97,6 +99,139 @@ dsclust_mod = DecisionSetMod(
     name = 'DSCluster'
 )
 
+
+####################################################################################################
+
+'''
+# Decision Set Clustering: Total Coverage Mistake Objective
+objective = TotalCoverageMistakeObjective(
+    n_rules = n_rules
+)
+
+# Find minimum lambda value:
+dsclust = DSCluster(
+    objective = objective,
+    rule_miner = rule_miner,
+    rules = rules,
+    rule_labels = rule_labels,
+)
+
+min_lambda_val = dsclust.compute_lambda(data, kmeans_base.labels) + 1e-10
+
+print("Minimum lambda value:", min_lambda_val)
+
+# Lambda array:
+lambda_array = np.linspace(min_lambda_val, min_lambda_val * 10, 100)
+
+# Decision Set Clustering:
+dsclust_params = {
+    (l,) : {
+        'objective' : TotalCoverageMistakeObjective(
+            n_rules = n_rules,
+            lambda_val = l
+        )
+    }
+    for i,l in enumerate(lambda_array)
+}
+dsclust_mod = DecisionSetMod(
+    model = DSCluster,
+    rule_miner = rule_miner,
+    name = 'DSCluster'
+)
+'''
+
+
+####################################################################################################
+
+'''
+# Decision Set Clustering: Coverage Mistake Objective
+objective = CoverageCostObjective(
+    cluster_centers = kmeans_base.centers,
+    n_rules = n_rules,
+    method = "kmeans"
+)
+objective.set_data(data)
+
+# Find minimum lambda value:
+dsclust = DSCluster(
+    objective = objective,
+    rule_miner = rule_miner,
+    rules = rules,
+    rule_labels = rule_labels,
+)
+
+min_lambda_val = dsclust.compute_lambda(data, kmeans_base.labels) + 1e-10
+
+print("Minimum lambda value:", min_lambda_val)
+
+# Lambda array:
+lambda_array = np.linspace(min_lambda_val, min_lambda_val * 10, 100)
+
+# Decision Set Clustering:
+dsclust_params = {
+    (l,) : {
+        'objective' : CoverageCostObjective(
+            cluster_centers = kmeans_base.centers,
+            n_rules = n_rules,
+            lambda_val = l,
+            method = "kmeans"
+        )
+    }
+    for i,l in enumerate(lambda_array)
+}
+dsclust_mod = DecisionSetMod(
+    model = DSCluster,
+    rule_miner = rule_miner,
+    name = 'DSCluster'
+)
+'''
+
+####################################################################################################
+
+'''
+# Decision Set Clustering: Coverage Mistake Objective
+objective = TotalCoverageCostObjective(
+    cluster_centers = kmeans_base.centers,
+    n_rules = n_rules,
+    method = "kmeans"
+)
+objective.set_data(data)
+
+# Find minimum lambda value:
+dsclust = DSCluster(
+    objective = objective,
+    rule_miner = rule_miner,
+    rules = rules,
+    rule_labels = rule_labels,
+)
+
+min_lambda_val = dsclust.compute_lambda(data, kmeans_base.labels) + 1e-10
+
+print("Minimum lambda value:", min_lambda_val)
+
+# Lambda array:
+lambda_array = np.linspace(min_lambda_val, min_lambda_val * 10, 100)
+
+# Decision Set Clustering:
+dsclust_params = {
+    (l,) : {
+        'objective' : TotalCoverageCostObjective(
+            cluster_centers = kmeans_base.centers,
+            n_rules = n_rules,
+            lambda_val = l,
+            method = "kmeans"
+        )
+    }
+    for i,l in enumerate(lambda_array)
+}
+dsclust_mod = DecisionSetMod(
+    model = DSCluster,
+    rule_miner = rule_miner,
+    name = 'DSCluster'
+)
+'''
+
+####################################################################################################
 module_list = [
     (dsclust_mod, dsclust_params)
 ]
@@ -105,20 +240,14 @@ module_list = [
 measurement_fns = [
     ObjectiveGain(
         objective = objective,
-        name = 'per-cluster-coverage'
+        baseline_assignment = kmeans_assignment,
+        name = 'gain'
     ),
     ObjectiveCost(
         objective = objective,
-        name = 'mistakes-cost'
+        baseline_assignment = kmeans_assignment,
+        name = 'cost'
     ),
-    ObjectiveGain(
-        objective = objective2,
-        name = 'total-coverage'
-    ),
-    ObjectiveCost(
-        objective = objective2,
-        name = 'clustering-cost'
-    )
 ]
 
 exp = LambdaExperiment(
@@ -135,8 +264,9 @@ exp = LambdaExperiment(
 import time 
 start = time.time()
 exp1_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '_kmeans')
+exp.save_results('data/experiments/climate/lambdas/', '_total_coverage_cost')
 end = time.time()
 print("Experiment 1 time:", end - start)
+
 
 ####################################################################################################

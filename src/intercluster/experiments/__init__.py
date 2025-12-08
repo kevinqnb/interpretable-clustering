@@ -4,7 +4,7 @@ from .measurements import (
     Coverage,
     DistanceRatio,
     Silhouette,
-    CoverageMistakeScore,
+    #CoverageMistakeScore,
     ClusteringDistance,
     ObjectiveGain,
     ObjectiveCost,
