@@ -53,11 +53,11 @@ class DSCluster(DecisionSet):
         self.objective.set_lambda(lambda_val)
 
     
-    def compute_lambda(
+    def compute_lambdas(
         self,
         X : NDArray,
         y : List[Set[int]]
-    ) -> float:
+    ) -> NDArray:
         """
         Computes the lambda value for the objective function based on the dataset.
 
@@ -66,7 +66,10 @@ class DSCluster(DecisionSet):
             y (List[Set[int]]): Target labels.
 
         Returns:
-            lambda_val (float): The computed lambda value.
+            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
+                most value for which the approximation guarantee holds, and increasing
+                until reaching the maximum coverage/cost ratio seen
+                for any (rule, cluster) assignment pair. 
         """
         if self.rules is None:
             raise ValueError('Rules have not been mined yet.')
@@ -79,12 +82,12 @@ class DSCluster(DecisionSet):
             y, n_labels = n_labels, ignore = {-1}
         )
         data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.rules)
-        lambda_val = self.objective.compute_lambda(
+        lambda_vals = self.objective.compute_lambdas(
             data = X,
             data_to_cluster_assignment = data_to_cluster_assignment,
             data_to_rules_assignment = data_to_rules_assignment
         )
-        return lambda_val
+        return lambda_vals
 
     def select(
             self,

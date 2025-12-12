@@ -37,12 +37,17 @@ class FrequentItemsetMiner(RuleMiner):
     def __init__(
         self,
         min_support : float = 0.1,
+        max_length : int = 10,
         binning_method : str = "uniform",
         bin_params : dict = {'n_bins': 5}
     ):
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
             raise ValueError("min_support must be a floating point number in [0, 1].")
         self.min_support = min_support
+
+        if not isinstance(max_length, int) or max_length < 1:
+            raise ValueError("max_length must be a positive integer.")
+        self.max_length = max_length
 
         if binning_method not in ["uniform", "quantile", "cluster"]:
             raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile' or 'cluster'.")
@@ -68,6 +73,7 @@ class FrequentItemsetMiner(RuleMiner):
             rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
+        print("Fitting FrequentItemsetMiner...")
         if self.binning_method == "quantile":
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":
@@ -81,7 +87,9 @@ class FrequentItemsetMiner(RuleMiner):
 
         txns = TransactionDB.from_DataFrame(bin_df)
         frequent_itemsets = fim.apriori(
-            txns.string_representation, supp=self.min_support*100, report="s"
+            txns.string_representation,
+            supp=self.min_support*100,
+            zmax = self.max_length
         )
 
         # Convert to decision set format:

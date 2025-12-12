@@ -1,8 +1,11 @@
+import numpy as np
 from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
     interval_to_condition,
+    decision_set_to_cars,
+    flatten_labels
 )
 from .mining import RuleMiner
 from .decision_set import DecisionSet
@@ -144,17 +147,25 @@ class IDS(DecisionSet):
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
+        y_ = flatten_labels(y)
+        if len(y_) != len(y):
+            raise ValueError("Each data point must have exactly one label.")
         if self.decision_set is None or self.decision_set_labels is None:
             raise ValueError('Decision set has not been fitted yet.')
         
-        quant_df = QuantitativeDataFrame(self.rule_miner.bin_df)
-
-        valid_cars = [car for i,car in enumerate(self.rule_miner.cars) 
-                                if int(self.rule_miner.cars[i].consequent[1]) != -1]
-        #valid_cars = self.rule_miner.cars
+        cars = decision_set_to_cars(
+            X, y,
+            self.decision_set,
+            self.decision_set_labels
+        )
+        valid_cars = [car for i,car in enumerate(cars) if int(cars[i].consequent[1]) != -1]
         if len(valid_cars) == 0:
             raise ValueError("No valid (non-outlier) class association rules found. " \
             "Try increasing the number of mined rules.")
+        
+        bin_df = self.rule_miner.bin_df.assign(**{'class': y_})
+        bin_df['class'] = bin_df['class'].astype(str)
+        quant_df = QuantitativeDataFrame(bin_df)
 
         if self.lambdas is None:
             def fmax(lambda_dict):

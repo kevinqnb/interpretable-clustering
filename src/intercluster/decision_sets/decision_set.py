@@ -166,7 +166,8 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        if self.rules is None or self.rule_labels is None:
+        if self.rules is None:
+            print("Mining decision set rules...")
             self.decision_set, self.decision_set_labels = self.rule_miner.fit(X, y)
         else:
             self.decision_set = self.rules

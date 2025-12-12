@@ -118,12 +118,12 @@ class Objective:
         return g - self.lambda_val * h
     
 
-    def compute_lambda(
+    def compute_lambdas(
         self,
         data : NDArray,
         data_to_cluster_assignment : NDArray,
         data_to_rules_assignment : NDArray
-    ) -> float:
+    ) -> NDArray:
         """
         Computes minimum value of lambda necessary for an approximation algorithm.
 
@@ -138,7 +138,10 @@ class Objective:
                 data point i is assigned to rule j and `False` otherwise.
                 
         Returns:
-            float: The computed lambda value.
+            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
+                most value for which the approximation guarantee holds, and increasing
+                until reaching the maximum coverage/cost ratio seen
+                for any (rule, cluster) assignment pair. 
         """
         n,d = data.shape
         self.data = data
@@ -159,7 +162,8 @@ class Objective:
         rule_points = assignment_to_dict(data_to_rules_assignment)
         cluster_points = assignment_to_dict(data_to_cluster_assignment)
 
-        max_ratio = 0.0
+        largest = []
+        second_max_ratio = 0.0
         for rule in rule_list:
             r_points = {rule: rule_points[rule]}
             c_ratios = []
@@ -186,11 +190,13 @@ class Objective:
                     c_ratios.append(ratio)
 
             if len(c_ratios) >= 2:
-                second_largest = np.sort(c_ratios)[-2]
-                if second_largest > max_ratio:
-                    max_ratio = second_largest
+                c_ratios_sorted = np.sort(c_ratios)
+                largest.append(c_ratios_sorted[-1])
+                second_largest = c_ratios_sorted[-2]
+                if second_largest > second_max_ratio:
+                    second_max_ratio = second_largest
 
-        return max_ratio
+        return np.sort(largest + [second_max_ratio])
     
     
     def marginal_gain(

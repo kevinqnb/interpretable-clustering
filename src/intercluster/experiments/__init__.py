@@ -1,11 +1,16 @@
 from .measurements import (
+    TotalCoverage,
+    ClusterCoverage,
+    Mistakes,
     ClusteringCost,
-    Overlap,
-    Coverage,
-    DistanceRatio,
+    RuleClusteringCost,
+    PairwiseDistance,
+    RulePairwiseDistance,
+    ClusteringCost,
+    #Overlap,
+    #DistanceRatio,
     Silhouette,
     #CoverageMistakeScore,
-    ClusteringDistance,
     ObjectiveGain,
     ObjectiveCost,
     ObjectiveValue,
@@ -22,9 +27,7 @@ from .modules import (
 )
 
 from .experiments import (
-    MaxRulesExperiment,
-    LambdaExperiment,
-    RobustnessExperiment,
+    Experiment,
 )
 
 
