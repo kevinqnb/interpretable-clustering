@@ -31,7 +31,7 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
-    'max_rules': 6 + 2,
+    'max_rules': 6 + 20,
     'min_support': 0.1,
     'max_rule_length': 10,
     'n_bins': 5,
