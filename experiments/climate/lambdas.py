@@ -29,10 +29,10 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'n_rules': 6,
-    'n_bins': 5,
-    'min_support': 0.1,
-    'max_rule_length': 10,
-    'per_cluster_cost': 0.1,
+    'n_bins': 6,
+    'min_support': 0.025,
+    'max_rule_length': 3,
+    'per_cluster_cost': 0.25,
 }
 
 
@@ -459,7 +459,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '')
+exp.save_results('data/experiments/climate/lambdas/', '_rule_tuning')
 end = time.time()
 print("Experiment time:", end - start)
 

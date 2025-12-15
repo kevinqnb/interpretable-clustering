@@ -1,0 +1,25 @@
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/lambdas.py", line 461, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 512, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1841, in _retrieve
+    batched_results = batched_results.get_result(self.timeout)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker.
+
+The exit codes of the workers are {SIGKILL(-9)}
+Detailed tracebacks of the workers should have been printed to stderr in the executor process if faulthandler was not disabled.

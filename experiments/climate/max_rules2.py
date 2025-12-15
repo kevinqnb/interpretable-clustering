@@ -12,7 +12,7 @@ from intercluster.experiments import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 1
+experiment_cpu_count = 8
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -22,7 +22,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
@@ -32,10 +32,10 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'max_rules': 6 + 20,
-    'min_support': 0.1,
-    'max_rule_length': 5,
-    'n_bins': 5,
-    'per_cluster_cost': 0.1,
+    'min_support': 0.025,
+    'max_rule_length': 3,
+    'n_bins': 6,
+    'per_cluster_cost': 0.25,
     'depth_factor': 0.03,
     'ids_samples': 10,
     'lambdas' : {}
@@ -202,9 +202,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 2.5
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 2.143
 
 # Decision Set Clustering:
 dsclust_params1 = {
@@ -243,9 +243,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 3.56
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 1.765
 
 # Decision Set Clustering:
 dsclust_params2 = {
@@ -288,8 +288,7 @@ dsclust = DSCluster(
 )
 
 lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 0.047
+lambda_val = 0.04193
 
 # Decision Set Clustering:
 dsclust_params3 = {
@@ -333,9 +332,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]\
-#lambda_val = 0.027
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]\
+lambda_val = 0.03254
 
 # Decision Set Clustering:
 dsclust_params4 = {
@@ -376,9 +375,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 3.5
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 3.143
 
 # Decision Set Clustering:
 dsclust_params5 = {
@@ -417,9 +416,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 9.25
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 3.2174
 
 # Decision Set Clustering:
 dsclust_params6 = {
@@ -461,9 +460,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 0.0642
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 0.03629
 
 # Decision Set Clustering:
 dsclust_params7 = {
@@ -507,9 +506,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
-#lambda_val = 0.0933
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 0.03502
 
 # Decision Set Clustering:
 dsclust_params8 = {
@@ -549,10 +548,10 @@ module_list = [
     (dsclust_mod2, dsclust_params2),
     (dsclust_mod3, dsclust_params3),
     (dsclust_mod4, dsclust_params4),
-    (dsclust_mod5, dsclust_params5),
-    (dsclust_mod6, dsclust_params6),
-    (dsclust_mod7, dsclust_params7),
-    (dsclust_mod8, dsclust_params8)
+    #(dsclust_mod5, dsclust_params5),
+    #(dsclust_mod6, dsclust_params6),
+    #(dsclust_mod7, dsclust_params7),
+    #(dsclust_mod8, dsclust_params8)
 ] #+ ids_module_list
 
 
@@ -579,7 +578,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/max_rules/', '')
+exp.save_results('data/experiments/climate/max_rules/', '_rule_tuning_no_total')
 end = time.time()
 print("Experiment time:", end - start)
 

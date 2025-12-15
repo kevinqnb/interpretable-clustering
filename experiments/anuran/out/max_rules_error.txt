@@ -1,0 +1,24 @@
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/max_rules.py", line 25, in <module>
+    data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/anuran')
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/preprocessing.py", line 150, in load_preprocessed_climate
+    gdf = gpd.read_file(shape_file_path, dtype = dtype_dict)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/geopandas/io/file.py", line 316, in _read_file
+    return _read_file_pyogrio(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/geopandas/io/file.py", line 576, in _read_file_pyogrio
+    return pyogrio.read_dataframe(path_or_bytes, bbox=bbox, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/geopandas.py", line 382, in read_dataframe
+    result = read_func(
+             ^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py", line 200, in read
+    return ogr_read(
+           ^^^^^^^^^
+  File "pyogrio/_io.pyx", line 1412, in pyogrio._io.ogr_read
+  File "pyogrio/_io.pyx", line 262, in pyogrio._io.ogr_open
+pyogrio.errors.DataSourceError: data/anuran/climate_divisions/climate_divisions.shp: No such file or directory
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.

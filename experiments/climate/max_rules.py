@@ -32,10 +32,10 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'max_rules': 6 + 20,
-    'min_support': 0.1,
-    'max_rule_length': 10,
-    'n_bins': 5,
-    'per_cluster_cost': 0.1,
+    'min_support': 0.025,
+    'max_rule_length': 3,
+    'n_bins': 6,
+    'per_cluster_cost': 0.25,
     'depth_factor': 0.03,
     'ids_samples': 10,
     'lambdas' : {}
@@ -177,7 +177,7 @@ for s in range(fixed_parameters['ids_samples']):
     ids_mod = DecisionSetMod(
         model = IDS,
         rules = uniform_rules,
-        rule_labels = uniform_rule_labels,
+        rule_labels = None,
         rule_miner = uniform_rule_miner,
         name = f"IDS_{s}"
     )
@@ -202,8 +202,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 2.143
 
 # Decision Set Clustering:
 dsclust_params1 = {
@@ -242,8 +243,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 1.765
 
 # Decision Set Clustering:
 dsclust_params2 = {
@@ -286,7 +288,7 @@ dsclust = DSCluster(
 )
 
 lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+lambda_val = 0.04193
 
 # Decision Set Clustering:
 dsclust_params3 = {
@@ -330,8 +332,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]\
+lambda_val = 0.03254
 
 # Decision Set Clustering:
 dsclust_params4 = {
@@ -372,8 +375,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 3.143
 
 # Decision Set Clustering:
 dsclust_params5 = {
@@ -398,7 +402,7 @@ fixed_parameters['lambdas'][dsclust_mod5.name] = lambda_val
 
 
 ####################################################################################################
-# Module 6. Cluster Bin Rules, Coverage Mistake Objective
+# Module 6. Cluster Bin Rules, Total Coverage Mistake Objective
 
 objective = TotalCoverageMistakeObjective(
     n_rules = fixed_parameters['n_clusters']
@@ -412,8 +416,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 3.2174
 
 # Decision Set Clustering:
 dsclust_params6 = {
@@ -438,7 +443,7 @@ fixed_parameters['lambdas'][dsclust_mod6.name] = lambda_val
 
 
 ####################################################################################################
-# Module 7. Uniform Bin Rules, Coverage Cost Objective
+# Module 7. Uniform Bin Rules, Total Coverage Cost Objective
 
 objective = TotalCoverageCostObjective(
     cluster_centers = kmeans_base.centers,
@@ -455,8 +460,9 @@ dsclust = DSCluster(
     rule_labels = uniform_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 0.03629
 
 # Decision Set Clustering:
 dsclust_params7 = {
@@ -500,8 +506,9 @@ dsclust = DSCluster(
     rule_labels = cluster_rule_labels,
 )
 
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = lambda_array[0]
+#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
+#lambda_val = lambda_array[0]
+lambda_val = 0.03502
 
 # Decision Set Clustering:
 dsclust_params8 = {
@@ -545,7 +552,7 @@ module_list = [
     (dsclust_mod6, dsclust_params6),
     (dsclust_mod7, dsclust_params7),
     (dsclust_mod8, dsclust_params8)
-] + ids_module_list
+] #+ ids_module_list
 
 
 measurement_fns = [
@@ -571,7 +578,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '')
+exp.save_results('data/experiments/climate/max_rules/', '_rule_tuning')
 end = time.time()
 print("Experiment time:", end - start)
 

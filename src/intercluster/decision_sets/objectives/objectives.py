@@ -162,7 +162,7 @@ class Objective:
         rule_points = assignment_to_dict(data_to_rules_assignment)
         cluster_points = assignment_to_dict(data_to_cluster_assignment)
 
-        largest = []
+        ratios = []
         second_max_ratio = 0.0
         for rule in rule_list:
             r_points = {rule: rule_points[rule]}
@@ -189,14 +189,17 @@ class Objective:
                     ratio = np.inf
                     c_ratios.append(ratio)
 
+
+            # Does this need to be here?
             if len(c_ratios) >= 2:
                 c_ratios_sorted = np.sort(c_ratios)
-                largest.append(c_ratios_sorted[-1])
+                ratios.append(c_ratios_sorted[-1])
+
                 second_largest = c_ratios_sorted[-2]
                 if second_largest > second_max_ratio:
                     second_max_ratio = second_largest
 
-        return np.sort(largest + [second_max_ratio])
+        return np.sort(ratios + [second_max_ratio])
     
     
     def marginal_gain(
