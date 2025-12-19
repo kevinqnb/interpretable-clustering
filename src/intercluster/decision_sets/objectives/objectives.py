@@ -26,21 +26,13 @@ class Objective:
         self,
         n_rules : int,
         lambda_val : float = 1.0,
+        data : NDArray = None,
         cluster_centers : NDArray = None,
     ):
         self.n_rules = n_rules
         self.lambda_val = lambda_val
-        self.cluster_centers = cluster_centers
-
-
-    def set_data(self, data : NDArray):
-        """
-        Sets the data for the objective.
-
-        Args:
-            data (NDArray): (n x d) Data array.
-        """
         self.data = data
+        self.cluster_centers = cluster_centers
 
 
     def set_lambda(self, lambda_val : float):
@@ -701,6 +693,7 @@ class CoverageCostObjective(Objective):
     """
     def __init__(
             self,
+            data : NDArray,
             cluster_centers : NDArray,
             n_rules : int,
             lambda_val : float = 1.0,
@@ -709,6 +702,7 @@ class CoverageCostObjective(Objective):
         super().__init__(
             n_rules = n_rules,
             lambda_val = lambda_val,
+            data = data,
             cluster_centers = cluster_centers
         )
 
@@ -861,6 +855,7 @@ class TotalCoverageCostObjective(Objective):
     """
     def __init__(
             self,
+            data : NDArray,
             cluster_centers : NDArray,
             n_rules : int,
             lambda_val : float = 1.0,
@@ -881,6 +876,7 @@ class TotalCoverageCostObjective(Objective):
         super().__init__(
             n_rules = n_rules,
             lambda_val = lambda_val,
+            data = data,
             cluster_centers = cluster_centers
         )
 
