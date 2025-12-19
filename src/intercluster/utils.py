@@ -7,7 +7,7 @@ from pyarc.data_structures import Consequent, Item, Antecedent, ClassAssocationR
 from .node import Node
 from .conditions import Condition, LinearCondition
 
-#from mdlp.discretization import MDLP
+from mdlp.discretization import MDLP
 from .oned_cluster_cy import oned_cluster_cy
 
 
@@ -410,6 +410,28 @@ def collect_nodes(root : Node) -> List[Node]:
 ####################################################################################################
 
 
+def collect_node_rules(root : Node) -> List[Node]:
+    """
+    Given the root of a tree, finds all nodes in the tree.
+    
+    Args:
+        root (Node): Root of the tree.
+    
+    Returns:
+        nodes (List[Node]): List of nodes in the tree. 
+    """
+    
+    rules = []
+    for path in traverse(root):
+        conditions = [node.condition for node in path if node.type != 'leaf']
+        rules.append(conditions)
+
+    return rules
+
+
+####################################################################################################
+
+
 def collect_leaves(root : Node) -> List[Node]:
     """
     Given the root of a tree, finds all leaf nodes in the tree.
@@ -573,59 +595,6 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
 ####################################################################################################
 
 
-def entropy_bin(
-        X : NDArray,
-        y : List[Set[int]],
-        random_state : int = None
-    ) -> pd.DataFrame:
-    """
-    Bins each feature of a real valued dataset to minimize the entropy of the resulting 
-    binned dataset.
-
-    This function makes use of the Minimum Description Length Principle (MDLP) 
-    python implementation: https://github.com/hlin117/mdlp-discretization?tab=readme-ov-file
-
-    Based upon the following work:
-    Fayyad, U. M., & Irani, K. B. (1993). 
-    Multi-interval discretization of continuous-valued attributes for classification learning.
-    
-    Args:
-        X (np.ndarray): Input (n x d) dataset.
-        
-        y (List[Set[int]]): Input list of labels associated with each data point.
-            NOTE: Each data point must have exactly one label.
-
-        random_state (int, optional): Seed used by the random number generator.
-            Defaults to None.
-            
-    Returns:
-        binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
-            pandas Interval objects (start, stop].
-    """
-    if not can_flatten(y):
-        raise ValueError("Each data point must be assigned to a single label.")
-        
-    y_ = flatten_labels(y)
-    discretizer = MDLP(random_state = random_state)
-    data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
-    interval_data = {}
-    for i, col in enumerate(data_disc.T):
-        cut_points = discretizer.cut_points_[i]
-        cut_points = np.concatenate(([-np.inf], cut_points, [np.inf]))
-        intervals = pd.IntervalIndex.from_breaks(cut_points)
-        
-        interval_list = []
-        for val in col:
-            interval_list.append(intervals[val])
-        
-        interval_data[i] = interval_list
-
-    bin_df = pd.DataFrame(interval_data)
-    return bin_df
-
-####################################################################################################
-
-
 def quantile_bin(
         X : NDArray,
         n_bins : int
@@ -739,6 +708,60 @@ def oned_cluster_bin(
         bin_df[i] = xi_intervals
 
     return pd.DataFrame(bin_df)
+
+
+####################################################################################################
+
+
+def entropy_bin(
+        X : NDArray,
+        y : List[Set[int]],
+        random_state : int = None
+    ) -> pd.DataFrame:
+    """
+    Bins each feature of a real valued dataset to minimize the entropy of the resulting 
+    binned dataset.
+
+    This function makes use of the Minimum Description Length Principle (MDLP) 
+    python implementation: https://github.com/hlin117/mdlp-discretization?tab=readme-ov-file
+
+    Based upon the following work:
+    Fayyad, U. M., & Irani, K. B. (1993). 
+    Multi-interval discretization of continuous-valued attributes for classification learning.
+    
+    Args:
+        X (np.ndarray): Input (n x d) dataset.
+        
+        y (List[Set[int]]): Input list of labels associated with each data point.
+            NOTE: Each data point must have exactly one label.
+
+        random_state (int, optional): Seed used by the random number generator.
+            Defaults to None.
+            
+    Returns:
+        binned_X (pd.DataFrame): Binned version of the input dataset, where bins are represented by 
+            pandas Interval objects (start, stop].
+    """
+    if not can_flatten(y):
+        raise ValueError("Each data point must be assigned to a single label.")
+        
+    y_ = flatten_labels(y)
+    discretizer = MDLP(random_state = random_state)
+    data_disc = discretizer.fit_transform(X, y_ + 1)  # MDLP does not accept negative labels
+    interval_data = {}
+    for i, col in enumerate(data_disc.T):
+        cut_points = discretizer.cut_points_[i]
+        cut_points = np.concatenate(([-np.inf], cut_points, [np.inf]))
+        intervals = pd.IntervalIndex.from_breaks(cut_points)
+        
+        interval_list = []
+        for val in col:
+            interval_list.append(intervals[val])
+        
+        interval_data[i] = interval_list
+
+    bin_df = pd.DataFrame(interval_data)
+    return bin_df
 
 
 ####################################################################################################
@@ -903,4 +926,4 @@ def cars_to_decision_set(
     return decision_set, decision_set_labels
 
 
-######################################################################################################
+####################################################################################################

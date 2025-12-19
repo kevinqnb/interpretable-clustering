@@ -111,14 +111,14 @@ shallow_tree_mod = DecisionTreeMod(
 
 # Rule Generation 
 # Run once to get estimate for the number of mined rules (this is mostly a deterministic process anyways)
-association_rule_miner = ClassAssociationMiner(
+class_association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
     max_length = max_length,
     random_state = seed
 )
-association_rules, association_rule_labels = association_rule_miner.fit(data, kmeans_labels)
-association_n_mine = len(association_rule_miner.decision_set)
+association_rules, association_rule_labels = class_association_rule_miner.fit(data, kmeans_labels)
+association_n_mine = len(class_association_rule_miner.decision_set)
 
 
 # CBA
@@ -129,7 +129,7 @@ cba_mod = DecisionSetMod(
     model = CBA,
     rules = association_rules,
     rule_labels = association_rule_labels,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'CBA'
 )
 
@@ -156,7 +156,7 @@ for s in range(ids_samples):
         model = IDS,
         rules = association_rules,
         rule_labels = association_rule_labels,
-        rule_miner = association_rule_miner,
+        rule_miner = class_association_rule_miner,
         name = f"IDS_{s}"
     )
     ids_module_list.append((ids_mod, ids_params))
@@ -172,7 +172,7 @@ dsclust_params_assoc = {
 }
 dsclust_mod_assoc = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'DSCluster-Assoc'
 )
 

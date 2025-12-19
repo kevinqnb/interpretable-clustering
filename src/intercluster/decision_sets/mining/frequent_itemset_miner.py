@@ -30,7 +30,7 @@ class FrequentItemsetMiner(RuleMiner):
             uniform binning parameters.
 
     Attrs:
-         decision_set (List[List[Condition]]): The mined decision set,
+        decision_set (List[List[Condition]]): The mined decision set,
             where each rule is a list of conditions.
         bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
     """
@@ -73,7 +73,6 @@ class FrequentItemsetMiner(RuleMiner):
             rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
-        print("Fitting FrequentItemsetMiner...")
         if self.binning_method == "quantile":
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":

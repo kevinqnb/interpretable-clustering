@@ -1,5 +1,5 @@
-from .association_rule_miner import (
-    AssociationRuleMiner
+from .class_association_rule_miner import (
+    ClassAssociationRuleMiner
 )
 
 from .box_miner import (
@@ -12,6 +12,10 @@ from .frequent_itemset_miner import (
 
 from .oned_cluster_miner import (
     ClusterMiner
+)
+
+from .tree_miner import (
+    TreeMiner
 )
 
 from .rule_miner import (

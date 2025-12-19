@@ -41,6 +41,7 @@ from .utils import (
     assignment_to_dict,
     traverse,
     collect_nodes,
+    collect_node_rules,
     collect_leaves,
     get_decision_paths,
     get_decision_paths_with_labels,

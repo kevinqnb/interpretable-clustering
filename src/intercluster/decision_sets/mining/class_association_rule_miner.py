@@ -1,10 +1,14 @@
 import pandas as pd
 from pyarc import TransactionDB
+import fim
 from pyarc.algorithms.rule_generation import generateCARs
 from typing import List, Set, Tuple, Any
 from intercluster import (
     Condition,
     entropy_bin,
+    uniform_bin,
+    quantile_bin,
+    oned_cluster_bin,
     interval_to_condition,
     can_flatten,
     flatten_labels,
@@ -17,22 +21,22 @@ from .rule_miner import RuleMiner
 ####################################################################################################
 
 
-class AssociationRuleMiner(RuleMiner):
+class ClassAssociationRuleMiner(RuleMiner):
     """
     Classification Association Rule Miner
     Rule miner that uses association rule mining to generate rules.
 
-    This is a wrapper around the PyIDS package [https://github.com/jirifilip/pyIDS/tree/master],
-    which implements a classifcation and association rule mining algorithm based upon:
-    Liu, B., Hsu, W., & Ma, Y. (1998, July). Integrating Classification and Association Rule Mining.
+    This is based upon the following code:
+    https://github.com/jirifilip/pyARC/blob/master/pyarc/algorithms/rule_generation.py
     """
     def __init__(
         self,
         min_support : float = 0.1,
         min_confidence : float = 0.8,
         max_length : int = 2,
+        binning_method : str = "entropy",
+        bin_params : dict = {'random_state': 342},
         ignore : Set[Any] = {-1},
-        random_state : int = None
     ):
         """
         Initialize the AssociationRuleMiner.
@@ -41,9 +45,11 @@ class AssociationRuleMiner(RuleMiner):
             min_support (float, optional): Minimum support for a rule. Defaults to 0.1.
             min_confidence (float, optional): Minimum confidence for a rule. Defaults to 0.8.
             max_length (int, optional): Maximum length of a rule (number of conditions). Defaults to 10.
+            binning_method (str, optional): Binning method to use. 
+                Options are "uniform", "quantile", "cluster", or "entropy". Defaults to "entropy".
+            bin_params (dict, optional): Parameters for the binning method. Defaults to standard 
+                entropy binning parameters (just a random state).
             ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
-            random_state (int, optional): Seed used by the random number generator.
-                Defaults to None.
 
         Attributes:
             decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
@@ -59,8 +65,13 @@ class AssociationRuleMiner(RuleMiner):
         self.min_support = min_support
         self.min_confidence = min_confidence
         self.max_length = max_length
+        if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
+            raise ValueError(
+                "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
+            )
+        self.binning_method = binning_method
+        self.bin_params = bin_params
         self.ignore = ignore
-        self.random_state = random_state
         super().__init__()
 
         self.bin_df = None
@@ -85,21 +96,48 @@ class AssociationRuleMiner(RuleMiner):
         if not can_flatten(y):
             raise ValueError("Each data point must be assigned to a single label.")
         y_ = flatten_labels(y)
-        bin_df = entropy_bin(X, y, random_state = self.random_state)
+
+        if self.binning_method == "quantile":
+            bin_df = quantile_bin(X, **self.bin_params)
+        elif self.binning_method == "uniform":
+            bin_df = uniform_bin(X, **self.bin_params)
+        elif self.binning_method == "cluster":
+            bin_df = oned_cluster_bin(X, **self.bin_params)
+        else: #elif self.binning_method == "entropy":
+            bin_df = entropy_bin(X, y, **self.bin_params)
+
         bin_df.columns = bin_df.columns.astype(str)
         bin_df['class'] = y_
         bin_df = bin_df.astype(str)
         self.bin_df = bin_df
 
         txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
-        cars = generateCARs(
-            txns,
-            support = int(self.min_support * 100),
-            confidence = int(self.min_confidence * 100),
-            maxlen = self.max_length + 1, # +1 to account for the class label
-            zmin = 1 # force rules with length at least 1
+        cars = fim.apriori(
+            txns.string_representation,
+            supp=self.min_support*100,
+            conf=self.min_confidence*100,
+            mode="o",
+            target="r",
+            report="sc",
+            zmax= self.max_length + 1, # +1 to account for the class label
+            appear=txns.appeardict
         )
-        self.decision_set, self.decision_set_labels = cars_to_decision_set(cars)
+
+        self.decision_set = []
+        self.decision_set_labels = []
+
+        for car in cars:
+            con, ant, support, confidence = car
+            consequent = int(con.split(':=:')[1])
+            rule = []
+            for condition in ant:
+                feature, interval = condition.split(':=:')
+                feature = int(feature)
+                lower_condition, upper_condition = interval_to_condition(feature, interval)
+                rule.append(lower_condition)
+                rule.append(upper_condition)
+            self.decision_set.append(rule)
+            self.decision_set_labels.append({consequent})
 
         # remove rules covering outliers
         self.decision_set = [rule for i,rule in enumerate(self.decision_set) 

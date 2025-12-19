@@ -432,6 +432,7 @@ dependencies = [
     { name = "geopandas" },
     { name = "jupyter" },
     { name = "matplotlib" },
+    { name = "mdlp-discretization" },
     { name = "networkx" },
     { name = "numpy" },
     { name = "pandas" },
@@ -453,6 +454,7 @@ requires-dist = [
     { name = "geopandas", specifier = ">=1.1.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.10.7" },
+    { name = "mdlp-discretization", git = "https://github.com/kevinqnb/mdlp-discretization.git" },
     { name = "networkx", specifier = ">=3.6" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pandas", specifier = ">=2.3.3" },
@@ -926,6 +928,16 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/74/97e72a36efd4ae2bccb3463284300f8953f199b5ffbc04cbbb0ec78f74b1/matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe", size = 8110, upload-time = "2025-10-23T09:00:22.126Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76", size = 9516, upload-time = "2025-10-23T09:00:20.675Z" },
+]
+
+[[package]]
+name = "mdlp-discretization"
+version = "0.3.3"
+source = { git = "https://github.com/kevinqnb/mdlp-discretization.git#0a33b8854365a723f03be38de22573070c86a4eb" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
 ]
 
 [[package]]

@@ -51,8 +51,8 @@ class DecisionSet:
                 "Input rule_miner must be a valid instance of the RuleMiner object."
         self.rule_miner = rule_miner
 
-        if rule_miner is None and (rules is None or rule_labels is None):
-            raise ValueError("If no rule_miner is provided, both rules and rule_labels must be provided.")
+        if rule_miner is None and (rules is None):
+            raise ValueError("If no rule_miner is provided, rules must be provided.")
        
         if rules is not None:
             for rule in rules:

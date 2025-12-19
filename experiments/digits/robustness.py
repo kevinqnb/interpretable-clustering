@@ -48,7 +48,7 @@ depth_factor = 0.03
 min_support = 0.01
 min_confidence = 0.5
 max_length = 10
-association_rule_miner = ClassAssociationMiner(
+class_association_rule_miner = ClassAssociationMiner(
     min_support = min_support,
     min_confidence = min_confidence,
     max_length = max_length
@@ -114,21 +114,21 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 # CBA
-cba_params = {'rule_miner' : association_rule_miner}
+cba_params = {'rule_miner' : class_association_rule_miner}
 cba_mod = DecisionSetMod(
     model = CBA,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'CBA'
 )
 
 # IDS
 ids_params = {
     'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner,
+    'rule_miner' : class_association_rule_miner,
 }
 ids_mod = DecisionSetMod(
     model = IDS,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'IDS'
 )
 
@@ -137,11 +137,11 @@ ids_mod = DecisionSetMod(
 dsclust_params1 = {
     'lambd' : lambda_val,
     'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner
+    'rule_miner' : class_association_rule_miner
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'DSCluster-Association-Rules'
 )
 
@@ -220,21 +220,21 @@ rem_tree_mod = DecisionTreeMod(
 )
 
 # CBA
-cba_params = {'rule_miner' : association_rule_miner}
+cba_params = {'rule_miner' : class_association_rule_miner}
 cba_mod = DecisionSetMod(
     model = CBA,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'CBA'
 )
 
 # IDS
 ids_params = {
     'lambdas' : ids_lambdas,
-    'rule_miner' : association_rule_miner,
+    'rule_miner' : class_association_rule_miner,
 }
 ids_mod = DecisionSetMod(
     model = IDS,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'IDS'
 )
 
@@ -243,11 +243,11 @@ ids_mod = DecisionSetMod(
 dsclust_params1 = {
     'lambd' : lambda_val,
     'n_rules' : n_rules,
-    'rule_miner' : association_rule_miner,
+    'rule_miner' : class_association_rule_miner,
 }
 dsclust_mod1 = DecisionSetMod(
     model = DSCluster,
-    rule_miner = association_rule_miner,
+    rule_miner = class_association_rule_miner,
     name = 'DSCluster-Association-Rules'
 )
 
