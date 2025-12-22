@@ -17,6 +17,8 @@ from .decision_set import DecisionSet
 # Since PyIDS is not a dependency of Intercluster, it must be installed separately.
 
 from pyids.algorithms.ids import IDS as IDS_pyids
+from pyids.data_structures.ids_cacher import IDSCacher
+from pyids.data_structures.ids_ruleset import IDSRuleSet
 from pyids.model_selection.coordinate_ascent import CoordinateAscent
 from pyids.data_structures.ids_rule import IDSRule
 from pyarc.qcba.data_structures import QuantitativeDataFrame
@@ -57,6 +59,8 @@ class IDS(DecisionSet):
             If None, the rules will be generated using the rule_miner. Defaults to None.
         rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
             If None, the labels will be generated using the rule_miner. Defaults to None.
+        ids_cacher (IDSCacher, optional): An optional IDSCacher object to cache computations
+            during IDS fitting. Defaults to None.
 
     """
     def __init__(
@@ -67,8 +71,8 @@ class IDS(DecisionSet):
         max_iterations : int = 50,
         rule_miner : RuleMiner = None, 
         rules : List[List[Condition]] = None,
-        rule_labels : List[Set[int]] = None
-
+        rule_labels : List[Set[int]] = None,
+        ids_cacher:  IDSCacher = None
     ):
         super().__init__(rule_miner, rules, rule_labels)
         if self.rule_miner is None:
@@ -109,6 +113,7 @@ class IDS(DecisionSet):
         self.lambda_search_dict = lambda_search_dict
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
+        self.ids_cacher = ids_cacher
 
     
     def ids_to_decision_set(self, cars : List[IDSRule]) -> List[List[Condition]]:
@@ -162,16 +167,22 @@ class IDS(DecisionSet):
         if len(valid_cars) == 0:
             raise ValueError("No valid (non-outlier) class association rules found. " \
             "Try increasing the number of mined rules.")
-        
+        ids_rules = list(map(IDSRule, valid_cars))
+        all_rules = IDSRuleSet(ids_rules)
         bin_df = self.rule_miner.bin_df.assign(**{'class': y_})
         bin_df['class'] = bin_df['class'].astype(str)
         quant_df = QuantitativeDataFrame(bin_df)
 
+        if self.ids_cacher is None:
+            self.ids_cacher = IDSCacher()
+            self.ids_cacher.calculate_overlap(all_rules, quant_df)
+
         if self.lambdas is None:
             def fmax(lambda_dict):
                 ids = IDS_pyids(algorithm="SLS")
+                ids.ids_ruleset = all_rules
+                ids.cacher = self.ids_cacher
                 ids.fit(
-                    class_association_rules=valid_cars,
                     quant_dataframe=quant_df,
                     lambda_array=list(lambda_dict.values())
                 )
@@ -187,18 +198,31 @@ class IDS(DecisionSet):
             )
 
             lambdas = coord_asc.fit()
+            #print("Lambdas found:", lambdas)
         else:
             lambdas = self.lambdas
 
-        #print("Lambdas found:", lambdas)
+
         print('Starting IDS selection...')
         import time; start_time = time.time()
         ids = IDS_pyids(algorithm="DLS")
-        ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
+        ids.ids_ruleset = all_rules
+        ids.cacher = self.ids_cacher
+        ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
         end = time.time()
         print(f"IDS selection finished in {end - start_time:.2f} seconds.")
         decision_set, decision_set_labels = self.ids_to_decision_set(ids.clf.rules)
         return decision_set, decision_set_labels
+    
+
+    def get_cacher(self) -> IDSCacher:
+        """
+        Get the IDSCacher used during fitting.
+        
+        Returns:
+            IDSCacher: The IDSCacher object.
+        """
+        return self.ids_cacher
     
 
 ####################################################################################################

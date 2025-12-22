@@ -96,28 +96,6 @@ class DecisionSet:
                     new_decision_set_labels.append({label})
         return new_decision_set, new_decision_set_labels
     
-        
-    def _fitting(
-        self,
-        X : NDArray,
-        y : List[Set[int]] = None
-    ) -> Tuple[List[List[Condition]], List[Set[int]]]:
-        """
-        Privately used, custom fitting function.
-        Fits a decision set to an input dataset. 
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            y (List[Set[int]], optional): Target labels. Defaults to None.
-            
-        returns:
-            decision_set (List[Condition]): List of rules.
-            
-            decision_set_labels (List[int]): List of labels corresponding to each rule.
-        """
-        raise NotImplementedError('Method not implemented.')
-    
 
     def select(self, X : NDArray, y : List[Set[int]] = None):
         """
@@ -173,8 +151,15 @@ class DecisionSet:
             self.decision_set = self.rules
             self.decision_set_labels = self.rule_labels
 
-        if self.decision_set_labels is None:
+        if self.decision_set_labels is None and y is None:
+            y = [{-1} for _ in range(X.shape[0])]
+            self.decision_set_labels = [{i} for i in range(len(self.decision_set))]
+
+        elif self.decision_set_labels is None and y is not None:
             self.decision_set, self.decision_set_labels = self.cartesian_labels(y)
+
+        elif self.decision_set_labels is not None and y is None:
+            y = [{-1} for _ in range(X.shape[0])]
 
 
         self.decision_set, self.decision_set_labels = self.select(X, y)
@@ -278,6 +263,21 @@ class DecisionSet:
             return np.nan
         else:
             return wad/total_covers
+        
+    
+    def get_sum_of_rule_lengths(self) -> float:
+        """
+        Finds the sum of the lengths of the rules.
+
+        NOTE: If the decision set has been selectd this will automatically use the 
+            selectd decision set.
+
+        Args:
+
+        Returns:
+            sum (float): Sum of lengths of all rules.
+        """
+        return sum([len(rule) for rule in self.decision_set])
         
     
     

@@ -169,6 +169,7 @@ older/
 
 experiments/*/*.sh
 experiments/*/*.txt
+experiments/*/*/*.txt
 
 examples/testing.ipynb
 examples/examples_older.ipynb

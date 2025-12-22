@@ -21,17 +21,18 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, labels, feature_labels, scaler = load_preprocessed_blobs('data/synthetic')
 n,d = data.shape
+k = len(np.unique(labels))
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'n_rules': 6,
-    'n_bins': 6,
-    'min_support': 0.05,
-    'min_confidence': 0.8,
+    'n_clusters': k,
+    'n_rules': k,
+    'n_bins': k,
+    'min_support': 0.001,
+    'min_confidence': 0.5,
     'max_rule_length': 4,
     'per_cluster_cost': 0.25,
     'alpha_mistakes': 0.0,
@@ -49,10 +50,9 @@ kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
 fixed_parameters['alpha_rule_clustering_cost'] = average_distance
-#fixed_parameters['alpha_rule_clustering_cost'] = 0.0
+fixed_parameters['alpha_rule_clustering_cost'] = 0.0
 fixed_parameters['alpha_rule_mean_cost'] = average_distance
-#fixed_parameters['alpha_rule_mean_cost'] = 0.0
-
+fixed_parameters['alpha_rule_mean_cost'] = 0.0
 
 ####################################################################################################
 # Rule Mining:
@@ -242,7 +242,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '_alpha')
+exp.save_results('data/experiments/blobs/lambdas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

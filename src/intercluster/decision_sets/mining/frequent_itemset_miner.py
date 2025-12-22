@@ -37,7 +37,7 @@ class FrequentItemsetMiner(RuleMiner):
     def __init__(
         self,
         min_support : float = 0.1,
-        max_length : int = 10,
+        max_length : int = None,
         binning_method : str = "uniform",
         bin_params : dict = {'n_bins': 5}
     ):
@@ -45,8 +45,9 @@ class FrequentItemsetMiner(RuleMiner):
             raise ValueError("min_support must be a floating point number in [0, 1].")
         self.min_support = min_support
 
-        if not isinstance(max_length, int) or max_length < 1:
-            raise ValueError("max_length must be a positive integer.")
+        if max_length is not None:
+            if not isinstance(max_length, int) or max_length < 1:
+                raise ValueError("max_length must be a positive integer.")
         self.max_length = max_length
 
         if binning_method not in ["uniform", "quantile", "cluster"]:
@@ -85,11 +86,17 @@ class FrequentItemsetMiner(RuleMiner):
         self.bin_df = bin_df
 
         txns = TransactionDB.from_DataFrame(bin_df)
-        frequent_itemsets = fim.apriori(
-            txns.string_representation,
-            supp=self.min_support*100,
-            zmax = self.max_length
-        )
+        if self.max_length is not None:
+            frequent_itemsets = fim.apriori(
+                txns.string_representation,
+                supp=self.min_support*100,
+                zmax = self.max_length
+            )
+        else:
+            frequent_itemsets = fim.apriori(
+                txns.string_representation,
+                supp=self.min_support*100
+            )
 
         # Convert to decision set format:
         self.decision_set = []

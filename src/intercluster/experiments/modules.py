@@ -87,6 +87,7 @@ class KMeansBase(Baseline):
         self.centers = None
         self.labels = None
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         
     def assign(self, X : NDArray) -> NDArray:
@@ -142,6 +143,7 @@ class DBSCANBase(Baseline):
         self.fitted = False
         self.assignment = None
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
 
         
@@ -197,6 +199,7 @@ class AgglomerativeBase(Baseline):
         self.fitted = False
         self.assignment = None
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
 
         
@@ -254,6 +257,7 @@ class IMMBase(Baseline):
         self.assignment = None
         self.centers = None
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         
     def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
@@ -285,6 +289,7 @@ class IMMBase(Baseline):
                 assignment = self.assignment
             )
             self.max_rule_length = exkmc_tree.depth
+            self.sum_rule_length = exkmc_tree.get_sum_of_depths()
             self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X)
 
         return self.assignment, self.centers
@@ -323,6 +328,7 @@ class DecisionTreeMod(Module):
         """
         self.n_rules = np.nan
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         self.tree = None
 
@@ -376,6 +382,7 @@ class DecisionTreeMod(Module):
         # A few data things to record:
         self.n_rules = self.tree.leaf_count
         self.max_rule_length = self.tree.depth
+        self.sum_rule_length = self.tree.get_sum_of_depths()
         self.weighted_average_rule_length = self.tree.get_weighted_average_depth(X)
 
         return (
@@ -445,7 +452,9 @@ class DecisionSetMod(Module):
         """
         self.n_rules = np.nan
         self.max_rule_length = np.nan
+        self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
+
         self.dset = None
 
 
@@ -504,6 +513,7 @@ class DecisionSetMod(Module):
 
         self.n_rules = len(self.dset.decision_set)
         self.max_rule_length = self.dset.max_rule_length
+        self.sum_rule_length = self.dset.get_sum_of_rule_lengths()
         self.weighted_average_rule_length = self.dset.get_weighted_average_rule_length(X)
 
         return (

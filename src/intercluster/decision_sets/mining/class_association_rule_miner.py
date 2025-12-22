@@ -33,7 +33,7 @@ class ClassAssociationRuleMiner(RuleMiner):
         self,
         min_support : float = 0.1,
         min_confidence : float = 0.8,
-        max_length : int = 2,
+        max_length : int = None,
         binning_method : str = "entropy",
         bin_params : dict = {'random_state': 342},
         ignore : Set[Any] = {-1},
@@ -60,8 +60,9 @@ class ClassAssociationRuleMiner(RuleMiner):
             raise ValueError("min_support must be a floating point number in [0, 1].")
         if not isinstance(min_confidence, float) or min_confidence < 0 or min_confidence > 1:
             raise ValueError("min_confidence must be a floating point number in [0, 1].")
-        if not isinstance(max_length, int) or max_length <= 0:
-            raise ValueError("max_length must be a positive integer.")
+        if max_length is not None:
+            if not (isinstance(max_length, int) or max_length is None) or max_length <= 0:
+                raise ValueError("max_length must be a positive integer.")
         self.min_support = min_support
         self.min_confidence = min_confidence
         self.max_length = max_length
@@ -112,16 +113,27 @@ class ClassAssociationRuleMiner(RuleMiner):
         self.bin_df = bin_df
 
         txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
-        cars = fim.apriori(
-            txns.string_representation,
-            supp=self.min_support*100,
-            conf=self.min_confidence*100,
-            mode="o",
-            target="r",
-            report="sc",
-            zmax= self.max_length + 1, # +1 to account for the class label
-            appear=txns.appeardict
-        )
+        if self.max_length is not None:
+            cars = fim.apriori(
+                txns.string_representation,
+                supp=self.min_support*100,
+                conf=self.min_confidence*100,
+                mode="o",
+                target="r",
+                report="sc",
+                zmax= self.max_length + 1, # +1 to account for the class label
+                appear=txns.appeardict
+            )
+        else:
+            cars = fim.apriori(
+                txns.string_representation,
+                supp=self.min_support*100,
+                conf=self.min_confidence*100,
+                mode="o",
+                target="r",
+                report="sc",
+                appear=txns.appeardict
+            )
 
         self.decision_set = []
         self.decision_set_labels = []

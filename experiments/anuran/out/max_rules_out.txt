@@ -1,0 +1,31 @@
+Fitting FrequentItemsetMiner...
+Fitting FrequentItemsetMiner...
+Running baseline...
+KMeans baseline assignment fitted.
+
+Running modules in parallel with 1 cores...
+Module Decision-Tree complete in 173.16479992866516(s).
+
+Module Exp-Tree complete in 2149.5047764778137(s).
+
+Module ExKMC complete in 173.52044034004211(s).
+
+Module Shallow-Tree complete in 181.0922749042511(s).
+
+Module DSCluster; Uniform-Bin; Coverage-Mistake-Obj complete in 8585.385107040405(s).
+
+Module DSCluster; Cluster-Bin; Coverage-Mistake-Obj complete in 4881.522168159485(s).
+
+Module DSCluster; Uniform-Bin; Coverage-Cost-Obj complete in 10908.369605779648(s).
+
+Module DSCluster; Cluster-Bin; Coverage-Cost-Obj complete in 5809.583433151245(s).
+
+Module DSCluster; Uniform-Bin; Total-Coverage-Mistake-Obj complete in 7657.462924480438(s).
+
+Module DSCluster; Cluster-Bin; Total-Coverage-Mistake-Obj complete in 6091.698601961136(s).
+
+Module DSCluster; Uniform-Bin; Total-Coverage-Cost-Obj complete in 9869.440993070602(s).
+
+Module DSCluster; Cluster-Bin; Total-Coverage-Cost-Obj complete in 6995.058338403702(s).
+
+Experiment time: 63481.89453291893

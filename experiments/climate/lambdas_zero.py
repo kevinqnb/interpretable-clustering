@@ -48,10 +48,10 @@ kmeans_assignment = kmeans_base.assign(data)
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = average_distance
-#fixed_parameters['alpha_rule_clustering_cost'] = 0.0
-fixed_parameters['alpha_rule_mean_cost'] = average_distance
-#fixed_parameters['alpha_rule_mean_cost'] = 0.0
+#fixed_parameters['alpha_rule_clustering_cost'] = average_distance
+fixed_parameters['alpha_rule_clustering_cost'] = 0.0
+#fixed_parameters['alpha_rule_mean_cost'] = average_distance
+fixed_parameters['alpha_rule_mean_cost'] = 0.0
 
 
 ####################################################################################################
@@ -242,7 +242,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '_alpha')
+exp.save_results('data/experiments/climate/lambdas/', '_alpha_zero')
 end = time.time()
 print("Experiment time:", end - start)
 

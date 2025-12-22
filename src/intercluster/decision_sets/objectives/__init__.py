@@ -4,4 +4,5 @@ from .objectives import (
     TotalCoverageMistakeObjective,
     CoverageCostObjective,
     TotalCoverageCostObjective,
+    TotalCoverageRuleCost,
 )

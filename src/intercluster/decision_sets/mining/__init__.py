@@ -6,6 +6,10 @@ from .box_miner import (
     BoxMiner
 )
 
+from .cluster_box_miner import (
+    ClusterBoxMiner
+)
+
 from .frequent_itemset_miner import (
     FrequentItemsetMiner
 )

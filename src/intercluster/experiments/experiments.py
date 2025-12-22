@@ -404,6 +404,7 @@ class Experiment:
             self.baseline.name :
                 {
                     'max-rule-length' : self.baseline.max_rule_length,
+                    'sum-rule-length' : self.baseline.sum_rule_length,
                     'weighted-avg-length' : self.baseline.weighted_average_rule_length
                 }
         }
@@ -453,6 +454,7 @@ class Experiment:
             module.name :
                 {
                     'max-rule-length' : {},
+                    'sum-rule-length' : {},
                     'weighted-avg-length' : {}
                 } |
                 {
@@ -473,6 +475,7 @@ class Experiment:
             # Record measurements:
             for p in param_tuple:
                 module_result_dict[module.name]['max-rule-length'][p] = module.max_rule_length
+                module_result_dict[module.name]['sum-rule-length'][p] = module.sum_rule_length
                 module_result_dict[module.name]['weighted-avg-length'][p] = module.weighted_average_rule_length
                 
                 for fn in self.measurement_fns:

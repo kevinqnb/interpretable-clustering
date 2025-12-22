@@ -1,0 +1,22 @@
+{
+    "dscluster; fim-uniform; coverage-mistake": 0.2702702702702703,
+    "dscluster; fim-uniform; total-coverage-mistake": 1.2702702702702702,
+    "dscluster; fim-uniform; coverage-cost": 0.005429294975675087,
+    "dscluster; fim-uniform; total-coverage-cost": 0.018082405063643586,
+    "dscluster; fim-cluster; coverage-mistake": 0.24475524475524477,
+    "dscluster; fim-cluster; total-coverage-mistake": 1.2447552447552448,
+    "dscluster; fim-cluster; coverage-cost": 0.005270985439863282,
+    "dscluster; fim-cluster; total-coverage-cost": 0.018036493089672364,
+    "dscluster; car-entropy; coverage-mistake": 0.25,
+    "dscluster; car-entropy; total-coverage-mistake": 1.25,
+    "dscluster; car-entropy; coverage-cost": 0.01626723172436757,
+    "dscluster; car-entropy; total-coverage-cost": 0.02343764564373785,
+    "dscluster; decision-tree; coverage-mistake": 0.768,
+    "dscluster; decision-tree; total-coverage-mistake": 1.768,
+    "dscluster; decision-tree; coverage-cost": 0.017343050770231853,
+    "dscluster; decision-tree; total-coverage-cost": 0.04084078090422512,
+    "dscluster; exkmc; coverage-mistake": 0.46534653465346537,
+    "dscluster; exkmc; total-coverage-mistake": 1.4653465346534653,
+    "dscluster; exkmc; coverage-cost": 0.0127921392281674,
+    "dscluster; exkmc; total-coverage-cost": 0.03236064779885583
+}

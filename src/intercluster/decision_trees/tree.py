@@ -355,9 +355,26 @@ class Tree():
              satisfies = satisfies_path(X, path)
              total_covers += len(satisfies)
              if len(satisfies) != 0:
-                wad += len(satisfies) * (len(path) - 1)
+                wad += len(satisfies) * (len(path) - 1) # not including leaf node
 
         return wad/total_covers
+    
+
+    def get_sum_of_depths(self) -> float:
+        """
+        Finds the sum of depths of all leaves in the tree.
+
+        Args:
+            X : Input dataset to predict with. 
+
+        Returns:
+            sum (float): Sum of depths of all leaves.
+        """
+        sum_depths = 0
+        decision_paths = get_decision_paths(self.root)
+        for path in decision_paths:
+            sum_depths += (len(path) - 1) # not including leaf node
+        return sum_depths
     
 
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:

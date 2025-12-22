@@ -278,7 +278,7 @@ class ClusteringCost(MeasurementFunction):
 class RuleClusteringCost(MeasurementFunction):
     """
     Measures the cost of the clustering as the sum over RULES of distances between
-    its covered points and its assigned center.
+    its covered points and a set of given cluster centers.
     
     Args:
         data (np.ndarray): (n x d) Dataset.
@@ -287,11 +287,13 @@ class RuleClusteringCost(MeasurementFunction):
     def __init__(
         self,
         data : NDArray,
+        cluster_centers : NDArray = None,
         method : str = 'kmeans',
         name : str = 'rule-clustering-cost'
     ):
         super().__init__(name)
         self.data = data
+        self.cluster_centers = cluster_centers
         if method not in ['kmeans', 'kmedians']:
             raise ValueError("Method must be one of 'kmeans' or 'kmedians'.")
         self.method = method
@@ -326,14 +328,18 @@ class RuleClusteringCost(MeasurementFunction):
         assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Each rule must be "
                                                                 "assigned to exactly one cluster.")
         
-        cluster_centers = np.zeros((k, self.data.shape[1]))
-        for j in range(k):
-            cluster_points_idx = np.where(data_to_cluster_assignment[:,j])[0]
-            if len(cluster_points_idx) == 0:
-                continue
-            cluster_points = self.data[cluster_points_idx, :]
-            center = np.mean(cluster_points, axis = 0)
-            cluster_centers[j,:] = center
+        
+        if self.cluster_centers is None:
+            cluster_centers = np.zeros((k, self.data.shape[1]))
+            for j in range(k):
+                cluster_points_idx = np.where(data_to_cluster_assignment[:,j])[0]
+                if len(cluster_points_idx) == 0:
+                    continue
+                cluster_points = self.data[cluster_points_idx, :]
+                center = np.mean(cluster_points, axis = 0)
+                cluster_centers[j,:] = center
+        else:
+            cluster_centers = self.cluster_centers
         
         
         cost = 0.0

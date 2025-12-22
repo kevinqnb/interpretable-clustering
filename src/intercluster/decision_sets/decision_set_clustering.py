@@ -24,7 +24,7 @@ class DSCluster(DecisionSet):
         objective : Objective,
         rule_miner : RuleMiner = None, 
         rules : List[List[Condition]] = None,
-        rule_labels : List[Set[int]] = None
+        rule_labels : List[Set[int]] = None,
     ):
         """
         Args:
@@ -56,7 +56,7 @@ class DSCluster(DecisionSet):
     def compute_lambdas(
         self,
         X : NDArray,
-        y : List[Set[int]]
+        y : List[Set[int]] = None
     ) -> NDArray:
         """
         Computes the lambda value for the objective function based on the dataset.
@@ -76,16 +76,22 @@ class DSCluster(DecisionSet):
         
 
         # DO I NEED TO WORRY about {-1} labels here??
-        
-        n_labels = len(unique_labels(y, ignore ={-1}))
+        if y is None:
+            y = [{-1} for _ in range(X.shape[0])]
+            n_labels = 1
+        else:
+            n_labels = len(unique_labels(y, ignore ={-1}))
+
         data_to_cluster_assignment = labels_to_assignment(
             y, n_labels = n_labels, ignore = {-1}
         )
         data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.rules)
+        rule_lengths = [len(rule) for rule in self.rules]
         lambda_vals = self.objective.compute_lambdas(
             data = X,
             data_to_cluster_assignment = data_to_cluster_assignment,
-            data_to_rules_assignment = data_to_rules_assignment
+            data_to_rules_assignment = data_to_rules_assignment,
+            rule_lengths = rule_lengths
         )
         return lambda_vals
 
@@ -108,8 +114,9 @@ class DSCluster(DecisionSet):
         self.decision_set = [rule for i,rule in enumerate(self.decision_set) 
                              if self.decision_set_labels[i] != {-1}]
         self.decision_set_labels = [label for label in self.decision_set_labels if label != {-1}]
+        rule_lengths = [len(rule) for rule in self.decision_set]
         
-        n_labels = len(unique_labels(y, ignore ={-1}))
+        n_labels = len(unique_labels(self.decision_set_labels, ignore ={-1}))
         data_to_cluster_assignment = labels_to_assignment(
             y, n_labels = n_labels, ignore = {-1}
         )
@@ -121,7 +128,8 @@ class DSCluster(DecisionSet):
             data = X,
             data_to_cluster_assignment = data_to_cluster_assignment,
             rule_to_cluster_assignment = rule_to_cluster_assignment,
-            data_to_rules_assignment = data_to_rules_assignment
+            data_to_rules_assignment = data_to_rules_assignment,
+            rule_lengths = rule_lengths
         )
 
         selected_set = [self.decision_set[i] for i in selected_rules]

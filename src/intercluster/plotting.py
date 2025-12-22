@@ -75,7 +75,7 @@ def plot_decision_boundaries(
 def plot_rule_boxes(
     model : Callable,
     X : NDArray,
-    color_dict : Dict[int, Any],
+    color_dict : Dict[int, Any] = None,
     ax : Callable = None
 ):
     """
@@ -89,6 +89,8 @@ def plot_rule_boxes(
         ax (matplotlib axes, optional): Axes for plotting. If None, uses the current axes.
     """
     assert X.shape[1] == 2, "X must be a 2D array with shape (n_samples, 2)."
+    if color_dict is None:
+        color_dict = {list(i)[0]: 'grey' for i in model.decision_set_labels}
 
     supported_plot = ['DSCluster', 'IdsSet']
     if model.__class__.__name__ not in supported_plot:
