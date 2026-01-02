@@ -28,7 +28,7 @@ euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 ##### Parameters #####
-lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas2.json'
+lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha.json'
 with open(lambdas_fname, 'r') as f:
     selected_lambdas = json.load(f)
 
@@ -42,7 +42,7 @@ fixed_parameters = {
     'max_rule_length': 4,
     'n_bins': 6,
     'per_cluster_cost': 0.25,
-    'alpha_mistakes': 0.0, #1.0,
+    'alpha_mistakes': 0.01 * n * 1.0,
     'depth_factor': 0.03,
     'ids_samples': 1,
     'lambdas' : selected_lambdas
@@ -61,8 +61,8 @@ kmeans_labels = kmeans_base.labels
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = average_distance
-fixed_parameters['alpha_rule_clustering_cost'] = 0.0
+fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * average_distance
+fixed_parameters['alpha_rule_mean_cost'] = 0.01 * n * average_distance
 
 ####################################################################################################
 # Rule Mining:
@@ -272,7 +272,7 @@ objective4 = TotalCoverageCostObjective(
     method = "kmeans"
 )
 
-objective5 = TotalCoverageRuleCost(
+objective5 = TotalCoverageRuleCostObjective(
     data = data,
     n_rules = -1.0, # Placeholder, will be set later
     lambda_val = -1.0, # Placeholder, will be set later
@@ -352,7 +352,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_alpha_zero')
+exp.save_results('data/experiments/climate/max_rules/', '_alpha')
 end = time.time()
 print("Experiment time:", end - start)
 

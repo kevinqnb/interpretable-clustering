@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
@@ -27,23 +28,27 @@ euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 ##### Parameters #####
+lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha_zero.json'
+with open(lambdas_fname, 'r') as f:
+    selected_lambdas = json.load(f)
+
 fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
     'max_rules': 6 + 20,
-    'min_support': 0.025,
-    'max_rule_length': 3,
+    'min_support': 0.05,
+    'min_confidence': 0.8,
+    'max_rule_length': 4,
     'n_bins': 6,
     'per_cluster_cost': 0.25,
+    'alpha_mistakes': 0.0,
     'depth_factor': 0.03,
-    'ids_samples': 10,
-    'lambdas' : {}
+    'ids_samples': 1,
+    'lambdas' : selected_lambdas
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
-
-####################################################################################################
 
 np.random.seed(seed)
 
@@ -52,8 +57,16 @@ kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_see
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 
+# Find average distance of points to their closest cluster center
+kmeans_distances = pairwise_distances(data, kmeans_base.centers)
+closest_distances = np.min(kmeans_distances, axis=1)
+average_distance = np.mean(closest_distances)
+fixed_parameters['alpha_rule_clustering_cost'] = 0.0
+fixed_parameters['alpha_rule_mean_cost'] = 0.0
 
+####################################################################################################
 # Rule Mining:
+
 uniform_rule_miner = FrequentItemsetMiner(
     min_support = fixed_parameters['min_support'],
     max_length = fixed_parameters['max_rule_length'],
@@ -62,7 +75,6 @@ uniform_rule_miner = FrequentItemsetMiner(
         'n_bins': fixed_parameters['n_bins'],
     }
 )
-
 uniform_rules, uniform_rule_labels = uniform_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
@@ -77,10 +89,52 @@ cluster_rule_miner = FrequentItemsetMiner(
         'method': 'kmeans'
     }
 )
-
 cluster_rules, cluster_rule_labels = cluster_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+
+
+class_association_rule_miner = ClassAssociationRuleMiner(
+    min_support = fixed_parameters['min_support'],
+    min_confidence = fixed_parameters['min_confidence'],
+    max_length = fixed_parameters['max_rule_length'],
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': seed,
+    }
+)
+class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+
+decision_tree_rule_miner = TreeMiner(
+    tree = DecisionTree(random_state = seed),
+)
+decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+
+exkmc_rule_miner = TreeMiner(
+    tree = ExkmcTree(
+        k = fixed_parameters['n_clusters'],
+        kmeans = kmeans_base.clustering,
+        imm = True
+    )
+)
+exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+
+rule_miner_dict = {
+    'fim-uniform': (uniform_rule_miner, uniform_rules, None),
+    'fim-cluster': (cluster_rule_miner, cluster_rules, None),
+    'car-entropy': (class_association_rule_miner, class_association_rules, None),
+    'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
+    'exkmc': (exkmc_rule_miner, exkmc_rules, None)
+}
 
 
 ####################################################################################################
@@ -155,6 +209,7 @@ cba_mod = DecisionSetMod(
 )
 '''
 
+'''
 # IDS
 rule_comb = len(uniform_rules) * fixed_parameters['n_clusters']
 ids_lambdas = [
@@ -182,356 +237,82 @@ for s in range(fixed_parameters['ids_samples']):
         name = f"IDS_{s}"
     )
     ids_module_list.append((ids_mod, ids_params))
-
+'''
 
 ####################################################################################################
 # Decision Set Clustering Modules:
 
-####################################################################################################
-# Module 1. Uniform Bin Rules, Coverage Mistake Objective
-
-objective = CoverageMistakeObjective(
-    n_rules = fixed_parameters['n_clusters']
+objective1 = CoverageMistakeObjective(
+    n_rules = -1, # Placeholder, will be set later
+    lambda_val = -1.0, # Placeholder, will be set later
+    alpha_val = fixed_parameters['alpha_mistakes']
 )
 
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = uniform_rule_labels,
+objective2 = TotalCoverageMistakeObjective(
+    n_rules = -1, # Placeholder, will be set later
+    lambda_val = -1.0, # Placeholder, will be set later
+    alpha_val = fixed_parameters['alpha_mistakes']
 )
 
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 2.143
-
-# Decision Set Clustering:
-dsclust_params1 = {
-    (r,) : {
-        'objective' : CoverageMistakeObjective(
-            n_rules = r,
-            lambda_val = lambda_val
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod1 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = None,
-    name = 'DSCluster; Uniform-Bin; Coverage-Mistake-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod1.name] = lambda_val
-
-
-####################################################################################################
-# Module 2. Cluster Bin Rules, Coverage Mistake Objective
-
-objective = CoverageMistakeObjective(
-    n_rules = fixed_parameters['n_clusters']
-)
-
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = cluster_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 1.765
-
-# Decision Set Clustering:
-dsclust_params2 = {
-    (r,) : {
-        'objective' : CoverageMistakeObjective(
-            n_rules = r,
-            lambda_val = lambda_val
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = None,
-    name = 'DSCluster; Cluster-Bin; Coverage-Mistake-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod2.name] = lambda_val
-
-
-####################################################################################################
-# Module 3. Uniform Bin Rules, Coverage Cost Objective
-
-objective = CoverageCostObjective(
+objective3 = CoverageCostObjective(
+    data = data,
     cluster_centers = kmeans_base.centers,
-    n_rules = fixed_parameters['n_clusters'],
+    n_rules = -1, # Placeholder, will be set later
+    lambda_val = -1.0, # Placeholder, will be set later
+    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
     method = "kmeans"
 )
-objective.set_data(data)
 
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = uniform_rule_labels,
-)
-
-lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-lambda_val = 0.04193
-
-# Decision Set Clustering:
-dsclust_params3 = {
-    (r,) : {
-        'objective' : CoverageCostObjective(
-            cluster_centers = kmeans_base.centers,
-            n_rules = r,
-            lambda_val = lambda_val,
-            method = "kmeans"
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod3 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = None,
-    name = 'DSCluster; Uniform-Bin; Coverage-Cost-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod3.name] = lambda_val
-
-
-####################################################################################################
-# Module 4. Cluster Bin Rules, Coverage Cost Objective
-
-objective = CoverageCostObjective(
+objective4 = TotalCoverageCostObjective(
+    data = data,
     cluster_centers = kmeans_base.centers,
-    n_rules = fixed_parameters['n_clusters'],
+    n_rules = -1, # Placeholder, will be set later
+    lambda_val = -1.0, # Placeholder, will be set later
+    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
     method = "kmeans"
 )
-objective.set_data(data)
 
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = cluster_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]\
-lambda_val = 0.03254
-
-# Decision Set Clustering:
-dsclust_params4 = {
-    (r,) : {
-        'objective' : CoverageCostObjective(
-            cluster_centers = kmeans_base.centers,
-            n_rules = r,
-            lambda_val = lambda_val,
-            method = "kmeans"
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod4 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = None,
-    name = 'DSCluster; Cluster-Bin; Coverage-Cost-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod4.name] = lambda_val
-
-
-####################################################################################################
-# Module 5. Uniform Bin Rules, Total Coverage Mistake Objective
-
-objective = TotalCoverageMistakeObjective(
-    n_rules = fixed_parameters['n_clusters']
-)
-
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = uniform_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 3.143
-
-# Decision Set Clustering:
-dsclust_params5 = {
-    (r,) : {
-        'objective' : TotalCoverageMistakeObjective(
-            n_rules = r,
-            lambda_val = lambda_val
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod5 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = None,
-    name = 'DSCluster; Uniform-Bin; Total-Coverage-Mistake-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod5.name] = lambda_val
-
-
-####################################################################################################
-# Module 6. Cluster Bin Rules, Total Coverage Mistake Objective
-
-objective = TotalCoverageMistakeObjective(
-    n_rules = fixed_parameters['n_clusters']
-)
-
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = cluster_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 3.2174
-
-# Decision Set Clustering:
-dsclust_params6 = {
-    (r,) : {
-        'objective' : TotalCoverageMistakeObjective(
-            n_rules = r,
-            lambda_val = lambda_val
-        )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod6 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = None,
-    name = 'DSCluster; Cluster-Bin; Total-Coverage-Mistake-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod6.name] = lambda_val
-
-
-####################################################################################################
-# Module 7. Uniform Bin Rules, Total Coverage Cost Objective
-
-objective = TotalCoverageCostObjective(
-    cluster_centers = kmeans_base.centers,
-    n_rules = fixed_parameters['n_clusters'],
+objective5 = TotalCoverageRuleCostObjective(
+    data = data,
+    n_rules = -1.0, # Placeholder, will be set later
+    lambda_val = -1.0, # Placeholder, will be set later
+    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
     method = "kmeans"
 )
-objective.set_data(data)
 
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = uniform_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 0.03629
-
-# Decision Set Clustering:
-dsclust_params7 = {
-    (r,) : {
-        'objective' : TotalCoverageCostObjective(
-            cluster_centers = kmeans_base.centers,
-            n_rules = r,
-            lambda_val = lambda_val,
-            method = "kmeans"
-        )
-    }
-    for i,r in enumerate(n_rules_list)
+objective_dict = {
+    'coverage-mistake': objective1,
+    'total-coverage-mistake': objective2,
+    'coverage-cost': objective3,
+    'total-coverage-cost': objective4,
+    'total-coverage-rule-cost': objective5
 }
 
-dsclust_mod7 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = uniform_rule_miner,
-    rules = uniform_rules,
-    rule_labels = None,
-    name = 'DSCluster; Uniform-Bin; Total-Coverage-Cost-Obj'
-)
+dscluster_module_list = []
+for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+    for obj_name, obj in objective_dict.items():
+        module_name = f'dscluster; {rule_miner_name}; {obj_name}'
+        lambda_val = fixed_parameters['lambdas'][module_name]
+        # Decision Set Clustering:
+        dsclust_params = {
+            (r,) : {
+                'objective' : type(obj)(
+                    **{k: v for k, v in obj.__dict__.items() if k not in ['n_rules','lambda_val']},
+                    n_rules = r,
+                    lambda_val = lambda_val
+                )
+            }
+            for i,r in enumerate(n_rules_list)
+        }
 
-fixed_parameters['lambdas'][dsclust_mod7.name] = lambda_val
-
-
-####################################################################################################
-# Module 8. Cluster Bin Rules, Coverage Cost Objective
-
-objective = TotalCoverageCostObjective(
-    cluster_centers = kmeans_base.centers,
-    n_rules = fixed_parameters['n_clusters'],
-    method = "kmeans"
-)
-objective.set_data(data)
-
-# Find minimum lambda value:
-dsclust = DSCluster(
-    objective = objective,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = cluster_rule_labels,
-)
-
-#lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
-#lambda_val = lambda_array[0]
-lambda_val = 0.03502
-
-# Decision Set Clustering:
-dsclust_params8 = {
-    (r,) : {
-        'objective' : TotalCoverageCostObjective(
-            cluster_centers = kmeans_base.centers,
-            n_rules = r,
-            lambda_val = lambda_val,
-            method = "kmeans"
+        dsclust_mod = DecisionSetMod(
+            model = DSCluster,
+            rule_miner = rule_miner,
+            rules = rules,
+            rule_labels = rule_labels,
+            name = module_name
         )
-    }
-    for i,r in enumerate(n_rules_list)
-}
-
-dsclust_mod8 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = cluster_rule_miner,
-    rules = cluster_rules,
-    rule_labels = None,
-    name = 'DSCluster; Cluster-Bin; Total-Coverage-Cost-Obj'
-)
-
-fixed_parameters['lambdas'][dsclust_mod8.name] = lambda_val
+        dscluster_module_list.append((dsclust_mod, dsclust_params))
 
 
 ####################################################################################################
@@ -544,23 +325,16 @@ module_list = [
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
     #(cba_mod, cba_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2),
-    (dsclust_mod3, dsclust_params3),
-    (dsclust_mod4, dsclust_params4),
-    #(dsclust_mod5, dsclust_params5),
-    #(dsclust_mod6, dsclust_params6),
-    #(dsclust_mod7, dsclust_params7),
-    #(dsclust_mod8, dsclust_params8)
-] #+ ids_module_list
+] + dscluster_module_list #+ ids_module_list
 
 
 measurement_fns = [
     TotalCoverage(),
     ClusterCoverage(baseline_assignment = kmeans_assignment),
     Mistakes(baseline_assignment = kmeans_assignment),
-    ClusteringCost(data = data, method = "kmeans"),
-    RuleClusteringCost(data = data, method = "kmeans"),
+    ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
+    RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
+    RuleClusteringCost(data = data, cluster_centers = None, method = "kmeans", name = "rule-mean-cost"),
     PairwiseDistance(baseline_assignment = kmeans_assignment),
     RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
@@ -578,7 +352,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_rule_tuning_no_total')
+exp.save_results('data/experiments/climate/max_rules/', '_alpha_zero')
 end = time.time()
 print("Experiment time:", end - start)
 

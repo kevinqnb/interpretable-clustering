@@ -122,10 +122,11 @@ def plot_rule_boxes(
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
                     fill=True,
-                    color=color_dict[list(model.decision_set_labels[i])[0]],
+                    facecolor=color_dict[list(model.decision_set_labels[i])[0]],
                     alpha=0.25,
                     linestyle='solid',
-                    linecolor='k'
+                    edgecolor='black',
+                    linewidth=2
                 )
             )
         else:
@@ -135,9 +136,11 @@ def plot_rule_boxes(
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
                     fill=True, 
-                    color=color_dict[list(model.decision_set_labels[i])[0]],
+                    facecolor=color_dict[list(model.decision_set_labels[i])[0]],
                     alpha=0.25,
-                    linestyle='solid'
+                    linestyle='solid',
+                    edgecolor='black',
+                    linewidth=2
                 )
             )
         

@@ -489,8 +489,6 @@ class DecisionSetMod(Module):
                 `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
                 assigned to multiple clusters. 
         """
-        n_unique = len(unique_labels(y, ignore = {-1}))
-
         #if self.rules is None or self.rule_labels is None:
         #    self.rules, self.rule_labels = self.rule_miner.fit(X, y)
 
@@ -499,9 +497,30 @@ class DecisionSetMod(Module):
             **(self.fitting_params | 
             {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
         )
-        self.dset.fit(X, y)
-        dset_labels = self.dset.predict(X)
-        dset_rule_labels = self.dset.decision_set_labels
+
+        if self.fitting_params.get('objective', None).__class__.__name__ != 'TotalCoverageRuleCostObjective':
+            self.dset.fit(X, y)
+            dset_labels = self.dset.predict(X)
+            dset_rule_labels = self.dset.decision_set_labels
+            n_unique = len(unique_labels(y, ignore = {-1}))
+
+        else:
+            self.dset.fit(X, None)
+            dset_labels = self.dset.predict(X)
+
+            labels_dict = {-1:-1}
+            new_dset_labels = []
+            for l in dset_labels:
+                lint = list(l)[0]
+                if lint not in labels_dict:
+                    labels_dict[lint] = len(labels_dict.keys()) - 1
+                new_dset_labels.append({labels_dict[lint]})
+            dset_labels = new_dset_labels
+
+            dset_rule_labels = [{labels_dict[list(l)[0]]} for l in self.dset.decision_set_labels]
+            n_unique = len(unique_labels(y, ignore = {-1}))
+
+
         # This should ignore any rules which are assigned to the outlier class 
         dset_rule_assignment = labels_to_assignment(
             dset_rule_labels, n_labels = n_unique, ignore = {-1}

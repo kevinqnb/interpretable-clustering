@@ -32,9 +32,9 @@ class TreeMiner(RuleMiner):
         self.bin_df = None
 
     def fit(
-            self,
-            X : NDArray,
-            y : List[Set[int]] = None
+        self,
+        X : NDArray,
+        y : List[Set[int]] = None
     ):
         """
         Fit the FrequentItemsetMiner to the input dataset.

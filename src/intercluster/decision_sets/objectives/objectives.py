@@ -136,7 +136,7 @@ class Objective:
         h = self.cost(selected_rules_info)
         return g - self.lambda_val * h
     
-
+    '''
     def compute_lambdas(
         self,
         data : NDArray,
@@ -220,7 +220,194 @@ class Objective:
         if second_max_ratio == 0.0:
             return np.sort(ratios)
         return np.sort(ratios + [second_max_ratio])
-    
+    '''
+
+    '''
+    def compute_lambdas(
+        self,
+        data : NDArray,
+        data_to_cluster_assignment : NDArray,
+        data_to_rules_assignment : NDArray,
+        rule_lengths : list[int]
+    ) -> NDArray:
+        """
+        Computes minimum value of lambda necessary for an approximation algorithm.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+            rule_lengths (list[int]): A list of lengths for each rule.
+                
+        Returns:
+            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
+                most value for which the approximation guarantee holds, and increasing
+                until reaching the maximum coverage/cost ratio seen
+                for any (rule, cluster) assignment pair. 
+        """
+        n,d = data.shape
+        n2,k = data_to_cluster_assignment.shape
+        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
+                                                                        "assigned to at most one cluster.")
+
+        n3,r = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
+
+        #if self.cluster_centers is not None:
+        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
+        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
+
+        rule_list = list(np.arange(r))
+        
+        rule_points = assignment_to_dict(data_to_rules_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
+
+        ratios = []
+        largest_marginal_ratio = 0.0
+        for rule in rule_list:
+            r_points = rule_points[rule]
+            r_length = rule_length_dict[rule]
+            c_ratios = []
+            for cluster_1 in range(k):
+                r_coverage_cluster_1 = rule_points[rule].intersection(cluster_points[cluster_1])
+                r_info_1 = {rule: {
+                        'points': r_points,
+                        'coverage': r_coverage_cluster_1,
+                        'length': r_length,
+                        'label': cluster_1
+                    }
+                }
+                g = self.reward(r_info_1)
+                h = self.cost(r_info_1)
+
+                if h > 0:
+                    ratio = g / h
+                    ratios.append(ratio)
+                else:
+                    ratio = np.inf
+                    ratios.append(ratio)
+
+                # Do not consider marginal gain if the initial gain is zero.
+                if g == 0:
+                    continue
+                
+                c_ratios = []
+                for cluster_2 in range(k):
+                    if cluster_1 == cluster_2:
+                        continue
+                    r_coverage_cluster_2 = rule_points[rule].intersection(cluster_points[cluster_2])
+                    r_info_2 = {
+                        'points': r_points,
+                        'coverage': r_coverage_cluster_2,
+                        'length': r_length,
+                        'label': cluster_2
+                    }
+                    c_covers = {i: set() for i in range(k)}
+                    c_covers[cluster_1] = r_coverage_cluster_1
+                    g = self.marginal_reward(
+                        r_info_2,
+                        total_coverage = r_points,
+                        cluster_coverage = c_covers
+                    )
+                    h = self.marginal_cost(
+                        r_info_2,
+                        total_coverage = r_points,
+                        cluster_coverage = c_covers
+                    )
+
+                    if h > 0:
+                        ratio = g / h
+                        c_ratios.append(ratio)
+                    else:
+                        ratio = np.inf
+                        c_ratios.append(ratio)
+
+
+                c_ratios_sorted = np.sort(c_ratios)
+                if c_ratios_sorted[-1] > largest_marginal_ratio:
+                    largest_marginal_ratio = c_ratios_sorted[-1]
+                    
+
+        print("Largest marginal ratio:", largest_marginal_ratio)
+
+        return np.sort([r for r in set(ratios) if r >= largest_marginal_ratio])
+    '''
+
+    def compute_lambdas(
+        self,
+        data : NDArray,
+        data_to_cluster_assignment : NDArray,
+        data_to_rules_assignment : NDArray,
+        rule_lengths : list[int]
+    ) -> NDArray:
+        """
+        Computes minimum value of lambda necessary for an approximation algorithm.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+            rule_lengths (list[int]): A list of lengths for each rule.
+                
+        Returns:
+            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
+                most value for which the approximation guarantee holds, and increasing
+                until reaching the maximum coverage/cost ratio seen
+                for any (rule, cluster) assignment pair. 
+        """
+        n,d = data.shape
+        n2,k = data_to_cluster_assignment.shape
+        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
+                                                                        "assigned to at most one cluster.")
+
+        n3,r = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
+
+        #if self.cluster_centers is not None:
+        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
+        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
+
+        rule_list = list(np.arange(r))
+        
+        rule_points = assignment_to_dict(data_to_rules_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
+
+        ratios = set()
+        for rule in rule_list:
+            r_points = rule_points[rule]
+            r_length = rule_length_dict[rule]
+            for cluster in range(k):
+                r_coverage = rule_points[rule].intersection(cluster_points[cluster])
+                r_info = {rule: {
+                        'points': r_points,
+                        'coverage': r_coverage,
+                        'length': r_length,
+                        'label': cluster
+                    }
+                }
+                g = self.reward(r_info)
+                h = self.cost(r_info)
+
+                if h > 0:
+                    ratio = g / h
+                else:
+                    ratio = np.inf
+
+                ratios.add(ratio)
+            
+        return np.sort(np.array(list(ratios)))
     
     def marginal_reward(
         self,
@@ -909,7 +1096,7 @@ class TotalCoverageCostObjective(Objective):
 ####################################################################################################
 
 
-class TotalCoverageRuleCost(Objective):
+class TotalCoverageRuleCostObjective(Objective):
     """
     Objective that selects rules based on a coverage and rule cost objective.
 

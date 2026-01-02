@@ -437,6 +437,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyarc" },
+    { name = "pyclustering" },
     { name = "pyids" },
     { name = "pytest" },
     { name = "scikit-learn" },
@@ -459,6 +460,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pyarc", specifier = ">=1.1.4" },
+    { name = "pyclustering", specifier = ">=0.10.1.2" },
     { name = "pyids", git = "https://github.com/kevinqnb/pyIDS.git" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
@@ -1233,6 +1235,18 @@ sdist = { url = "https://files.pythonhosted.org/packages/3d/45/3461d987932d1165c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/91/09/32560e0df50f084e03f344bb57196bbcfbeec90a8f7aa982043be6bc7f45/pyarc-1.1.4-py2.py3-none-any.whl", hash = "sha256:beb5669262637eb2dc92b01839e4ca576c87d0424926a818e39f235bb11b4a7e", size = 36109, upload-time = "2020-12-09T10:32:58.51Z" },
 ]
+
+[[package]]
+name = "pyclustering"
+version = "0.10.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/cf/6c1183d0c1e76df398d0808f78cabaedd87a1ca7548b9b03d51620ff55eb/pyclustering-0.10.1.2.tar.gz", hash = "sha256:8a98fd299fcc1e21b7b7c963275162dd7194aa3d921aa66d313775597cf833d1", size = 2575620, upload-time = "2020-11-25T22:41:20.453Z" }
 
 [[package]]
 name = "pycparser"

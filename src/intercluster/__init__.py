@@ -52,6 +52,7 @@ from .utils import (
     quantile_bin,
     uniform_bin,
     oned_cluster_bin,
+    adaptive_grid_bin,
     interval_to_condition,
     oned_cluster,
     decision_set_to_cars,

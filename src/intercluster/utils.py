@@ -412,7 +412,7 @@ def collect_nodes(root : Node) -> List[Node]:
 
 def collect_node_rules(root : Node) -> List[Node]:
     """
-    Given the root of a tree, finds all nodes in the tree.
+    Given the root, finds all sub-rules in the tree.
     
     Args:
         root (Node): Root of the tree.
@@ -423,8 +423,15 @@ def collect_node_rules(root : Node) -> List[Node]:
     
     rules = []
     for path in traverse(root):
-        conditions = [node.condition for node in path if node.type != 'leaf']
-        rules.append(conditions)
+        last_node = path[-1]
+        if last_node.type != 'leaf':
+            conditions = [node.condition for node in path if node.type != 'leaf']
+            rules.append(conditions)
+
+            # Also include the rule with the last condition flipped
+            last_condition_flipped = copy.deepcopy(conditions)
+            last_condition_flipped[-1].set_direction(-1 * last_condition_flipped[-1].direction)
+            rules.append(last_condition_flipped)
 
     return rules
 
@@ -671,7 +678,7 @@ def oned_cluster(
 
 
 def oned_cluster_bin(
-        x : NDArray,
+        X : NDArray,
         cluster_cost : float = 0.0,
         method : str = "kmeans"
     ) -> NDArray:
@@ -679,7 +686,7 @@ def oned_cluster_bin(
     Clusters a 1d array into segments.
 
     Args:
-        x (np.ndarray): 1d array of data points to cluster.
+        x (np.ndarray): n x d data array
         
         cluster_cost (float, optional): Cost associated with adding a new cluster. 
             Must be between 0.0 and 1.0. Defaults to 0.0.
@@ -692,8 +699,8 @@ def oned_cluster_bin(
             of data points and k is the number of clusters found.
     """
     bin_df = {}
-    for i in range(x.shape[1]):
-        xi = x[:,i]
+    for i in range(X.shape[1]):
+        xi = X[:,i]
         xi_labels = oned_cluster_cy(xi, cluster_cost, method)
         xi_intervals = [None for _ in range(len(xi))]
         for l in np.unique(xi_labels):
@@ -707,7 +714,7 @@ def oned_cluster_bin(
 
         bin_df[i] = xi_intervals
 
-    return pd.DataFrame(bin_df)
+    return pd.DataFrame(bin_df, dtype = 'category')
 
 
 ####################################################################################################
@@ -761,6 +768,107 @@ def entropy_bin(
         interval_data[i] = interval_list
 
     bin_df = pd.DataFrame(interval_data)
+    return bin_df
+
+
+####################################################################################################
+
+
+def adaptive_grid_bin(
+    X, 
+    initial_bins=100, 
+    window_size=5, 
+    merge_threshold=0.20, 
+    fixed_partitions_if_equi=5
+):
+    """
+    Implements the Adaptive Grid algorithm from the MAFIA subspace clustering paper.
+    
+    It partitions each dimension of the dataset into adaptive intervals (bins) based on 
+    data distribution, merging regions of similar density.
+
+    Args:
+        dataset : numpy.ndarray
+            Input dataset of shape (n_samples, n_features).
+        initial_bins : int, default=1000
+            The number of fine-grained 'units' to divide the dimension into initially.
+            This corresponds to dividing |Ai| into units before windowing.
+        window_size : int, default=5
+            The number of units to group into a single 'window' (variable 'z' in Algorithm 1)[cite: 130, 454].
+        merge_threshold : float, default=0.20
+            The percentage difference threshold for merging adjacent windows (alpha)[cite: 131].
+        fixed_partitions_if_equi : int, default=5
+            The number of fixed partitions to use if a dimension is determined to be 
+            equi-distributed (single bin result)[cite: 136, 459].
+
+    Returns:
+        pd.DataFrame
+            A DataFrame with the same shape as X, where values are pd.Interval objects
+            representing the bin boundaries for each point.
+    """
+    n_samples, n_features = X.shape
+    discretized_data = {}
+    
+    for dim_idx in range(n_features):
+        col_data = X[:, dim_idx]
+        counts, edges = np.histogram(col_data, bins=initial_bins)
+        num_windows = int(np.ceil(len(counts) / window_size))
+        window_stats = []
+        
+        for w in range(num_windows):
+            start_unit = w * window_size
+            end_unit = min((w + 1) * window_size, len(counts))
+            units_in_window = counts[start_unit:end_unit]
+            window_max_val = np.max(units_in_window)  
+            window_stats.append({
+                'val': window_max_val,
+                'start_edge': edges[start_unit],
+                'end_edge': edges[end_unit]
+            })
+            
+        merged_bins = []
+        if not window_stats:
+             continue
+
+        current_bin_start = window_stats[0]['start_edge']
+        current_bin_val = window_stats[0]['val']
+        
+        # Helper to check merge condition
+        def should_merge(val1, val2, threshold):
+            denom = max(val1, val2)
+            if denom == 0:
+                return True # Both are 0, same density
+            diff = abs(val1 - val2) / denom
+            return diff <= threshold
+
+        for i in range(1, len(window_stats)):
+            next_window = window_stats[i]
+            
+            if should_merge(current_bin_val, next_window['val'], merge_threshold):
+                # Merge:
+                current_bin_val = max(current_bin_val, next_window['val']) 
+            else:
+                # Close the current bin
+                merged_bins.append(current_bin_start)
+                
+                # Start new bin
+                current_bin_start = next_window['start_edge']
+                current_bin_val = next_window['val']
+                
+        merged_bins.append(current_bin_start)
+        merged_bins.append(window_stats[-1]['end_edge'])
+        
+        # Handles Equi-distributed dimensions
+        if len(merged_bins) <= 2:
+            final_edges = np.linspace(col_data.min(), col_data.max(), fixed_partitions_if_equi + 1)
+        else:
+            final_edges = np.array(merged_bins)
+            
+        final_edges = np.unique(final_edges)
+        discretized_col = pd.cut(col_data, bins=final_edges, include_lowest=True)
+        discretized_data[dim_idx] = discretized_col
+
+    bin_df = pd.DataFrame(discretized_data)    
     return bin_df
 
 

@@ -46,11 +46,9 @@ kmeans_assignment = kmeans_base.assign(data)
 
 # Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-closest_distances = np.min(kmeans_distances, axis=1)
-average_distance = np.mean(closest_distances)
-#fixed_parameters['alpha_rule_clustering_cost'] = average_distance
+closest_distances = np.max(kmeans_distances, axis=1)
+max_distance = np.mean(closest_distances)
 fixed_parameters['alpha_rule_clustering_cost'] = 0.0
-#fixed_parameters['alpha_rule_mean_cost'] = average_distance
 fixed_parameters['alpha_rule_mean_cost'] = 0.0
 
 
@@ -82,6 +80,17 @@ cluster_rule_miner = FrequentItemsetMiner(
 cluster_rules, cluster_rule_labels = cluster_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+
+'''
+clique_rule_miner = CliqueMiner(
+    density = 20/len(data),
+    bin_method = 'adaptive_grid',
+    bin_params = {
+        'initial_bins': 100,
+    }
+)
+clique_rules, clique_rule_labels = clique_rule_miner.fit(data)
+'''
 
 
 class_association_rule_miner = ClassAssociationRuleMiner(
@@ -118,13 +127,65 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 
+forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100})
+forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
+
+
 rule_miner_dict = {
-    'fim-uniform': (uniform_rule_miner, uniform_rules, None),
-    'fim-cluster': (cluster_rule_miner, cluster_rules, None),
+    #'fim-uniform': (uniform_rule_miner, uniform_rules, None),
+    #'fim-cluster': (cluster_rule_miner, cluster_rules, None),
+    #'clique': (clique_rule_miner, clique_rules, None),
     'car-entropy': (class_association_rule_miner, class_association_rules, None),
     'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
-    'exkmc': (exkmc_rule_miner, exkmc_rules, None)
+    'exkmc': (exkmc_rule_miner, exkmc_rules, None),
+    'random-forest': (forest_rule_miner, forest_rules, None)
 }
+
+
+####################################################################################################
+# Find Rule-Mined centers:
+
+center_objective = TotalCoverageRuleCostObjective(
+    data = data,
+    n_rules = fixed_parameters['n_rules'],
+    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
+    method = "kmeans"
+)
+
+dsclust = DSCluster(
+    objective = center_objective,
+    rule_miner = forest_rule_miner,
+    rules = forest_rules,
+    rule_labels = None,
+)
+
+lambda_array = dsclust.compute_lambdas(data, None)
+dsclust.set_lambda(lambda_array[0])
+print("Using lambda value:", lambda_array[0])
+dsclust.fit(data, None)
+dsclust_labels = dsclust.predict(data)
+
+labels_dict = {-1:-1}
+new_dsclust_labels = []
+for l in dsclust_labels:
+    lint = list(l)[0]
+    if lint not in labels_dict:
+        labels_dict[lint] = len(labels_dict.keys()) - 1
+    new_dsclust_labels.append({labels_dict[lint]})
+dsclust_labels = new_dsclust_labels
+
+n_labels = fixed_parameters['n_rules']
+dsclust_assignment = labels_to_assignment(
+    dsclust_labels, n_labels = n_labels, ignore = {-1}
+)
+dsclust_centers = np.zeros((n_labels, d))
+for r in range(n_labels):
+    if np.sum(dsclust_assignment[:, r]) > 0:
+        dsclust_centers[r] = np.mean(
+            data[dsclust_assignment[:, r] == 1], axis = 0
+        )
+    else:
+        dsclust_centers[r] = data[np.random.choice(data.shape[0], 1)[0]]
 
 
 ####################################################################################################
@@ -157,8 +218,9 @@ objective4 = TotalCoverageCostObjective(
 )
 
 
-objective5 = TotalCoverageRuleCost(
+objective5 = TotalCoverageCostObjective(
     data = data,
+    cluster_centers = dsclust_centers,
     n_rules = fixed_parameters['n_rules'],
     alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
     method = "kmeans"
@@ -166,11 +228,11 @@ objective5 = TotalCoverageRuleCost(
 
 
 objective_dict = {
-    'coverage-mistake': objective1,
+    #'coverage-mistake': objective1,
     'total-coverage-mistake': objective2,
-    'coverage-cost': objective3,
+    #'coverage-cost': objective3,
     'total-coverage-cost': objective4,
-    'total-coverage-rule-cost': objective5
+    'total-coverage-cost-unsupervised': objective5
 }
 
 
@@ -191,8 +253,11 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
         lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
         lambda_array = lambda_array[np.isfinite(lambda_array)]
         # Subsample lambda array at even intervals:
-        indices = np.linspace(0, len(lambda_array) - 1, num = 100, dtype=int)
+        indices = np.linspace(0, len(lambda_array) - 1, num = max(len(lambda_array), 100), dtype=int)
         lambda_array = lambda_array[indices]
+        # Add on a few values between 0 and min lambda:
+        prelim = np.linspace(0, lambda_array[0], num = 10)
+        lambda_array = np.concatenate((prelim, lambda_array))
 
         # Decision Set Clustering:
         dsclust_params = {
@@ -242,7 +307,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '_alpha_zero')
+exp.save_results('data/experiments/climate/lambdas/', '_alpha_zero_lambda')
 end = time.time()
 print("Experiment time:", end - start)
 

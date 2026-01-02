@@ -22,6 +22,14 @@ from .tree_miner import (
     TreeMiner
 )
 
+from .random_forest_miner import (
+    RandomForestMiner
+)
+
 from .rule_miner import (
     RuleMiner
+)
+
+from .clique_miner import (
+    CliqueMiner
 )
