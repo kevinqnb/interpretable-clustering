@@ -447,6 +447,7 @@ class Experiment:
                 in the form {module name : {measurement name : {lambda value : measurement result}}}
         """
         if self.verbose:
+            print(f"Running module " + module.name + "...")
             start = time.time()
 
         # Initialize result dictionaries
@@ -471,6 +472,7 @@ class Experiment:
                 rule_to_cluster_assignment,
                 data_to_cluster_assignment
             ) = module.fit(self.data, self.baseline.labels)
+
             
             # Record measurements:
             for p in param_tuple:

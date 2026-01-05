@@ -129,7 +129,7 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 
-forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100})
+forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 
@@ -150,7 +150,7 @@ rule_miner_dict = {
 center_objective = TotalCoverageRuleCostObjective(
     data = data,
     n_rules = fixed_parameters['n_rules'],
-    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
+    alpha_val = fixed_parameters['alpha_rule_mean_cost'],
     method = "kmeans"
 )
 
@@ -163,7 +163,6 @@ dsclust = DSCluster(
 
 lambda_array = dsclust.compute_lambdas(data, None)
 dsclust.set_lambda(lambda_array[0])
-print("Using lambda value:", lambda_array[0])
 dsclust.fit(data, None)
 dsclust_labels = dsclust.predict(data)
 
@@ -228,9 +227,9 @@ objective5 = TotalCoverageCostObjective(
 
 
 objective_dict = {
-    #'coverage-mistake': objective1,
+    'coverage-mistake': objective1,
     'total-coverage-mistake': objective2,
-    #'coverage-cost': objective3,
+    'coverage-cost': objective3,
     'total-coverage-cost': objective4,
     'total-coverage-cost-unsupervised': objective5
 }
@@ -254,16 +253,16 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
         lambda_array = dsclust.compute_lambdas(data, kmeans_base.labels)
         lambda_array = lambda_array[np.isfinite(lambda_array)]
         # Subsample lambda array at even intervals:
-        indices = np.linspace(0, len(lambda_array) - 1, num = max(len(lambda_array), 100), dtype=int)
+        indices = np.linspace(0, len(lambda_array) - 1, num = min(len(lambda_array), 100), dtype=int)
         lambda_array = lambda_array[indices]
         # Add on a few values between 0 and min lambda:
-        prelim = np.linspace(0, lambda_array[0], num = 10)
-        lambda_array = np.concatenate((prelim, lambda_array))
+        #prelim = np.linspace(0, lambda_array[0], num = 10)
+        #lambda_array = np.concatenate((prelim, lambda_array))
 
         dsclust_params = {
             (l,) : {
                 'objective' : type(obj)(
-                    **{k: v for k, v in obj.__dict__.items() if k != 'lambda_val'},
+                    **{k: v for k, v in obj.__dict__.items() if k not in ['lambda_val', 'data_to_center_distances']},
                     lambda_val = l
                 )
             }
@@ -289,7 +288,7 @@ measurement_fns = [
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
-    RuleClusteringCost(data = data, cluster_centers = None, method = "kmeans", name = "rule-mean-cost"),
+    RuleClusteringCost(data = data, cluster_centers = dsclust_centers, method = "kmeans", name = "rule-mean-cost"),
     PairwiseDistance(baseline_assignment = kmeans_assignment),
     RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
@@ -307,7 +306,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '_alpha_lambda')
+exp.save_results('data/experiments/climate/lambdas/', '_alpha')
 end = time.time()
 print("Experiment time:", end - start)
 

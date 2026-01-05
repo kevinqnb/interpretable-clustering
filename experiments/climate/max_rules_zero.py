@@ -23,7 +23,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
@@ -42,7 +42,7 @@ fixed_parameters = {
     'max_rule_length': 5,
     'depth_factor': 0.03,
     'lambdas' : {},
-    'alpha_mistakes': 0.5 * n * 1.0
+    'alpha_mistakes': 0.0
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -58,7 +58,7 @@ kmeans_labels = kmeans_base.labels
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.5 * n * average_distance
+fixed_parameters['alpha_rule_clustering_cost'] = 0.0
 
 ####################################################################################################
 # Rule Mining:
@@ -93,7 +93,7 @@ exkmc_rule_miner = TreeMiner(
     )
 )
 exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = np.copy(data), y = kmeans_base.labels
+    X = data, y = kmeans_base.labels
 )
 
 
@@ -203,6 +203,7 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
             dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
         lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
         lambda_val = lambda_vals[0]
+        fixed_parameters['lambdas'][module_name] = lambda_val
 
         # Decision Set Clustering Parameters:
         dsclust_params = {
@@ -262,7 +263,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/max_rules/', '_tuned')
+exp.save_results('data/experiments/climate/max_rules/', '_tuned_zero')
 end = time.time()
 print("Experiment time:", end - start)
 

@@ -410,7 +410,7 @@ def collect_nodes(root : Node) -> List[Node]:
 ####################################################################################################
 
 
-def collect_node_rules(root : Node) -> List[Node]:
+def collect_node_rules(root : Node) -> List[Condition]:
     """
     Given the root, finds all sub-rules in the tree.
     
@@ -457,6 +457,35 @@ def collect_leaves(root : Node) -> List[Node]:
             leaves.append(last_node)
             
     return leaves
+
+
+####################################################################################################
+
+
+def collect_leaf_rules(root : Node) -> List[Condition]:
+    """
+    Given the root of a tree, finds all leaf nodes in the tree.
+    
+    Args:
+        root (Node): Root of the tree.
+    
+    Returns:
+        leaf_rules (List[Condition]): List of leaf rules in the tree. 
+    """
+
+    leaf_rules = []
+    for path in traverse(root):
+        last_node = path[-1]
+        if last_node.type == 'leaf':
+            conditions = [node.condition for node in path if node.type != 'leaf']
+            leaf_rules.append(conditions)
+
+            # Also include the rule with the last condition flipped
+            #last_condition_flipped = copy.deepcopy(conditions)
+            #last_condition_flipped[-1].set_direction(-1 * last_condition_flipped[-1].direction)
+            #leaf_rules.append(last_condition_flipped)
+
+    return leaf_rules
 
 
 ####################################################################################################

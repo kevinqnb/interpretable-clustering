@@ -136,7 +136,88 @@ class Objective:
         h = self.cost(selected_rules_info)
         return g - self.lambda_val * h
     
-    '''
+
+    def filter_rules(
+        self,
+        data : NDArray,
+        data_to_cluster_assignment : NDArray,
+        data_to_rules_assignment : NDArray,
+        rule_lengths : list[int],
+        remove_top : float = 0.1
+    ) -> NDArray:
+        """
+        Computes minimum value of lambda necessary for an approximation algorithm.
+
+        Args:
+            data (NDArray): (n x d) Data array.
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                data point i is assigned to rule j and `False` otherwise.
+            rule_lengths (list[int]): A list of lengths for each rule.
+            remove_top (float, optional): The proportion of rules to remove from the top. 
+                Defaults to 0.1.
+
+        Returns:
+            rule_indices (NDArray): An array of integers representing the indices of the filtered rules.
+        """
+        n,d = data.shape
+        n2,k = data_to_cluster_assignment.shape
+        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
+        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
+                                                                        "assigned to at most one cluster.")
+
+        n3,r = data_to_rules_assignment.shape
+        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
+        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
+
+        assert 0.0 <= remove_top < 1.0, "remove_top must be in [0.0, 1.0)."
+
+        rule_list = list(np.arange(r))
+        
+        rule_points = assignment_to_dict(data_to_rules_assignment)
+        cluster_points = assignment_to_dict(data_to_cluster_assignment)
+        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
+
+        second_max_ratios = [0.0 for _ in range(r)]
+        for i,rule in enumerate(rule_list):
+            r_points = rule_points[rule]
+            r_length = rule_length_dict[rule]
+            c_ratios = []
+            for cluster in range(k):
+                r_coverage = rule_points[rule].intersection(cluster_points[cluster])
+                r_info = {rule: {
+                        'points': r_points,
+                        'coverage': r_coverage,
+                        'length': r_length,
+                        'label': cluster
+                    }
+                }
+                g = self.reward(r_info)
+                h = self.cost(r_info)
+
+                if h > 0:
+                    ratio = g / h
+                    c_ratios.append(ratio)
+                else:
+                    ratio = np.inf
+                    c_ratios.append(ratio)
+
+
+            c_ratios_sorted = np.sort(c_ratios)
+            second_max_ratios[i] = c_ratios_sorted[-2]
+
+        second_max_ratios = np.array(second_max_ratios)
+        n_remove = int(remove_top * r)
+        if n_remove > 0:
+            threshold = np.partition(second_max_ratios, -n_remove)[-n_remove]
+            selected_rules = np.where(second_max_ratios < threshold)[0]
+        else:
+            selected_rules = np.arange(r)
+
+        return selected_rules
+
     def compute_lambdas(
         self,
         data : NDArray,
@@ -217,10 +298,10 @@ class Objective:
                 if second_largest > second_max_ratio:
                     second_max_ratio = second_largest
                     
+        ratios = [r for r in ratios if r >= second_max_ratio]
         if second_max_ratio == 0.0:
             return np.sort(ratios)
         return np.sort(ratios + [second_max_ratio])
-    '''
 
     '''
     def compute_lambdas(
@@ -329,16 +410,16 @@ class Objective:
                         c_ratios.append(ratio)
 
 
-                c_ratios_sorted = np.sort(c_ratios)
-                if c_ratios_sorted[-1] > largest_marginal_ratio:
-                    largest_marginal_ratio = c_ratios_sorted[-1]
+                c_ratio_max = np.max(c_ratios)
+                if c_ratio_max > largest_marginal_ratio:
+                    largest_marginal_ratio = c_ratio_max
                     
 
         print("Largest marginal ratio:", largest_marginal_ratio)
 
-        return np.sort([r for r in set(ratios) if r >= largest_marginal_ratio])
+        return np.array([largest_marginal_ratio])
     '''
-
+    '''
     def compute_lambdas(
         self,
         data : NDArray,
@@ -408,6 +489,7 @@ class Objective:
                 ratios.add(ratio)
             
         return np.sort(np.array(list(ratios)))
+    '''
     
     def marginal_reward(
         self,
@@ -997,6 +1079,14 @@ class TotalCoverageCostObjective(Objective):
             raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
         self.method = method
 
+        # Compute n x k distance matrix between data points and cluster centers.
+        self.data_to_center_distances = np.zeros((data.shape[0], cluster_centers.shape[0]))
+        for i in range(cluster_centers.shape[0]):
+            if self.method == "kmeans":
+                self.data_to_center_distances[:, i] = np.sum((data - cluster_centers[i])**2, axis=1)
+            else:  # self.method == "kmedians"
+                self.data_to_center_distances[:, i] = np.sum(np.abs(data - cluster_centers[i]), axis=1)
+
 
     def reward(
         self,
@@ -1034,11 +1124,8 @@ class TotalCoverageCostObjective(Objective):
         total_cost = 0.0
         for rule, info in selected_rules_info.items():
             r_points = info['points']
-            r_center = self.cluster_centers[info['label']]
-            if self.method == "kmeans":
-                cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-            else:  # self.method == "kmedians"
-                cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+            r_center = info['label']
+            cluster_cost = np.sum(self.data_to_center_distances[list(r_points), r_center])
             total_cost += cluster_cost
 
         length_penalty = sum(
@@ -1085,11 +1172,8 @@ class TotalCoverageCostObjective(Objective):
             cost (float): The cost of the selected rules.
         """
         r_points = rule_info['points']
-        r_center = self.cluster_centers[rule_info['label']]
-        if self.method == "kmeans":
-            cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-        else:  # self.method == "kmedians"
-            cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+        r_center = rule_info['label']
+        cluster_cost = np.sum(self.data_to_center_distances[list(r_points), r_center])
         return cluster_cost + self.alpha_val * rule_info['length']
 
 

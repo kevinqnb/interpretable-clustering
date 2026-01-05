@@ -52,6 +52,54 @@ class DSCluster(DecisionSet):
         """
         self.objective.set_lambda(lambda_val)
 
+
+    def filter_rules(
+        self,
+        X : NDArray,
+        y : List[Set[int]] = None,
+        remove_top : float = 0.1
+    ) -> NDArray:
+        """
+        Computes the lambda value for the objective function based on the dataset.
+
+        Args:
+            X (np.ndarray): Input dataset.
+            y (List[Set[int]]): Target labels.
+            remove_top (float, optional): The proportion of rules to remove from the top. 
+                Defaults to 0.1.
+        Returns:
+            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
+                most value for which the approximation guarantee holds, and increasing
+                until reaching the maximum coverage/cost ratio seen
+                for any (rule, cluster) assignment pair. 
+        """
+        if self.rules is None:
+            raise ValueError('Rules have not been mined yet.')
+
+        # DO I NEED TO WORRY about {-1} labels here??
+        if y is None:
+            y = [{-1} for _ in range(X.shape[0])]
+            n_labels = 1
+        else:
+            n_labels = len(unique_labels(y, ignore ={-1}))
+
+        data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = n_labels, ignore = {-1}
+        )
+        data_to_rules_assignment = self.get_data_to_rules_assignment(X, self.rules)
+        rule_lengths = [len(rule) for rule in self.rules]
+        rules_indices = self.objective.filter_rules(
+            data = X,
+            data_to_cluster_assignment = data_to_cluster_assignment,
+            data_to_rules_assignment = data_to_rules_assignment,
+            rule_lengths = rule_lengths,
+            remove_top = remove_top
+        )
+
+        self.rules = [self.rules[i] for i in rules_indices]
+        if self.rule_labels is not None:
+            self.rule_labels = [self.rule_labels[i] for i in rules_indices]
+
     
     def compute_lambdas(
         self,
@@ -94,6 +142,7 @@ class DSCluster(DecisionSet):
             rule_lengths = rule_lengths
         )
         return lambda_vals
+
 
     def select(
             self,

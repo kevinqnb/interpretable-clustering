@@ -43,6 +43,7 @@ from .utils import (
     collect_nodes,
     collect_node_rules,
     collect_leaves,
+    collect_leaf_rules,
     get_decision_paths,
     get_decision_paths_with_labels,
     get_depth,

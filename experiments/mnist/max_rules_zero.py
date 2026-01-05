@@ -23,7 +23,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
@@ -35,14 +35,14 @@ n,d = data.shape
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'max_rules': 6 + 20,
+    'n_clusters': 10,
+    'max_rules': 10 + 20,
     'min_support': 0.05,
     'min_confidence': 0.8,
     'max_rule_length': 5,
     'depth_factor': 0.03,
     'lambdas' : {},
-    'alpha_mistakes': 0.5 * n * 1.0
+    'alpha_mistakes': 0.0
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -58,11 +58,12 @@ kmeans_labels = kmeans_base.labels
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.5 * n * average_distance
+fixed_parameters['alpha_rule_clustering_cost'] = 0.0
 
 ####################################################################################################
 # Rule Mining:
 
+'''
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
@@ -75,7 +76,7 @@ class_association_rule_miner = ClassAssociationRuleMiner(
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
-
+'''
 
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = seed),
@@ -89,11 +90,12 @@ exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
         k = fixed_parameters['n_clusters'],
         kmeans = kmeans_base.clustering,
-        imm = True
+        imm = True,
+        max_leaf_nodes = fixed_parameters['max_rules']
     )
 )
 exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = np.copy(data), y = kmeans_base.labels
+    X = data, y = kmeans_base.labels
 )
 
 
@@ -104,7 +106,7 @@ rule_miner_dict = {
     'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
     'exkmc': (exkmc_rule_miner, exkmc_rules, None),
     'random-forest': (forest_rule_miner, forest_rules, None),
-    'car-entropy': (class_association_rule_miner, class_association_rules, None),
+    #'car-entropy': (class_association_rule_miner, class_association_rules, None),
 }
 
 
@@ -262,7 +264,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/max_rules/', '_tuned')
+exp.save_results('data/experiments/mnist/max_rules/', '_tuned_zero3')
 end = time.time()
 print("Experiment time:", end - start)
 

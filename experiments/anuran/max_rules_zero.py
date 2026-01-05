@@ -23,14 +23,14 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 ##### Parameters #####
-lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha_zero.json'
-with open(lambdas_fname, 'r') as f:
-    selected_lambdas = json.load(f)
+#lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha_zero.json'
+#with open(lambdas_fname, 'r') as f:
+#    selected_lambdas = json.load(f)
 
 fixed_parameters = {
     'n' : n,
@@ -39,13 +39,10 @@ fixed_parameters = {
     'max_rules': 6 + 20,
     'min_support': 0.05,
     'min_confidence': 0.8,
-    'max_rule_length': 4,
-    'n_bins': 6,
-    'per_cluster_cost': 0.25,
-    'alpha_mistakes': 0.0,
+    'max_rule_length': 5,
     'depth_factor': 0.03,
-    'ids_samples': 1,
-    'lambdas' : selected_lambdas
+    'lambdas' : {},
+    'alpha_mistakes': 0.0
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -62,37 +59,9 @@ kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 closest_distances = np.min(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
 fixed_parameters['alpha_rule_clustering_cost'] = 0.0
-fixed_parameters['alpha_rule_mean_cost'] = 0.0
 
 ####################################################################################################
 # Rule Mining:
-
-uniform_rule_miner = FrequentItemsetMiner(
-    min_support = fixed_parameters['min_support'],
-    max_length = fixed_parameters['max_rule_length'],
-    binning_method = "uniform",
-    bin_params = {
-        'n_bins': fixed_parameters['n_bins'],
-    }
-)
-uniform_rules, uniform_rule_labels = uniform_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-
-cluster_rule_miner = FrequentItemsetMiner(
-    min_support = fixed_parameters['min_support'],
-    max_length = fixed_parameters['max_rule_length'],
-    binning_method = "cluster",
-    bin_params = {
-        'cluster_cost': fixed_parameters['per_cluster_cost'],
-        'method': 'kmeans'
-    }
-)
-cluster_rules, cluster_rule_labels = cluster_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
@@ -128,12 +97,14 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 
+forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
+forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
+
 rule_miner_dict = {
-    'fim-uniform': (uniform_rule_miner, uniform_rules, None),
-    'fim-cluster': (cluster_rule_miner, cluster_rules, None),
-    'car-entropy': (class_association_rule_miner, class_association_rules, None),
     'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
-    'exkmc': (exkmc_rule_miner, exkmc_rules, None)
+    'exkmc': (exkmc_rule_miner, exkmc_rules, None),
+    'random-forest': (forest_rule_miner, forest_rules, None),
+    'car-entropy': (class_association_rule_miner, class_association_rules, None),
 }
 
 
@@ -184,60 +155,6 @@ shallow_tree_mod = DecisionTreeMod(
     name = 'Shallow-Tree'
 )
 
-'''
-# Pre-generated association rules
-association_rule_miner = ClassAssociationMiner(
-    min_support = min_support,
-    min_confidence = min_confidence,
-    max_length = max_length,
-    random_state = seed
-)
-association_rules, association_rule_labels = association_rule_miner.fit(data, kmeans_labels)
-association_n_mine = len(association_rule_miner.decision_set)
-
-
-# CBA
-cba_params = {
-    tuple(kmeans_n_rules_list) : {}
-}
-cba_mod = DecisionSetMod(
-    model = CBA,
-    rules = association_rules,
-    rule_labels = association_rule_labels,
-    rule_miner = association_rule_miner,
-    name = 'CBA'
-)
-'''
-
-'''
-# IDS
-rule_comb = len(uniform_rules) * fixed_parameters['n_clusters']
-ids_lambdas = [
-    1/rule_comb,
-    1/(2 * data.shape[1] * rule_comb),
-    1/(len(data) * (rule_comb**2)),
-    1/(len(data) * (rule_comb**2)),
-    1/fixed_parameters['n_clusters'],
-    1/(data.shape[0] * rule_comb),
-    1/(data.shape[0])
-]
-
-ids_module_list = []
-for s in range(fixed_parameters['ids_samples']):
-    ids_params = {
-        tuple(n_rules_list) : {
-            'lambdas' : ids_lambdas
-        }
-    }
-    ids_mod = DecisionSetMod(
-        model = IDS,
-        rules = uniform_rules,
-        rule_labels = None,
-        rule_miner = uniform_rule_miner,
-        name = f"IDS_{s}"
-    )
-    ids_module_list.append((ids_mod, ids_params))
-'''
 
 ####################################################################################################
 # Decision Set Clustering Modules:
@@ -248,13 +165,7 @@ objective1 = CoverageMistakeObjective(
     alpha_val = fixed_parameters['alpha_mistakes']
 )
 
-objective2 = TotalCoverageMistakeObjective(
-    n_rules = -1, # Placeholder, will be set later
-    lambda_val = -1.0, # Placeholder, will be set later
-    alpha_val = fixed_parameters['alpha_mistakes']
-)
-
-objective3 = CoverageCostObjective(
+objective2 = CoverageCostObjective(
     data = data,
     cluster_centers = kmeans_base.centers,
     n_rules = -1, # Placeholder, will be set later
@@ -263,41 +174,42 @@ objective3 = CoverageCostObjective(
     method = "kmeans"
 )
 
-objective4 = TotalCoverageCostObjective(
-    data = data,
-    cluster_centers = kmeans_base.centers,
-    n_rules = -1, # Placeholder, will be set later
-    lambda_val = -1.0, # Placeholder, will be set later
-    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
-    method = "kmeans"
-)
-
-objective5 = TotalCoverageRuleCostObjective(
-    data = data,
-    n_rules = -1.0, # Placeholder, will be set later
-    lambda_val = -1.0, # Placeholder, will be set later
-    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
-    method = "kmeans"
-)
 
 objective_dict = {
     'coverage-mistake': objective1,
-    'total-coverage-mistake': objective2,
-    'coverage-cost': objective3,
-    'total-coverage-cost': objective4,
-    'total-coverage-rule-cost': objective5
+    'coverage-cost': objective2,
 }
 
 dscluster_module_list = []
 for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
     for obj_name, obj in objective_dict.items():
         module_name = f'dscluster; {rule_miner_name}; {obj_name}'
-        lambda_val = fixed_parameters['lambdas'][module_name]
-        # Decision Set Clustering:
+        #lambda_val = fixed_parameters['lambdas'][module_name]
+        obj_eval = type(obj)(
+            **{k: v for k, v in obj.__dict__.items()
+               if k not in ['n_rules','lambda_val','data_to_center_distances']},
+            n_rules = n_rules_list[0],
+            lambda_val = -1 # Placeholder, will be set later
+        )
+
+        # Find lambda_val for this module
+        dsclust = DSCluster(
+            objective = obj_eval,
+            rule_miner = rule_miner,
+            rules = rules,
+            rule_labels = rule_labels,
+        )
+        if rule_miner_name == 'random-forest':
+            dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
+        lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
+        lambda_val = lambda_vals[0]
+
+        # Decision Set Clustering Parameters:
         dsclust_params = {
             (r,) : {
                 'objective' : type(obj)(
-                    **{k: v for k, v in obj.__dict__.items() if k not in ['n_rules','lambda_val']},
+                    **{k: v for k, v in obj.__dict__.items()
+                       if k not in ['n_rules','lambda_val', 'data_to_center_distances']},
                     n_rules = r,
                     lambda_val = lambda_val
                 )
@@ -324,8 +236,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    #(cba_mod, cba_params),
-] + dscluster_module_list #+ ids_module_list
+] + dscluster_module_list
 
 
 measurement_fns = [
@@ -334,7 +245,6 @@ measurement_fns = [
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
-    RuleClusteringCost(data = data, cluster_centers = None, method = "kmeans", name = "rule-mean-cost"),
     PairwiseDistance(baseline_assignment = kmeans_assignment),
     RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
@@ -352,7 +262,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_alpha_zero')
+exp.save_results('data/experiments/anuran/max_rules/', '_tuned_zero')
 end = time.time()
 print("Experiment time:", end - start)
 

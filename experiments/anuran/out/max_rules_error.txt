@@ -22,3 +22,243 @@ Traceback (most recent call last):
   File "pyogrio/_io.pyx", line 262, in pyogrio._io.ogr_open
 pyogrio.errors.DataSourceError: data/anuran/climate_divisions/climate_divisions.shp: No such file or directory
 warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 370, in fit
+    self.tree.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_trees/imm_tree.py", line 113, in fit
+    self.exkmc_tree.fit(X, self.kmeans)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 134, in fit
+    self.tree = self._build_tree(x_data, y,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 81, in _build_tree
+    cut = get_min_mistakes_cut(x_data, y, self.all_centers, valid_centers, valid_cols, self.n_jobs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "ExKMC/splitters/cut_finder.pyx", line 31, in ExKMC.splitters.cut_finder.get_min_mistakes_cut
+  File "<stringsource>", line 664, in View.MemoryView.memoryview_cwrapper
+  File "<stringsource>", line 352, in View.MemoryView.memoryview.__cinit__
+ValueError: buffer source array is read-only
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/max_rules.py", line 264, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+ValueError: buffer source array is read-only
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 370, in fit
+    self.tree.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_trees/imm_tree.py", line 113, in fit
+    self.exkmc_tree.fit(X, self.kmeans)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 134, in fit
+    self.tree = self._build_tree(x_data, y,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 81, in _build_tree
+    cut = get_min_mistakes_cut(x_data, y, self.all_centers, valid_centers, valid_cols, self.n_jobs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "ExKMC/splitters/cut_finder.pyx", line 31, in ExKMC.splitters.cut_finder.get_min_mistakes_cut
+  File "<stringsource>", line 664, in View.MemoryView.memoryview_cwrapper
+  File "<stringsource>", line 352, in View.MemoryView.memoryview.__cinit__
+ValueError: buffer source array is read-only
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/max_rules.py", line 264, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+ValueError: buffer source array is read-only
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 370, in fit
+    self.tree.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_trees/imm_tree.py", line 113, in fit
+    self.exkmc_tree.fit(X, self.kmeans)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 134, in fit
+    self.tree = self._build_tree(x_data, y,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 81, in _build_tree
+    cut = get_min_mistakes_cut(x_data, y, self.all_centers, valid_centers, valid_cols, self.n_jobs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "ExKMC/splitters/cut_finder.pyx", line 31, in ExKMC.splitters.cut_finder.get_min_mistakes_cut
+  File "<stringsource>", line 664, in View.MemoryView.memoryview_cwrapper
+  File "<stringsource>", line 352, in View.MemoryView.memoryview.__cinit__
+ValueError: buffer source array is read-only
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/max_rules.py", line 269, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+ValueError: buffer source array is read-only
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 370, in fit
+    self.tree.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_trees/imm_tree.py", line 113, in fit
+    self.exkmc_tree.fit(X, self.kmeans)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 134, in fit
+    self.tree = self._build_tree(x_data, y,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/ExKMC/Tree.py", line 81, in _build_tree
+    cut = get_min_mistakes_cut(x_data, y, self.all_centers, valid_centers, valid_cols, self.n_jobs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "ExKMC/splitters/cut_finder.pyx", line 31, in ExKMC.splitters.cut_finder.get_min_mistakes_cut
+  File "<stringsource>", line 664, in View.MemoryView.memoryview_cwrapper
+  File "<stringsource>", line 352, in View.MemoryView.memoryview.__cinit__
+ValueError: buffer source array is read-only
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/anuran/max_rules.py", line 264, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+ValueError: buffer source array is read-only

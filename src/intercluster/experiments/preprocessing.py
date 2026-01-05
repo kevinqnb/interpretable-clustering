@@ -75,6 +75,10 @@ def load_preprocessed_anuran(filepath):
     scaler = StandardScaler()
 
     scaled_data = scaler.fit_transform(anuran)
+    
+    # Ensure the array is writable (not read-only)
+    if not scaled_data.flags.writeable:
+        scaled_data = np.array(scaled_data, copy=True)
 
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 

@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from intercluster import Node, collect_node_rules
+from intercluster import Node, collect_node_rules, collect_leaf_rules
 from intercluster.decision_trees import DecisionTree
 from intercluster.utils import can_flatten, flatten_labels
 from .rule_miner import RuleMiner
