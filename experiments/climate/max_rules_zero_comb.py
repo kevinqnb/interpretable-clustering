@@ -100,11 +100,11 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
+
+all_rules = decision_tree_rules + exkmc_rules + forest_rules + class_association_rules
+
 rule_miner_dict = {
-    'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
-    'exkmc': (exkmc_rule_miner, exkmc_rules, None),
-    'random-forest': (forest_rule_miner, forest_rules, None),
-    'car-entropy': (class_association_rule_miner, class_association_rules, None),
+    'all-rules': (None, all_rules, None),
 }
 
 
@@ -202,7 +202,6 @@ for obj_name, obj in objective_dict.items():
             rules = rules,
             rule_labels = rule_labels,
         )
-        #if rule_miner_name == 'random-forest':
         dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
         lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
         lambda_val = lambda_vals[0]
@@ -281,7 +280,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_max_lambda_zero')
+exp.save_results('data/experiments/climate/max_rules/', '_comb_zero')
 end = time.time()
 print("Experiment time:", end - start)
 

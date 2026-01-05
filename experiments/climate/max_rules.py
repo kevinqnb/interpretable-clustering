@@ -36,7 +36,7 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
-    'max_rules': 6 + 20,
+    'max_rules': 12,
     'min_support': 0.05,
     'min_confidence': 0.8,
     'max_rule_length': 5,
@@ -56,7 +56,7 @@ kmeans_labels = kmeans_base.labels
 
 # Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-closest_distances = np.min(kmeans_distances, axis=1)
+closest_distances = np.mean(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
 fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * average_distance
 
@@ -157,7 +157,7 @@ shallow_tree_mod = DecisionTreeMod(
 
 
 ####################################################################################################
-# Decision Set Clustering Modules:
+# Objectives for Decision Set Clustering:
 
 objective1 = CoverageMistakeObjective(
     n_rules = -1, # Placeholder, will be set later
@@ -179,11 +179,15 @@ objective_dict = {
     'coverage-cost': objective2,
 }
 
-dscluster_module_list = []
-for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-    for obj_name, obj in objective_dict.items():
-        module_name = f'dscluster; {rule_miner_name}; {obj_name}'
-        #lambda_val = fixed_parameters['lambdas'][module_name]
+
+####################################################################################################
+# Find maximum lambda value among all rule miners
+
+
+for obj_name, obj in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    max_lambda = 0.0
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
         obj_eval = type(obj)(
             **{k: v for k, v in obj.__dict__.items()
                if k not in ['n_rules','lambda_val','data_to_center_distances']},
@@ -198,10 +202,25 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
             rules = rules,
             rule_labels = rule_labels,
         )
-        if rule_miner_name == 'random-forest':
-            dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
+        #if rule_miner_name == 'random-forest':
+        dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
         lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
         lambda_val = lambda_vals[0]
+        if lambda_val > max_lambda:
+            max_lambda = lambda_val
+    
+    fixed_parameters['lambdas'][obj_mod_name] = max_lambda
+
+
+####################################################################################################
+# Decision Set Clustering Modules:
+
+dscluster_module_list = []
+for obj_name, obj in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    lambda_val = fixed_parameters['lambdas'][obj_mod_name]
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = obj_mod_name + f'; {rule_miner_name}'
         fixed_parameters['lambdas'][module_name] = lambda_val
 
         # Decision Set Clustering Parameters:
@@ -262,7 +281,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_tuned')
+exp.save_results('data/experiments/climate/max_rules/', '_max_lambda')
 end = time.time()
 print("Experiment time:", end - start)
 

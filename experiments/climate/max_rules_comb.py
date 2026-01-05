@@ -42,7 +42,7 @@ fixed_parameters = {
     'max_rule_length': 5,
     'depth_factor': 0.03,
     'lambdas' : {},
-    'alpha_mistakes': 0.0
+    'alpha_mistakes': 0.01 * n * 1.0
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -56,26 +56,12 @@ kmeans_labels = kmeans_base.labels
 
 # Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-closest_distances = np.min(kmeans_distances, axis=1)
+closest_distances = np.max(kmeans_distances, axis=1)
 average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.0
+fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * average_distance
 
 ####################################################################################################
 # Rule Mining:
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
-    max_length = fixed_parameters['max_rule_length'],
-    binning_method = "entropy",
-    bin_params = {
-        'random_state': seed,
-    }
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
 
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = seed),
@@ -100,11 +86,24 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
+
+class_association_rule_miner = ClassAssociationRuleMiner(
+    min_support = fixed_parameters['min_support'],
+    min_confidence = fixed_parameters['min_confidence'],
+    max_length = fixed_parameters['max_rule_length'],
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': seed,
+    }
+)
+class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+all_rules = decision_tree_rules + exkmc_rules + forest_rules + class_association_rules
+
 rule_miner_dict = {
-    'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
-    'exkmc': (exkmc_rule_miner, exkmc_rules, None),
-    'random-forest': (forest_rule_miner, forest_rules, None),
-    'car-entropy': (class_association_rule_miner, class_association_rules, None),
+    'all-rules': (None, all_rules, None),
 }
 
 
@@ -174,11 +173,11 @@ objective2 = CoverageCostObjective(
     method = "kmeans"
 )
 
-
 objective_dict = {
     'coverage-mistake': objective1,
     'coverage-cost': objective2,
 }
+
 
 ####################################################################################################
 # Find maximum lambda value among all rule miners
@@ -202,7 +201,6 @@ for obj_name, obj in objective_dict.items():
             rules = rules,
             rule_labels = rule_labels,
         )
-        #if rule_miner_name == 'random-forest':
         dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
         lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
         lambda_val = lambda_vals[0]
@@ -281,7 +279,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/max_rules/', '_max_lambda_zero')
+exp.save_results('data/experiments/climate/max_rules/', '_comb2')
 end = time.time()
 print("Experiment time:", end - start)
 

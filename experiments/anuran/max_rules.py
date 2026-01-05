@@ -93,7 +93,7 @@ exkmc_rule_miner = TreeMiner(
     )
 )
 exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = np.copy(data), y = kmeans_base.labels
+    X = data, y = kmeans_base.labels
 )
 
 
