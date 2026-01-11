@@ -434,14 +434,12 @@ class DecisionSetMod(Module):
         fitting_params : Dict[str, Any] = None,
         rules : List[List[Condition]] = None,
         rule_labels : List[Set[int]] = None,
-        rule_miner : Any = None,
         name : str = 'Decision-Set'
     ):
         self.model = model
         self.fitting_params = fitting_params
         self.rules = rules
         self.rule_labels = rule_labels
-        self.rule_miner = rule_miner
         super().__init__(name)
         self.reset()
     
@@ -494,8 +492,7 @@ class DecisionSetMod(Module):
 
         # Fit the model with the current number of rules
         self.dset = self.model(
-            **(self.fitting_params | 
-            {'rules' : self.rules, 'rule_labels' : self.rule_labels, 'rule_miner' : self.rule_miner})
+            **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
         )
 
         if self.fitting_params.get('objective', None).__class__.__name__ != 'TotalCoverageRuleCostObjective':

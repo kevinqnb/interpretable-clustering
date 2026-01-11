@@ -6,7 +6,7 @@ from typing import Callable, List, Dict, Tuple, Any, Set
 from numpy.typing import NDArray
 from .node import Node
 from .utils import can_flatten, flatten_labels, labels_to_assignment
-from .conditions import Condition
+from .rules import Condition
 
 
 ####################################################################################################

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
@@ -65,21 +66,21 @@ class IDS(DecisionSet):
     """
     def __init__(
         self,
+        rules : List[List[Condition]] = None,
+        bin_df : pd.DataFrame = None,
         lambdas : list[float] = None,
         lambda_search_dict : dict[str, tuple[float, float]] = None,
         ternary_search_precision : float = 1.0,
         max_iterations : int = 50,
-        rule_miner : RuleMiner = None, 
-        rules : List[List[Condition]] = None,
+        ids_cacher:  IDSCacher = None,
         rule_labels : List[Set[int]] = None,
-        ids_cacher:  IDSCacher = None
     ):
-        super().__init__(rule_miner, rules, rule_labels)
-        if self.rule_miner is None:
-            raise ValueError("A rule_miner must be provided for this decision set.")
-        
-            # NOTE: You need to make sure this is either a Clustering or FrequentItemset miner!!
-            # Need to be able to make a quantitative dataframe from bin_df!
+        assert rule_labels is None, 'rule_labels must be None for IDS.'
+        super().__init__(rules = rules, rule_labels = None)
+
+        if bin_df is None:
+            raise ValueError("bin_df must be provided to initialize IDS.")
+        self.bin_df = bin_df
             
         if lambdas is not None:
             if not isinstance(lambdas, list):
@@ -169,13 +170,17 @@ class IDS(DecisionSet):
             "Try increasing the number of mined rules.")
         ids_rules = list(map(IDSRule, valid_cars))
         all_rules = IDSRuleSet(ids_rules)
-        bin_df = self.rule_miner.bin_df.assign(**{'class': y_})
+        bin_df = self.bin_df.assign(**{'class': y_})
         bin_df['class'] = bin_df['class'].astype(str)
         quant_df = QuantitativeDataFrame(bin_df)
 
         if self.ids_cacher is None:
+            import time; start_time = time.time()
+            print('Calculating IDS cacher overlaps...')
             self.ids_cacher = IDSCacher()
             self.ids_cacher.calculate_overlap(all_rules, quant_df)
+            end = time.time()
+            print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
 
         if self.lambdas is None:
             def fmax(lambda_dict):

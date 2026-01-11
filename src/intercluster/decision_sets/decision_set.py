@@ -5,7 +5,8 @@ from intercluster import (
     Condition,
     satisfies_conditions,
     labels_to_assignment,
-    unique_labels
+    unique_labels,
+    cartesian_product_labels
 )
 from .mining import RuleMiner
 
@@ -16,48 +17,29 @@ class DecisionSet:
     """
     def __init__(
         self,
-        rule_miner : RuleMiner = None, 
-        rules : List[List[Condition]] = None,
+        rules : List[List[Condition]],
         rule_labels : List[Set[int]] = None,
         ignore = set()
     ):
-        
         """
         Args:
-            rule_miner (RuleMiner, optional): Rule mining algorithm used to generate the rules.
-                If None, the rules must be provided directly. Defaults to None.
-            rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
-                If None, the rules will be generated using the rule_miner. Defaults to None.
+            rules (List[List[Condition]], optional): List of rules to select from.
             rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
                 If None, the labels will be generated using the rule_miner. Defaults to None.
             ignore (Set[int], optional): Set of labels to ignore when fitting the decision set.
                 Defaults to to the empty set.
 
-
         Attributes:
-            decision_set (List[Condition]): List of rules in the decision set.
+            decision_set (List[Condition]): List of rules in the selected decision set.
             
             decision_set_labels (List[Set[int]]): List of labels corresponding to each
                 rule in the decision set. 
 
             rule_length (int): Maximum rule length.
-
-            selector (Callable, optional): Function/Object used to select rules. 
-                Defaults to None, in which case no pruning is performed.
-            
-        """
-        if rule_miner is not None:
-            assert issubclass(type(rule_miner), RuleMiner), \
-                "Input rule_miner must be a valid instance of the RuleMiner object."
-        self.rule_miner = rule_miner
-
-        if rule_miner is None and (rules is None):
-            raise ValueError("If no rule_miner is provided, rules must be provided.")
-       
-        if rules is not None:
-            for rule in rules:
-                assert isinstance(rule, list) and all(isinstance(cond, Condition) for cond in rule), \
-                    "Each rule must be a list of Condition objects."
+        """       
+        for rule in rules:
+            assert isinstance(rule, list) and all(isinstance(cond, Condition) for cond in rule), \
+                "Each rule must be a list of Condition objects."
         self.rules = rules
 
         if rule_labels is not None:
@@ -72,29 +54,6 @@ class DecisionSet:
         self.decision_set = None
         self.decision_set_labels = None
         self.max_rule_length = 0
-        self.selector = None
-
-
-    def cartesian_labels(self, y : List[Set[int]]):
-        """
-        Using a given set of labels, creates a copy of each decision rule assigned to every possible
-        label (the cartesian product: rules x labels).
-        
-        Args:
-            y (List[Set[int]]): List of sets.
-            
-        Returns:
-            powerset (List[Set[int]]): Powerset of the input list of sets.
-        """
-        uni_labels = unique_labels(y)
-        new_decision_set = []
-        new_decision_set_labels = []
-        for i, rule in enumerate(self.decision_set):
-            for label in uni_labels:
-                if label not in self.ignore:
-                    new_decision_set.append(rule)
-                    new_decision_set_labels.append({label})
-        return new_decision_set, new_decision_set_labels
     
 
     def select(self, X : NDArray, y : List[Set[int]] = None):
@@ -144,23 +103,30 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        if self.rules is None:
-            print("Mining decision set rules...")
-            self.decision_set, self.decision_set_labels = self.rule_miner.fit(X, y)
-        else:
-            self.decision_set = self.rules
-            self.decision_set_labels = self.rule_labels
+        self.decision_set = self.rules
+        self.decision_set_labels = self.rule_labels
 
         if self.decision_set_labels is None and y is None:
-            y = [{-1} for _ in range(X.shape[0])]
+            #y = [{-1} for _ in range(X.shape[0])]
+            # Each decision rule gets its own unique label
             self.decision_set_labels = [{i} for i in range(len(self.decision_set))]
+            y = [set() for _ in range(X.shape[0])]
+            for i, rule in enumerate(self.decision_set):
+                data_points_satisfied = satisfies_conditions(X, rule)
+                for j in data_points_satisfied:
+                    y[j] = y[j].union(self.decision_set_labels[i])
 
         elif self.decision_set_labels is None and y is not None:
-            self.decision_set, self.decision_set_labels = self.cartesian_labels(y)
+            self.decision_set, self.decision_set_labels = cartesian_product_labels(
+                self.decision_set, y, ignore = self.ignore
+            )
 
         elif self.decision_set_labels is not None and y is None:
-            y = [{-1} for _ in range(X.shape[0])]
-
+            raise ValueError('If rule_labels are provided, y must also be provided.')
+        
+        # Remove rules covering outliers
+        self.decision_set = [rule for i,rule in enumerate(self.decision_set) if self.decision_set_labels[i] != {-1}]
+        self.decision_set_labels = [label for label in self.decision_set_labels if label != {-1}]
 
         self.decision_set, self.decision_set_labels = self.select(X, y)
         self.decision_set, self.decision_set_labels = self.trim()

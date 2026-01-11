@@ -103,8 +103,10 @@ forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.label
 
 all_rules = decision_tree_rules + exkmc_rules + forest_rules + class_association_rules
 
+ensemble_rules = filter_rules(all_rules, data, kmeans_labels, frac_cov = 0.5)
+
 rule_miner_dict = {
-    'all-rules': (None, all_rules, None),
+    'ensemble': (None, ensemble_rules, None),
 }
 
 
@@ -209,6 +211,7 @@ for obj_name, obj in objective_dict.items():
             max_lambda = lambda_val
     
     fixed_parameters['lambdas'][obj_mod_name] = max_lambda
+    print(f'Found max lambda for {obj_mod_name}: {max_lambda}')
 
 
 ####################################################################################################

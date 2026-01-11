@@ -5,7 +5,7 @@ from typing import Any, List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from pyarc.data_structures import Consequent, Item, Antecedent, ClassAssocationRule
 from .node import Node
-from .conditions import Condition, LinearCondition
+from .rules import Condition, LinearCondition
 
 from mdlp.discretization import MDLP
 from .oned_cluster_cy import oned_cluster_cy
@@ -216,7 +216,7 @@ def flatten_labels(labels : List[Set[int]]) -> NDArray:
             labels of the item with index i.
             
     Returns:
-        flattened (List[int]): Flattened list of labels.
+        flattened (np.array): Flattened list of labels.
     """
     flattened = np.array([j for _,labs in enumerate(labels) for j in labs], dtype = np.int64)
     return flattened
@@ -1061,6 +1061,85 @@ def cars_to_decision_set(
         label = int(car.consequent.value)
         decision_set_labels.append(set([label]))
     return decision_set, decision_set_labels
+
+
+####################################################################################################
+
+
+def filter_rules(
+    rules : List[List[Condition]],
+    X : NDArray,
+    y : List[Set[int]],
+    confidence : float = 0.5
+) -> List[List[Condition]]:
+    """
+    Filters a list of rules to only include those with a minimum 
+    level of confidence for the labels of the covered points.
+
+    Args:
+        rules (List[List[Condition]]): List of rules to filter, where each rule is a list of conditions.
+        
+        X (np.ndarray): Input data array.
+        
+        y (List[Set[int]]): List of label sets for each instance.
+            Each label set should contain only a single label.
+
+        confidence (float, optional): Minimum confidence threshold for a rule to be kept.
+            Defaults to 0.5, in which case rules must have at least 50% confidence and be 
+            simple majority rules. 
+
+    Returns:
+        filtered_rules (List[List[Condition]]): Filtered list of rules.
+    """
+    if not can_flatten(y):
+        raise ValueError("Each label in y must be a single label set.")
+    y_ = flatten_labels(y)
+
+    filtered_rules = []
+    for rule in rules:
+        covered_indices = satisfies_conditions(X, rule)
+        covered_labels = y_[covered_indices]
+        labs, counts = np.unique(covered_labels, return_counts=True)
+        if len(counts) == 0:
+            continue
+        if np.max(counts) / len(covered_indices) >= confidence:
+            filtered_rules.append(rule)
+
+    return filtered_rules
+
+
+####################################################################################################
+
+
+def cartesian_product_labels(
+    rules : List[List[Condition]],
+    labels : List[Set[int]],
+    ignore : Set[int] = set()
+) -> Tuple[List[List[Condition]], List[Set[int]]]:
+    """
+    Given a list of rules and a list of labels, creates a new list of rules
+    where each rule is duplicated for each unique label in the labels list.
+
+    Args:
+        rules (List[List[Condition]]): List of rules to duplicate, where each rule is a list of conditions.
+        
+        labels (List[Set[int]]): List of label sets for each instance.
+            Each label set should contain only a single label.
+
+        ignore (Set[int], optional): Set of labels to ignore when duplicating rules. Defaults to an empty set.
+
+    Returns:
+        new_rules (List[List[Condition]]): New list of rules after duplication.
+    """
+    uni_labels = unique_labels(labels)
+    new_rules = []
+    new_rule_labels = []
+    for i, rule in enumerate(rules):
+        for label in uni_labels:
+            if label not in ignore:
+                new_rules.append(rule)
+                new_rule_labels.append({label})
+    return new_rules, new_rule_labels
 
 
 ####################################################################################################

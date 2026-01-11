@@ -46,13 +46,16 @@ def entropy(x : NDArray) -> float:
 ####################################################################################################
 
 
-def coverage(assignment : np.ndarray, percentage : bool = True) -> float:
+def coverage(assignment : np.ndarray, weights : np.ndarray = None, percentage : bool = True) -> float:
     """
     Computes the coverage of a point assignment. 
     
     Args:
         assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
             being True (1) if point i belongs to class j and False (0) otherwise. 
+
+        weights (np.ndarray, optional): n x 1 array of weights for each point. 
+            If None, all points are equally weighted. Defaults to None. 
 
         percentage (bool, optional): If True, returns the coverage as a percentage of points
             covered by at least one cluster. If False, returns the total number of points covered.
@@ -61,11 +64,18 @@ def coverage(assignment : np.ndarray, percentage : bool = True) -> float:
         coverage (float): Fraction of points covered by at least one cluster.
     """
     n,k = assignment.shape
+    if weights is not None:
+        assert weights.ndim == 1, "Weights array must be one dimensional."
+        if len(weights) != n:
+            raise ValueError("Weights array length does not match number of points.")
+    else:
+        weights = np.ones(n)
+    
     #coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
     if percentage:
-        coverage = np.sum(covered_mask(assignment)) / n
+        coverage = np.sum(weights[covered_mask(assignment)]) / n
     else:
-        coverage = np.sum(covered_mask(assignment))
+        coverage = np.sum(weights[covered_mask(assignment)])
     return coverage
 
 
@@ -232,6 +242,37 @@ def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
         [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
     )
     return divide_with_zeros(second_closest_dists, closest_dists)
+
+
+####################################################################################################
+
+
+def distance_ratio_score(X : NDArray, centers : NDArray) -> NDArray:
+    """
+    For each data point, let a be the distance to its closest cluster center
+    and b be the distance to its second closest cluster center. This function computes the
+    a score as 1 - (a / b). Points which are equally close to their first and second closest
+    centers receive a score of 0, while points which are strongly tied to their closest center
+    receive a score close to 1.
+
+    Args:
+        X (np.ndarray): (n x d) Dataset.
+        
+        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+
+    Returns:
+        (np.ndarray): Length n distance ratio array.
+    """
+    n,d = X.shape
+    center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
+    sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
+    closest_dists = np.array(
+        [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]
+    )
+    second_closest_dists = np.array(
+        [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
+    )
+    return 1 - divide_with_zeros(closest_dists, second_closest_dists)
 
 
 ####################################################################################################

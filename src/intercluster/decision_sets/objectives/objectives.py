@@ -1,7 +1,8 @@
 import numpy as np
 from numpy.typing import NDArray
+from intercluster import Condition
 from intercluster.utils import (
-    assignment_to_dict,
+    assignment_to_dict, labels_to_assignment, unique_labels, satisfies_conditions
 )
 
 ####################################################################################################
@@ -12,46 +13,144 @@ class Objective:
     Base class for a selector, which is used to select rules based on a given objective.
 
     Args:
-        n_rules (int): The *maximum* number of rules to select.
-        lambda_val (float): A hyperparameter that controls tradeoff between reward and cost.
-            Defaults to 1.0.
+        n_select (int): The *maximum* number of rules to select.
         alpha_val (float): A hyperparameter for tuning the size of the selected rules.
-            Larger values penalize longer rules more heavily. Defaults to 1.0.
-        cluster_centers (NDArray): (k x d) array where each row i is the given 
-            representative for cluster i.
+            Larger values penalize longer rules more heavily. Defaults to 0.0.
+        lambda_val (float): A hyperparameter that controls tradeoff between reward and cost.
+            Defaults to None, in which case it may be selected automatically.
 
     Attrs:
         name (str): Name of the objective.
+        X (NDArray): The data points.
+        y (list[set[int]]): The labels for each data point.
+        data_to_cluster_assignment (NDArray): The cluster assignment for each data point.
+        rules (list[list[Condition]]): The rules for the objective.
+        rule_labels (list[set[int]]): The labels for each rule.
+        data_to_rules_assignment (NDArray): The rule assignment for each data point.
+        rules_to_clusters_assignment (NDArray): The cluster assignment for each rule.
         value (float): The value of the objective function for the selected rules.
     """
     def __init__(
         self,
-        n_rules : int,
-        lambda_val : float = 1.0,
-        alpha_val : float = 1.0
+        n_select : int,
+        alpha_val : float = 0.0,
+        lambda_val : float = None,
+        cluster_centers : NDArray = None,
+        weights : NDArray = None,
     ):
-        self.n_rules = n_rules
-        self.lambda_val = lambda_val
+        assert n_select > 0, 'n_select must be positive.'
+        self.n_select = n_select
+
+        assert alpha_val >= 0.0, 'alpha_val must be non-negative.'
         self.alpha_val = alpha_val
 
+        assert lambda_val is None or lambda_val >= 0.0, 'lambda_val must be non-negative.'
+        self.lambda_val = lambda_val
 
-    def set_lambda(self, lambda_val : float):
+        assert cluster_centers is None or isinstance(cluster_centers, np.ndarray), \
+            'cluster_centers must be a numpy array.'
+        if cluster_centers is not None:
+            assert len(cluster_centers.shape) == 2, 'cluster_centers must be a 2D array.'
+        self.cluster_centers = cluster_centers
+
+        assert weights is None or isinstance(weights, np.ndarray), \
+            'weights must be a numpy array.'
+        if weights is not None:
+            assert len(weights.shape) == 1, 'weights must be a 1D array.'
+        self.weights = weights
+
+        self.data_set = False
+        self.rules_set = False
+
+        self.X = None
+        self.y = None
+        self.data_to_cluster_assignment = None
+        self.rules = None
+        self.rule_labels = None
+        self.data_to_rules_assignment = None
+        self.rule_to_cluster_assignment = None
+
+
+    def set_data(
+        self, 
+        X : NDArray,
+        y : list[set[int]],
+    ):
+        """
+        Sets the data for the objective.
+        """
+        assert isinstance(X, np.ndarray), 'X must be a numpy array.'
+        assert len(X.shape) == 2, 'X must be a 2D array.'
+        assert len(y) == X.shape[0], 'y must have the same number of elements as X has rows.'
+        assert all(isinstance(label_set, set) for label_set in y), \
+            'Each element of y must be a set of labels.'
+        
+        if self.weights is None:
+            self.weights = np.ones(X.shape[0], dtype = float)
+        else:
+            assert len(self.weights) == X.shape[0], \
+                'weights must have the same length as the number of samples in X.'
+            
+        self.X = X
+        self.y = y
+        n_labels = len(unique_labels(y))
+        self.data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = n_labels, ignore = {-1}
+        )
+        self.data_set = True
+
+
+    def set_rules(
+        self,
+        rules : list[list[Condition]],
+        rule_labels : list[set[int]],
+    ):
+        """
+        Sets the rules for the objective.
+        """
+        if self.data_to_cluster_assignment is None:
+            raise ValueError('Data must be set before setting rules.')
+        self.rules = rules
+        self.rule_labels = rule_labels
+        n_labels = len(unique_labels(rule_labels))
+        if n_labels != self.data_to_cluster_assignment.shape[1]:
+            raise ValueError("Number of labels in rule_labels must match number of clusters "
+                             "seen in y.")
+
+        self.data_to_rules_assignment = np.zeros((self.X.shape[0], len(rules)), dtype = bool)
+        for i, condition_list in enumerate(rules):
+            data_points_satisfied = satisfies_conditions(self.X, condition_list)
+            self.data_to_rules_assignment[data_points_satisfied, i] = True
+
+        self.rule_to_cluster_assignment = labels_to_assignment(
+            rule_labels, n_labels = n_labels, ignore = {-1}
+        )
+
+        self.rule_lengths = [len(rule) for rule in rules]
+        self.rules_set = True
+        self.create_rule_info_dict()
+
+
+    def set_lambda(self, lambda_val : float = None):
         """
         Sets the lambda value for the objective.
 
         Args:
             lambda_val (float): The new lambda value.
         """
+        if lambda_val is None and not (self.data_set and self.rules_set):
+            raise ValueError('Data and rules must be set before setting lambda automatically.')
+        elif lambda_val is None:
+            lambda_vals = self.compute_lambdas()
+            if len(lambda_vals) == 0:
+                lambda_val = 0.0
+            else:
+                lambda_val = lambda_vals[0]
+    
         self.lambda_val = lambda_val
 
 
-    def create_rule_info_dict(
-        self,
-        data_to_cluster_assignment : NDArray,
-        rule_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int]
-    ) -> dict[int, dict[str, any]]:
+    def create_rule_info_dict(self) -> dict[int, dict[str, any]]:
         """
         Creates a dictionary containing information about each rule.
 
@@ -65,22 +164,25 @@ class Objective:
             dict[int, dict[str, any]]: A dictionary mapping each rule index to its information.
                 This includes the rule's points, coverage, length, and label.
         """
-        r,_ = rule_to_cluster_assignment.shape
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        rule_labels = {i: rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
-        rule_points = assignment_to_dict(data_to_rules_assignment)
+        if not (self.data_set and self.rules_set):
+            raise ValueError('Data and rules must be set before creating rule info dictionary.')
+        
+        r,_ = self.rule_to_cluster_assignment.shape
+        cluster_coverage = assignment_to_dict(self.data_to_cluster_assignment)
+        rule_labels = {i: self.rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
+        rule_coverage = assignment_to_dict(self.data_to_rules_assignment)
         rule_cluster_coverage = {}
-        for rule, points in rule_points.items():
-            rule_label = rule_labels[rule]
-            c_points = cluster_points[rule_label]
-            rule_cluster_coverage[rule] = points.intersection(c_points)
+        for r, r_coverage in rule_coverage.items():
+            rule_label = rule_labels[r]
+            c_coverage = cluster_coverage[rule_label]
+            rule_cluster_coverage[r] = r_coverage.intersection(c_coverage)
 
         # Storing all relevant information about each rule:
         rules_info = {
             r: {
-                'points': rule_points[r],
-                'coverage': rule_cluster_coverage[r],
-                'length': rule_lengths[r],
+                'coverage': rule_coverage[r],
+                'cluster_coverage': rule_cluster_coverage[r],
+                'length': self.rule_lengths[r],
                 'label': rule_labels[r]
             } for r in range(r)
         }
@@ -137,94 +239,7 @@ class Objective:
         return g - self.lambda_val * h
     
 
-    def filter_rules(
-        self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int],
-        remove_top : float = 0.1
-    ) -> NDArray:
-        """
-        Computes minimum value of lambda necessary for an approximation algorithm.
-
-        Args:
-            data (NDArray): (n x d) Data array.
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-            rule_lengths (list[int]): A list of lengths for each rule.
-            remove_top (float, optional): The proportion of rules to remove from the top. 
-                Defaults to 0.1.
-
-        Returns:
-            rule_indices (NDArray): An array of integers representing the indices of the filtered rules.
-        """
-        n,d = data.shape
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
-                                                                        "assigned to at most one cluster.")
-
-        n3,r = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
-
-        assert 0.0 <= remove_top < 1.0, "remove_top must be in [0.0, 1.0)."
-
-        rule_list = list(np.arange(r))
-        
-        rule_points = assignment_to_dict(data_to_rules_assignment)
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
-
-        second_max_ratios = [0.0 for _ in range(r)]
-        for i,rule in enumerate(rule_list):
-            r_points = rule_points[rule]
-            r_length = rule_length_dict[rule]
-            c_ratios = []
-            for cluster in range(k):
-                r_coverage = rule_points[rule].intersection(cluster_points[cluster])
-                r_info = {rule: {
-                        'points': r_points,
-                        'coverage': r_coverage,
-                        'length': r_length,
-                        'label': cluster
-                    }
-                }
-                g = self.reward(r_info)
-                h = self.cost(r_info)
-
-                if h > 0:
-                    ratio = g / h
-                    c_ratios.append(ratio)
-                else:
-                    ratio = np.inf
-                    c_ratios.append(ratio)
-
-
-            c_ratios_sorted = np.sort(c_ratios)
-            second_max_ratios[i] = c_ratios_sorted[-2]
-
-        second_max_ratios = np.array(second_max_ratios)
-        n_remove = int(remove_top * r)
-        if n_remove > 0:
-            threshold = np.partition(second_max_ratios, -n_remove)[-n_remove]
-            selected_rules = np.where(second_max_ratios < threshold)[0]
-        else:
-            selected_rules = np.arange(r)
-
-        return selected_rules
-
-    def compute_lambdas(
-        self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int]
-    ) -> NDArray:
+    def compute_lambdas(self) -> NDArray:
         """
         Computes minimum value of lambda necessary for an approximation algorithm.
 
@@ -243,37 +258,25 @@ class Objective:
                 until reaching the maximum coverage/cost ratio seen
                 for any (rule, cluster) assignment pair. 
         """
-        n,d = data.shape
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
-                                                                        "assigned to at most one cluster.")
-
-        n3,r = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
-
-        #if self.cluster_centers is not None:
-        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
-        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
-
+        n,r = self.data_to_rules_assignment.shape
+        _,k = self.data_to_cluster_assignment.shape
         rule_list = list(np.arange(r))
         
-        rule_points = assignment_to_dict(data_to_rules_assignment)
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
+        #rule_points = assignment_to_dict(self.data_to_rules_assignment)
+        #cluster_points = assignment_to_dict(self.data_to_cluster_assignment)
+        #rule_length_dict = {i: self.rule_lengths[i] for i in range(r)}
 
         ratios = []
         second_max_ratio = 0.0
         for rule in rule_list:
-            r_points = rule_points[rule]
+            r_coverage = rule_points[rule]
             r_length = rule_length_dict[rule]
             c_ratios = []
             for cluster in range(k):
-                r_coverage = rule_points[rule].intersection(cluster_points[cluster])
+                r_cluster_coverage = r_coverage.intersection(cluster_points[cluster])
                 r_info = {rule: {
-                        'points': r_points,
                         'coverage': r_coverage,
+                        'cluster_coverage': r_cluster_coverage,
                         'length': r_length,
                         'label': cluster
                     }
@@ -303,194 +306,7 @@ class Objective:
             return np.sort(ratios)
         return np.sort(ratios + [second_max_ratio])
 
-    '''
-    def compute_lambdas(
-        self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int]
-    ) -> NDArray:
-        """
-        Computes minimum value of lambda necessary for an approximation algorithm.
 
-        Args:
-            data (NDArray): (n x d) Data array.
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-            rule_lengths (list[int]): A list of lengths for each rule.
-                
-        Returns:
-            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
-                most value for which the approximation guarantee holds, and increasing
-                until reaching the maximum coverage/cost ratio seen
-                for any (rule, cluster) assignment pair. 
-        """
-        n,d = data.shape
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
-                                                                        "assigned to at most one cluster.")
-
-        n3,r = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
-
-        #if self.cluster_centers is not None:
-        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
-        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
-
-        rule_list = list(np.arange(r))
-        
-        rule_points = assignment_to_dict(data_to_rules_assignment)
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
-
-        ratios = []
-        largest_marginal_ratio = 0.0
-        for rule in rule_list:
-            r_points = rule_points[rule]
-            r_length = rule_length_dict[rule]
-            c_ratios = []
-            for cluster_1 in range(k):
-                r_coverage_cluster_1 = rule_points[rule].intersection(cluster_points[cluster_1])
-                r_info_1 = {rule: {
-                        'points': r_points,
-                        'coverage': r_coverage_cluster_1,
-                        'length': r_length,
-                        'label': cluster_1
-                    }
-                }
-                g = self.reward(r_info_1)
-                h = self.cost(r_info_1)
-
-                if h > 0:
-                    ratio = g / h
-                    ratios.append(ratio)
-                else:
-                    ratio = np.inf
-                    ratios.append(ratio)
-
-                # Do not consider marginal gain if the initial gain is zero.
-                if g == 0:
-                    continue
-                
-                c_ratios = []
-                for cluster_2 in range(k):
-                    if cluster_1 == cluster_2:
-                        continue
-                    r_coverage_cluster_2 = rule_points[rule].intersection(cluster_points[cluster_2])
-                    r_info_2 = {
-                        'points': r_points,
-                        'coverage': r_coverage_cluster_2,
-                        'length': r_length,
-                        'label': cluster_2
-                    }
-                    c_covers = {i: set() for i in range(k)}
-                    c_covers[cluster_1] = r_coverage_cluster_1
-                    g = self.marginal_reward(
-                        r_info_2,
-                        total_coverage = r_points,
-                        cluster_coverage = c_covers
-                    )
-                    h = self.marginal_cost(
-                        r_info_2,
-                        total_coverage = r_points,
-                        cluster_coverage = c_covers
-                    )
-
-                    if h > 0:
-                        ratio = g / h
-                        c_ratios.append(ratio)
-                    else:
-                        ratio = np.inf
-                        c_ratios.append(ratio)
-
-
-                c_ratio_max = np.max(c_ratios)
-                if c_ratio_max > largest_marginal_ratio:
-                    largest_marginal_ratio = c_ratio_max
-                    
-
-        print("Largest marginal ratio:", largest_marginal_ratio)
-
-        return np.array([largest_marginal_ratio])
-    '''
-    '''
-    def compute_lambdas(
-        self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int]
-    ) -> NDArray:
-        """
-        Computes minimum value of lambda necessary for an approximation algorithm.
-
-        Args:
-            data (NDArray): (n x d) Data array.
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-            rule_lengths (list[int]): A list of lengths for each rule.
-                
-        Returns:
-            lambda_vals (NDArray): A sorted array of lambda values, starting from the minimum 
-                most value for which the approximation guarantee holds, and increasing
-                until reaching the maximum coverage/cost ratio seen
-                for any (rule, cluster) assignment pair. 
-        """
-        n,d = data.shape
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
-                                                                        "assigned to at most one cluster.")
-
-        n3,r = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        assert len(rule_lengths) == r, "Rule lengths must match number of rules."
-
-        #if self.cluster_centers is not None:
-        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
-        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
-
-        rule_list = list(np.arange(r))
-        
-        rule_points = assignment_to_dict(data_to_rules_assignment)
-        cluster_points = assignment_to_dict(data_to_cluster_assignment)
-        rule_length_dict = {i: rule_lengths[i] for i in range(r)}
-
-        ratios = set()
-        for rule in rule_list:
-            r_points = rule_points[rule]
-            r_length = rule_length_dict[rule]
-            for cluster in range(k):
-                r_coverage = rule_points[rule].intersection(cluster_points[cluster])
-                r_info = {rule: {
-                        'points': r_points,
-                        'coverage': r_coverage,
-                        'length': r_length,
-                        'label': cluster
-                    }
-                }
-                g = self.reward(r_info)
-                h = self.cost(r_info)
-
-                if h > 0:
-                    ratio = g / h
-                else:
-                    ratio = np.inf
-
-                ratios.add(ratio)
-            
-        return np.sort(np.array(list(ratios)))
-    '''
-    
     def marginal_reward(
         self,
         rule_info: dict[str, any],
@@ -533,11 +349,6 @@ class Objective:
 
     def select(
         self,
-        data : NDArray,
-        data_to_cluster_assignment : NDArray,
-        rule_to_cluster_assignment : NDArray,
-        data_to_rules_assignment : NDArray,
-        rule_lengths : list[int]
     ) -> NDArray[np.int64]:
         """
         Selects a subset rules using a distorted greedy algorithm. For more information 
@@ -546,50 +357,22 @@ class Objective:
         by Harshaw el al., ICML 2019.
         
         Args:
-            data (NDArray): (n x d) Data array.
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
-                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
-                be assigned to a single cluster.
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                data point i is assigned to rule j and `False` otherwise.
-            rule_lengths (list[int]): A list of lengths for each rule.
                 
         Returns:
             NDArray: An array of integers representing the indices of the selected rules.
         """
-        n,d = data.shape
-        n2,k = data_to_cluster_assignment.shape
-        assert n == n2, "Data and Data to Cluster assignment arrays do not match in shape along axis 0."
-        assert np.all(np.sum(data_to_cluster_assignment, axis = 1) <= 1), ("Each data point must be "
-                                                                        "assigned to at most one cluster.")
-        r,k2 = rule_to_cluster_assignment.shape
-        assert k == k2, "Data and Rule assignment arrays do not match in shape along axis 1."
-        assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Rules must be assigned "
-                                                                        "to exactly one cluster.")
-        n3,r2 = data_to_rules_assignment.shape
-        assert n == n3, "Data and Data to Rule assignment arrays do not match in shape along axis 0."
-        assert r == r2, "Number of rules in Rule assignment must match number of rules in Data to Rule assignment."
-        
-        #if self.cluster_centers is not None:
-        #    assert self.cluster_centers.shape[0] == k, "Number of cluster centers must match number of clusters."
-        #    assert self.cluster_centers.shape[1] == d, "Cluster center dimension must match data dimension."
+        if not (self.data_set and self.rules_set):
+            raise ValueError('Data and rules must be set before selecting rules.')
+        n,k = self.data_to_cluster_assignment.shape
+        r,_ = self.rule_to_cluster_assignment.shape
 
-
-        rules_info = self.create_rule_info_dict(
-            data_to_cluster_assignment,
-            rule_to_cluster_assignment,
-            data_to_rules_assignment,
-            rule_lengths
-        )
+        rules_info = self.create_rule_info_dict()
 
         total_coverage = set()
-        cluster_coverage = {l: set() for l in range(k)}
+        total_cluster_coverage = {l: set() for l in range(k)}
         selected_rules = set()
         discarded_rules = set()
-        for i in range(self.n_rules):
+        for i in range(self.n_select):
             best_rule = None
             best_rule_score = 0.0
             
@@ -602,13 +385,13 @@ class Objective:
                     g = self.marginal_reward(
                         rules_info[rule],
                         total_coverage,
-                        cluster_coverage
+                        total_cluster_coverage
                     )
 
                     h = self.marginal_cost(
                         rules_info[rule],
                         total_coverage,
-                        cluster_coverage
+                        total_cluster_coverage
                     )
 
                     # Early discard since the marginal reward will only decrease from here on out, 
@@ -618,7 +401,7 @@ class Objective:
                     if g - self.lambda_val * h <= 0:
                         discarded_rules.add(rule)
                     
-                    score = (1 - 1/self.n_rules)**(self.n_rules - (i + 1)) * g - self.lambda_val * h
+                    score = (1 - 1/self.n_select)**(self.n_select - (i + 1)) * g - self.lambda_val * h
                     
                     if score > best_rule_score:
                         best_rule = rule
@@ -627,14 +410,14 @@ class Objective:
             if best_rule_score > 0:
                 selected_rules.add(best_rule)
                 best_rule_label = rules_info[best_rule]['label']
-                best_rule_points = rules_info[best_rule]['points']
                 best_rule_coverage = rules_info[best_rule]['coverage']
-                cluster_coverage[best_rule_label] = cluster_coverage[
+                best_rule_cluster_coverage = rules_info[best_rule]['cluster_coverage']
+                total_cluster_coverage[best_rule_label] = total_cluster_coverage[
                     best_rule_label
                 ].union(
-                    best_rule_coverage
+                    best_rule_cluster_coverage
                 )
-                total_coverage = total_coverage.union(best_rule_points)
+                total_coverage = total_coverage.union(best_rule_coverage)
 
         # Compute final objective value
         self.reward_value = self.reward(
@@ -657,22 +440,29 @@ class CoverageMistakeObjective(Objective):
     Objective that selects rules based on a coverage and mistake objective.
 
     Args:
-        n_rules (int): The *maximum* number of rules to select.
+        n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
     """
-    def __init__(self, n_rules : int, lambda_val : float = 1.0, alpha_val : float = 1.0):
+    def __init__(
+        self,
+        n_select : int,
+        alpha_val : float = 0.0,
+        lambda_val : float = None, 
+        weights : NDArray = None
+    ):
         """
         Args:
-            n_rules (int): The *maximum* number of rules to select.
+            n_select (int): The *maximum* number of rules to select.
             lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             alpha_val (float): A hyperparameter for tuning the size of the selected rules.
                 Larger values penalize longer rules more heavily. Defaults to 1.0.
         """
         super().__init__(
-            n_rules = n_rules,
+            n_select = n_select,
+            alpha_val = alpha_val,
             lambda_val = lambda_val,
-            alpha_val = alpha_val
+            weights = weights
         )
 
 
@@ -689,18 +479,18 @@ class CoverageMistakeObjective(Objective):
         Returns:
             reward (float): The reward from the selected rules.
         """
-        per_cluster_coverage = {}
+        total_cluster_coverage = {}
         for rule, info in selected_rules_info.items():
             label = info['label']
-            if label not in per_cluster_coverage:
-                per_cluster_coverage[label] = set()
-            per_cluster_coverage[label] = per_cluster_coverage[label].union(
-                info['coverage']
+            if label not in total_cluster_coverage:
+                total_cluster_coverage[label] = set()
+            total_cluster_coverage[label] = total_cluster_coverage[label].union(
+                info['cluster_coverage']
             )
-        total_coverage = 0
-        for l, covered in per_cluster_coverage.items():
-            total_coverage += len(covered)
-        return total_coverage
+        total_weighted_coverage = 0
+        for l, covered in total_cluster_coverage.items():
+            total_weighted_coverage += np.sum(self.weights[list(covered)])
+        return total_weighted_coverage
 
 
     def cost(
@@ -718,9 +508,9 @@ class CoverageMistakeObjective(Objective):
         """
         total_mistakes = 0
         for rule, info in selected_rules_info.items():
-            r_points = info['points']
             r_coverage = info['coverage']
-            mistakes = r_points.difference(r_coverage)
+            r_cluster_coverage = info['cluster_coverage']
+            mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
 
         length_penalty = sum(
@@ -733,7 +523,7 @@ class CoverageMistakeObjective(Objective):
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
+        total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal reward as new coverage from selected rule.
@@ -746,17 +536,18 @@ class CoverageMistakeObjective(Objective):
         Returns:
             coverage (float): The coverage of the selected rules.
         """
-        r_coverage = rule_info['coverage']
-        s_coverage = cluster_coverage[rule_info['label']]
-        new_coverage = r_coverage.difference(s_coverage)
-        return len(new_coverage)
+        r_cluster_coverage = rule_info['cluster_coverage']
+        s_coverage = total_cluster_coverage[rule_info['label']]
+        new_coverage = r_cluster_coverage.difference(s_coverage)
+        new_coverage_weighted = np.sum(self.weights[list(new_coverage)])
+        return new_coverage_weighted
 
 
     def marginal_cost(
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage: dict[int, set[int]],
+        total_cluster_coverage: dict[int, set[int]],
     ) -> float:
         """
         Computes the marginal cost as the number of mistakes made by the selected rule.
@@ -769,9 +560,9 @@ class CoverageMistakeObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
-        r_points = rule_info['points']
         r_coverage = rule_info['coverage']
-        mistakes = r_points.difference(r_coverage)
+        r_cluster_coverage = rule_info['cluster_coverage']
+        mistakes = r_coverage.difference(r_cluster_coverage)
         return len(mistakes) + self.alpha_val * rule_info['length']
         
 
@@ -785,22 +576,29 @@ class TotalCoverageMistakeObjective(Objective):
     rather than within each cluster.
 
     Args:
-        n_rules (int): The *maximum* number of rules to select.
+        n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
     """
-    def __init__(self, n_rules : int, lambda_val : float = 1.0, alpha_val : float = 1.0):
+    def __init__(
+        self,
+        n_select : int,
+        alpha_val : float = 0.0,
+        lambda_val : float = None,
+        weights : NDArray = None
+    ):
         """
         Args:
-            n_rules (int): The *maximum* number of rules to select.
+            n_select (int): The *maximum* number of rules to select.
             lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             alpha_val (float): A hyperparameter for tuning the size of the selected rules.
                 Larger values penalize longer rules more heavily. Defaults to 1.0.
         """
         super().__init__(
-            n_rules = n_rules,
+            n_select = n_select,
+            alpha_val = alpha_val,
             lambda_val = lambda_val,
-            alpha_val = alpha_val
+            weights = weights
         )
 
 
@@ -819,9 +617,10 @@ class TotalCoverageMistakeObjective(Objective):
         """
         total_coverage = set()
         for rule, info in selected_rules_info.items():
-            r_coverage = info['points']
+            r_coverage = info['coverage']
             total_coverage = total_coverage.union(r_coverage)
-        return len(total_coverage)
+
+        return np.sum(self.weights[list(total_coverage)])
 
 
     def cost(
@@ -839,9 +638,9 @@ class TotalCoverageMistakeObjective(Objective):
         """
         total_mistakes = 0
         for rule, info in selected_rules_info.items():
-            r_points = info['points']
             r_coverage = info['coverage']
-            mistakes = r_points.difference(r_coverage)
+            r_cluster_coverage = info['cluster_coverage']
+            mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
 
         length_penalty = sum(
@@ -854,7 +653,7 @@ class TotalCoverageMistakeObjective(Objective):
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
+        total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal reward as new coverage from selected rule.
@@ -866,16 +665,17 @@ class TotalCoverageMistakeObjective(Objective):
         Returns:
             coverage (float): The coverage of the selected rules.
         """
-        r_points = rule_info['points']
-        new_points = r_points.difference(total_coverage)
-        return len(new_points)
+        r_coverage = rule_info['coverage']
+        new_points = r_coverage.difference(total_coverage)
+        new_points_weighted = np.sum(self.weights[list(new_points)])
+        return new_points_weighted
 
 
     def marginal_cost(
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage: dict[int, set[int]]
+        total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal cost as the number of mistakes made by the selected rule.
@@ -887,9 +687,9 @@ class TotalCoverageMistakeObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
-        r_points = rule_info['points']
         r_coverage = rule_info['coverage']
-        mistakes = r_points.difference(r_coverage)
+        r_cluster_coverage = rule_info['cluster_coverage']
+        mistakes = r_coverage.difference(r_cluster_coverage)
         return len(mistakes) + self.alpha_val * rule_info['length']
         
 
@@ -904,34 +704,72 @@ class CoverageCostObjective(Objective):
         data (NDArray): (n x d) array.
         cluster_centers (NDArray): (k x d) array where each row i is the given 
                 representative for cluster i.
-        n_rules (int): The *maximum* number of rules to select.
+        n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
         alpha_val (float): A hyperparameter for tuning the size of the selected rules.
             Larger values penalize longer rules more heavily. Defaults to 1.0.
-        method (str): The method used to compute cluster costs. 
+        cluster_cost_method (str): The cluster_cost_method used to compute cluster costs. 
             Currently only "kmeans" or "kmedians" are supported.
     """
     def __init__(
             self,
-            data : NDArray,
-            cluster_centers : NDArray,
-            n_rules : int,
-            lambda_val : float = 1.0,
-            alpha_val : float = 1.0,
-            method : str = "kmeans"
+            n_select : int,
+            alpha_val : float = 0.0,
+            lambda_val : float = None,
+            cluster_centers : NDArray = None,
+            weights : NDArray = None,
+            cluster_cost_method : str = "kmeans"
         ):
         super().__init__(
-            n_rules = n_rules,
+            n_select = n_select,
+            alpha_val = alpha_val,
             lambda_val = lambda_val,
-            alpha_val = alpha_val
+            cluster_centers = cluster_centers,
+            weights = weights
         )
+        if self.cluster_centers is None:
+            raise ValueError("Cluster_centers must be provided for this objective.")
+        if cluster_cost_method not in ["kmeans", "kmedians"]:
+            raise ValueError(f"Method {cluster_cost_method} not supported. Supported cluster_cost_methods are 'kmeans' and 'kmedians'.")
+        self.cluster_cost_method = cluster_cost_method
 
-        self.data = data
-        self.cluster_centers = cluster_centers
-        if method not in ["kmeans", "kmedians"]:
-            raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
-        self.method = method
+
+    def set_data(
+        self, 
+        X : NDArray,
+        y : list[set[int]],
+    ):
+        """
+        Sets the data for the objective.
+        """
+        assert isinstance(X, np.ndarray), 'X must be a numpy array.'
+        assert len(X.shape) == 2, 'X must be a 2D array.'
+        assert len(y) == X.shape[0], 'y must have the same number of elements as X has rows.'
+        assert all(isinstance(label_set, set) for label_set in y), \
+            'Each element of y must be a set of labels.'
+        
+        if self.weights is None:
+            self.weights = np.ones(X.shape[0], dtype = float)
+        else:
+            assert len(self.weights) == X.shape[0], \
+                'weights must have the same length as the number of samples in X.'
+            
+        self.X = X
+        self.y = y
+        n_labels = len(unique_labels(y))
+        self.data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = n_labels, ignore = {-1}
+        )
+        self.data_set = True
+
+        # Compute n x k distance matrix between data points and cluster centers.
+        self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
+        for i in range(self.cluster_centers.shape[0]):
+            if self.cluster_cost_method == "kmeans":
+                self.data_to_center_distances[:, i] = np.sum((self.X - self.cluster_centers[i])**2, axis=1)
+            else:  # self.cluster_cost_cluster_cost_method == "kmedians"
+                self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
 
 
     def reward(
@@ -947,23 +785,23 @@ class CoverageCostObjective(Objective):
         Returns:
             reward (float): The reward from the selected rules.
         """
-        per_cluster_coverage = {}
+        total_cluster_coverage = {}
         for rule, info in selected_rules_info.items():
             label = info['label']
-            if label not in per_cluster_coverage:
-                per_cluster_coverage[label] = set()
-            per_cluster_coverage[label] = per_cluster_coverage[label].union(
-                info['coverage']
+            if label not in total_cluster_coverage:
+                total_cluster_coverage[label] = set()
+            total_cluster_coverage[label] = total_cluster_coverage[label].union(
+                info['cluster_coverage']
             )
-        total_coverage = 0
-        for l, covered in per_cluster_coverage.items():
-            total_coverage += len(covered)
-        return total_coverage
+        total_weighted_coverage = 0
+        for l, covered in total_cluster_coverage.items():
+            total_weighted_coverage += np.sum(self.weights[list(covered)])
+        return total_weighted_coverage
 
 
     def cost(
         self,
-        selected_rules_info : dict[int, dict[str, any]],
+        selected_rules_info: dict[int, dict[str, any]]
     ) -> float:
         """
         Computes the cost of the selected rules.
@@ -976,12 +814,9 @@ class CoverageCostObjective(Objective):
         """
         total_cost = 0.0
         for rule, info in selected_rules_info.items():
-            r_points = info['points']
-            r_center = self.cluster_centers[info['label']]
-            if self.method == "kmeans":
-                cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-            else:  # self.method == "kmedians"
-                cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+            r_coverage = info['coverage']
+            r_center = info['label']
+            cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
             total_cost += cluster_cost
 
         length_penalty = sum(
@@ -994,7 +829,7 @@ class CoverageCostObjective(Objective):
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
+        total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal reward as new coverage from selected rule.
@@ -1007,17 +842,18 @@ class CoverageCostObjective(Objective):
         Returns:
             coverage (float): The coverage of the selected rules.
         """
-        r_coverage = rule_info['coverage']
-        s_coverage = cluster_coverage[rule_info['label']]
-        new_coverage = r_coverage.difference(s_coverage)
-        return len(new_coverage)
+        r_cluster_coverage = rule_info['cluster_coverage']
+        s_coverage = total_cluster_coverage[rule_info['label']]
+        new_coverage = r_cluster_coverage.difference(s_coverage)
+        new_coverage_weighted = np.sum(self.weights[list(new_coverage)])
+        return new_coverage_weighted
 
 
     def marginal_cost(
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage: dict[int, set[int]]
+        total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal cost as the number of mistakes made by the selected rule.
@@ -1029,12 +865,9 @@ class CoverageCostObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
-        r_points = rule_info['points']
-        r_center = self.cluster_centers[rule_info['label']]
-        if self.method == "kmeans":
-            cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-        else:  # self.method == "kmedians"
-            cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+        r_coverage = rule_info['coverage']
+        r_center = rule_info['label']
+        cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
         return cluster_cost + self.alpha_val * rule_info['length']
     
 
@@ -1051,41 +884,71 @@ class TotalCoverageCostObjective(Objective):
         data (NDArray): (n x d) data array.
         cluster_centers (NDArray): (k x d) array where each row i is the given 
             representative for cluster i.
-        n_rules (int): The *maximum* number of rules to select.
+        n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
         alpha_val (float): A hyperparameter that controls the length penalty. Defaults to 1.0.
-        method (str): The method used to compute cluster costs. 
+        cluster_cost_method (str): The cluster_cost_method used to compute cluster costs. 
             Currently only "kmeans" or "kmedians" are supported.
     """
     def __init__(
             self,
-            data : NDArray,
-            cluster_centers : NDArray,
-            n_rules : int,
-            lambda_val : float = 1.0,
-            alpha_val : float = 1.0,
-            method : str = "kmeans"
+            n_select : int,
+            alpha_val : float = 0.0,
+            lambda_val : float = None,
+            cluster_centers : NDArray = None,
+            weights : NDArray = None,
+            cluster_cost_method : str = "kmeans"
         ):
         super().__init__(
-            n_rules = n_rules,
+            n_select = n_select,
+            alpha_val = alpha_val,
             lambda_val = lambda_val,
-            alpha_val = alpha_val
+            cluster_centers = cluster_centers,
+            weights = weights
         )
+        if self.cluster_centers is None:
+            raise ValueError("Cluster_centers must be provided for this objective.")
+        if cluster_cost_method not in ["kmeans", "kmedians"]:
+            raise ValueError(f"Method {cluster_cost_method} not supported. Supported cluster_cost_methods are 'kmeans' and 'kmedians'.")
+        self.cluster_cost_method = cluster_cost_method
 
-        self.data = data
-        self.cluster_centers = cluster_centers
-        if method not in ["kmeans", "kmedians"]:
-            raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
-        self.method = method
+
+    def set_data(
+        self, 
+        X : NDArray,
+        y : list[set[int]],
+    ):
+        """
+        Sets the data for the objective.
+        """
+        assert isinstance(X, np.ndarray), 'X must be a numpy array.'
+        assert len(X.shape) == 2, 'X must be a 2D array.'
+        assert len(y) == X.shape[0], 'y must have the same number of elements as X has rows.'
+        assert all(isinstance(label_set, set) for label_set in y), \
+            'Each element of y must be a set of labels.'
+        
+        if self.weights is None:
+            self.weights = np.ones(X.shape[0], dtype = float)
+        else:
+            assert len(self.weights) == X.shape[0], \
+                'weights must have the same length as the number of samples in X.'
+            
+        self.X = X
+        self.y = y
+        n_labels = len(unique_labels(y))
+        self.data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = n_labels, ignore = {-1}
+        )
+        self.data_set = True
 
         # Compute n x k distance matrix between data points and cluster centers.
-        self.data_to_center_distances = np.zeros((data.shape[0], cluster_centers.shape[0]))
-        for i in range(cluster_centers.shape[0]):
-            if self.method == "kmeans":
-                self.data_to_center_distances[:, i] = np.sum((data - cluster_centers[i])**2, axis=1)
-            else:  # self.method == "kmedians"
-                self.data_to_center_distances[:, i] = np.sum(np.abs(data - cluster_centers[i]), axis=1)
+        self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
+        for i in range(self.cluster_centers.shape[0]):
+            if self.cluster_cost_method == "kmeans":
+                self.data_to_center_distances[:, i] = np.sum((self.X - self.cluster_centers[i])**2, axis=1)
+            else:  # self.cluster_cost_cluster_cost_method == "kmedians"
+                self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
 
 
     def reward(
@@ -1103,9 +966,9 @@ class TotalCoverageCostObjective(Objective):
         """
         total_coverage = set()
         for rule, info in selected_rules_info.items():
-            r_coverage = info['points']
+            r_coverage = info['coverage']
             total_coverage = total_coverage.union(r_coverage)
-        return len(total_coverage)
+        return np.sum(self.weights[list(total_coverage)])
 
 
     def cost(
@@ -1123,9 +986,9 @@ class TotalCoverageCostObjective(Objective):
         """
         total_cost = 0.0
         for rule, info in selected_rules_info.items():
-            r_points = info['points']
+            r_coverage = info['coverage']
             r_center = info['label']
-            cluster_cost = np.sum(self.data_to_center_distances[list(r_points), r_center])
+            cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
             total_cost += cluster_cost
 
         length_penalty = sum(
@@ -1138,7 +1001,7 @@ class TotalCoverageCostObjective(Objective):
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
+        total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal reward as new coverage from selected rule.
@@ -1150,16 +1013,17 @@ class TotalCoverageCostObjective(Objective):
         Returns:
             coverage (float): The coverage of the selected rules.
         """
-        r_points = rule_info['points']
-        new_points = r_points.difference(total_coverage)
-        return len(new_points)
+        r_coverage = rule_info['coverage']
+        new_points = r_coverage.difference(total_coverage)
+        new_points_weighted = np.sum(self.weights[list(new_points)])
+        return new_points_weighted
 
 
     def marginal_cost(
         self,
         rule_info: dict[str, any],
         total_coverage : set[int],
-        cluster_coverage: dict[int, set[int]]
+        total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
         Computes the marginal cost as the number of mistakes made by the selected rule.
@@ -1171,142 +1035,9 @@ class TotalCoverageCostObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
-        r_points = rule_info['points']
+        r_coverage = rule_info['coverage']
         r_center = rule_info['label']
-        cluster_cost = np.sum(self.data_to_center_distances[list(r_points), r_center])
-        return cluster_cost + self.alpha_val * rule_info['length']
-
-
-####################################################################################################
-
-
-class TotalCoverageRuleCostObjective(Objective):
-    """
-    Objective that selects rules based on a coverage and rule cost objective.
-
-    Args:
-        data (NDArray): (n x d) data array.
-        n_rules (int): The *maximum* number of rules to select.
-        lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
-            Defaults to 1.0.
-        alpha_val (float): A hyperparameter that controls the length penalty. Defaults to 1.0.
-        method (str): The method used to compute cluster costs. 
-            Currently only "kmeans" or "kmedians" are supported.
-    """
-    def __init__(
-            self,
-            data : NDArray,
-            n_rules : int,
-            lambda_val : float = 1.0,
-            alpha_val : float = 1.0,
-            method : str = "kmeans"
-        ):
-        super().__init__(
-            n_rules = n_rules,
-            lambda_val = lambda_val,
-            alpha_val = alpha_val
-        )
-
-        self.data = data
-        if method not in ["kmeans", "kmedians"]:
-            raise ValueError(f"Method {method} not supported. Supported methods are 'kmeans' and 'kmedians'.")
-        self.method = method
-
-
-    def reward(
-        self,
-        selected_rules_info: dict[int, dict[str, any]],
-    ) -> float:
-        """
-        Computes the reward from the selected rules.
-
-        Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected 
-                rule index to its information (points, coverage, length, label).
-        Returns:
-            reward (float): The reward from the selected rules.
-        """
-        total_coverage = set()
-        for rule, info in selected_rules_info.items():
-            r_coverage = info['points']
-            total_coverage = total_coverage.union(r_coverage)
-        return len(total_coverage)
-
-
-    def cost(
-        self,
-        selected_rules_info: dict[int, dict[str, any]]
-    ) -> float:
-        """
-        Computes the cost of the selected rules.
-
-        Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected rule index
-                to its information (points, coverage, length, label).
-        Returns:
-            cost (float): The cost of the selected rules.
-        """
-        total_cost = 0.0
-        for rule, info in selected_rules_info.items():
-            r_points = info['points']
-            if self.method == "kmeans":
-                r_center = np.mean(self.data[list(r_points)], axis=0)
-                cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-            else:  # self.method == "kmedians"
-                r_center = np.median(self.data[list(r_points)], axis=0)
-                cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
-            total_cost += cluster_cost
-
-        length_penalty = sum(
-            self.alpha_val * info['length'] for rule, info in selected_rules_info.items()
-        )
-        return total_cost + length_penalty
-
-
-    def marginal_reward(
-        self,
-        rule_info: dict[str, any],
-        total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
-    ) -> float:
-        """
-        Computes the marginal reward as new coverage from selected rule.
-
-        Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
-        Returns:
-            coverage (float): The coverage of the selected rules.
-        """
-        r_points = rule_info['points']
-        new_points = r_points.difference(total_coverage)
-        return len(new_points)
-
-
-    def marginal_cost(
-        self,
-        rule_info: dict[str, any],
-        total_coverage : set[int],
-        cluster_coverage: dict[int, set[int]]
-    ) -> float:
-        """
-        Computes the marginal cost as the number of mistakes made by the selected rule.
-
-        Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
-        Returns:
-            cost (float): The cost of the selected rules.
-        """
-        r_points = rule_info['points']
-        if self.method == "kmeans":
-            r_center = np.mean(self.data[list(r_points)], axis=0)
-            cluster_cost = np.sum((self.data[list(r_points)] - r_center)**2)
-        else:  # self.method == "kmedians"
-            r_center = np.median(self.data[list(r_points)], axis=0)
-            cluster_cost = np.sum(np.abs(self.data[list(r_points)] - r_center))
+        cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
         return cluster_cost + self.alpha_val * rule_info['length']
 
 

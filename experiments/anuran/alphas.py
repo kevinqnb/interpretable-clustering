@@ -21,7 +21,8 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 fixed_parameters = {
@@ -29,11 +30,11 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'n_select': 6,
-    'min_support': 0.05,
+    'min_support': 0.05, 
     'min_confidence': 0.85,
     'max_rule_length': 4,
     'depth_factor': 0.03,
-    'alpha_mistakes': 0.01 * n * 1.0,
+    'lambdas': {}
 }
 
 np.random.seed(seed)
@@ -45,10 +46,7 @@ kmeans_labels = kmeans_base.labels
 
 # Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-closest_distances = np.min(kmeans_distances, axis=1)
-average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * average_distance
-
+furthest_distance = np.max(np.max(kmeans_distances, axis=1))
 
 ####################################################################################################
 # Rule Mining:
@@ -59,6 +57,7 @@ decision_tree_rule_miner = TreeMiner(
 decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+
 
 exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
@@ -82,8 +81,10 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
     X = data, y = kmeans_labels
 )
 
+
 forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
+
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
@@ -98,104 +99,51 @@ class_association_rules, class_association_rule_labels = class_association_rule_
     X = data, y = kmeans_base.labels
 )
 
+
 ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
-ensemble_rules, ensemble_rule_labels = cartesian_product_labels(ensemble_rules, kmeans_labels)
 
 rule_miner_dict = {
-    'ensemble': (None, ensemble_rules, ensemble_rule_labels),
+    'ensemble' : (None, ensemble_rules, None),
 }
-
-
-####################################################################################################
-# Find lambda values to test for each objective and rule miner combination:
-
-lambda_dict = {}
-for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-    objective1 = CoverageMistakeObjective(
-        n_select = fixed_parameters['n_select'],
-        alpha_val = fixed_parameters['alpha_mistakes']
-    )
-    objective1.set_data(data, kmeans_base.labels)
-    objective1.set_rules(rules, rule_labels)
-    lambda_vals1 = objective1.compute_lambdas()
-    indices = np.linspace(0, len(lambda_vals1) - 1, num = min(len(lambda_vals1), 100), dtype=int)
-    lambda_vals1 = lambda_vals1[indices]
-    module_name1 = f'dscluster; coverage-mistake; {rule_miner_name}'
-    lambda_dict[module_name1] = lambda_vals1
-
-    objective2 = TotalCoverageMistakeObjective(
-        n_select = fixed_parameters['n_select'],
-        alpha_val = fixed_parameters['alpha_mistakes']
-    )
-    objective2.set_data(data, kmeans_base.labels)
-    objective2.set_rules(rules, rule_labels)
-    lambda_vals2 = objective2.compute_lambdas()
-    indices = np.linspace(0, len(lambda_vals2) - 1, num = min(len(lambda_vals2), 100), dtype=int)
-    lambda_vals2 = lambda_vals2[indices]
-    module_name2 = f'dscluster; total-coverage-mistake; {rule_miner_name}'
-    lambda_dict[module_name2] = lambda_vals2
-
-    objective3 = CoverageCostObjective(
-        n_select = fixed_parameters['n_select'],
-        alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
-        cluster_centers = kmeans_base.centers,
-        cluster_cost_method = "kmeans"
-    )
-    objective3.set_data(data, kmeans_base.labels)
-    objective3.set_rules(rules, rule_labels)
-    lambda_vals3 = objective3.compute_lambdas()
-    indices = np.linspace(0, len(lambda_vals3) - 1, num = min(len(lambda_vals3), 100), dtype=int)
-    lambda_vals3 = lambda_vals3[indices]
-    module_name3 = f'dscluster; coverage-cost; {rule_miner_name}'
-    lambda_dict[module_name3] = lambda_vals3
-
-
-    objective4 = TotalCoverageCostObjective(
-        n_select = fixed_parameters['n_select'],
-        alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
-        cluster_centers = kmeans_base.centers,
-        cluster_cost_method = "kmeans"
-    )
-    objective4.set_data(data, kmeans_base.labels)
-    objective4.set_rules(rules, rule_labels)
-    lambda_vals4 = objective4.compute_lambdas()
-    indices = np.linspace(0, len(lambda_vals4) - 1, num = min(len(lambda_vals4), 100), dtype=int)
-    lambda_vals4 = lambda_vals4[indices]
-    module_name4 = f'dscluster; total-coverage-cost; {rule_miner_name}'
-    lambda_dict[module_name4] = lambda_vals4
 
 
 ####################################################################################################
 # Define Objectives:
 
+
 objective_dict = {
     'coverage-mistake': {
         'n_select': fixed_parameters['n_select'],
-        'alpha_val': fixed_parameters['alpha_mistakes'],
         'objective_type': 'coverage-mistake'
     },
     'total-coverage-mistake': {
         'n_select': fixed_parameters['n_select'],
-        'alpha_val': fixed_parameters['alpha_mistakes'],
         'objective_type': 'total-coverage-mistake'
     },
     'coverage-cost': {
         'n_select': fixed_parameters['n_select'],
-        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans'
     },
     'total-coverage-cost': {
         'n_select': fixed_parameters['n_select'],
-        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans'
     }
+}
+
+
+# List of alpha values to try for each objective
+objective_alpha_dict = {
+    'coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 100),
+    'total-coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 100),
+    'coverage-cost': np.linspace(0.0, furthest_distance * n, num = 100),
+    'total-coverage-cost': np.linspace(0.0, furthest_distance * n, num = 100),
 }
 
 
@@ -206,19 +154,30 @@ module_list = []
 for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
     for obj_name, obj_params in objective_dict.items():
         module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        lambda_vals = lambda_dict[module_name]
-        # Decision Set Clustering Parameters:
-        dsclust_params = {
-            (l,) : {'lambda_val' : l} | obj_params
-            for i,l in enumerate(lambda_vals)
-        }
+        if module_name not in fixed_parameters['lambdas']:
+            fixed_parameters['lambdas'][module_name] = {}
+        alpha_vals = objective_alpha_dict[obj_name]
+        for alpha in alpha_vals:
+            dsclust = DSCluster(
+                rules = rules,
+                alpha_val = alpha,
+                **obj_params
+            )
+            dsclust.fit(data, kmeans_labels)
+            lambda_val = dsclust.objective.lambda_val
+            fixed_parameters['lambdas'][f'dscluster; {obj_name}; {rule_miner_name}'][alpha] = lambda_val
 
-        dsclust_mod = DecisionSetMod(
-            model = DSCluster,
-            rules = rules,
-            name = module_name
-        )
-        module_list.append((dsclust_mod, dsclust_params))
+            obj_parameterized = {
+                (alpha_val,): obj_params | {'alpha_val': alpha_val, 'lambda_val': lambda_val}
+                for alpha_val in objective_alpha_dict[obj_name]
+            }
+
+            module = DecisionSetMod(
+                model = DSCluster,
+                rules = rules,
+                name = f'dscluster; {obj_name}; {rule_miner_name}'
+            )
+            module_list.append((module, obj_parameterized))
 
 
 ####################################################################################################
@@ -247,7 +206,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/lambdas/', '')
+exp.save_results('data/experiments/anuran/alphas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

@@ -1,4 +1,4 @@
-from .conditions import (
+from .rules import (
     Condition,
     LinearCondition
 )
@@ -11,6 +11,7 @@ from .measurements import (
     center_dists,
     kmeans_cost,
     distance_ratio,
+    distance_ratio_score,
     silhouette_score,
     mutual_reachability_distance,
     density_distance,
@@ -57,7 +58,9 @@ from .utils import (
     interval_to_condition,
     oned_cluster,
     decision_set_to_cars,
-    cars_to_decision_set
+    cars_to_decision_set,
+    filter_rules,
+    cartesian_product_labels,
 )
 
 
