@@ -1,4 +1,6 @@
 import os
+import json
+import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
@@ -11,7 +13,7 @@ from intercluster.experiments import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 1
+experiment_cpu_count = 8
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -22,319 +24,299 @@ seed = 342
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_digits()
-data_labels = labels_format(data_labels)
-data = data
-data_labels = data_labels
+#euclidean_distances = pairwise_distances(data)
 n,d = data.shape
-n_unique_labels = len(unique_labels(data_labels))
 
-# Parameters:
-lambda_val = 5.0
-max_rules = 20
-n_samples = 10
+##### Parameters #####
+#lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha_zero.json'
+#with open(lambdas_fname, 'r') as f:
+#    selected_lambdas = json.load(f)
 
-# KMeans:
-kmeans_n_clusters = n_unique_labels
-kmeans_n_rules_list = list(np.arange(kmeans_n_clusters, max_rules + 1))
+fixed_parameters = {
+    'n' : n,
+    'd' : d,
+    'n_clusters': 10,
+    'max_rules': 20,
+    'min_support': 0.05,
+    'min_confidence': 0.85,
+    'max_rule_length': 4,
+    'depth_factor': 0.03,
+    'ids_samples': 1,
+    'forest_samples': 10,
+    'alpha_mistakes': 0.01 * n * 1.0,
+    'lambdas' : {},
+}
 
-# DBSCAN
-n_core = 20
-# Use only if there is some ground truth labeling of the data:
-true_assignment = labels_to_assignment(data_labels, n_unique_labels)
-density_distances = density_distance(data, n_core = n_core)
-euclidean_distances = pairwise_distances(data)
-#epsilon = min_inter_cluster_distance(density_distances, true_assignment) - 0.01
-epsilon = 1.5
+n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
 
-# Shallow Tree
-depth_factor = 0.03
-
-# Association Rule Mining:
-association_n_mine = 10000
-
-# Pointwise Rule Mining:
-pointwise_samples_per_point = 10
-pointwise_prob_dim = 1/2
-pointwise_prob_stop = 8/10
-
-# IDS:
-ids_lambdas = [
-    1/association_n_mine,
-    1/(2 * data.shape[1] * association_n_mine),
-    1/(len(data) * (association_n_mine**2)),
-    1/(len(data) * (association_n_mine**2)),
-    0,
-    1/(data.shape[0] * association_n_mine),
-    1/(data.shape[0])
-]
-
-
-####################################################################################################
-
-# Experiment 1: KMeans reference clustering:
 np.random.seed(seed)
 
 # Baseline KMeans
-kmeans_base = KMeansBase(n_clusters = kmeans_n_clusters, random_seed = seed)
+kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = seed)
 kmeans_assignment = kmeans_base.assign(data)
+kmeans_labels = kmeans_base.labels
+
+# Find average distance of points to their closest cluster center
+kmeans_distances = pairwise_distances(data, kmeans_base.centers)
+max_distances = np.max(kmeans_distances, axis=1)
+max_distance = np.max(max_distances)
+fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * max_distance
+
+####################################################################################################
+# Rule Mining:
+
+decision_tree_rule_miner = TreeMiner(
+    tree = DecisionTree(random_state = seed),
+)
+decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+
+exkmc_rule_miner = TreeMiner(
+    tree = ExkmcTree(
+        k = fixed_parameters['n_clusters'],
+        kmeans = kmeans_base.clustering,
+        imm = True
+    )
+)
+exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
+    X = data.copy(), y = kmeans_base.labels
+)
+
+
+shallow_tree_miner = TreeMiner(
+    tree = ShallowTree(
+        n_clusters = fixed_parameters['n_clusters'],
+        depth_factor = fixed_parameters['depth_factor'],
+        kmeans_random_state = seed
+    )
+)
+shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
+    X = data, y = kmeans_labels
+)
+
+forest_rules_list = []
+for _ in range(fixed_parameters['forest_samples']):
+    forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': np.random.randint(0, 10000)})
+    frules, _ = forest_rule_miner.fit(data, kmeans_base.labels)
+    forest_rules_list.append(frules)
+
+
+class_association_rule_miner = ClassAssociationRuleMiner(
+    min_support = fixed_parameters['min_support'],
+    min_confidence = fixed_parameters['min_confidence'],
+    max_length = fixed_parameters['max_rule_length'],
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': seed,
+    }
+)
+class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+rule_miner_dict = {}
+
+for i in range(fixed_parameters['forest_samples']):
+    forest_rules = forest_rules_list[i]
+    ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+    ensemble_rules = filter_rules(
+        ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
+    )
+    rule_miner_dict[f'ensemble_{i}'] = (None, ensemble_rules, None)
+
+
+####################################################################################################
+# Comparison Modules:
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in kmeans_n_rules_list}
+decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : seed}
+                        for i in n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
-# Removal Tree
-rem_tree_params = {tuple(kmeans_n_rules_list) : {'num_clusters' : kmeans_n_clusters}}
-rem_tree_mod = DecisionTreeMod(
-    model = RemovalTree,
+
+# Explanation Tree
+exp_tree_params = {tuple(n_rules_list) : {'num_clusters' : fixed_parameters['n_clusters']}}
+exp_tree_mod = DecisionTreeMod(
+    model = ExplanationTree,
     name = 'Exp-Tree'
 )
+
 
 # ExKMC
 exkmc_params = {
     (i,) : {
-        'k' : kmeans_n_clusters,
+        'k' : fixed_parameters['n_clusters'],
         'kmeans': kmeans_base.clustering,
         'max_leaf_nodes': i
-    } for i in kmeans_n_rules_list
+    } for i in n_rules_list
 }
 exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
     name = 'ExKMC'
 )
 
+
 # Shallow Tree
 shallow_tree_params = {
-    tuple(kmeans_n_rules_list) : {
-        'n_clusters' : kmeans_n_clusters,
-        'depth_factor' : depth_factor,
+    tuple(n_rules_list) : {
+        'n_clusters' : fixed_parameters['n_clusters'],
+        'depth_factor' : fixed_parameters['depth_factor'],
         'kmeans_random_state' : seed
-    } for i in kmeans_n_rules_list
+    } for i in n_rules_list
 }
 shallow_tree_mod = DecisionTreeMod(
     model = ShallowTree,
     name = 'Shallow-Tree'
 )
 
-# IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-ids_params = {
-    tuple(kmeans_n_rules_list) : {
-        'lambdas' : ids_lambdas,
-        'rule_miner' : association_rule_miner_ids,
+
+# IDS:
+'''
+rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
+ids_lambdas = [
+    1/rule_comb,
+    1/(2 * data.shape[1] * rule_comb),
+    1/(len(data) * (rule_comb**2)),
+    1/(len(data) * (rule_comb**2)),
+    1/fixed_parameters['n_clusters'],
+    1/(data.shape[0] * rule_comb),
+    1/(data.shape[0])
+]
+
+ids_module_list = []
+for s in range(fixed_parameters['ids_samples']):
+    ids_params = {
+        tuple(n_rules_list) : {
+            'lambdas' : ids_lambdas
+        }
+    }
+    ids_mod = DecisionSetMod(
+        model = IDS,
+        fitting_params = {'bin_df': class_association_rule_miner.bin_df},
+        rules = class_association_rules,
+        name = f"IDS_{s}"
+    )
+    ids_module_list.append((ids_mod, ids_params))
+'''
+
+####################################################################################################
+# Objectives for Decision Set Clustering:
+
+objective_dict = {
+    'coverage-mistake': {
+        'alpha_val': fixed_parameters['alpha_mistakes'],
+        'objective_type': 'coverage-mistake'
+    },
+    'total-coverage-mistake': {
+        'alpha_val': fixed_parameters['alpha_mistakes'],
+        'objective_type': 'total-coverage-mistake'
+    },
+    'coverage-cost': {
+        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'total-coverage-cost': {
+        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'total-coverage-cost',
+        'cluster_cost_method': 'kmeans'
     }
 }
 
-ids_mod = DecisionSetMod(
-    model = IdsSet,
-    rule_miner = association_rule_miner_ids,
-    name = 'IDS'
-)
+
+####################################################################################################
+# Find max lambda values among all rule miners
+
+for obj_name, obj_params in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    max_lambda = 0.0
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        dsclust = DSCluster(
+            rules = rules,
+            n_select = n_rules_list[0],
+            **obj_params
+        )
+        dsclust.fit(data, kmeans_labels)
+        lambda_val = dsclust.objective.lambda_val
+        if lambda_val > max_lambda:
+            max_lambda = lambda_val
+    
+    print(f'Found max lambda for {obj_mod_name}: {max_lambda}')
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = obj_mod_name + f'; {rule_miner_name}'
+        fixed_parameters['lambdas'][module_name] = max_lambda
 
 
-# Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-dsclust_params1 = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-        'rule_miner' : association_rule_miner_dscluster,
-    }
-    for i in kmeans_n_rules_list
-}
-dsclust_mod1 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = association_rule_miner_dscluster,
-    name = 'DSCluster-Association-Rules'
-)
+####################################################################################################
+# Decision Set Clustering Modules:
 
-# Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop,
-)
-dsclust_params2 = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-        'rule_miner' : pointwise_rule_miner,
-    }
-    for i in kmeans_n_rules_list
-}
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise-Rules'
-)
+dscluster_module_list = []
+for obj_name, obj_params in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = obj_mod_name + f'; {rule_miner_name}'
+        lambda_val = fixed_parameters['lambdas'][module_name]
+
+        # Decision Set Clustering Parameters:
+        dsclust_params = {
+            (r,) : {'n_select' : r, 'lambda_val' : lambda_val} | obj_params
+            for i,r in enumerate(n_rules_list)
+        }
+
+        dsclust_mod = DecisionSetMod(
+            model = DSCluster,
+            rules = rules,
+            name = module_name
+        )
+        dscluster_module_list.append((dsclust_mod, dsclust_params))
+
+
+####################################################################################################
+
 
 baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
+    (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    #(ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
-]
+] + dscluster_module_list #+ ids_module_list
 
-coverage_mistake_measure = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = kmeans_assignment,
-    name = 'coverage-mistake-score'
-)
-
-silhouette_measure = Silhouette(
-    distances = euclidean_distances,
-    name = 'silhouette-score'
-)
 
 measurement_fns = [
-    coverage_mistake_measure,
-    silhouette_measure,
+    TotalCoverage(),
+    ClusterCoverage(baseline_assignment = kmeans_assignment),
+    Mistakes(baseline_assignment = kmeans_assignment),
+    ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
+    RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
+    PairwiseDistance(baseline_assignment = kmeans_assignment),
+    RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
 
-exp1 = MaxRulesExperiment(
+exp = Experiment(
     data = data,
-    n_rules_list = kmeans_n_rules_list,
-    baseline = baseline,
+    baseline = kmeans_base,
     module_list = module_list,
-    measurement_fns = measurement_fns,
-    n_samples = n_samples,
-    cpu_count = experiment_cpu_count
+    measurement_fns= measurement_fns,
+    fixed_parameters = fixed_parameters,
+    cpu_count = experiment_cpu_count,
+    verbose = True
 )
 
 import time 
 start = time.time()
-exp1_results = exp1.run()
-exp1.save_results('data/experiments/digits/max_rules/', '_kmeans')
+exp_results = exp.run()
+exp.save_results('data/experiments/digits/max_rules/', '')
 end = time.time()
-print("Experiment 1 time:", end - start)
+print("Experiment time:", end - start)
 
-####################################################################################################
-
-# Experiment 2: DBSCAN reference clustering:
-np.random.seed(seed)
-
-# Baseline DBSCAN
-dbscan_base = DBSCANBase(eps=epsilon, n_core=n_core)
-dbscan_assignment = dbscan_base.assign(data)
-dbscan_n_clusters = len(unique_labels(dbscan_base.labels))
-dbscan_n_rules_list = list(np.arange(dbscan_n_clusters, max_rules + 1))
-
-if dbscan_n_clusters < 2:
-    raise ValueError("DBSCAN found less than 2 clusters. Try changing n_core or epsilon.")
-
-# Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i} for i in dbscan_n_rules_list}
-decision_tree_mod = DecisionTreeMod(
-    model = DecisionTree,
-    name = 'Decision-Tree'
-)
-
-# Removal Tree
-rem_tree_params = {tuple(dbscan_n_rules_list) : {'num_clusters' : dbscan_n_clusters}}
-rem_tree_mod = DecisionTreeMod(
-    model = RemovalTree,
-    name = 'Exp-Tree'
-)
-
-
-# IDS
-association_rule_miner_ids = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-ids_params = {
-    tuple(dbscan_n_rules_list) : {
-        'lambdas' : ids_lambdas,
-        'rule_miner' : association_rule_miner_ids,
-    }
-}
-ids_mod = DecisionSetMod(
-    model = IdsSet,
-    rule_miner = association_rule_miner_ids,
-    name = 'IDS'
-)
-
-
-# Decision Set Clustering (1) -- Entropy Association Rules (same as IDS)
-association_rule_miner_dscluster = AssociationRuleMiner(max_rules = association_n_mine, bin_type = 'mdlp')
-dsclust_params1 = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-        'rule_miner' : association_rule_miner_dscluster,
-    }
-    for i in dbscan_n_rules_list
-}
-dsclust_mod1 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = association_rule_miner_dscluster,
-    name = 'DSCluster-Association-Rules'
-)
-
-# Decision Set Clustering (2) -- Pointwise Rules
-pointwise_rule_miner = PointwiseMinerV2(
-    samples = pointwise_samples_per_point,
-    prob_dim = pointwise_prob_dim,
-    prob_stop = pointwise_prob_stop,
-)
-dsclust_params2 = {
-    (i,) : {
-        'lambd' : lambda_val,
-        'n_rules' : i,
-        'rule_miner' : pointwise_rule_miner,
-    }
-    for i in dbscan_n_rules_list
-}
-dsclust_mod2 = DecisionSetMod(
-    model = DSCluster,
-    rule_miner = pointwise_rule_miner,
-    name = 'DSCluster-Pointwise-Rules'
-)
-
-baseline = dbscan_base
-module_list = [
-    (decision_tree_mod, decision_tree_params),
-    (rem_tree_mod, rem_tree_params),
-    #(ids_mod, ids_params),
-    (dsclust_mod1, dsclust_params1),
-    (dsclust_mod2, dsclust_params2)
-]
-
-coverage_mistake_measure = CoverageMistakeScore(
-    lambda_val = lambda_val,
-    ground_truth_assignment = dbscan_assignment,
-    name = 'coverage-mistake-score'
-)
-
-silhouette_measure = Silhouette(
-    distances = density_distances,
-    name = 'silhouette-score'
-)
-
-measurement_fns = [
-    coverage_mistake_measure,
-    silhouette_measure
-]
-
-exp2 = MaxRulesExperiment(
-    data = data,
-    n_rules_list = dbscan_n_rules_list,
-    baseline = baseline,
-    module_list = module_list,
-    measurement_fns = measurement_fns,
-    n_samples = n_samples,
-    cpu_count = experiment_cpu_count
-)
-
-import time 
-start = time.time()
-exp2_results = exp2.run()
-exp2.save_results('data/experiments/digits/max_rules/', '_dbscan')
-end = time.time()
-print("Experiment 2 time:", end - start)
 
 ####################################################################################################
 

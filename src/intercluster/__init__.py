@@ -1,5 +1,7 @@
 from .rules import (
     Condition,
+    Rule,
+    Decision,
     LinearCondition
 )
 
@@ -49,7 +51,7 @@ from .utils import (
     get_decision_paths_with_labels,
     get_depth,
     satisfies_path,
-    satisfies_conditions,
+    satisfies_rule,
     entropy_bin,
     quantile_bin,
     uniform_bin,
@@ -61,6 +63,7 @@ from .utils import (
     cars_to_decision_set,
     filter_rules,
     cartesian_product_labels,
+    map_rules_to_decisions,
 )
 
 

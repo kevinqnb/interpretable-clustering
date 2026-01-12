@@ -5,6 +5,7 @@ from pyarc.algorithms.rule_generation import generateCARs
 from typing import List, Set, Tuple, Any
 from intercluster import (
     Condition,
+    Rule,
     entropy_bin,
     uniform_bin,
     quantile_bin,
@@ -52,7 +53,7 @@ class ClassAssociationRuleMiner(RuleMiner):
             ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
 
         Attributes:
-            decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+            decision_set (List[Rule]): The mined decision set.
             decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
             bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
         """
@@ -82,7 +83,7 @@ class ClassAssociationRuleMiner(RuleMiner):
             self,
             X : pd.DataFrame,
             y : List[Set[int]],
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
+        ) -> Tuple[List[Rule], List[Set[int]]]:
         """
         Fit the AssociationRuleMiner to the input dataset.
 
@@ -91,7 +92,7 @@ class ClassAssociationRuleMiner(RuleMiner):
             y (List[Set[int]], optional): Target labels. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): List of labels corresponding to each rule.
         """
         if not can_flatten(y):
@@ -141,14 +142,14 @@ class ClassAssociationRuleMiner(RuleMiner):
         for car in cars:
             con, ant, support, confidence = car
             consequent = int(con.split(':=:')[1])
-            rule = []
+            conditions = []
             for condition in ant:
                 feature, interval = condition.split(':=:')
                 feature = int(feature)
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
-                rule.append(lower_condition)
-                rule.append(upper_condition)
-            self.decision_set.append(rule)
+                conditions.append(lower_condition)
+                conditions.append(upper_condition)
+            self.decision_set.append(Rule(conditions))
             self.decision_set_labels.append({consequent})
 
         # remove rules covering outliers

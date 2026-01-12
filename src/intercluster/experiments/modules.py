@@ -103,6 +103,7 @@ class KMeansBase(Baseline):
         """
         if not self.fitted:
             self.clustering.fit(X)
+            self.clustering.cluster_centers_ = self.clustering.cluster_centers_.copy()
             self.labels = labels_format(self.clustering.labels_)
             self.assignment = labels_to_assignment(
                 self.labels,
@@ -495,34 +496,18 @@ class DecisionSetMod(Module):
             **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
         )
 
-        if self.fitting_params.get('objective', None).__class__.__name__ != 'TotalCoverageRuleCostObjective':
-            self.dset.fit(X, y)
-            dset_labels = self.dset.predict(X)
-            dset_rule_labels = self.dset.decision_set_labels
-            n_unique = len(unique_labels(y, ignore = {-1}))
-
-        else:
-            self.dset.fit(X, None)
-            dset_labels = self.dset.predict(X)
-
-            labels_dict = {-1:-1}
-            new_dset_labels = []
-            for l in dset_labels:
-                lint = list(l)[0]
-                if lint not in labels_dict:
-                    labels_dict[lint] = len(labels_dict.keys()) - 1
-                new_dset_labels.append({labels_dict[lint]})
-            dset_labels = new_dset_labels
-
-            dset_rule_labels = [{labels_dict[list(l)[0]]} for l in self.dset.decision_set_labels]
-            n_unique = len(unique_labels(y, ignore = {-1}))
+        self.dset.fit(X, y)
+        dset_labels = self.dset.predict(X)
+        #dset_rule_labels = self.dset.decision_set_labels
+        n_unique = len(unique_labels(y, ignore = {-1}))
 
 
         # This should ignore any rules which are assigned to the outlier class 
-        dset_rule_assignment = labels_to_assignment(
-            dset_rule_labels, n_labels = n_unique, ignore = {-1}
-        )
+        #dset_rule_assignment = labels_to_assignment(
+        #    dset_rule_labels, n_labels = n_unique, ignore = {-1}
+        #)
         dset_data_to_rule_assignment = self.dset.get_data_to_rules_assignment(X)
+        dset_rule_to_cluster_assignment = self.dset.get_rules_to_clusters_assignment(n_labels = n_unique, ignore = {-1})
         dset_data_to_cluster_assignment = labels_to_assignment(
             dset_labels, n_labels = n_unique, ignore = {-1}
         )
@@ -534,7 +519,7 @@ class DecisionSetMod(Module):
 
         return (
             dset_data_to_rule_assignment,
-            dset_rule_assignment,
+            dset_rule_to_cluster_assignment,
             dset_data_to_cluster_assignment
         )
     

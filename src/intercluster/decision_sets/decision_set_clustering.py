@@ -4,7 +4,9 @@ from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
-    satisfies_conditions,
+    Rule,
+    Decision,
+    satisfies_rule,
     labels_to_assignment,
     unique_labels,
 )
@@ -25,7 +27,7 @@ class DSCluster(DecisionSet):
     """
     def __init__(
         self,
-        rules : List[List[Condition]],
+        rules : List[Rule],
         n_select : int,
         alpha_val : float = 0.0,
         lambda_val : float = None,
@@ -129,7 +131,7 @@ class DSCluster(DecisionSet):
             self,
             X : NDArray,
             y : List[Set[int]]
-        ) -> List[List[Condition]]:
+        ) -> set[Decision]:
         """
         selects the decision set by removing rules that do not cover any points in the dataset.
 
@@ -137,17 +139,14 @@ class DSCluster(DecisionSet):
             X (np.ndarray): Input dataset.
             y (List[Set[int]]): Target labels.
         """
-        if self.decision_set is None or self.decision_set_labels is None:
-            raise ValueError('Rules or rule labels have not been provided yet.')
+        if self.decision_set is None:
+            raise ValueError('Decision set has not been initialized yet.')
         
-        self.objective.set_data(X, y)
-        self.objective.set_rules(self.decision_set, self.decision_set_labels)
+        self.objective.initialize_data(X, y)
+        self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
-        selected_rules = self.objective.select()
-
-        selected_set = [self.decision_set[i] for i in selected_rules]
-        selected_set_labels = [self.decision_set_labels[i] for i in selected_rules]
-        return selected_set, selected_set_labels
+        selected_decision_set = self.objective.select()
+        return selected_decision_set
 
 
 ####################################################################################################

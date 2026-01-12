@@ -70,7 +70,7 @@ def load_preprocessed_anuran(filepath):
     data_filepath = os.path.join(filepath, 'Frogs_MFCCs.csv')
     anuran = pd.read_csv(data_filepath)
     anuran = anuran.iloc[:, :-4]
-    anuran = anuran.to_numpy()
+    anuran = anuran.to_numpy(copy = True)
 
     scaler = StandardScaler()
 

@@ -7,6 +7,7 @@ from intercluster import (
     quantile_bin,
     oned_cluster_bin,
     interval_to_condition,
+    Rule
 )
 
 from .rule_miner import RuleMiner
@@ -30,8 +31,7 @@ class FrequentItemsetMiner(RuleMiner):
             uniform binning parameters.
 
     Attrs:
-        decision_set (List[List[Condition]]): The mined decision set,
-            where each rule is a list of conditions.
+        decision_set (List[Rule]): The mined decision set.
         bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
     """
     def __init__(
@@ -62,7 +62,7 @@ class FrequentItemsetMiner(RuleMiner):
             self,
             X : NDArray,
             y : List[Set[int]] = None
-    ):
+    ) -> tuple[list[Rule], list[set[int]]]:
         """
         Fit the FrequentItemsetMiner to the input dataset.
 
@@ -71,7 +71,7 @@ class FrequentItemsetMiner(RuleMiner):
             y (List[Set[int]], optional): Dummy parameter for compatibility. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
         if self.binning_method == "quantile":
@@ -102,14 +102,14 @@ class FrequentItemsetMiner(RuleMiner):
         self.decision_set = []
         for itemset in frequent_itemsets:
             antecedent, support = itemset
-            rule = []
+            conditions = []
             for condition in antecedent:
                 feature, interval = condition.split(':=:')
                 feature = int(feature)
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
-                rule.append(lower_condition)
-                rule.append(upper_condition)
-            self.decision_set.append(rule)
+                conditions.append(lower_condition)
+                conditions.append(upper_condition)
+            self.decision_set.append(Rule(conditions))
 
         return self.decision_set, None
     

@@ -24,7 +24,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
@@ -36,11 +36,11 @@ n,d = data.shape
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'n_select': 6,
-    'max_rules': 12,
-    'min_support': 0.05,
-    'min_confidence': 0.85,
+    'n_clusters': 10,
+    'n_select': 10,
+    'max_rules': 20,
+    'min_support': 0.1,
+    'min_confidence': 0.9,
     'max_rule_length': 4,
     'depth_factor': 0.03,
     'alpha_mistakes': 0.0,
@@ -82,6 +82,7 @@ exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
         k = fixed_parameters['n_clusters'],
         kmeans = kmeans_base.clustering,
+        max_leaf_nodes = fixed_parameters['max_rules'],
         imm = True
     )
 )
@@ -202,7 +203,7 @@ experiment_results = {
     'modules': module_results
 }   
 
-results_fname = 'data/experiments/climate/outliers/exp.json'
+results_fname = 'data/experiments/mnist/outliers/exp.json'
 with open(results_fname, 'w') as f:
     json.dump(experiment_results, f)
 

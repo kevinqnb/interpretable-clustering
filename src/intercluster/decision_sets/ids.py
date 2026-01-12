@@ -4,6 +4,8 @@ from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
+    Rule,
+    Decision,
     interval_to_condition,
     decision_set_to_cars,
     flatten_labels
@@ -66,7 +68,7 @@ class IDS(DecisionSet):
     """
     def __init__(
         self,
-        rules : List[List[Condition]] = None,
+        rules : List[Rule] = None,
         bin_df : pd.DataFrame = None,
         lambdas : list[float] = None,
         lambda_search_dict : dict[str, tuple[float, float]] = None,
@@ -117,7 +119,7 @@ class IDS(DecisionSet):
         self.ids_cacher = ids_cacher
 
     
-    def ids_to_decision_set(self, cars : List[IDSRule]) -> List[List[Condition]]:
+    def ids_to_decision_set(self, cars : List[IDSRule]) -> List[Rule]:
         """
         Convert a list of rules found with PyIDS to a list of Conditions.
         Args:
@@ -126,7 +128,6 @@ class IDS(DecisionSet):
             list: A list of Rule objects.
         """
         decision_set = []
-        decision_set_labels = []
         for car in cars:
             car_dict = car.to_dict()
             car_interval_dict = car_dict['antecedent']
@@ -139,9 +140,10 @@ class IDS(DecisionSet):
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
                 rule_conditions.append(lower_condition)
                 rule_conditions.append(upper_condition)
-            decision_set.append(rule_conditions)
-            decision_set_labels.append({int(car_dict['consequent']['value'])})
-        return decision_set, decision_set_labels
+            rule = Rule(rule_conditions)
+            label = int(car_dict['consequent']['value'])
+            decision_set.append(Decision(rule, label))
+        return decision_set
 
 
     def select(self, X : NDArray, y : List[Set[int]] = None):
@@ -161,8 +163,7 @@ class IDS(DecisionSet):
         
         cars = decision_set_to_cars(
             X, y,
-            self.decision_set,
-            self.decision_set_labels
+            self.decision_set
         )
         valid_cars = [car for i,car in enumerate(cars) if int(cars[i].consequent[1]) != -1]
         if len(valid_cars) == 0:

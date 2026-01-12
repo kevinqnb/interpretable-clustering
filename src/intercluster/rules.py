@@ -2,14 +2,16 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from numpy.typing import NDArray
 from typing import Callable, List
+from dataclasses import dataclass
+
+
+####################################################################################################
 
 
 class Condition():
     """
     Base class for a rule-based condition
     """
-    def __init__(self):
-        pass
     
     def evaluate(self, X : NDArray) -> NDArray:
         """
@@ -23,10 +25,159 @@ class Condition():
             (np.ndarray): Length n boolean array with entry i being `True` if point i satisfies
                 the condition, and `False` otherwise.
         """
-        pass
+        raise NotImplementedError("Subclasses must implement evaluate method")
+
+
+####################################################################################################
+
+
+@dataclass(frozen=True)
+class Rule():
+    """
+    Object for a rule, which is a conjunction of conditions.
+    
+    Args:
+        conditions (List[Condition]): List of conditions that make up the rule.
+    """
+    conditions: List[Condition]
+    
+    def __post_init__(self):
+        """
+        Converts conditions to tuple and caches hash for efficient operations.
+        """
+        # Convert list to tuple for immutability and efficient hashing
+        object.__setattr__(self, 'conditions', tuple(self.conditions))
         
+        # Cache hash value
+        object.__setattr__(self, '_hash', hash(self.conditions))
+        
+        
+    def evaluate(self, X : NDArray) -> NDArray:
+        """
+        Evaluates the rule upon a given subset of data.
+        
+        Args:
+            X (np.ndarray): Size n x d dataset for evaluation. May be either a single 
+                data point or a 2d array.
+                
+        Returns:
+            (np.ndarray): Length n boolean array with entry i being `True` if point i satisfies
+                the rule, and `False` otherwise.
+        """        
+        if len(self.conditions) == 0:
+            return np.array([True]*X.shape[0])
+        
+        evals = self.conditions[0].evaluate(X)
+        for cond in self.conditions[1:]:
+            evals = np.logical_and(evals, cond.evaluate(X))
+            
+        return evals
+    
+    def __len__(self):
+        """
+        Returns the number of conditions in the rule.
+        
+        Returns:
+            (int): Number of conditions in the rule.
+        """
+        return len(self.conditions)
+    
+    def __hash__(self):
+        """
+        Returns a hash value for the rule based on its conditions.
+        Uses cached hash value computed during initialization.
+        
+        Returns:
+            (int): Hash value for the rule.
+        """
+        return self._hash
+    
+    def __eq__(self, other):
+        """
+        Checks equality between two rules.
+        
+        Args:
+            other (Rule): Another rule to compare with.
+            
+        Returns:
+            (bool): True if the rules have the same conditions, False otherwise.
+        """
+        if not isinstance(other, Rule):
+            return False
+        # Fast path: if same object, return True
+        if self is other:
+            return True
+        # Fast path: compare cached hashes first (if available)
+        if hasattr(self, '_hash') and hasattr(other, '_hash'):
+            if self._hash != other._hash:
+                return False
+            # Hashes match - very likely equal, but verify to handle rare collisions
+            # For identical objects this is nearly free since conditions is a tuple
+            return self.conditions == other.conditions
+        return self.conditions == other.conditions
 
 
+####################################################################################################
+
+
+@dataclass(frozen=True)
+class Decision():
+    """
+    Object for a decision, which is a rule along with its predicted class label.
+
+    Args:
+        rule (Rule): The rule associated with the decision.
+        
+        label (int): The predicted class label for the decision.
+    """
+    rule: Rule
+    label: int
+    
+    def __post_init__(self):
+        """
+        Caches hash for efficient dictionary/set operations.
+        """
+        object.__setattr__(self, '_hash', hash((self.rule, self.label)))
+    
+    def __hash__(self):
+        """
+        Returns a hash value for the decision based on its rule and label.
+        Uses cached hash value computed during initialization.
+        
+        Returns:
+            (int): Hash value for the decision.
+        """
+        return self._hash
+    
+    def __eq__(self, other):
+        """
+        Checks equality between two decisions.
+        
+        Args:
+            other (Decision): Another decision to compare with.
+            
+        Returns:
+            (bool): True if the decisions have the same rule and label, False otherwise.
+        """
+        if not isinstance(other, Decision):
+            return False
+        # Fast path: if same object, return True
+        if self is other:
+            return True
+        # Fast path: compare cached hashes first (if available)
+        if hasattr(self, '_hash') and hasattr(other, '_hash'):
+            if self._hash != other._hash:
+                return False
+            # Hashes match - check cheap comparison (label) first before expensive rule comparison
+            return self.label == other.label and self.rule == other.rule
+        # Fallback: check cheap comparison first
+        return self.label == other.label and self.rule == other.rule
+
+
+####################################################################################################
+
+
+@dataclass(frozen=True)
 class LinearCondition(Condition):
     """
     Object for a linear splitting condition, either axis aligned
@@ -43,29 +194,77 @@ class LinearCondition(Condition):
             Use -1 for less than or equal (<=) or 1 for greater (>). 
             Defaults to -1.
     """
-    def __init__(
-        self,
-        features : NDArray,
-        weights : NDArray,
-        threshold : float,
-        direction : int = -1,
-    ):
-        self.features = features
-        self.weights = weights
-        self.threshold = threshold
-        self.set_direction(direction)
-        
-        
-    def set_direction(self, direction : int):
+    features: NDArray
+    weights: NDArray
+    threshold: float
+    direction: int = -1
+    
+    def __post_init__(self):
         """
-        Sets the direction for the inequality.
-        
-        direction (int): Specifies the direction for the inequality. 
-            Use -1 for less than or equal (<=) or 1 for greater (>). 
+        Validates and converts features and weights to numpy arrays after initialization.
         """
-        if direction not in {1, -1}:
+        # Convert to numpy arrays if they aren't already
+        object.__setattr__(self, 'features', np.array(self.features))
+        object.__setattr__(self, 'weights', np.array(self.weights))
+        
+        # Validate direction
+        if self.direction not in {1, -1}:
             raise ValueError("Invalid inequality direction, must be -1 (<=) or 1 (>).")
-        self.direction = direction
+        
+        # Cache hash value for efficient dictionary/set operations
+        hash_val = hash((
+            tuple(self.features),  # No need for flatten() on 1D arrays
+            tuple(self.weights),
+            self.threshold,
+            self.direction
+        ))
+        object.__setattr__(self, '_hash', hash_val)
+        
+
+    def __hash__(self):
+        """
+        Returns a hash value for the condition based on its parameters.
+        Uses cached hash value computed during initialization.
+        
+        Returns:
+            (int): Hash value for the condition.
+        """
+        return self._hash
+    
+    def __eq__(self, other):
+        """
+        Checks equality between two linear conditions.
+        Custom equality needed because numpy arrays use element-wise comparison.
+        
+        Args:
+            other (LinearCondition): Another condition to compare with.
+            
+        Returns:
+            (bool): True if the conditions have the same parameters, False otherwise.
+        """
+        if not isinstance(other, LinearCondition):
+            return False
+        # Fast path: if same object, return True
+        if self is other:
+            return True
+        # Fast path: compare cached hashes first (if available)
+        if hasattr(self, '_hash') and hasattr(other, '_hash'):
+            if self._hash != other._hash:
+                return False
+            # Hashes match - check cheap comparisons first before expensive numpy array equality
+            if self.threshold != other.threshold or self.direction != other.direction:
+                return False
+            return (
+                np.array_equal(self.features, other.features) and
+                np.array_equal(self.weights, other.weights)
+            )
+        # Fallback: check cheap comparisons first, then expensive ones
+        if self.threshold != other.threshold or self.direction != other.direction:
+            return False
+        return (
+            np.array_equal(self.features, other.features) and
+            np.array_equal(self.weights, other.weights)
+        )
         
     
     def evaluate(self, X : NDArray) -> NDArray:
@@ -192,7 +391,5 @@ class LinearCondition(Condition):
 
         return condition_str
 
-        
 
-
-
+####################################################################################################

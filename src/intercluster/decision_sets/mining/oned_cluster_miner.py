@@ -4,6 +4,7 @@ from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
+    Rule,
     LinearCondition,
     oned_cluster,
 )
@@ -24,7 +25,7 @@ class ClusterMiner(RuleMiner):
             Defaults to "kmeans".
 
     Attrs:
-        decision_set (List[List[Condition]]): The mined decision set, 
+        decision_set (List[Rule]): The mined decision set, 
             where each rule is a list of conditions.
         bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
     """
@@ -49,7 +50,7 @@ class ClusterMiner(RuleMiner):
             self,
             X : NDArray,
             y : List[Set[int]] = None
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
+        ) -> Tuple[List[Rule], List[Set[int]]]:
         """
         Fit the rule mining algorithm to the input dataset.
 
@@ -58,7 +59,7 @@ class ClusterMiner(RuleMiner):
             y (List[Set[int]], optional): Dummy parameter for compatibility. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
         assert X.ndim == 2, "Input data X must be a 2D array."
@@ -82,7 +83,7 @@ class ClusterMiner(RuleMiner):
                     lower_bound = np.min(cluster_points)
                     upper_bound = np.max(cluster_points)
 
-                    rule = []
+                    conditions = []
                     condition1 = LinearCondition(
                         features=np.array([feature]),
                         weights=np.array([1.0]),
@@ -95,9 +96,9 @@ class ClusterMiner(RuleMiner):
                         threshold=upper_bound,
                         direction=-1
                     )
-                    rule.append(condition1)
-                    rule.append(condition2)
-                    self.decision_set.append(rule)
+                    conditions.append(condition1)
+                    conditions.append(condition2)
+                    self.decision_set.append(Rule(conditions))
                     mapping[cluster] = f"({lower_bound}, {upper_bound}]"
 
             bin_df.append([mapping[cluster] for cluster in cluster_labels])

@@ -5,8 +5,9 @@ from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
     Condition,
+    Rule,
     LinearCondition,
-    satisfies_conditions,
+    satisfies_rule,
 )
 from .rule_miner import RuleMiner
 
@@ -36,7 +37,7 @@ class ClusterBoxMiner(RuleMiner):
             lambd (float, optional): Parameter for exponential distribution.
 
         Attributes:
-            decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+            decision_set (List[Rule]): The mined decision set.
             decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
         """
         if not isinstance(samples, int) or samples <= 0:
@@ -52,7 +53,7 @@ class ClusterBoxMiner(RuleMiner):
             self,
             X : NDArray,
             y : List[Set[int]] = None,
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
+        ) -> Tuple[List[Rule], List[Set[int]]]:
         """
         Creates rules for the decision set by drawing boxes around dense sets of points 
         in randomly chosen dimensions. 
@@ -62,7 +63,7 @@ class ClusterBoxMiner(RuleMiner):
             y (List[Set[int]], optional): Dummy parameter for compatibility. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): List of labels corresponding to each rule.
         """
         n,d = X.shape
@@ -148,7 +149,7 @@ class ClusterBoxMiner(RuleMiner):
                 # Subtract 1 from the lower indices, since the lower bounds will be strict 
                 # greater-than indequalities (>)
                 lower_idx -= 1
-                rule = []
+                conditions = []
                 for j, f in enumerate(features):
                     feature_vec = X_sorted[:, f]
                     lower_bound = (
@@ -172,11 +173,11 @@ class ClusterBoxMiner(RuleMiner):
                         threshold=upper_bound,
                         direction=-1
                     )
-                    rule.append(condition1)
-                    rule.append(condition2)
+                    conditions.append(condition1)
+                    conditions.append(condition2)
 
 
-                decision_set.append(rule)
+                decision_set.append(Rule(conditions))
 
 
         self.decision_set = decision_set

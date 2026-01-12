@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.typing import NDArray
-from intercluster import Condition
+from intercluster import Condition, Rule, Decision
 from intercluster.utils import (
-    assignment_to_dict, labels_to_assignment, unique_labels, satisfies_conditions
+    assignment_to_dict, labels_to_assignment, unique_labels, satisfies_rule, map_rules_to_decisions
 )
 
 ####################################################################################################
@@ -21,14 +21,8 @@ class Objective:
 
     Attrs:
         name (str): Name of the objective.
-        X (NDArray): The data points.
-        y (list[set[int]]): The labels for each data point.
-        data_to_cluster_assignment (NDArray): The cluster assignment for each data point.
-        rules (list[list[Condition]]): The rules for the objective.
-        rule_labels (list[set[int]]): The labels for each rule.
-        data_to_rules_assignment (NDArray): The rule assignment for each data point.
-        rules_to_clusters_assignment (NDArray): The cluster assignment for each rule.
-        value (float): The value of the objective function for the selected rules.
+        data_initialized (bool): Whether the data has been initialized.
+        decision_set_initialized (bool): Whether the decision set has been initialized.
     """
     def __init__(
         self,
@@ -59,19 +53,19 @@ class Objective:
             assert len(weights.shape) == 1, 'weights must be a 1D array.'
         self.weights = weights
 
-        self.data_set = False
-        self.rules_set = False
+        self.data_initialized = False
+        self.decision_set_initialized = False
 
         self.X = None
         self.y = None
-        self.data_to_cluster_assignment = None
-        self.rules = None
-        self.rule_labels = None
-        self.data_to_rules_assignment = None
-        self.rule_to_cluster_assignment = None
+        self.label_set = None
+        self.n_labels = 0
+        self.cluster_coverage_dict = None
+        self.rule_to_decision_dict = None
+        self.decision_info_dict = None
 
 
-    def set_data(
+    def initialize_data(
         self, 
         X : NDArray,
         y : list[set[int]],
@@ -93,42 +87,55 @@ class Objective:
             
         self.X = X
         self.y = y
-        n_labels = len(unique_labels(y))
-        self.data_to_cluster_assignment = labels_to_assignment(
-            y, n_labels = n_labels, ignore = {-1}
+        self.label_set = unique_labels(y)
+        self.n_labels = len(self.label_set)
+        data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = self.n_labels, ignore = {-1}
         )
-        self.data_set = True
+        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
+        self.data_initialized = True
 
 
-    def set_rules(
+    def initialize_decision_set(
         self,
-        rules : list[list[Condition]],
-        rule_labels : list[set[int]],
+        decision_set : set[Decision],
     ):
         """
-        Sets the rules for the objective.
+        Sets the decisions for the objective to select from.
         """
-        if self.data_to_cluster_assignment is None:
-            raise ValueError('Data must be set before setting rules.')
-        self.rules = rules
-        self.rule_labels = rule_labels
-        n_labels = len(unique_labels(rule_labels))
-        if n_labels != self.data_to_cluster_assignment.shape[1]:
-            raise ValueError("Number of labels in rule_labels must match number of clusters "
-                             "seen in y.")
+        if self.data_initialized is False:
+            raise ValueError('Data must be initialized before decisions.')
 
-        self.data_to_rules_assignment = np.zeros((self.X.shape[0], len(rules)), dtype = bool)
-        for i, condition_list in enumerate(rules):
-            data_points_satisfied = satisfies_conditions(self.X, condition_list)
-            self.data_to_rules_assignment[data_points_satisfied, i] = True
+        assert isinstance(decision_set, set), 'decision_set must be a set.'
+        assert all(isinstance(decision, Decision) for decision in decision_set), \
+            'Each element of decision_set must be a Decision.'
+        
+        decision_labels = unique_labels([{d.label} for d in decision_set])
+        if not decision_labels.issubset(self.label_set):
+            raise ValueError(
+                'Decisions must cover the same labels as the input data.'
+            )
 
-        self.rule_to_cluster_assignment = labels_to_assignment(
-            rule_labels, n_labels = n_labels, ignore = {-1}
-        )
+        # Isolate unique rules and map them to their decisions.
+        self.rule_to_decision_dict = map_rules_to_decisions(decision_set)
 
-        self.rule_lengths = [len(rule) for rule in rules]
-        self.rules_set = True
-        self.create_rule_info_dict()
+        # Track info for each decision.
+        self.decision_info_dict = {}
+        for decision in decision_set:
+            rule_coverage = set(list(satisfies_rule(self.X, decision.rule)))
+            rule_cluster_coverage = self.cluster_coverage_dict[decision.label].intersection(
+                rule_coverage
+            )
+            rule_length = len(decision.rule)
+            self.decision_info_dict[decision] = {
+                'coverage': rule_coverage,
+                'coverage_array': np.fromiter(rule_coverage, dtype=np.int64),
+                'cluster_coverage': rule_cluster_coverage,
+                'length': rule_length,
+                'label': decision.label
+            }
+        
+        self.decision_set_initialized = True
 
 
     def set_lambda(self, lambda_val : float = None):
@@ -138,8 +145,8 @@ class Objective:
         Args:
             lambda_val (float): The new lambda value.
         """
-        if lambda_val is None and not (self.data_set and self.rules_set):
-            raise ValueError('Data and rules must be set before setting lambda automatically.')
+        if lambda_val is None and not (self.data_initialized and self.decision_set_initialized):
+            raise ValueError('Data and decision set must be initialized before setting lambda.')
         elif lambda_val is None:
             lambda_vals = self.compute_lambdas()
             if len(lambda_vals) == 0:
@@ -150,92 +157,53 @@ class Objective:
         self.lambda_val = lambda_val
 
 
-    def create_rule_info_dict(self) -> dict[int, dict[str, any]]:
-        """
-        Creates a dictionary containing information about each rule.
-
-        Args:
-            data_to_cluster_assignment (NDArray): The cluster assignment for each data point.
-            rule_to_cluster_assignment (NDArray): The cluster assignment for each rule.
-            data_to_rules_assignment (NDArray): The rule assignment for each data point.
-            rule_lengths (list[int]): The lengths of each rule.
-
-        Returns:
-            dict[int, dict[str, any]]: A dictionary mapping each rule index to its information.
-                This includes the rule's points, coverage, length, and label.
-        """
-        if not (self.data_set and self.rules_set):
-            raise ValueError('Data and rules must be set before creating rule info dictionary.')
-        
-        r,_ = self.rule_to_cluster_assignment.shape
-        cluster_coverage = assignment_to_dict(self.data_to_cluster_assignment)
-        rule_labels = {i: self.rule_to_cluster_assignment[i,:].nonzero()[0][0] for i in range(r)}
-        rule_coverage = assignment_to_dict(self.data_to_rules_assignment)
-        rule_cluster_coverage = {}
-        for r, r_coverage in rule_coverage.items():
-            rule_label = rule_labels[r]
-            c_coverage = cluster_coverage[rule_label]
-            rule_cluster_coverage[r] = r_coverage.intersection(c_coverage)
-
-        # Storing all relevant information about each rule:
-        rules_info = {
-            r: {
-                'coverage': rule_coverage[r],
-                'cluster_coverage': rule_cluster_coverage[r],
-                'length': self.rule_lengths[r],
-                'label': rule_labels[r]
-            } for r in range(r)
-        }
-        return rules_info
-
-
     def reward(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
         Computes the reward from the selected rules.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected
-                rule index to its information, including labels, points, coverage, and lengths.
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each selected
+                decision to its information, including labels, points, coverage, and lengths.
         Returns:
-            reward (float): The reward from the selected rules.
+            reward (float): The reward from the selected decisions.
         """
         pass
 
 
     def cost(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
         Computes the cost of the selected rules.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected
-                rule index to its information, including labels, points, coverage, and lengths.
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each selected
+                decision to its information, including labels, points, coverage, and lengths.
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
         pass
 
 
     def compute_objective(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
-        Computes the objective value for the selected rules.
+        Computes the objective value for the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected
-                rule index to its information, including labels, points, coverage, and lengths.
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each selected
+                decision to its information, including labels, points, coverage, and lengths.
         Returns:
-            objective (float): The objective value for the selected rules.
+            objective (float): The objective value for the selected decisions.
         """
-        g = self.reward(selected_rules_info)
-        h = self.cost(selected_rules_info)
+        g = self.reward(selected_decisions_info)
+        h = self.cost(selected_decisions_info)
         return g - self.lambda_val * h
     
 
@@ -258,48 +226,44 @@ class Objective:
                 until reaching the maximum coverage/cost ratio seen
                 for any (rule, cluster) assignment pair. 
         """
-        n,r = self.data_to_rules_assignment.shape
-        _,k = self.data_to_cluster_assignment.shape
-        rule_list = list(np.arange(r))
-        
-        #rule_points = assignment_to_dict(self.data_to_rules_assignment)
-        #cluster_points = assignment_to_dict(self.data_to_cluster_assignment)
-        #rule_length_dict = {i: self.rule_lengths[i] for i in range(r)}
-
         ratios = []
         second_max_ratio = 0.0
-        for rule in rule_list:
-            r_coverage = rule_points[rule]
-            r_length = rule_length_dict[rule]
-            c_ratios = []
-            for cluster in range(k):
-                r_cluster_coverage = r_coverage.intersection(cluster_points[cluster])
-                r_info = {rule: {
+        for rule in self.rule_to_decision_dict.keys():
+            max_rule_ratio = 0.0
+            second_max_rule_ratio = 0.0
+            for decision in self.rule_to_decision_dict[rule]:
+                decision_info = self.decision_info_dict[decision]
+
+                r_coverage = decision_info['coverage']
+                r_cluster_coverage = decision_info['cluster_coverage']
+                r_length = decision_info['length']
+                d_label = decision_info['label']
+                d_info = {
+                    decision: {
                         'coverage': r_coverage,
+                        'coverage_array': np.fromiter(r_coverage, dtype=np.int64),
                         'cluster_coverage': r_cluster_coverage,
                         'length': r_length,
-                        'label': cluster
+                        'label': d_label
                     }
                 }
-                g = self.reward(r_info)
-                h = self.cost(r_info)
+                g = self.reward(d_info)
+                h = self.cost(d_info)
 
                 if h > 0:
                     ratio = g / h
-                    c_ratios.append(ratio)
                 else:
                     ratio = np.inf
-                    c_ratios.append(ratio)
 
+                if ratio > max_rule_ratio:
+                    second_max_rule_ratio = max_rule_ratio
+                    max_rule_ratio = ratio
+                elif ratio > second_max_rule_ratio:
+                    second_max_rule_ratio = ratio
 
-            c_ratios_sorted = np.sort(c_ratios)
-            ratios.append(c_ratios_sorted[-1])
-
-            # Does this need to be here?
-            if len(c_ratios) >= 2:
-                second_largest = c_ratios_sorted[-2]
-                if second_largest > second_max_ratio:
-                    second_max_ratio = second_largest
+            ratios.append(max_rule_ratio)
+            if second_max_rule_ratio > second_max_ratio:
+                second_max_ratio = second_max_rule_ratio
                     
         ratios = [r for r in ratios if r >= second_max_ratio]
         if second_max_ratio == 0.0:
@@ -309,40 +273,40 @@ class Objective:
 
     def marginal_reward(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal reward from selected rule.
+        Computes the marginal reward from selected decision.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information about the decision being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected rules.
+                label to the set of data points already covered by selected decisions.
         
         Returns:
-            coverage (float): The coverage of the selected rules.
+            coverage (float): The coverage of the selected decisions.
         """
         pass
 
 
     def marginal_cost(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal cost of the selected rule.
+        Computes the marginal cost of the selected decision.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information about the decision being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected rules.
+                label to the set of data points already covered by selected decisions.
         
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
         pass        
 
@@ -355,41 +319,33 @@ class Objective:
         on the algorithm, see the following paper:
         "Submodular Maximization Beyond Non-Negativity: Guarantees, Fast Algorithms, and Applications"
         by Harshaw el al., ICML 2019.
-        
         Args:
-                
+            
         Returns:
-            NDArray: An array of integers representing the indices of the selected rules.
+            decision_set (Set[Decision]): The selected set of decisions.
         """
-        if not (self.data_set and self.rules_set):
-            raise ValueError('Data and rules must be set before selecting rules.')
-        n,k = self.data_to_cluster_assignment.shape
-        r,_ = self.rule_to_cluster_assignment.shape
-
-        rules_info = self.create_rule_info_dict()
+        if not (self.data_initialized and self.decision_set_initialized):
+            raise ValueError('Data and decisions must be initialized before selection.')
 
         total_coverage = set()
-        total_cluster_coverage = {l: set() for l in range(k)}
-        selected_rules = set()
-        discarded_rules = set()
+        total_cluster_coverage = {l: set() for l in range(self.n_labels)}
+        selected_decisions = set()
+        discarded_decisions = set()
         for i in range(self.n_select):
-            best_rule = None
-            best_rule_score = 0.0
-            
-            # NOTE: Iterating over rules in a sorted order to ensure deterministic behavior.
-            # Effectively, this means that when there are ties, the rule with the lowest index
-            # will be selected. This is consistent with our preference for lexicographic ordering
-            # in optimal solution sets.
-            for rule in range(r):
-                if (rule not in selected_rules) and (rule not in discarded_rules):
+            best_decision = None
+            best_decision_score = 0.0
+
+            # NOTE: Should this iterate over decisions in a sorted order?
+            for decision, decision_info in self.decision_info_dict.items():
+                if (decision not in selected_decisions) and (decision not in discarded_decisions):
                     g = self.marginal_reward(
-                        rules_info[rule],
+                        decision_info,
                         total_coverage,
                         total_cluster_coverage
                     )
 
                     h = self.marginal_cost(
-                        rules_info[rule],
+                        decision_info,
                         total_coverage,
                         total_cluster_coverage
                     )
@@ -399,37 +355,37 @@ class Objective:
                     # Therefore if g - lambda * c <= 0, the score will never be positive, 
                     # and it can never be selected.
                     if g - self.lambda_val * h <= 0:
-                        discarded_rules.add(rule)
+                        discarded_decisions.add(decision)
                     
                     score = (1 - 1/self.n_select)**(self.n_select - (i + 1)) * g - self.lambda_val * h
-                    
-                    if score > best_rule_score:
-                        best_rule = rule
-                        best_rule_score = score
-                        
-            if best_rule_score > 0:
-                selected_rules.add(best_rule)
-                best_rule_label = rules_info[best_rule]['label']
-                best_rule_coverage = rules_info[best_rule]['coverage']
-                best_rule_cluster_coverage = rules_info[best_rule]['cluster_coverage']
-                total_cluster_coverage[best_rule_label] = total_cluster_coverage[
-                    best_rule_label
+
+                    if score > best_decision_score:
+                        best_decision = decision
+                        best_decision_score = score
+
+            if best_decision_score > 0:
+                selected_decisions.add(best_decision)
+                best_decision_label = self.decision_info_dict[best_decision]['label']
+                best_decision_coverage = self.decision_info_dict[best_decision]['coverage']
+                best_decision_cluster_coverage = self.decision_info_dict[best_decision]['cluster_coverage']
+                total_cluster_coverage[best_decision_label] = total_cluster_coverage[
+                    best_decision_label
                 ].union(
-                    best_rule_cluster_coverage
+                    best_decision_cluster_coverage
                 )
-                total_coverage = total_coverage.union(best_rule_coverage)
+                total_coverage = total_coverage.union(best_decision_coverage)
 
         # Compute final objective value
         self.reward_value = self.reward(
-            {rule: rules_info[rule] for rule in selected_rules},
+            {decision: self.decision_info_dict[decision] for decision in selected_decisions},
         )
         self.cost_value = self.cost(
-            {rule: rules_info[rule] for rule in selected_rules},
+            {decision: self.decision_info_dict[decision] for decision in selected_decisions},
         )
         self.objective_value = self.compute_objective(
-            {rule: rules_info[rule] for rule in selected_rules},
+            {decision: self.decision_info_dict[decision] for decision in selected_decisions},
         )
-        return np.array(list(selected_rules))
+        return selected_decisions
 
 
 ####################################################################################################
@@ -468,60 +424,60 @@ class CoverageMistakeObjective(Objective):
 
     def reward(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decision_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
         Computes the reward from the selected rules.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected 
-                rule index to its information (points, coverage, length, label).
+            selected_decision_info (dict[Decision, dict[str, any]]): A dictionary mapping each 
+                selected decision to its information (coverage, cluster coverage, length, label).
         Returns:
             reward (float): The reward from the selected rules.
         """
         total_cluster_coverage = {}
-        for rule, info in selected_rules_info.items():
+        for decision, info in selected_decision_info.items():
             label = info['label']
             if label not in total_cluster_coverage:
                 total_cluster_coverage[label] = set()
-            total_cluster_coverage[label] = total_cluster_coverage[label].union(
-                info['cluster_coverage']
-            )
+            total_cluster_coverage[label].update(info['cluster_coverage'])
+        
         total_weighted_coverage = 0
-        for l, covered in total_cluster_coverage.items():
-            total_weighted_coverage += np.sum(self.weights[list(covered)])
+        for covered in total_cluster_coverage.values():
+            if covered:  # Only process non-empty sets
+                covered_array = np.fromiter(covered, dtype=np.int64)
+                total_weighted_coverage += np.sum(self.weights[covered_array])
         return total_weighted_coverage
 
 
     def cost(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
         Computes the cost of the selected rules.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected rule index
-                to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each 
+                selected decision to its information (coverage, cluster coverage, length, label).
         Returns:
             cost (float): The cost of the selected rules.
         """
         total_mistakes = 0
-        for rule, info in selected_rules_info.items():
+        length_penalty = 0
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             r_cluster_coverage = info['cluster_coverage']
             mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
+            length_penalty += self.alpha_val * info['length']
 
-        length_penalty = sum(
-            self.alpha_val * info['length'] for rule, info in selected_rules_info.items()
-        )
         return total_mistakes + length_penalty
 
 
     def marginal_reward(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage : dict[int, set[int]]
     ) -> float:
@@ -529,42 +485,45 @@ class CoverageMistakeObjective(Objective):
         Computes the marginal reward as new coverage from selected rule.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information 
+                for a given decision (coverage, cluster coverage, length, label).
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
                 label to the set of data points already covered by selected rules.
         
         Returns:
             coverage (float): The coverage of the selected rules.
         """
-        r_cluster_coverage = rule_info['cluster_coverage']
-        s_coverage = total_cluster_coverage[rule_info['label']]
+        r_cluster_coverage = decision_info['cluster_coverage']
+        s_coverage = total_cluster_coverage[decision_info['label']]
         new_coverage = r_cluster_coverage.difference(s_coverage)
-        new_coverage_weighted = np.sum(self.weights[list(new_coverage)])
+        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
+        new_coverage_weighted = np.sum(self.weights[new_coverage_array])
         return new_coverage_weighted
 
 
     def marginal_cost(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage: dict[int, set[int]],
     ) -> float:
         """
-        Computes the marginal cost as the number of mistakes made by the selected rule.
+        Computes the marginal cost as the number of mistakes made by the selected decision.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information about the decision
+                being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
                 label to the set of data points already covered by selected rules.
         
         Returns:
             cost (float): The cost of the selected rules.
         """
-        r_coverage = rule_info['coverage']
-        r_cluster_coverage = rule_info['cluster_coverage']
+        r_coverage = decision_info['coverage']
+        r_cluster_coverage = decision_info['cluster_coverage']
         mistakes = r_coverage.difference(r_cluster_coverage)
-        return len(mistakes) + self.alpha_val * rule_info['length']
-        
+        return len(mistakes) + self.alpha_val * decision_info['length']
+
 
 ####################################################################################################
 
@@ -604,19 +563,19 @@ class TotalCoverageMistakeObjective(Objective):
 
     def reward(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
-        Computes the reward from the selected rules.
+        Computes the reward from the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected 
-                rule index to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping 
+                each selected decision to its information (points, coverage, length, label).
         Returns:
-            reward (float): The reward from the selected rules.
+            reward (float): The reward from the selected decisions.
         """
         total_coverage = set()
-        for rule, info in selected_rules_info.items():
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             total_coverage = total_coverage.union(r_coverage)
 
@@ -625,73 +584,73 @@ class TotalCoverageMistakeObjective(Objective):
 
     def cost(
         self,
-        selected_rules_info: dict[int, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]]
     ) -> float:
         """
-        Computes the cost of the selected rules.
+        Computes the cost of the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected rule index
-                to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
+                selected decision to its information (points, coverage, length, label).
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
         total_mistakes = 0
-        for rule, info in selected_rules_info.items():
+        length_penalty = 0
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             r_cluster_coverage = info['cluster_coverage']
             mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
+            length_penalty += self.alpha_val * info['length']
 
-        length_penalty = sum(
-            [self.alpha_val * info['length'] for rule, info in selected_rules_info.items()]
-        )
         return total_mistakes + length_penalty
 
-    
+
     def marginal_reward(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal reward as new coverage from selected rule.
+        Computes the marginal reward as new coverage from selected decision.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information about the decision being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected rules.        
+                label to the set of data points already covered by selected decisions.        
         Returns:
-            coverage (float): The coverage of the selected rules.
+            coverage (float): The coverage of the selected decisions.
         """
-        r_coverage = rule_info['coverage']
-        new_points = r_coverage.difference(total_coverage)
-        new_points_weighted = np.sum(self.weights[list(new_points)])
+        r_coverage = decision_info['coverage']
+        new_coverage = r_coverage.difference(total_coverage)
+        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
+        new_points_weighted = np.sum(self.weights[new_coverage_array])
         return new_points_weighted
 
 
     def marginal_cost(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal cost as the number of mistakes made by the selected rule.
+        Computes the marginal cost as the number of mistakes made by the selected decision.
 
         Args:
-            rule_info (dict): A dictionary containing information about the rule being considered.
+            decision_info (dict): A dictionary containing information about the decision being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected rules.        
+                label to the set of data points already covered by selected decisions.        
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
-        r_coverage = rule_info['coverage']
-        r_cluster_coverage = rule_info['cluster_coverage']
+        r_coverage = decision_info['coverage']
+        r_cluster_coverage = decision_info['cluster_coverage']
         mistakes = r_coverage.difference(r_cluster_coverage)
-        return len(mistakes) + self.alpha_val * rule_info['length']
-        
+        return len(mistakes) + self.alpha_val * decision_info['length']
+
 
 ####################################################################################################
 
@@ -735,7 +694,7 @@ class CoverageCostObjective(Objective):
         self.cluster_cost_method = cluster_cost_method
 
 
-    def set_data(
+    def initialize_data(
         self, 
         X : NDArray,
         y : list[set[int]],
@@ -754,14 +713,16 @@ class CoverageCostObjective(Objective):
         else:
             assert len(self.weights) == X.shape[0], \
                 'weights must have the same length as the number of samples in X.'
-            
+
         self.X = X
         self.y = y
-        n_labels = len(unique_labels(y))
-        self.data_to_cluster_assignment = labels_to_assignment(
-            y, n_labels = n_labels, ignore = {-1}
+            
+        self.label_set = unique_labels(y)
+        self.n_labels = len(self.label_set)
+        data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = self.n_labels, ignore = {-1}
         )
-        self.data_set = True
+        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
 
         # Compute n x k distance matrix between data points and cluster centers.
         self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
@@ -771,105 +732,115 @@ class CoverageCostObjective(Objective):
             else:  # self.cluster_cost_cluster_cost_method == "kmedians"
                 self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
 
+        self.data_initialized = True
+
 
     def reward(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
-        Computes the reward from the selected rules.
+        Computes the reward from the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected 
-                rule index to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each 
+                selected decision to its information (points, coverage, length, label).
         Returns:
-            reward (float): The reward from the selected rules.
+            reward (float): The reward from the selected decisions.
         """
         total_cluster_coverage = {}
-        for rule, info in selected_rules_info.items():
+        for decision, info in selected_decisions_info.items():
             label = info['label']
             if label not in total_cluster_coverage:
                 total_cluster_coverage[label] = set()
-            total_cluster_coverage[label] = total_cluster_coverage[label].union(
-                info['cluster_coverage']
-            )
+            total_cluster_coverage[label].update(info['cluster_coverage'])
+        
         total_weighted_coverage = 0
-        for l, covered in total_cluster_coverage.items():
-            total_weighted_coverage += np.sum(self.weights[list(covered)])
+        for covered in total_cluster_coverage.values():
+            if covered:  # Only process non-empty sets
+                covered_array = np.fromiter(covered, dtype=np.int64)
+                total_weighted_coverage += np.sum(self.weights[covered_array])
         return total_weighted_coverage
 
 
     def cost(
         self,
-        selected_rules_info: dict[int, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]]
     ) -> float:
         """
-        Computes the cost of the selected rules.
+        Computes the cost of the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected rule index
-                to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
+                selected decision to its information (points, coverage, length, label).
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
         total_cost = 0.0
-        for rule, info in selected_rules_info.items():
+        length_penalty = 0.0
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             r_center = info['label']
-            cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
-            total_cost += cluster_cost
+            if r_coverage:  # Only process non-empty sets
+                coverage_array = info['coverage_array']
+                cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
+                total_cost += cluster_cost
+            length_penalty += self.alpha_val * info['length']
 
-        length_penalty = sum(
-            self.alpha_val * info['length'] for rule, info in selected_rules_info.items()
-        )
         return total_cost + length_penalty
 
 
     def marginal_reward(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal reward as new coverage from selected rule.
+        Computes the marginal reward as new coverage from selected decision.
 
         Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
+            decision_info (dict[str, any]): A dictionary containing information about the decision 
+                being considered.
+            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
+                set of data points already covered by selected decisions.
 
         Returns:
-            coverage (float): The coverage of the selected rules.
+            coverage (float): The coverage of the selected decisions.
         """
-        r_cluster_coverage = rule_info['cluster_coverage']
-        s_coverage = total_cluster_coverage[rule_info['label']]
+        r_cluster_coverage = decision_info['cluster_coverage']
+        s_coverage = total_cluster_coverage[decision_info['label']]
         new_coverage = r_cluster_coverage.difference(s_coverage)
-        new_coverage_weighted = np.sum(self.weights[list(new_coverage)])
+        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
+        new_coverage_weighted = np.sum(self.weights[new_coverage_array])
         return new_coverage_weighted
 
 
     def marginal_cost(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal cost as the number of mistakes made by the selected rule.
+        Computes the marginal cost as the number of mistakes made by the selected decision.
 
         Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
+            decision_info (dict[str, any]): A dictionary containing information about the decision
+                being considered.
+            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
+                set of data points already covered by selected decisions.
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
-        r_coverage = rule_info['coverage']
-        r_center = rule_info['label']
-        cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
-        return cluster_cost + self.alpha_val * rule_info['length']
-    
+        r_coverage = decision_info['coverage']
+        r_center = decision_info['label']
+        if r_coverage:  # Only process non-empty sets
+            coverage_array = decision_info['coverage_array']
+            cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
+            return cluster_cost + self.alpha_val * decision_info['length']
+        return self.alpha_val * decision_info['length']
+
 
 ####################################################################################################
 
@@ -914,7 +885,7 @@ class TotalCoverageCostObjective(Objective):
         self.cluster_cost_method = cluster_cost_method
 
 
-    def set_data(
+    def initialize_data(
         self, 
         X : NDArray,
         y : list[set[int]],
@@ -936,11 +907,13 @@ class TotalCoverageCostObjective(Objective):
             
         self.X = X
         self.y = y
-        n_labels = len(unique_labels(y))
-        self.data_to_cluster_assignment = labels_to_assignment(
-            y, n_labels = n_labels, ignore = {-1}
+
+        self.label_set = unique_labels(y)
+        self.n_labels = len(self.label_set)
+        data_to_cluster_assignment = labels_to_assignment(
+            y, n_labels = self.n_labels, ignore = {-1}
         )
-        self.data_set = True
+        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
 
         # Compute n x k distance matrix between data points and cluster centers.
         self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
@@ -950,22 +923,24 @@ class TotalCoverageCostObjective(Objective):
             else:  # self.cluster_cost_cluster_cost_method == "kmedians"
                 self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
 
+        self.data_initialized = True
+
 
     def reward(
         self,
-        selected_rules_info: dict[int, dict[str, any]],
+        selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
         """
-        Computes the reward from the selected rules.
+        Computes the reward from the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected 
-                rule index to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
+                selected decision to its information (points, coverage, length, label).
         Returns:
-            reward (float): The reward from the selected rules.
+            reward (float): The reward from the selected decisions.
         """
         total_coverage = set()
-        for rule, info in selected_rules_info.items():
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             total_coverage = total_coverage.union(r_coverage)
         return np.sum(self.weights[list(total_coverage)])
@@ -973,72 +948,79 @@ class TotalCoverageCostObjective(Objective):
 
     def cost(
         self,
-        selected_rules_info: dict[int, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]]
     ) -> float:
         """
-        Computes the cost of the selected rules.
+        Computes the cost of the selected decisions.
 
         Args:
-            selected_rules_info (dict[int, dict[str, any]]): A dictionary mapping each selected rule index
-                to its information (points, coverage, length, label).
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
+                selected decision to its information (points, coverage, length, label).
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
         total_cost = 0.0
-        for rule, info in selected_rules_info.items():
+        length_penalty = 0.0
+        for decision, info in selected_decisions_info.items():
             r_coverage = info['coverage']
             r_center = info['label']
-            cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
-            total_cost += cluster_cost
+            if r_coverage:  # Only process non-empty sets
+                coverage_array = info['coverage_array']
+                cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
+                total_cost += cluster_cost
+            length_penalty += self.alpha_val * info['length']
 
-        length_penalty = sum(
-            self.alpha_val * info['length'] for rule, info in selected_rules_info.items()
-        )
         return total_cost + length_penalty
 
 
     def marginal_reward(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage : dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal reward as new coverage from selected rule.
+        Computes the marginal reward as new coverage from selected decision.
 
         Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
+            decision_info (dict[str, any]): A dictionary containing information about the decision 
+                being considered.
+            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
+                set of data points already covered by selected decisions.
         Returns:
-            coverage (float): The coverage of the selected rules.
+            coverage (float): The coverage of the selected decisions.
         """
-        r_coverage = rule_info['coverage']
-        new_points = r_coverage.difference(total_coverage)
-        new_points_weighted = np.sum(self.weights[list(new_points)])
+        r_coverage = decision_info['coverage']
+        new_coverage = r_coverage.difference(total_coverage)
+        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
+        new_points_weighted = np.sum(self.weights[new_coverage_array])
         return new_points_weighted
 
 
     def marginal_cost(
         self,
-        rule_info: dict[str, any],
+        decision_info: dict[str, any],
         total_coverage : set[int],
         total_cluster_coverage: dict[int, set[int]]
     ) -> float:
         """
-        Computes the marginal cost as the number of mistakes made by the selected rule.
+        Computes the marginal cost as the number of mistakes made by the selected decision.
 
         Args:
-            rule_info (dict[str, any]): A dictionary containing information about the rule being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the set of data points
-                already covered by selected rules.
+            decision_info (dict[str, any]): A dictionary containing information about the decision
+                being considered.
+            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
+                set of data points already covered by selected decisions.
         Returns:
-            cost (float): The cost of the selected rules.
+            cost (float): The cost of the selected decisions.
         """
-        r_coverage = rule_info['coverage']
-        r_center = rule_info['label']
-        cluster_cost = np.sum(self.data_to_center_distances[list(r_coverage), r_center])
-        return cluster_cost + self.alpha_val * rule_info['length']
+        r_coverage = decision_info['coverage']
+        r_center = decision_info['label']
+        if r_coverage:  # Only process non-empty sets
+            coverage_array = decision_info['coverage_array']
+            cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
+            return cluster_cost + self.alpha_val * decision_info['length']
+        return self.alpha_val * decision_info['length']
 
 
 ####################################################################################################

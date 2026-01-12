@@ -24,7 +24,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
@@ -202,7 +202,7 @@ experiment_results = {
     'modules': module_results
 }   
 
-results_fname = 'data/experiments/climate/outliers/exp.json'
+results_fname = 'data/experiments/anuran/outliers/exp.json'
 with open(results_fname, 'w') as f:
     json.dump(experiment_results, f)
 

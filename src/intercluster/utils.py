@@ -1,11 +1,12 @@
 import copy
+from dataclasses import replace
 import numpy as np
 import pandas as pd
 from typing import Any, List, Dict, Set, Tuple, Iterator
 from numpy.typing import NDArray
 from pyarc.data_structures import Consequent, Item, Antecedent, ClassAssocationRule
 from .node import Node
-from .rules import Condition, LinearCondition
+from .rules import Condition, Rule, Decision, LinearCondition
 
 from mdlp.discretization import MDLP
 from .oned_cluster_cy import oned_cluster_cy
@@ -370,7 +371,7 @@ def traverse(node : Node, path : List[Node] = None) -> Iterator[List[Node]]:
     # Yield paths with children
     if node.left_child is not None:
         left_condition_node = copy.deepcopy(node)
-        left_condition_node.condition.set_direction(-1)
+        left_condition_node.condition = replace(left_condition_node.condition, direction = -1)
         left_path = path + [left_condition_node]
         yield from traverse(node.left_child, left_path)
         
@@ -380,7 +381,7 @@ def traverse(node : Node, path : List[Node] = None) -> Iterator[List[Node]]:
     # intended to move left if True, so switching is especially helpful for paths moving right.
     if node.right_child is not None:
         right_condition_node = copy.deepcopy(node)
-        right_condition_node.condition.set_direction(1)
+        right_condition_node.condition = replace(right_condition_node.condition, direction=1)
         right_path = path + [right_condition_node]
         yield from traverse(node.right_child, right_path)
         
@@ -410,7 +411,7 @@ def collect_nodes(root : Node) -> List[Node]:
 ####################################################################################################
 
 
-def collect_node_rules(root : Node) -> List[Condition]:
+def collect_node_rules(root : Node) -> List[Rule]:
     """
     Given the root, finds all sub-rules in the tree.
     
@@ -418,7 +419,7 @@ def collect_node_rules(root : Node) -> List[Condition]:
         root (Node): Root of the tree.
     
     Returns:
-        nodes (List[Node]): List of nodes in the tree. 
+        nodes (List[Rule]): List of rules in the tree.
     """
     
     rules = []
@@ -426,12 +427,12 @@ def collect_node_rules(root : Node) -> List[Condition]:
         last_node = path[-1]
         if last_node.type != 'leaf':
             conditions = [node.condition for node in path if node.type != 'leaf']
-            rules.append(conditions)
+            rule = Rule(conditions)
+            rules.append(rule)
 
             # Also include the rule with the last condition flipped
-            last_condition_flipped = copy.deepcopy(conditions)
-            last_condition_flipped[-1].set_direction(-1 * last_condition_flipped[-1].direction)
-            rules.append(last_condition_flipped)
+            last_condition_flipped = replace(conditions[-1], direction=-1 * conditions[-1].direction)
+            rules.append(Rule(conditions[:-1] + [last_condition_flipped]))
 
     return rules
 
@@ -462,15 +463,14 @@ def collect_leaves(root : Node) -> List[Node]:
 ####################################################################################################
 
 
-def collect_leaf_rules(root : Node) -> List[Condition]:
+def collect_leaf_rules(root : Node) -> List[Rule]:
     """
     Given the root of a tree, finds all leaf nodes in the tree.
     
     Args:
         root (Node): Root of the tree.
-    
     Returns:
-        leaf_rules (List[Condition]): List of leaf rules in the tree. 
+        leaf_rules (List[Rule]): List of leaf rules in the tree. 
     """
 
     leaf_rules = []
@@ -478,12 +478,8 @@ def collect_leaf_rules(root : Node) -> List[Condition]:
         last_node = path[-1]
         if last_node.type == 'leaf':
             conditions = [node.condition for node in path if node.type != 'leaf']
-            leaf_rules.append(conditions)
-
-            # Also include the rule with the last condition flipped
-            #last_condition_flipped = copy.deepcopy(conditions)
-            #last_condition_flipped[-1].set_direction(-1 * last_condition_flipped[-1].direction)
-            #leaf_rules.append(last_condition_flipped)
+            rule = Rule(conditions)
+            leaf_rules.append(rule)
 
     return leaf_rules
 
@@ -585,27 +581,19 @@ def get_depth(root : Node) -> int:
 ####################################################################################################
 
 
-def satisfies_conditions(X : NDArray, condition_list : List) -> NDArray:
+def satisfies_rule(X : NDArray, rule : Rule) -> NDArray:
     """
-    Given a dataset X and a list of conditions, determines 
-    which data indices satisfy them simultaneously.
+    Given a dataset X and a rule, determines 
+    which data indices satisfy the rule.
     
     Args:
         X (np.ndarray): Dataset to evaluate.
-        
-        condition_list (List[Condition]): List of conditions to evaluate with.
-    
+        rule (Rule): Rule to evaluate with.
+
     Returns:
         (np.ndarray): Integer array of data indices satisfying the decision path. 
-    """
-    satisfies_mask = np.zeros((X.shape[0], len(condition_list)), dtype = bool)
-    for i, cond in enumerate(condition_list):
-        assert (cond.direction is not None), "Condition has no associated inequality direction."
-        
-        satisfies_cond_mask = cond.evaluate(X)
-        satisfies_mask[:,i] = satisfies_cond_mask
-        
-    return np.where(np.all(satisfies_mask, axis = 1))[0]
+    """        
+    return np.where(rule.evaluate(X))[0]
 
 
 ####################################################################################################
@@ -625,7 +613,8 @@ def satisfies_path(X : NDArray, path : List) -> NDArray:
         (np.ndarray): Integer array of data indices satisfying the decision path. 
     """
     condition_list = [node.condition for node in path[:-1]]
-    return satisfies_conditions(X, condition_list)
+    rule = Rule(condition_list)
+    return satisfies_rule(X, rule)
 
 
 ####################################################################################################
@@ -953,8 +942,7 @@ def interval_to_condition(feature : Any, interval : str) -> Tuple[Condition, Con
 def decision_set_to_cars(
     X: np.ndarray,
     y: list[set[int]],
-    decision_set: list[list[Condition]],
-    decision_set_labels: list[set[int]]
+    decision_set: list[Decision]
 ) -> list[ClassAssocationRule]:   
     """
     Convert a decision set into a list of class association rules.
@@ -964,30 +952,25 @@ def decision_set_to_cars(
         X (np.ndarray): Input data array.
         y (list[set[int]]): List of label sets for each instance.
             Each label set should contain only a single label.
-        decision_set (list[list[Condition]]): Decision set represented as a list of rules,
-            where each rule is a list of conditions.
-        decision_set_labels (list[set[int]]): List of label sets corresponding to each rule
-            in the decision set. Each label set should contain only a single label.
+        decision_set (list[Decision]): Decision set represented as a list of decisions.
 
     Returns: 
         cars (list[ClassAssocationRule]): List of class association rules.
     """
     if not can_flatten(y):
         raise ValueError("Each label in y must be a single label set.")
-    if not can_flatten(decision_set_labels):
-        raise ValueError("Each label in y must be a single label set.")
-    
-    for rule in decision_set:
-        for condition in rule:
+
+    for decision in decision_set:
+        for condition in decision.rule.conditions:
             if len(condition.features) != 1:
                 raise ValueError("Each condition must have a single feature.")
             
     cars = []
-    for i, rule in enumerate(decision_set):
-        consequent = f"class:=:{list(decision_set_labels[i])[0]}"
+    for i, decision in enumerate(decision_set):
+        consequent = f"class:=:{decision.label}"
         antecedent_dict = {}
         support_bool = np.ones(X.shape[0], dtype=bool)
-        for condition in rule:
+        for condition in decision.rule.conditions:
             feature = condition.features[0]
             if feature not in antecedent_dict:
                 antecedent_dict[feature] = [-np.inf, np.inf]
@@ -1015,7 +998,7 @@ def decision_set_to_cars(
         support = np.sum(support_bool)/X.shape[0]
         confidence = 0
         for idx in np.where(support_bool)[0]:
-            if y[idx] == decision_set_labels[i]:
+            if y[idx] == {decision.label}:
                 confidence += 1
         confidence /= np.sum(support_bool)
 
@@ -1035,49 +1018,46 @@ def decision_set_to_cars(
 
 def cars_to_decision_set(
     cars: list[ClassAssocationRule]
-) -> tuple[list[list[Condition]], list[set[int]]]:
+) -> List[Decision]:
     """
     Convert a list of class association rules into a decision set.
 
     Args:
         cars (list[ClassAssocationRule]): List of class association rules.
     Returns:
-        decision_set (list[list[Condition]]): Decision set represented as a list of rules,
-            where each rule is a list of conditions.
-        decision_set_labels (list[set[int]]): List of label sets corresponding to each rule
-            in the decision set. Each label set should contain only a single label.
+        decision_set (list[Decision]): Decision set represented as a list of decisions.
     """
     decision_set = []
-    decision_set_labels = []
     for car in cars:
-        rule = []
+        conditions = []
         for item in car.antecedent:
             feature = int(item[0])
             interval = item[1][:-1] + ']'
             condition = interval_to_condition(feature, interval)
-            rule.append(condition)
-            
-        decision_set.append(rule)
+            conditions.append(condition)
+    
+        rule = Rule(conditions)
         label = int(car.consequent.value)
-        decision_set_labels.append(set([label]))
-    return decision_set, decision_set_labels
+        decision = Decision(rule, label)
+        decision_set.append(decision)
+    return decision_set
 
 
 ####################################################################################################
 
 
 def filter_rules(
-    rules : List[List[Condition]],
+    rules : List[Rule],
     X : NDArray,
     y : List[Set[int]],
     confidence : float = 0.5
-) -> List[List[Condition]]:
+) -> List[Rule]:
     """
     Filters a list of rules to only include those with a minimum 
     level of confidence for the labels of the covered points.
 
     Args:
-        rules (List[List[Condition]]): List of rules to filter, where each rule is a list of conditions.
+        rules (List[Rule]): List of rules to filter.
         
         X (np.ndarray): Input data array.
         
@@ -1097,7 +1077,7 @@ def filter_rules(
 
     filtered_rules = []
     for rule in rules:
-        covered_indices = satisfies_conditions(X, rule)
+        covered_indices = satisfies_rule(X, rule)
         covered_labels = y_[covered_indices]
         labs, counts = np.unique(covered_labels, return_counts=True)
         if len(counts) == 0:
@@ -1140,6 +1120,27 @@ def cartesian_product_labels(
                 new_rules.append(rule)
                 new_rule_labels.append({label})
     return new_rules, new_rule_labels
+
+
+####################################################################################################
+
+
+def map_rules_to_decisions(
+    decision_set: list[Decision]) -> dict[Rule, Set[Decision]]:
+    """
+    Given a decision set, returns a dictionary mapping unique rules to their associated decisions.
+    Args:
+        decision_set (list[Decision]): Decision set represented as a list of decisions.
+    Returns:
+        rules_to_decisions_dict (dict[Rule, Set[Decision]]): Dictionary mapping unique rules to their associated decisions.
+    """
+    rules_to_decisions_dict = {}
+    for decision in decision_set:
+        rule = decision.rule
+        if rule not in rules_to_decisions_dict:
+            rules_to_decisions_dict[rule] = set()
+        rules_to_decisions_dict[rule].add(decision)
+    return rules_to_decisions_dict
 
 
 ####################################################################################################

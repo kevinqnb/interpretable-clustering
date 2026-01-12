@@ -179,3 +179,5 @@ src/intercluster/decision_sets/mining/clique_miner.py
 *.DS_Store
 
 *.c
+
+.nfs*

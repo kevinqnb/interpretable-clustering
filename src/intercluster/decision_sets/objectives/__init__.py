@@ -5,3 +5,11 @@ from .objectives import (
     CoverageCostObjective,
     TotalCoverageCostObjective,
 )
+
+__all__ = [
+    'Objective',
+    'CoverageMistakeObjective',
+    'TotalCoverageMistakeObjective',
+    'CoverageCostObjective',
+    'TotalCoverageCostObjective',
+]

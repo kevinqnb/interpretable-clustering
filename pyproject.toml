@@ -38,6 +38,6 @@ where = ["src"]
 exkmc = ["numpy"]
 
 [tool.uv.sources]
-exkmc = { git = "https://github.com/kevinqnb/ExKMC.git" }
 pyids = { git = "https://github.com/kevinqnb/pyIDS.git" }
 mdlp-discretization = { git = "https://github.com/kevinqnb/mdlp-discretization.git" }
+exkmc = { git = "https://github.com/kevinqnb/ExKMC.git" }

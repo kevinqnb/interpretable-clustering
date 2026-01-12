@@ -22,6 +22,14 @@ for pyx_file in src_dir.rglob("*.pyx"):
 setup(
     ext_modules=cythonize(
         extensions,
-        compiler_directives={'language_level': "3"}
+        compiler_directives={
+            'language_level': "3",
+            'boundscheck': False,
+            'wraparound': False,
+            'nonecheck': False,
+            'cdivision': True,
+            'initializedcheck': False,
+        },
+        #annotate=True,  # Generate HTML annotation files to see Python/C interactions
     )
 )

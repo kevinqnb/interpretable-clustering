@@ -24,8 +24,8 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
-euclidean_distances = pairwise_distances(data)
+data, data_labels, feature_labels, scaler = load_preprocessed_digits()
+#euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 ##### Parameters #####
@@ -36,9 +36,9 @@ n,d = data.shape
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'n_select': 6,
-    'max_rules': 12,
+    'n_clusters': 10,
+    'n_select': 10,
+    'max_rules': 20,
     'min_support': 0.05,
     'min_confidence': 0.85,
     'max_rule_length': 4,
@@ -202,7 +202,7 @@ experiment_results = {
     'modules': module_results
 }   
 
-results_fname = 'data/experiments/climate/outliers/exp.json'
+results_fname = 'data/experiments/digits/outliers/exp.json'
 with open(results_fname, 'w') as f:
     json.dump(experiment_results, f)
 

@@ -1,8 +1,7 @@
 import pandas as pd
 from typing import List, Set, Tuple
-from intercluster import (
-    Condition
-)
+from intercluster import Rule
+
 
 
 ####################################################################################################
@@ -13,7 +12,7 @@ class RuleMiner:
     Base class for rule mining algorithms.
 
     Attributes:
-        decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+        decision_set (List[Rule]): The mined decision set, where each rule is a list of conditions.
         decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
     """
     def __init__(self):
@@ -37,7 +36,7 @@ class RuleMiner:
             self,
             X : pd.DataFrame,
             y : List[Set[int]] = None
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
+        ) -> Tuple[List[Rule], List[Set[int]]]:
         """
         Fit the rule mining algorithm to the input dataset.
 
@@ -46,7 +45,7 @@ class RuleMiner:
             y (List[Set[int]], optional): Target labels. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): List of labels corresponding to each rule.
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

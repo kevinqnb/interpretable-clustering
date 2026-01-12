@@ -4,8 +4,8 @@ from numpy.typing import NDArray
 import pyarc
 from intercluster import (
     Condition,
+    Rule,
     LinearCondition,
-    satisfies_conditions,
 )
 from .rule_miner import RuleMiner
 
@@ -38,7 +38,7 @@ class BoxMiner(RuleMiner):
                 the expansion will always stop when a mistake is encountered.
 
         Attributes:
-            decision_set (List[List[Condition]]): The mined decision set, where each rule is a list of conditions.
+            decision_set (List[Rule]): The mined decision set.
             decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
         """
         if not isinstance(samples, int) or samples <= 0:
@@ -57,7 +57,7 @@ class BoxMiner(RuleMiner):
             self,
             X : NDArray,
             y : List[Set[int]],
-        ) -> Tuple[List[List[Condition]], List[Set[int]]]:
+        ) -> Tuple[List[Rule], List[Set[int]]]:
         """
         Creates rules for the decision set by drawing boxes around dense sets of points 
         in randomly chosen dimensions. 
@@ -67,7 +67,7 @@ class BoxMiner(RuleMiner):
             y (List[Set[int]], optional): Target labels. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): List of labels corresponding to each rule.
         """
         n,d = X.shape
@@ -162,7 +162,7 @@ class BoxMiner(RuleMiner):
                 # Subtract 1 from the lower indices, since the lower bounds will be strict 
                 # greater-than indequalities (>)
                 lower_idx -= 1
-                rule = []
+                conditions = []
                 for j, f in enumerate(features):
                     feature_vec = X_sorted[:, f]
                     lower_bound = (
@@ -186,11 +186,10 @@ class BoxMiner(RuleMiner):
                         threshold=upper_bound,
                         direction=-1
                     )
-                    rule.append(condition1)
-                    rule.append(condition2)
+                    conditions.append(condition1)
+                    conditions.append(condition2)
 
-
-                decision_set.append(rule)
+                decision_set.append(Rule(conditions))
                 decision_set_labels.append(y[i])
 
 

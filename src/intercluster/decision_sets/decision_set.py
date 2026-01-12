@@ -2,11 +2,11 @@ import numpy as np
 from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
-    Condition,
-    satisfies_conditions,
+    Rule,
+    Decision,
+    satisfies_rule,
     labels_to_assignment,
     unique_labels,
-    cartesian_product_labels
 )
 from .mining import RuleMiner
 
@@ -17,29 +17,25 @@ class DecisionSet:
     """
     def __init__(
         self,
-        rules : List[List[Condition]],
+        rules : List[Rule],
         rule_labels : List[Set[int]] = None,
         ignore = set()
     ):
         """
         Args:
-            rules (List[List[Condition]], optional): List of rules to select from.
+            rules (List[Rule], optional): List of rules to select from.
             rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
-                If None, the labels will be generated using the rule_miner. Defaults to None.
+                If None, the labels will be created using the input dataset. Defaults to None.
             ignore (Set[int], optional): Set of labels to ignore when fitting the decision set.
                 Defaults to to the empty set.
 
         Attributes:
-            decision_set (List[Condition]): List of rules in the selected decision set.
-            
-            decision_set_labels (List[Set[int]]): List of labels corresponding to each
-                rule in the decision set. 
+            decision_set (List[Rule]): List of rules in the selected decision set.
 
             rule_length (int): Maximum rule length.
-        """       
-        for rule in rules:
-            assert isinstance(rule, list) and all(isinstance(cond, Condition) for cond in rule), \
-                "Each rule must be a list of Condition objects."
+        """
+        if not isinstance(rules, list) or not all(isinstance(r, Rule) for r in rules):
+            raise ValueError("rules must be a list of Rule objects.")
         self.rules = rules
 
         if rule_labels is not None:
@@ -52,11 +48,10 @@ class DecisionSet:
         self.ignore = ignore
 
         self.decision_set = None
-        self.decision_set_labels = None
         self.max_rule_length = 0
     
 
-    def select(self, X : NDArray, y : List[Set[int]] = None):
+    def select(self, X : NDArray, y : List[Set[int]] = None) -> set[Decision]:
         """
         selects the decision set using the selector.
         
@@ -65,32 +60,29 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        if self.selector is not None:
-            if self.decision_set is None or self.decision_set_labels is None:
-                raise ValueError('Decision set has not been fitted yet.')
-            
-            pass
+        if self.decision_set is None:
+            raise ValueError('Decision set has not been initialized yet.')
+        
+        pass
     
 
-    def trim(self):
+    def trim(self) -> set[Decision]:
         """
-        Trims the rules in the decision set to remove any redundant conditions. 
+        Trims the rules in the decision set to remove any redundant conditions.
         """
-        if self.decision_set is None or self.decision_set_labels is None:
+        if self.decision_set is None:
             raise ValueError('Decision set has not been fitted yet.')
-        
-        trimmed_set = []
-        trimmed_labels = []
-        for i, rule in enumerate(self.decision_set):
-            trimmed_rule = []
-            for j, condition in enumerate(rule):
+
+        trimmed_set = set()
+        for decision in self.decision_set:
+            trimmed_conditions = []
+            for j, condition in enumerate(decision.rule.conditions):
                 if np.abs(condition.threshold) < np.inf:
-                    trimmed_rule.append(condition)
-            if len(trimmed_rule) > 0:
-                trimmed_set.append(trimmed_rule)
-                trimmed_labels.append(self.decision_set_labels[i])
-        
-        return trimmed_set, trimmed_labels
+                    trimmed_conditions.append(condition)
+            if len(trimmed_conditions) > 0:
+                trimmed_rule = Rule(trimmed_conditions)
+                trimmed_set.add(Decision(trimmed_rule, decision.label))
+        return trimmed_set
         
         
     def fit(self, X : NDArray, y : List[Set[int]] = None):
@@ -103,36 +95,61 @@ class DecisionSet:
             
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        self.decision_set = self.rules
-        self.decision_set_labels = self.rule_labels
+        if self.rule_labels is None and y is None:
+            # Each decision rule gets its own unique label, independent of y
+            self.decision_set = {
+                Decision(rule, i) for i, rule in enumerate(self.decision_set)
+            }
 
-        if self.decision_set_labels is None and y is None:
-            #y = [{-1} for _ in range(X.shape[0])]
-            # Each decision rule gets its own unique label
-            self.decision_set_labels = [{i} for i in range(len(self.decision_set))]
             y = [set() for _ in range(X.shape[0])]
-            for i, rule in enumerate(self.decision_set):
-                data_points_satisfied = satisfies_conditions(X, rule)
+            for i, decision in enumerate(self.decision_set):
+                data_points_satisfied = satisfies_rule(X, decision.rule)
                 for j in data_points_satisfied:
-                    y[j] = y[j].union(self.decision_set_labels[i])
+                    y[j] = y[j].union({decision.label})
 
-        elif self.decision_set_labels is None and y is not None:
-            self.decision_set, self.decision_set_labels = cartesian_product_labels(
-                self.decision_set, y, ignore = self.ignore
-            )
+        elif self.rule_labels is None and y is not None:
+            # Each rule is assigned to every possible unique label from y
+            ulabels = unique_labels(y)
+            self.decision_set = set()
+            for i, rule in enumerate(self.rules):
+                for u in ulabels:
+                    self.decision_set.add(
+                        Decision(rule, u)
+                    )
 
-        elif self.decision_set_labels is not None and y is None:
-            raise ValueError('If rule_labels are provided, y must also be provided.')
+        elif self.rule_labels is not None and y is None:
+            self.decision_set = set()
+            for i, rule in enumerate(self.rules):
+                self.decision_set.add(
+                    Decision(rule, self.rule_labels[i])
+                )
+
+            y = [set() for _ in range(X.shape[0])]
+            for decision in self.decision_set:
+                data_points_satisfied = satisfies_rule(X, decision.rule)
+                for j in data_points_satisfied:
+                    y[j] = y[j].union({decision.label})
+
+        else:
+            self.decision_set = set()
+            for i, rule in enumerate(self.rules):
+                self.decision_set.add(
+                    Decision(rule, self.rule_labels[i])
+                )
+            
         
         # Remove rules covering outliers
-        self.decision_set = [rule for i,rule in enumerate(self.decision_set) if self.decision_set_labels[i] != {-1}]
-        self.decision_set_labels = [label for label in self.decision_set_labels if label != {-1}]
+        self.decision_set = {
+            decision for decision in self.decision_set if decision.label != -1
+        }
+        self.decision_set = self.select(X, y)
+        self.decision_set = self.trim()
+        self.max_rule_length = max([len(decision.rule) for decision in self.decision_set]) \
+            if self.decision_set else 0
 
-        self.decision_set, self.decision_set_labels = self.select(X, y)
-        self.decision_set, self.decision_set_labels = self.trim()
-        self.max_rule_length = max([len(rule) for rule in self.decision_set]) if self.decision_set else 0
-    
-        
+        self.decision_set = list(self.decision_set)
+
+
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
         """
         Finds data points of X covered by each rule in the decision set.
@@ -145,13 +162,12 @@ class DecisionSet:
                 if point i is covered by rule j and False otherwise.
         """
         assignment = np.zeros((X.shape[0], len(self.decision_set)), dtype = bool)
-        for i, condition_list in enumerate(self.decision_set):
-            data_points_satisfied = satisfies_conditions(X, condition_list)
-            assignment[data_points_satisfied, i] = True
+        for i, decision in enumerate(self.decision_set):
+            assignment[:, i] = decision.rule.evaluate(X)
         return assignment
     
 
-    def get_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
+    def get_rules_to_clusters_assignment(self, n_labels : int, ignore : set[int] = set()) -> NDArray:
         """
         Finds data points of X covered by each rule in the decision set.
         
@@ -162,7 +178,8 @@ class DecisionSet:
             assignment (np.ndarray): n_rules x k boolean matrix with entry (i,j) being True
                 if point i is covered by rule j and False otherwise.
         """
-        assignment = labels_to_assignment(self.decision_set_labels, n_labels)
+        decision_set_labels = [{decision.label} for decision in self.decision_set]
+        assignment = labels_to_assignment(decision_set_labels, n_labels, ignore)
         return assignment
     
     
@@ -182,17 +199,14 @@ class DecisionSet:
             labels (List[Set[int]]): 2d list of predicted labels, with the internal list 
                 at index i representing the group of decision rules which satisfy X[i,:].
         """
-        
-        data_to_rules_assignment = self.get_data_to_rules_assignment(X)
-        
         labels = [set() for _ in range(len(X))]
-        for i in range(len(self.decision_set)):
-            r_covers = data_to_rules_assignment[:,i].nonzero()[0]
+        for i, decision in enumerate(self.decision_set):
+            r_covers = satisfies_rule(X, decision.rule)
             for j in r_covers:
                 if rule_labels:
                     labels[j].add(i)
                 else:
-                    labels[j] = labels[j].union(self.decision_set_labels[i])
+                    labels[j] = labels[j].union({decision.label})
 
         # Mark uncovered points with {-1}
         labels = [label if label else {-1} for label in labels]
@@ -214,16 +228,13 @@ class DecisionSet:
         Returns:
             wad (float): Weighted average depth.
         """
-        data_to_rules_assignment = self.get_data_to_rules_assignment(X)
-        decision_set = self.decision_set
-
         wad = 0
         total_covers = 0
-        for i, rule in enumerate(decision_set):
-            r_covers = data_to_rules_assignment[:,i].nonzero()[0]
+        for i, decision in enumerate(self.decision_set):
+            r_covers = satisfies_rule(X, decision.rule)
             total_covers += len(r_covers)
             if len(r_covers) != 0:
-                wad += len(r_covers) * (len(rule))
+                wad += len(r_covers) * (len(decision.rule))
             
         if total_covers == 0:
             return np.nan
@@ -243,7 +254,4 @@ class DecisionSet:
         Returns:
             sum (float): Sum of lengths of all rules.
         """
-        return sum([len(rule) for rule in self.decision_set])
-        
-    
-    
+        return sum([len(decision.rule) for decision in self.decision_set])

@@ -36,13 +36,15 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
-    'max_rules': 6 + 20,
+    'max_rules': 12,
     'min_support': 0.05,
-    'min_confidence': 0.8,
-    'max_rule_length': 5,
+    'min_confidence': 0.85,
+    'max_rule_length': 4,
     'depth_factor': 0.03,
+    'ids_samples': 1,
+    'forest_samples': 10,
+    'alpha_mistakes': 0.01 * n * 1.0,
     'lambdas' : {},
-    'alpha_mistakes': 0.5 * n * 1.0
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -56,26 +58,12 @@ kmeans_labels = kmeans_base.labels
 
 # Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-closest_distances = np.min(kmeans_distances, axis=1)
-average_distance = np.mean(closest_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.5 * n * average_distance
+max_distances = np.max(kmeans_distances, axis=1)
+max_distance = np.max(max_distances)
+fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * max_distance
 
 ####################################################################################################
 # Rule Mining:
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
-    max_length = fixed_parameters['max_rule_length'],
-    binning_method = "entropy",
-    bin_params = {
-        'random_state': seed,
-    }
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
 
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = seed),
@@ -93,19 +81,50 @@ exkmc_rule_miner = TreeMiner(
     )
 )
 exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = data, y = kmeans_base.labels
+    X = data.copy(), y = kmeans_base.labels
 )
 
 
-forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
-forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
+shallow_tree_miner = TreeMiner(
+    tree = ShallowTree(
+        n_clusters = fixed_parameters['n_clusters'],
+        depth_factor = fixed_parameters['depth_factor'],
+        kmeans_random_state = seed
+    )
+)
+shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
+    X = data, y = kmeans_labels
+)
 
-rule_miner_dict = {
-    'decision-tree': (decision_tree_rule_miner, decision_tree_rules, None),
-    'exkmc': (exkmc_rule_miner, exkmc_rules, None),
-    'random-forest': (forest_rule_miner, forest_rules, None),
-    'car-entropy': (class_association_rule_miner, class_association_rules, None),
-}
+forest_rules_list = []
+for _ in range(fixed_parameters['forest_samples']):
+    forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': np.random.randint(0, 10000)})
+    frules, _ = forest_rule_miner.fit(data, kmeans_base.labels)
+    forest_rules_list.append(frules)
+
+
+class_association_rule_miner = ClassAssociationRuleMiner(
+    min_support = fixed_parameters['min_support'],
+    min_confidence = fixed_parameters['min_confidence'],
+    max_length = fixed_parameters['max_rule_length'],
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': seed,
+    }
+)
+class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
+    X = data, y = kmeans_base.labels
+)
+
+rule_miner_dict = {}
+
+for i in range(fixed_parameters['forest_samples']):
+    forest_rules = forest_rules_list[i]
+    ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+    ensemble_rules = filter_rules(
+        ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
+    )
+    rule_miner_dict[f'ensemble_{i}'] = (None, ensemble_rules, None)
 
 
 ####################################################################################################
@@ -156,72 +175,104 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 
+# IDS:
+'''
+rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
+ids_lambdas = [
+    1/rule_comb,
+    1/(2 * data.shape[1] * rule_comb),
+    1/(len(data) * (rule_comb**2)),
+    1/(len(data) * (rule_comb**2)),
+    1/fixed_parameters['n_clusters'],
+    1/(data.shape[0] * rule_comb),
+    1/(data.shape[0])
+]
+
+ids_module_list = []
+for s in range(fixed_parameters['ids_samples']):
+    ids_params = {
+        tuple(n_rules_list) : {
+            'lambdas' : ids_lambdas
+        }
+    }
+    ids_mod = DecisionSetMod(
+        model = IDS,
+        fitting_params = {'bin_df': class_association_rule_miner.bin_df},
+        rules = class_association_rules,
+        name = f"IDS_{s}"
+    )
+    ids_module_list.append((ids_mod, ids_params))
+'''
+
+####################################################################################################
+# Objectives for Decision Set Clustering:
+
+objective_dict = {
+    'coverage-mistake': {
+        'alpha_val': fixed_parameters['alpha_mistakes'],
+        'objective_type': 'coverage-mistake'
+    },
+    'total-coverage-mistake': {
+        'alpha_val': fixed_parameters['alpha_mistakes'],
+        'objective_type': 'total-coverage-mistake'
+    },
+    'coverage-cost': {
+        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'total-coverage-cost': {
+        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'total-coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    }
+}
+
+
+####################################################################################################
+# Find max lambda values among all rule miners
+
+for obj_name, obj_params in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    max_lambda = 0.0
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        dsclust = DSCluster(
+            rules = rules,
+            n_select = n_rules_list[0],
+            **obj_params
+        )
+        dsclust.fit(data, kmeans_labels)
+        lambda_val = dsclust.objective.lambda_val
+        if lambda_val > max_lambda:
+            max_lambda = lambda_val
+    
+    print(f'Found max lambda for {obj_mod_name}: {max_lambda}')
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = obj_mod_name + f'; {rule_miner_name}'
+        fixed_parameters['lambdas'][module_name] = max_lambda
+
+
 ####################################################################################################
 # Decision Set Clustering Modules:
 
-objective1 = CoverageMistakeObjective(
-    n_rules = -1, # Placeholder, will be set later
-    lambda_val = -1.0, # Placeholder, will be set later
-    alpha_val = fixed_parameters['alpha_mistakes']
-)
-
-objective2 = CoverageCostObjective(
-    data = data,
-    cluster_centers = kmeans_base.centers,
-    n_rules = -1, # Placeholder, will be set later
-    lambda_val = -1.0, # Placeholder, will be set later
-    alpha_val = fixed_parameters['alpha_rule_clustering_cost'],
-    method = "kmeans"
-)
-
-
-objective_dict = {
-    'coverage-mistake': objective1,
-    'coverage-cost': objective2,
-}
-
 dscluster_module_list = []
-for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-    for obj_name, obj in objective_dict.items():
-        module_name = f'dscluster; {rule_miner_name}; {obj_name}'
-        #lambda_val = fixed_parameters['lambdas'][module_name]
-        obj_eval = type(obj)(
-            **{k: v for k, v in obj.__dict__.items()
-               if k not in ['n_rules','lambda_val','data_to_center_distances']},
-            n_rules = n_rules_list[0],
-            lambda_val = -1 # Placeholder, will be set later
-        )
-
-        # Find lambda_val for this module
-        dsclust = DSCluster(
-            objective = obj_eval,
-            rule_miner = rule_miner,
-            rules = rules,
-            rule_labels = rule_labels,
-        )
-        if rule_miner_name == 'random-forest':
-            dsclust.filter_rules(data, kmeans_labels, remove_top = 0.05)
-        lambda_vals = dsclust.compute_lambdas(data, kmeans_labels)
-        lambda_val = lambda_vals[0]
+for obj_name, obj_params in objective_dict.items():
+    obj_mod_name = f'dscluster; {obj_name}'
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = obj_mod_name + f'; {rule_miner_name}'
+        lambda_val = fixed_parameters['lambdas'][module_name]
 
         # Decision Set Clustering Parameters:
         dsclust_params = {
-            (r,) : {
-                'objective' : type(obj)(
-                    **{k: v for k, v in obj.__dict__.items()
-                       if k not in ['n_rules','lambda_val', 'data_to_center_distances']},
-                    n_rules = r,
-                    lambda_val = lambda_val
-                )
-            }
+            (r,) : {'n_select' : r, 'lambda_val' : lambda_val} | obj_params
             for i,r in enumerate(n_rules_list)
         }
 
         dsclust_mod = DecisionSetMod(
             model = DSCluster,
-            rule_miner = rule_miner,
             rules = rules,
-            rule_labels = rule_labels,
             name = module_name
         )
         dscluster_module_list.append((dsclust_mod, dsclust_params))
@@ -234,9 +285,9 @@ baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
-    (exkmc_mod, exkmc_params),
+    #(exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-] + dscluster_module_list
+] + dscluster_module_list #+ ids_module_list
 
 
 measurement_fns = [
@@ -262,7 +313,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/max_rules/', '_tuned')
+exp.save_results('data/experiments/anuran/max_rules/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

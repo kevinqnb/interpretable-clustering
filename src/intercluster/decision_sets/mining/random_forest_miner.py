@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from intercluster import Node, collect_node_rules, collect_leaf_rules
+from intercluster.rules import Rule
 from intercluster.decision_trees import DecisionTree
 from intercluster.utils import can_flatten, flatten_labels
 from .rule_miner import RuleMiner
@@ -25,7 +26,7 @@ class RandomForestMiner(RuleMiner):
         super().__init__()
         self.bin_df = None
 
-    def fit(self, X, y):
+    def fit(self, X : np.ndarray, y : np.ndarray) -> tuple[list[Rule], None]:
         """
         Fit the RandomForestMiner to the input dataset.
 
@@ -34,7 +35,7 @@ class RandomForestMiner(RuleMiner):
             y (List[Set[int]], optional): Dummy parameter for compatibility. Defaults to None.
 
         Returns:
-            rules (List[List[Condition]]): List of rules, where each rule is a list of conditions.
+            rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
         if not can_flatten(y):
