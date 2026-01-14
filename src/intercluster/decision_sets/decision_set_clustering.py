@@ -123,6 +123,20 @@ class DSCluster(DecisionSet):
                 weights = self.weights,
                 cluster_cost_method = self.cluster_cost_method
             )
+        elif self.objective_type == "coverage-pairwise-distance":
+            self.objective = CoverageMistakeObjective(
+                n_select = self.n_select,
+                alpha_val = self.alpha_val,
+                lambda_val = self.lambda_val,
+                weights = self.weights
+            )
+        elif self.objective_type == "total-coverage-pairwise-distance":
+            self.objective = TotalCoverageMistakeObjective(
+                n_select = self.n_select,
+                alpha_val = self.alpha_val,
+                lambda_val = self.lambda_val,
+                weights = self.weights
+            ) 
         else:
             raise ValueError(f'Unknown objective type: {self.objective_type}')
 
@@ -145,6 +159,7 @@ class DSCluster(DecisionSet):
         self.objective.initialize_data(X, y)
         self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
+        self.lambda_val = self.objective.lambda_val
         selected_decision_set = self.objective.select()
         return selected_decision_set
 

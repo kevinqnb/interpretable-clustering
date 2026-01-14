@@ -35,8 +35,9 @@ class ClassAssociationRuleMiner(RuleMiner):
         min_support : float = 0.1,
         min_confidence : float = 0.8,
         max_length : int = None,
+        bin_df = None,
         binning_method : str = "entropy",
-        bin_params : dict = {'random_state': 342},
+        bin_params : dict = dict(),
         ignore : Set[Any] = {-1},
     ):
         """
@@ -67,12 +68,15 @@ class ClassAssociationRuleMiner(RuleMiner):
         self.min_support = min_support
         self.min_confidence = min_confidence
         self.max_length = max_length
-        if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
-            raise ValueError(
-                "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
-            )
-        self.binning_method = binning_method
-        self.bin_params = bin_params
+
+        self.bin_df = bin_df
+        if self.bin_df is None:
+            if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
+                raise ValueError(
+                    "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
+                )
+            self.binning_method = binning_method
+            self.bin_params = bin_params
         self.ignore = ignore
         super().__init__()
 
@@ -99,7 +103,9 @@ class ClassAssociationRuleMiner(RuleMiner):
             raise ValueError("Each data point must be assigned to a single label.")
         y_ = flatten_labels(y)
 
-        if self.binning_method == "quantile":
+        if self.bin_df is not None:
+            bin_df = self.bin_df
+        elif self.binning_method == "quantile":
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":
             bin_df = uniform_bin(X, **self.bin_params)
@@ -113,7 +119,16 @@ class ClassAssociationRuleMiner(RuleMiner):
         bin_df = bin_df.astype(str)
         self.bin_df = bin_df
 
+        # Diagnostic information
+        print(f"Dataset size: {bin_df.shape[0]} rows, {bin_df.shape[1]} columns")
+        print(f"Min support: {self.min_support} ({self.min_support*100}%)")
+        print(f"Min confidence: {self.min_confidence} ({self.min_confidence*100}%)")
+        print(f"Max length: {self.max_length}")
+        print(f"Unique values per column: {[bin_df[col].nunique() for col in bin_df.columns[:5]]}...")  # First 5 cols
+        
         txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
+        print(f"Transaction DB size: {len(txns.string_representation)} transactions")
+
         if self.max_length is not None:
             cars = fim.apriori(
                 txns.string_representation,
@@ -135,6 +150,8 @@ class ClassAssociationRuleMiner(RuleMiner):
                 report="sc",
                 appear=txns.appeardict
             )
+
+        print(f"Generated {len(cars)} class association rules.")
 
         self.decision_set = []
         self.decision_set_labels = []

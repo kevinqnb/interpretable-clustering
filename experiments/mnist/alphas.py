@@ -1,4 +1,5 @@
 import os
+import math
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
@@ -21,20 +22,19 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
-euclidean_distances = pairwise_distances(data)
+data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
 n,d = data.shape
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 10,
-    'max_rules': 20,
-    'min_support': 0.1,
-    'min_confidence': 0.9,
+    'n_clusters': 6,
+    'n_select': 6,
+    'min_support': 0.05, 
+    'min_confidence': 0.85,
     'max_rule_length': 4,
     'depth_factor': 0.03,
-    'lambdas' : {},
+    'lambdas': {}
 }
 
 np.random.seed(seed)
@@ -43,10 +43,12 @@ np.random.seed(seed)
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = seed)
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
-
-# Find average distance of points to their closest cluster center
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 furthest_distance = np.max(np.max(kmeans_distances, axis=1))
+
+# Weights for uncertainty objectives
+weights = distance_ratio_score(data, kmeans_base.centers)
+fixed_parameters['weights'] = weights.tolist()
 
 ####################################################################################################
 # Rule Mining:
@@ -62,7 +64,6 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
         k = fixed_parameters['n_clusters'],
-        max_leaf_nodes = fixed_parameters['max_rules'],
         kmeans = kmeans_base.clustering,
         imm = True
     )
@@ -135,16 +136,64 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans'
-    }
+    },
+    'coverage-pairwise-distance': {
+        'n_select': fixed_parameters['n_select'],
+        'objective_type': 'coverage-pairwise-distance',
+    },
+    'total-coverage-pairwise-distance': {
+        'n_select': fixed_parameters['n_select'],
+        'objective_type': 'total-coverage-pairwise-distance',
+    },
+    'coverage-mistake-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'weights': weights,
+        'objective_type': 'coverage-mistake'
+    },
+    'total-coverage-mistake-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'weights': weights,
+        'objective_type': 'total-coverage-mistake'
+    },
+    'coverage-cost-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'cluster_centers': kmeans_base.centers,
+        'weights': weights,
+        'objective_type': 'coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'total-coverage-cost-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'cluster_centers': kmeans_base.centers,
+        'weights': weights,
+        'objective_type': 'total-coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'coverage-pairwise-distance-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'objective_type': 'coverage-pairwise-distance',
+    },
+    'total-coverage-pairwise-distance-weighted': {
+        'n_select': fixed_parameters['n_select'],
+        'objective_type': 'total-coverage-pairwise-distance',
+    },
 }
 
 
 # List of alpha values to try for each objective
 objective_alpha_dict = {
-    'coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 100),
-    'total-coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 100),
-    'coverage-cost': np.linspace(0.0, furthest_distance * n, num = 100),
-    'total-coverage-cost': np.linspace(0.0, furthest_distance * n, num = 100),
+    'coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 25),
+    'total-coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 25),
+    'coverage-cost': np.linspace(0.0, furthest_distance * n, num = 25),
+    'total-coverage-cost': np.linspace(0.0, furthest_distance * n, num = 25),
+    'coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
+    'total-coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
+    'coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = 25),
+    'total-coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = 25),
+    'coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = 25),
+    'total-coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = 25),
+    'coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
+    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
 }
 
 
@@ -159,17 +208,8 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
             fixed_parameters['lambdas'][module_name] = {}
         alpha_vals = objective_alpha_dict[obj_name]
         for alpha in alpha_vals:
-            dsclust = DSCluster(
-                rules = rules,
-                alpha_val = alpha,
-                **obj_params
-            )
-            dsclust.fit(data, kmeans_labels)
-            lambda_val = dsclust.objective.lambda_val
-            fixed_parameters['lambdas'][f'dscluster; {obj_name}; {rule_miner_name}'][alpha] = lambda_val
-
             obj_parameterized = {
-                (alpha_val,): obj_params | {'alpha_val': alpha_val, 'lambda_val': lambda_val}
+                (alpha_val,): obj_params | {'alpha_val': alpha_val}
                 for alpha_val in objective_alpha_dict[obj_name]
             }
 
@@ -186,7 +226,12 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
 
 measurement_fns = [
     TotalCoverage(),
+    TotalCoverage(weights = weights, name = 'total-coverage-weighted'),
     ClusterCoverage(baseline_assignment = kmeans_assignment),
+    ClusterCoverage(
+        baseline_assignment = kmeans_assignment, weights = weights, name = 'cluster-coverage-weighted'
+    ),
+    Overlap(),
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
@@ -207,7 +252,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/mnist/alphas/', '')
+exp.save_results('data/experiments/climate/alphas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

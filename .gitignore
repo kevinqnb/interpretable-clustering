@@ -173,7 +173,6 @@ experiments/*/*/*.txt
 
 examples/testing.ipynb
 examples/examples_older.ipynb
-examples/datasets.ipynb
 
 src/intercluster/decision_sets/mining/clique_miner.py
 *.DS_Store
@@ -181,3 +180,5 @@ src/intercluster/decision_sets/mining/clique_miner.py
 *.c
 
 .nfs*
+
+*bin_df.csv

@@ -22,7 +22,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_protein()
 n,d = data.shape
 
 fixed_parameters = {
@@ -30,7 +30,7 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'n_select': 6,
-    'min_support': 0.05, 
+    'min_support': 0.07, 
     'min_confidence': 0.85,
     'max_rule_length': 4,
     'depth_factor': 0.03,
@@ -252,7 +252,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/alphas/', '')
+exp.save_results('data/experiments/protein/alphas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 
