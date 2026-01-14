@@ -6,6 +6,7 @@ from intercluster import (
     uniform_bin,
     quantile_bin,
     oned_cluster_bin,
+    entropy_bin,
     interval_to_condition,
     Rule
 )
@@ -25,19 +26,24 @@ class FrequentItemsetMiner(RuleMiner):
 
     Args:
         min_support (float, optional): Minimum support for a rule. Defaults to 0.1.
+        max_length (int, optional): Maximum length of a rule (number of conditions). Defaults to None.
+        bin_df (pd.DataFrame, optional): Pre-binned dataset to use for mining rules. If None, 
+            binning will be performed according to the specified method. Defaults to None
         binning_method (str, optional): Binning method to use. Options are "uniform" or "quantile".
             Defaults to "uniform".
         bin_params (dict, optional): Parameters for the binning method. Defaults to standard 
             uniform binning parameters.
 
     Attrs:
-        decision_set (List[Rule]): The mined decision set.
+        rules (List[Rule]): The mined list of rules.
+        rule_labels (List[Set[int]]): The labels corresponding to each rule. None, dummy variable.
         bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
     """
     def __init__(
         self,
         min_support : float = 0.1,
         max_length : int = None,
+        bin_df = None,
         binning_method : str = "uniform",
         bin_params : dict = {'n_bins': 5}
     ):
@@ -53,6 +59,15 @@ class FrequentItemsetMiner(RuleMiner):
         if binning_method not in ["uniform", "quantile", "cluster"]:
             raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile' or 'cluster'.")
         self.binning_method = binning_method
+
+        self.bin_df = bin_df
+        if self.bin_df is None:
+            if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
+                raise ValueError(
+                    "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
+                )
+            self.binning_method = binning_method
+            self.bin_params = bin_params
 
         self.bin_params = bin_params
 
@@ -74,18 +89,22 @@ class FrequentItemsetMiner(RuleMiner):
             rules (List[Rule]): List of rules.
             rule_labels (List[Set[int]]): None, dummy variable.
         """
-        if self.binning_method == "quantile":
+        if self.bin_df is not None:
+            bin_df = self.bin_df
+        elif self.binning_method == "quantile":
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":
             bin_df = uniform_bin(X, **self.bin_params)
-        else:
+        elif self.binning_method == "cluster":
             bin_df = oned_cluster_bin(X, **self.bin_params)
+        else:
+            bin_df = entropy_bin(X, y, **self.bin_params)
 
         bin_df.columns = bin_df.columns.astype(str)
         bin_df = bin_df.astype(str)
         self.bin_df = bin_df
-
         txns = TransactionDB.from_DataFrame(bin_df)
+
         if self.max_length is not None:
             frequent_itemsets = fim.apriori(
                 txns.string_representation,
@@ -99,7 +118,7 @@ class FrequentItemsetMiner(RuleMiner):
             )
 
         # Convert to decision set format:
-        self.decision_set = []
+        self.rules = []
         for itemset in frequent_itemsets:
             antecedent, support = itemset
             conditions = []
@@ -109,9 +128,9 @@ class FrequentItemsetMiner(RuleMiner):
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
                 conditions.append(lower_condition)
                 conditions.append(upper_condition)
-            self.decision_set.append(Rule(conditions))
+            self.rules.append(Rule(conditions))
 
-        return self.decision_set, None
-    
+        return self.rules, None
+
 
 ####################################################################################################

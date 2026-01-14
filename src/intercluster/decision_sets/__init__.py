@@ -5,7 +5,3 @@ from .decision_set_clustering import (
 from .ids import (
     IDS
 )
-
-from .cba import (
-    CBA
-)

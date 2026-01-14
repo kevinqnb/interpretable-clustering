@@ -18,7 +18,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
+data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
 n,d = data.shape
 
 fixed_parameters = {
@@ -45,4 +45,4 @@ bin_df = entropy_bin(
     data, kmeans_labels, random_state = fixed_parameters['seed']
 )
 
-bin_df.to_csv('data/experiments/fashion/bin_df.csv', index = False)
+bin_df.to_csv('data/experiments/mnist/bin_df.csv', index = False)

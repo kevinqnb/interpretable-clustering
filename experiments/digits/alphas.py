@@ -1,7 +1,6 @@
 import os
 import math
 import numpy as np
-import pandas as pd
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
@@ -23,22 +22,21 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_digits()
 n,d = data.shape
-bin_df = pd.read_csv("../data/experiments/fashion/bin_df.csv")
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'n_select': 6,
+    'n_clusters': 10,
+    'n_select': 10,
     'min_support': 0.05, 
     'min_confidence': 0.85,
     'max_rule_length': 4,
-    'max_depth': 20,
+    'max_depth': None,
     'depth_factor': 0.03,
     'lambdas': {},
-    'seed': seed
+    'seed': seed,
 }
 
 np.random.seed(seed)
@@ -88,7 +86,7 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
 )
 
 
-forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': fixed_parameters['seed']})
+forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': seed})
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 
@@ -96,7 +94,10 @@ class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
     max_length = fixed_parameters['max_rule_length'],
-    bin_df = bin_df,
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': fixed_parameters['seed'],
+    }
 )
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
@@ -253,7 +254,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/alphas/', '')
+exp.save_results('data/experiments/digits/alphas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

@@ -54,8 +54,8 @@ class ClassAssociationRuleMiner(RuleMiner):
             ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
 
         Attributes:
-            decision_set (List[Rule]): The mined decision set.
-            decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
+            rules (List[Rule]): The mined rules.
+            rule_labels (List[Set[int]]): The labels corresponding to each rule.
             bin_df (pd.DataFrame): The binned version of the input dataset used for mining rules.
         """
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
@@ -79,8 +79,6 @@ class ClassAssociationRuleMiner(RuleMiner):
             self.bin_params = bin_params
         self.ignore = ignore
         super().__init__()
-
-        self.bin_df = None
 
 
     def fit(
@@ -119,15 +117,7 @@ class ClassAssociationRuleMiner(RuleMiner):
         bin_df = bin_df.astype(str)
         self.bin_df = bin_df
 
-        # Diagnostic information
-        print(f"Dataset size: {bin_df.shape[0]} rows, {bin_df.shape[1]} columns")
-        print(f"Min support: {self.min_support} ({self.min_support*100}%)")
-        print(f"Min confidence: {self.min_confidence} ({self.min_confidence*100}%)")
-        print(f"Max length: {self.max_length}")
-        print(f"Unique values per column: {[bin_df[col].nunique() for col in bin_df.columns[:5]]}...")  # First 5 cols
-        
         txns = TransactionDB.from_DataFrame(bin_df, target = 'class')
-        print(f"Transaction DB size: {len(txns.string_representation)} transactions")
 
         if self.max_length is not None:
             cars = fim.apriori(
@@ -151,10 +141,8 @@ class ClassAssociationRuleMiner(RuleMiner):
                 appear=txns.appeardict
             )
 
-        print(f"Generated {len(cars)} class association rules.")
-
-        self.decision_set = []
-        self.decision_set_labels = []
+        self.rules = []
+        self.rule_labels = []
 
         for car in cars:
             con, ant, support, confidence = car
@@ -166,15 +154,15 @@ class ClassAssociationRuleMiner(RuleMiner):
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
                 conditions.append(lower_condition)
                 conditions.append(upper_condition)
-            self.decision_set.append(Rule(conditions))
-            self.decision_set_labels.append({consequent})
+            self.rules.append(Rule(conditions))
+            self.rule_labels.append({consequent})
 
         # remove rules covering outliers
-        self.decision_set = [rule for i,rule in enumerate(self.decision_set) 
-                             if self.decision_set_labels[i] not in self.ignore]
-        self.decision_set_labels = [label for label in self.decision_set_labels 
+        self.rules = [rule for i,rule in enumerate(self.rules) 
+                             if self.rule_labels[i] not in self.ignore]
+        self.rule_labels = [label for label in self.rule_labels 
                                     if label not in self.ignore]
-        return self.decision_set, self.decision_set_labels
-    
+        return self.rules, self.rule_labels
+
 
 ####################################################################################################

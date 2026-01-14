@@ -15,16 +15,16 @@ class RandomForestMiner(RuleMiner):
         forest_params (dict, optional): Parameters for the RandomForestClassifier. Defaults to None.
 
     Attrs:
-        decision_set (List[List[Condition]]): The mined decision set,
+        rules (List[Rule]): The mined rules,
             where each rule is a list of conditions.
-        bin_df (pd.DataFrame): Not implemented. Dummy variable for compatibility.
+
+        rule_labels (List[Set[int]]): The labels corresponding to each rule. None, dummy variable.
     """
     def __init__(self, forest_params = None):
         if forest_params is None:
             forest_params = {}
         self.forest_params = forest_params
         super().__init__()
-        self.bin_df = None
 
     def fit(self, X : np.ndarray, y : np.ndarray) -> tuple[list[Rule], None]:
         """
@@ -44,7 +44,7 @@ class RandomForestMiner(RuleMiner):
         forest = RandomForestClassifier(**self.forest_params)
         forest.fit(X, y_array)
 
-        self.decision_set = []
+        self.rules = []
         for tree in forest.estimators_:
             dtree = DecisionTree()
             dtree.X = X
@@ -55,6 +55,6 @@ class RandomForestMiner(RuleMiner):
             indices = np.arange(len(X))
             dtree.grow(indices, 0, dtree.root, 0)
             dtree.node_count += 1
-            self.decision_set.extend(collect_node_rules(dtree.root))
+            self.rules.extend(collect_node_rules(dtree.root))
 
-        return self.decision_set, None
+        return self.rules, None

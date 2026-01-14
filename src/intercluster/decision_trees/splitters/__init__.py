@@ -8,7 +8,7 @@ from .information_gain import (
 )
 
 
-from .removal import (
+from .explanation import (
     ExplanationSplitter
 )
 

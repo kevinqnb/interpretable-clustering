@@ -18,7 +18,7 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 n,d = data.shape
 
 fixed_parameters = {

@@ -12,24 +12,20 @@ class RuleMiner:
     Base class for rule mining algorithms.
 
     Attributes:
-        decision_set (List[Rule]): The mined decision set, where each rule is a list of conditions.
-        decision_set_labels (List[Set[int]]): The labels corresponding to each rule.
+        rules (List[Rule]): The mined rules, where each rule is a list of conditions.
+        rule_labels (List[Set[int]]): The labels corresponding to each rule.
     """
     def __init__(self):
-        self.decision_set = None
-        self.decision_set_labels = None
-        self.bin_df = None
-        self.cars = None
+        self.rules = None
+        self.rule_labels = None
 
 
     def clear_cache(self):
         """
         Clear the currently stored rules.
         """
-        self.decision_set = None
-        self.decision_set_labels = None
-        self.bin_df = None
-        self.cars = None
+        self.rules = None
+        self.rule_labels = None
 
     
     def fit(
