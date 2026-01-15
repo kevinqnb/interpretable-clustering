@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
@@ -13,7 +14,7 @@ from intercluster.experiments import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 8
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -21,16 +22,24 @@ experiment_cpu_count = 8
 # reset the seed each time they are given one. 
 seed = 342
 
+def _memoryview_safe(x):
+    """
+    Make array safe to run in a Cython memoryview-based kernel. 
+    As far as I can tell, this sometimes is an issue when data is pickled in 
+    multiprocessing environments.
+    """
+    if not x.flags.writeable:
+        if not x.flags.owndata:
+            x = x.copy(order='C')
+        x.setflags(write=True)
+    return x
+
 ####################################################################################################
 # Read and process data:
-data, labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data = _memoryview_safe(data)
 euclidean_distances = pairwise_distances(data)
 n,d = data.shape
-
-##### Parameters #####
-#lambdas_fname = 'data/experiments/climate/lambdas/selected_lambdas_alpha_zero.json'
-#with open(lambdas_fname, 'r') as f:
-#    selected_lambdas = json.load(f)
 
 fixed_parameters = {
     'n' : n,
@@ -39,34 +48,61 @@ fixed_parameters = {
     'max_rules': 12,
     'min_support': 0.05,
     'min_confidence': 0.85,
-    'max_rule_length': 4,
+    'car_max_rule_length': 4,
+    'n_forest': 100,
+    'max_depth': None,
     'depth_factor': 0.03,
     'ids_samples': 1,
-    'forest_samples': 10,
-    'alpha_mistakes': 0.01 * n * 1.0,
-    'lambdas' : {},
+    'seed': seed,
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
 
-np.random.seed(seed)
+np.random.seed(fixed_parameters['seed'])
 
 # Baseline KMeans
-kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = seed)
+kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 
-# Find average distance of points to their closest cluster center
+# Weights for uncertainty objectives
+weights = distance_ratio_score(data, kmeans_base.centers)
+fixed_parameters['weights'] = weights.tolist()
+
+# Alpha values for objectives:
+# Hard coded for now; will be selected via separate experiment later:
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 max_distances = np.max(kmeans_distances, axis=1)
 max_distance = np.max(max_distances)
-fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * max_distance
+
+alpha_dict = {
+    'dscluster; coverage-mistake; ensemble': 0.01 * n * 1.0,
+    'dscluster; total-coverage-mistake; ensemble': 0.01 * n * 1.0,
+    'dscluster; coverage-cost; ensemble': 0.01 * n * max_distance,
+    'dscluster; total-coverage-cost; ensemble': 0.01 * n * max_distance,
+    'dscluster; coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
+    'dscluster; total-coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
+    'dscluster; coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
+    'dscluster; total-coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
+    'dscluster; coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
+    'dscluster; total-coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
+    'dscluster; coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
+    'dscluster; total-coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
+}
+
+with open("data/experiments/anuran/alphas/selected_alphas.json") as f:
+    selected_alpha_dict = json.load(f)
+alpha_dict = alpha_dict | selected_alpha_dict
+fixed_parameters['alpha'] = alpha_dict
+
+outfile = 'data/experiments/anuran/max_rules/'
+outfile_ref = '_update'
 
 ####################################################################################################
 # Rule Mining:
 
 decision_tree_rule_miner = TreeMiner(
-    tree = DecisionTree(random_state = seed),
+    tree = DecisionTree(random_state = fixed_parameters['seed']),
 )
 decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
     X = data, y = kmeans_base.labels
@@ -81,7 +117,7 @@ exkmc_rule_miner = TreeMiner(
     )
 )
 exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = data.copy(), y = kmeans_base.labels
+    X = data, y = kmeans_base.labels
 )
 
 
@@ -89,49 +125,52 @@ shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
         n_clusters = fixed_parameters['n_clusters'],
         depth_factor = fixed_parameters['depth_factor'],
-        kmeans_random_state = seed
+        kmeans_random_state = fixed_parameters['seed']
     )
 )
 shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
     X = data, y = kmeans_labels
 )
 
-forest_rules_list = []
-for _ in range(fixed_parameters['forest_samples']):
-    forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': np.random.randint(0, 10000)})
-    frules, _ = forest_rule_miner.fit(data, kmeans_base.labels)
-    forest_rules_list.append(frules)
+
+forest_rule_miner = RandomForestMiner(
+    forest_params = {
+        'n_estimators': fixed_parameters['n_forest'],
+        'max_depth': fixed_parameters['max_depth'],
+        'random_state': fixed_parameters['seed']
+    }
+)
+forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
-    max_length = fixed_parameters['max_rule_length'],
+    max_length = fixed_parameters['car_max_rule_length'],
     binning_method = "entropy",
     bin_params = {
-        'random_state': seed,
+        'random_state': fixed_parameters['seed'],
     }
 )
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
 
-rule_miner_dict = {}
+ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+ensemble_rules = filter_rules(
+    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
+)
 
-for i in range(fixed_parameters['forest_samples']):
-    forest_rules = forest_rules_list[i]
-    ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
-    ensemble_rules = filter_rules(
-        ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
-    )
-    rule_miner_dict[f'ensemble_{i}'] = (None, ensemble_rules, None)
+rule_miner_dict = {
+    'ensemble': (None, ensemble_rules, None),
+}
 
 
 ####################################################################################################
 # Comparison Modules:
 
 # Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : seed}
+decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : fixed_parameters['seed']}
                         for i in n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
@@ -166,7 +205,7 @@ shallow_tree_params = {
     tuple(n_rules_list) : {
         'n_clusters' : fixed_parameters['n_clusters'],
         'depth_factor' : fixed_parameters['depth_factor'],
-        'kmeans_random_state' : seed
+        'kmeans_random_state' : fixed_parameters['seed']
     } for i in n_rules_list
 }
 shallow_tree_mod = DecisionTreeMod(
@@ -209,67 +248,69 @@ for s in range(fixed_parameters['ids_samples']):
 
 objective_dict = {
     'coverage-mistake': {
-        'alpha_val': fixed_parameters['alpha_mistakes'],
         'objective_type': 'coverage-mistake'
     },
     'total-coverage-mistake': {
-        'alpha_val': fixed_parameters['alpha_mistakes'],
         'objective_type': 'total-coverage-mistake'
     },
     'coverage-cost': {
-        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans'
     },
     'total-coverage-cost': {
-        'alpha_val': fixed_parameters['alpha_rule_clustering_cost'],
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans'
-    }
+    },
+    'coverage-pairwise-distance': {
+        'objective_type': 'coverage-pairwise-distance',
+    },
+    'total-coverage-pairwise-distance': {
+        'objective_type': 'total-coverage-pairwise-distance',
+    },
+    'coverage-mistake-weighted': {
+        'weights': weights,
+        'objective_type': 'coverage-mistake'
+    },
+    'total-coverage-mistake-weighted': {
+        'weights': weights,
+        'objective_type': 'total-coverage-mistake'
+    },
+    'coverage-cost-weighted': {
+        'cluster_centers': kmeans_base.centers,
+        'weights': weights,
+        'objective_type': 'coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'total-coverage-cost-weighted': {
+        'cluster_centers': kmeans_base.centers,
+        'weights': weights,
+        'objective_type': 'total-coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'coverage-pairwise-distance-weighted': {
+        'weights': weights,
+        'objective_type': 'coverage-pairwise-distance',
+    },
+    'total-coverage-pairwise-distance-weighted': {
+        'weights': weights,
+        'objective_type': 'total-coverage-pairwise-distance',
+    },
 }
-
-
-####################################################################################################
-# Find max lambda values among all rule miners
-
-for obj_name, obj_params in objective_dict.items():
-    obj_mod_name = f'dscluster; {obj_name}'
-    max_lambda = 0.0
-    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        dsclust = DSCluster(
-            rules = rules,
-            n_select = n_rules_list[0],
-            **obj_params
-        )
-        dsclust.fit(data, kmeans_labels)
-        lambda_val = dsclust.objective.lambda_val
-        if lambda_val > max_lambda:
-            max_lambda = lambda_val
-    
-    print(f'Found max lambda for {obj_mod_name}: {max_lambda}')
-    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        module_name = obj_mod_name + f'; {rule_miner_name}'
-        fixed_parameters['lambdas'][module_name] = max_lambda
-
 
 ####################################################################################################
 # Decision Set Clustering Modules:
 
 dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
-    obj_mod_name = f'dscluster; {obj_name}'
     for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        module_name = obj_mod_name + f'; {rule_miner_name}'
-        lambda_val = fixed_parameters['lambdas'][module_name]
-
-        # Decision Set Clustering Parameters:
+        module_name = f'dscluster; {obj_name}; {rule_miner_name}'
+        alpha_val = alpha_dict[module_name]
         dsclust_params = {
-            (r,) : {'n_select' : r, 'lambda_val' : lambda_val} | obj_params
+            (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params
             for i,r in enumerate(n_rules_list)
         }
-
         dsclust_mod = DecisionSetMod(
             model = DSCluster,
             rules = rules,
@@ -285,14 +326,20 @@ baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
     (exp_tree_mod, exp_tree_params),
-    #(exkmc_mod, exkmc_params),
+    (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
 ] + dscluster_module_list #+ ids_module_list
 
-
 measurement_fns = [
     TotalCoverage(),
+    TotalCoverage(weights = weights, name = 'total-coverage-weighted'),
+    TotalCoverageSet(),
     ClusterCoverage(baseline_assignment = kmeans_assignment),
+    ClusterCoverage(
+        baseline_assignment = kmeans_assignment, weights = weights, name = 'cluster-coverage-weighted'
+    ),
+    ClusterCoverageSet(baseline_assignment = kmeans_assignment),
+    Overlap(),
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
@@ -313,7 +360,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/max_rules/', '')
+exp.save_results(outfile, outfile_ref)
 end = time.time()
 print("Experiment time:", end - start)
 

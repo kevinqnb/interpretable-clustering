@@ -1144,3 +1144,63 @@ def map_rules_to_decisions(
 
 
 ####################################################################################################
+
+
+def compute_elbow(x: np.ndarray, y: np.ndarray, increasing: bool = True) -> int:
+    """
+    Compute the elbow as the point farthest from the end-to-end line.
+
+    Note:
+    The distance used is the perpendicular distance to the *infinite* line
+    through (x[0], y[0]) and (x[-1], y[-1]) (not to the segment). This matches
+    the typical "elbow" heuristic.
+
+    If the first and last points are identical, distances are computed to that
+    point instead (Euclidean distance), and the farthest point is returned.
+
+    Args:
+        x, y: 1D arrays of equal length describing the curve points (x[i], y[i]).
+        increasing: If True, choose the farthest point among those *above* the
+            end-to-end line. If False, choose the farthest point among those
+            *below* the line.
+
+    Returns:
+        int: The index of the elbow point.
+    """
+    if len(x) != len(y):
+        raise ValueError("x and y must have the same length")
+    if len(x) < 2:
+        raise ValueError("Need at least two points to compute an elbow")
+
+    x1, y1 = x[0], y[0]
+    x2, y2 = x[-1], y[-1]
+
+    dx = x2 - x1
+    dy = y2 - y1
+
+    # Degenerate case: end points are identical.
+    if dx == 0.0 and dy == 0.0:
+        # Signed distance is arbitrary here; treat all points as eligible.
+        signed = np.zeros_like(x, dtype=float)
+        distances = np.sqrt((x - x1) ** 2 + (y - y1) ** 2)
+    else:
+        # Oriented line equation value (numerator of point-to-line distance).
+        # Positive/negative indicates which side of the line ("above"/"below")
+        # relative to the direction (x1,y1)->(x2,y2).
+        signed = dy * x - dx * y + (x2 * y1 - y2 * x1)
+        denom = np.sqrt(dx * dx + dy * dy)
+        distances = np.abs(signed) / denom
+
+    # Keep only points on the requested side.
+    # Note: points exactly on the line (signed==0) are excluded.
+    mask = signed > 0 if increasing else signed < 0
+
+    if np.any(mask):
+        masked = np.where(mask, distances, -np.inf)
+        idx = int(np.argmax(masked))
+    else:
+        # Fallback: if all points are on the other side (or collinear),
+        # return the unconstrained maximum.
+        idx = int(np.argmax(distances))
+
+    return idx

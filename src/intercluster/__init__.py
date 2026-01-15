@@ -64,6 +64,7 @@ from .utils import (
     filter_rules,
     cartesian_product_labels,
     map_rules_to_decisions,
+    compute_elbow,
 )
 
 

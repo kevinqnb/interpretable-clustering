@@ -1,6 +1,8 @@
 from .measurements import (
     TotalCoverage,
+    TotalCoverageSet,
     ClusterCoverage,
+    ClusterCoverageSet,
     Mistakes,
     ClusteringCost,
     RuleClusteringCost,

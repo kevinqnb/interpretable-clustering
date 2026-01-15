@@ -1,0 +1,10 @@
+{
+    "dscluster; coverage-mistake; ensemble": 299.7916666666667,
+    "dscluster; total-coverage-mistake; ensemble": 299.7916666666667,
+    "dscluster; coverage-cost; ensemble": 5960.546038676871,
+    "dscluster; total-coverage-cost; ensemble": 11921.092077353742,
+    "dscluster; coverage-mistake-weighted; ensemble": 299.7916666666667,
+    "dscluster; total-coverage-mistake-weighted; ensemble": 299.7916666666667,
+    "dscluster; coverage-cost-weighted; ensemble": 11921.092077353742,
+    "dscluster; total-coverage-cost-weighted; ensemble": 11921.092077353742
+}
