@@ -4,6 +4,11 @@ from numpy.typing import NDArray
 from typing import Callable, List
 from dataclasses import dataclass
 
+# Added for simple persistence of rules/decisions
+import pickle
+from pathlib import Path
+from typing import Iterable, Sequence, Union, Any
+
 
 ####################################################################################################
 
@@ -390,6 +395,67 @@ class LinearCondition(Condition):
         condition_str += str(np.round(threshold, 3))
 
         return condition_str
+
+
+####################################################################################################
+
+
+def save_rules(rules: Sequence[Rule], path: Union[str, Path], protocol: int = pickle.HIGHEST_PROTOCOL) -> None:
+    """Save a list/sequence of :class:`Rule` objects to disk using pickle.
+
+    Notes:
+        Pickle is Python-specific and **must not** be used with untrusted files.
+
+    Args:
+        rules: Sequence of rules to save.
+        path: Output file path (e.g. "rules.pkl").
+        protocol: Pickle protocol; defaults to highest available.
+    """
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("wb") as f:
+        pickle.dump(list(rules), f, protocol=protocol)
+
+
+def load_rules(path: Union[str, Path]) -> List[Rule]:
+    """Load rules previously saved with :func:`save_rules`.
+
+    Notes:
+        Only load pickle files you created yourself (or otherwise trust).
+
+    Args:
+        path: Input file path.
+
+    Returns:
+        A list of loaded :class:`Rule` objects.
+    """
+    p = Path(path)
+    with p.open("rb") as f:
+        obj: Any = pickle.load(f)
+
+    # Be permissive: accept list/tuple/etc. but return a list.
+    if isinstance(obj, (list, tuple)):
+        return list(obj)
+    return [obj]
+
+
+def save_decisions(decisions: Sequence[Decision], path: Union[str, Path], protocol: int = pickle.HIGHEST_PROTOCOL) -> None:
+    """Save a list/sequence of :class:`Decision` objects to disk using pickle."""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("wb") as f:
+        pickle.dump(list(decisions), f, protocol=protocol)
+
+
+def load_decisions(path: Union[str, Path]) -> List[Decision]:
+    """Load decisions previously saved with :func:`save_decisions`."""
+    p = Path(path)
+    with p.open("rb") as f:
+        obj: Any = pickle.load(f)
+
+    if isinstance(obj, (list, tuple)):
+        return list(obj)
+    return [obj]
 
 
 ####################################################################################################

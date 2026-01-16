@@ -193,18 +193,18 @@ objective_dict = {
 # List of alpha values to try for each objective
 n_compare = 25
 objective_alpha_dict = {
-    'coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = n_compare),
-    'total-coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = n_compare),
-    'coverage-cost': np.linspace(0.0, furthest_distance * n, num = n_compare),
-    'total-coverage-cost': np.linspace(0.0, furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = n_compare),
-    'total-coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = n_compare),
-    'coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = n_compare),
-    'total-coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'total-coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'total-coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'total-coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'total-coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
 }
 
 
@@ -261,7 +261,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/anuran/alphas/', '_update')
+exp.save_results('data/experiments/anuran/alphas/', '_smaller_alphas')
 end = time.time()
 print("Experiment time:", end - start)
 

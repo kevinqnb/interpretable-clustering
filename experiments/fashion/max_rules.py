@@ -10,6 +10,7 @@ from intercluster.decision_sets import *
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.experiments import *
+from intercluster.rules import save_rules, load_rules
 
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -44,7 +45,7 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 10,
-    'max_rules': 20,
+    'max_rules': 16,
     'min_support': 0.05,
     'min_confidence': 0.85,
     'car_max_rule_length': 4,
@@ -100,65 +101,9 @@ outfile = 'data/experiments/fashion/max_rules/'
 outfile_ref = '_update'
 
 ####################################################################################################
-# Rule Mining:
+# Load pre-mined rules:
 
-decision_tree_rule_miner = TreeMiner(
-    tree = DecisionTree(random_state = fixed_parameters['seed']),
-)
-decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-
-exkmc_rule_miner = TreeMiner(
-    tree = ExkmcTree(
-        k = fixed_parameters['n_clusters'],
-        max_leaf_nodes = fixed_parameters['max_rules'],
-        kmeans = kmeans_base.clustering,
-        imm = True
-    )
-)
-exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-
-shallow_tree_miner = TreeMiner(
-    tree = ShallowTree(
-        n_clusters = fixed_parameters['n_clusters'],
-        depth_factor = fixed_parameters['depth_factor'],
-        kmeans_random_state = fixed_parameters['seed']
-    )
-)
-shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
-    X = data, y = kmeans_labels
-)
-
-
-forest_rule_miner = RandomForestMiner(
-    forest_params = {
-        'n_estimators': fixed_parameters['n_forest'],
-        'max_depth': fixed_parameters['max_depth'],
-        'random_state': fixed_parameters['seed']
-    }
-)
-forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
-
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
-    max_length = fixed_parameters['car_max_rule_length'],
-    bin_df = bin_df
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
-ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
-)
+ensemble_rules = load_rules('data/experiments/fashion/rules/ensemble_rules.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -365,4 +310,3 @@ print("Experiment time:", end - start)
 
 
 ####################################################################################################
-

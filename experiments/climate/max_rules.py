@@ -57,30 +57,9 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-# Hard coded for now; will be selected via separate experiment later:
-kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-max_distances = np.max(kmeans_distances, axis=1)
-max_distance = np.max(max_distances)
-
-alpha_dict = {
-    'dscluster; coverage-mistake; ensemble': 0.01 * n * 1.0,
-    'dscluster; total-coverage-mistake; ensemble': 0.01 * n * 1.0,
-    'dscluster; coverage-cost; ensemble': 0.01 * n * max_distance,
-    'dscluster; total-coverage-cost; ensemble': 0.01 * n * max_distance,
-    'dscluster; coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; total-coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
-    'dscluster; total-coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
-    'dscluster; coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
-    'dscluster; total-coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
-    'dscluster; coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; total-coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
-}
-
-with open("data/experiments/climate/alphas/selected_alphas.json") as f:
+with open("data/experiments/climate/alphas/selected_alphas_update.json") as f:
     selected_alpha_dict = json.load(f)
-alpha_dict = alpha_dict | selected_alpha_dict
-fixed_parameters['alpha'] = alpha_dict
+fixed_parameters['alpha'] = selected_alpha_dict
 
 outfile = 'data/experiments/climate/max_rules/'
 outfile_ref = '_ids'
@@ -202,6 +181,7 @@ shallow_tree_mod = DecisionTreeMod(
 
 
 # IDS:
+
 rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
 ids_lambdas = [
     1/rule_comb,
@@ -217,12 +197,12 @@ ids_module_list = []
 for s in range(fixed_parameters['ids_samples']):
     ids_params = {
         tuple(n_rules_list) : {
-            'lambdas' : ids_lambdas
+            'lambdas' : ids_lambdas,
+            'bin_df' : class_association_rule_miner.bin_df,
         }
     }
     ids_mod = DecisionSetMod(
         model = IDS,
-        fitting_params = {'bin_df': class_association_rule_miner.bin_df},
         rules = class_association_rules,
         name = f"IDS_{s}"
     )
@@ -292,7 +272,7 @@ dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
     for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
         module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        alpha_val = alpha_dict[module_name]
+        alpha_val = fixed_parameters['alpha'][module_name]
         dsclust_params = {
             (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params
             for i,r in enumerate(n_rules_list)

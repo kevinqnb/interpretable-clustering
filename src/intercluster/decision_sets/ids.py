@@ -158,7 +158,7 @@ class IDS(DecisionSet):
         y_ = flatten_labels(y)
         if len(y_) != len(y):
             raise ValueError("Each data point must have exactly one label.")
-        if self.decision_set is None or self.decision_set_labels is None:
+        if self.decision_set is None:
             raise ValueError('Decision set has not been fitted yet.')
         
         cars = decision_set_to_cars(
@@ -217,9 +217,8 @@ class IDS(DecisionSet):
         ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
         end = time.time()
         print(f"IDS selection finished in {end - start_time:.2f} seconds.")
-        decision_set, decision_set_labels = self.ids_to_decision_set(ids.clf.rules)
-        return decision_set, decision_set_labels
-    
+        selected_decision_set = self.ids_to_decision_set(ids.clf.rules)
+        return selected_decision_set
 
     def get_cacher(self) -> IDSCacher:
         """

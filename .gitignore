@@ -182,3 +182,5 @@ src/intercluster/decision_sets/mining/clique_miner.py
 .nfs*
 
 *bin_df.csv
+
+*.pkl

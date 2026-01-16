@@ -284,7 +284,7 @@ def plot_decision_set(
     assert can_flatten(rule_labels), "Each rule must have exactly one label."
     rule_label_array = flatten_labels(rule_labels)
 
-    max_rule_length = np.max([len(r) for r in decision_set])
+    max_rule_length = np.max([len(d.rule) for d in decision_set])
 
     if size_factor is None:
         size_factor = max(1, max_rule_length // 2)
@@ -304,16 +304,16 @@ def plot_decision_set(
     # Order rules by cluster labels
     ordering = np.argsort(rule_label_array)
     for i, idx in enumerate(ordering):
-        rule = decision_set[idx]
+        rule = decision_set[idx].rule
         rule_string = 'If '
         
         # Every condition except the last node, which should be a leaf
-        for j, condition in enumerate(rule):            
+        for j, condition in enumerate(rule.conditions):            
             rule_string += '('
             rule_string += condition.display(
                 scaler=data_scaler,
                 feature_labels=feature_labels,
-                newline = False
+                newline=False
             )
             rule_string += ')'
             
@@ -321,9 +321,11 @@ def plot_decision_set(
                 rule_string += f'\n'
             #elif j % 1 == 0: 
             elif j % 2 == 1:
-                rule_string += r" $\&$ " + f'\n'
+                #rule_string += r" $\&$ " + f'\n'
+                rule_string += r" and " + f'\n'
             else:
-                rule_string += r" $\&$ "
+                #rule_string += r" $\&$ "
+                rule_string += r" and "
                 
         rule_string += 'Then cluster ' + str(rule_label_array[idx])
 

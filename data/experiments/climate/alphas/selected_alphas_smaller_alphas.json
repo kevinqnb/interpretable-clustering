@@ -1,0 +1,14 @@
+{
+    "dscluster; coverage-mistake; ensemble": 7.166666666666667,
+    "dscluster; total-coverage-mistake; ensemble": 7.166666666666667,
+    "dscluster; coverage-cost; ensemble": 103.35270392022164,
+    "dscluster; total-coverage-cost; ensemble": 103.35270392022164,
+    "dscluster; coverage-pairwise-distance; ensemble": 122.90833333333335,
+    "dscluster; total-coverage-pairwise-distance; ensemble": 0.0,
+    "dscluster; coverage-mistake-weighted; ensemble": 7.166666666666667,
+    "dscluster; total-coverage-mistake-weighted; ensemble": 7.166666666666667,
+    "dscluster; coverage-cost-weighted; ensemble": 103.35270392022164,
+    "dscluster; total-coverage-cost-weighted; ensemble": 103.35270392022164,
+    "dscluster; coverage-pairwise-distance-weighted; ensemble": 2949.8,
+    "dscluster; total-coverage-pairwise-distance-weighted; ensemble": 0.0
+}
