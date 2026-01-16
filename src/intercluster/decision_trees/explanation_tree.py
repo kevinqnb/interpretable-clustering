@@ -184,7 +184,7 @@ class ExplanationTree(Tree):
         # Remove outliers
         if remove_outliers:
             for outlier in self.outliers:
-                labels[outlier] = {-1}
+                labels[outlier] = set()
             
         return labels
 

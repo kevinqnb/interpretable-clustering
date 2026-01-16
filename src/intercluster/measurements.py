@@ -588,7 +588,6 @@ class PairwiseDistance(MeasurementFunction):
             self.baseline_labels,
             new_labels,
             percentage = False,
-            ignore = {-1}
         )
     
 
@@ -650,14 +649,13 @@ class RulePairwiseDistance(MeasurementFunction):
             total_pairwise_distance += clustering_distance(
                 baseline_labels,
                 rule_labels,
-                percentage = False,
-                ignore = {-1}
+                percentage = False
             )
         return total_pairwise_distance
-    
+
 
 ####################################################################################################
-    
+
 
 class Silhouette(MeasurementFunction):
     """

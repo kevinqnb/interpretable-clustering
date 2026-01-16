@@ -92,7 +92,6 @@ class CoveragePairwiseDistanceObjective(Objective):
                 baseline_labels,
                 rule_labels,
                 percentage = False,
-                ignore = {-1}
             )
             length_penalty += self.alpha_val * info['length']
 
@@ -206,7 +205,6 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
                 baseline_labels,
                 rule_labels,
                 percentage = False,
-                ignore = {-1}
             )
             length_penalty += self.alpha_val * info['length']
 

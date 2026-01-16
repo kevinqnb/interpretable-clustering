@@ -90,7 +90,7 @@ class Objective:
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
         data_to_cluster_assignment = labels_to_assignment(
-            y, n_labels = self.n_labels, ignore = {-1}
+            y, n_labels = self.n_labels
         )
         self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
         self.data_initialized = True

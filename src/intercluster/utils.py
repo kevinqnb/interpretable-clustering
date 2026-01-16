@@ -131,18 +131,17 @@ def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray)
 ####################################################################################################
 
 
-def labels_format(labels : NDArray, ignore : Set = set()) -> List[Set[int]]:
+def labels_format(labels : NDArray) -> List[Set[int]]:
     """
     Takes a 1 dimensional array of labels and forms it into a 2d label list, which is the 
     default form used in this library.
+
+    NOTE: By convention, a label of -1 indicates no label (empty set).
     
     Args:
         labels (np.ndarray): Length n array of labels.
-
-        ignore (Set[int], optional): Set of labels to ignore in the output. 
-            Defaults to an empty set.
     """
-    return [{i} if i not in ignore else set() for i in labels]
+    return [{i} if i != -1 else set() for i in labels]
 
 
 ####################################################################################################
@@ -170,22 +169,32 @@ def can_flatten(labels : List[Set[int]]) -> bool:
 def flatten_labels(labels : List[Set[int]]) -> NDArray:
     """
     Given a 2d labels list, returns a flattened list of labels. 
+
+    NOTE: If an inner list is empty, the flattened label is represented as -1.
     
     Args:
-        labels (List[Set[int]]): 2d list of integers where the inner list at index i 
-            labels of the item with index i.
+        labels (List[Set[int]]): List with sets of integers where the inner set at index i 
+            contains the labels of the item with index i.
             
     Returns:
         flattened (np.array): Flattened list of labels.
     """
-    flattened = np.array([j for _,labs in enumerate(labels) for j in labs], dtype = np.int64)
+    flattened_list = []
+    for labs in labels:
+        if labs:
+            for j in labs:
+                flattened_list.append(j)
+        else:
+            flattened_list.append(-1)
+
+    flattened = np.array(flattened_list, dtype = np.int64)
     return flattened
 
 
 ####################################################################################################
 
 
-def unique_labels(labels : List[Set[int]], ignore : set = set()) -> Set[int]:
+def unique_labels(labels : List[Set[int]]) -> Set[int]:
     """
     Given a 2d labels list, returns a set of unique labels. 
     
@@ -196,8 +205,10 @@ def unique_labels(labels : List[Set[int]], ignore : set = set()) -> Set[int]:
     Returns:
         unique_labels (Set[int]): Set of unique labels.
     """
-    unique_labels = set(flatten_labels(labels)) - ignore
-    return unique_labels
+    unique = set()
+    for labs in labels:
+        unique.update(labs)
+    return unique
 
 
 ####################################################################################################
@@ -206,7 +217,6 @@ def unique_labels(labels : List[Set[int]], ignore : set = set()) -> Set[int]:
 def labels_to_assignment(
         labels : List[Set[int]],
         n_labels : int,
-        ignore : Set[int] = set()
     ) -> NDArray:
     """
     Takes an input list of labels and returns its associated clustering matrix.
@@ -222,10 +232,6 @@ def labels_to_assignment(
         n_labels (int, optional): Total number of unique labels to create the assignment matrix 
             with. Helfpul for cases where points aren't assigned to any label (empty list).
 
-        ignore (Set[int], optional): Set of labels to ignore in the assignment matrix. For example,
-            this might be set to the set {-1} in the case that a label of -1 indicates that a point
-            is not assigned to any cluster. Defaults to an empty set.
-
     Returns:
         assignment_matrix (np.ndarray): n x k boolean matrix with entry (i,j) being True
             if point i belongs to label j and False otherwise.
@@ -233,8 +239,7 @@ def labels_to_assignment(
     assignment_matrix = np.zeros((len(labels), n_labels), dtype = bool)
     for i,labs in enumerate(labels):
         for j in labs:
-            if j not in ignore:
-                assignment_matrix[i, j] = True
+            assignment_matrix[i, j] = True
         
     return assignment_matrix
 
@@ -263,9 +268,10 @@ def assignment_to_labels(assignment : NDArray) -> List[Set[int]]:
     labels = []
     for _, assign in enumerate(assignment):
         l = np.where(assign)[0]
-        labels.append(set(l))
-            
-    return labels
+        if l.size > 0:
+            labels.append(set(l))
+        else:
+            labels.append(set())
 
 
 ####################################################################################################
@@ -273,7 +279,7 @@ def assignment_to_labels(assignment : NDArray) -> List[Set[int]]:
 
 def assignment_to_dict(
     assignment_matrix : NDArray
-) -> Dict[int, NDArray]:
+) -> Dict[int, Set[int]]:
     """
     Given a 2d labels list, returns a dictionary where the keys are labels,
     and the values are the sets of indices for the inner lists which contain the unique label.
@@ -286,7 +292,7 @@ def assignment_to_dict(
         assignment_dict (Dict[int, set[int]]): Dictionary where the keys are integers (labels) and 
             values are the sets of data point indices covered by the label.
     """        
-    assignment_dict = {l: np.array([]) for l in range(assignment_matrix.shape[1])}
+    assignment_dict = {l: set() for l in range(assignment_matrix.shape[1])}
     for i in range(assignment_matrix.shape[1]):
         #assignment_dict[i] = set(np.where(assignment_matrix[:,i])[0])
         assignment_dict[i] = set(assignment_matrix[:,i].nonzero()[0]) 

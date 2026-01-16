@@ -161,11 +161,10 @@ class DBSCANBase(Baseline):
         if not self.fitted:
             self.clustering.fit(X)
             self.labels = labels_format(self.clustering.labels_)
-            n_unique = len(unique_labels(self.labels, ignore = {-1}))
+            n_unique = len(unique_labels(self.labels))
             self.assignment = labels_to_assignment(
                 self.labels,
                 n_labels = n_unique,
-                ignore = {-1}
             )
             self.fitted = True
         
@@ -217,11 +216,10 @@ class AgglomerativeBase(Baseline):
         if not self.fitted:
             self.clustering.fit(X)
             self.labels = labels_format(self.clustering.labels_)
-            n_unique = len(unique_labels(self.labels, ignore = {-1}))
+            n_unique = len(unique_labels(self.labels))
             self.assignment = labels_to_assignment(
                 self.labels,
                 n_labels = n_unique,
-                ignore = {-1}
             )
             self.fitted = True
         
@@ -297,19 +295,18 @@ class DecisionTreeMod(Module):
                 `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
                 assigned to multiple clusters. 
         """
-        n_unique = len(unique_labels(y, ignore = {-1}))
+        n_unique = len(unique_labels(y))
         # Fit the model with the current number of rules
         self.tree = self.model(**self.fitting_params)
         self.tree.fit(X, y)
         tree_labels = self.tree.predict(X)
         tree_leaf_labels = self.tree.get_leaf_labels()
-        # This should ignore any rules which are assigned to the outlier class 
         tree_rule_assignment = labels_to_assignment(
-            tree_leaf_labels, n_labels = n_unique, ignore = {-1}
+            tree_leaf_labels, n_labels = n_unique
         )
         tree_data_to_rule_assignment = self.tree.get_data_to_rules_assignment(X)
         tree_data_to_cluster_assignment = labels_to_assignment(
-            tree_labels, n_labels = n_unique, ignore = {-1}
+            tree_labels, n_labels = n_unique
         )
 
         # A few data things to record:
@@ -428,17 +425,12 @@ class DecisionSetMod(Module):
         self.dset.fit(X, y)
         self.lambda_val = self.dset.lambda_val if hasattr(self.dset, 'lambda_val') else np.nan
         dset_labels = self.dset.predict(X)
-        n_unique = len(unique_labels(y, ignore = {-1}))
+        n_unique = len(unique_labels(y))
 
-
-        # This should ignore any rules which are assigned to the outlier class 
-        #dset_rule_assignment = labels_to_assignment(
-        #    dset_rule_labels, n_labels = n_unique, ignore = {-1}
-        #)
         dset_data_to_rule_assignment = self.dset.get_data_to_rules_assignment(X)
-        dset_rule_to_cluster_assignment = self.dset.get_rules_to_clusters_assignment(n_labels = n_unique, ignore = {-1})
+        dset_rule_to_cluster_assignment = self.dset.get_rules_to_clusters_assignment(n_labels = n_unique)
         dset_data_to_cluster_assignment = labels_to_assignment(
-            dset_labels, n_labels = n_unique, ignore = {-1}
+            dset_labels, n_labels = n_unique
         )
 
         self.n_rules = len(self.dset.decision_set)

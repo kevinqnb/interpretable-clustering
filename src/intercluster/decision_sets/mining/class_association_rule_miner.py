@@ -35,7 +35,6 @@ class ClassAssociationRuleMiner(RuleMiner):
         bin_df = None,
         binning_method : str = "entropy",
         bin_params : dict = dict(),
-        ignore : Set[Any] = {-1},
     ):
         """
         Initialize the AssociationRuleMiner.
@@ -48,7 +47,6 @@ class ClassAssociationRuleMiner(RuleMiner):
                 Options are "uniform", "quantile", "cluster", or "entropy". Defaults to "entropy".
             bin_params (dict, optional): Parameters for the binning method. Defaults to standard 
                 entropy binning parameters (just a random state).
-            ignore (Set[Any], optional): Set of labels to ignore when mining rules. Defaults to {-1}.
 
         Attributes:
             rules (List[Rule]): The mined rules.
@@ -74,7 +72,6 @@ class ClassAssociationRuleMiner(RuleMiner):
                 )
             self.binning_method = binning_method
             self.bin_params = bin_params
-        self.ignore = ignore
         super().__init__()
 
 
@@ -151,12 +148,7 @@ class ClassAssociationRuleMiner(RuleMiner):
                 conditions.append(upper_condition)
             self.rules.append(Rule(conditions))
             self.rule_labels.append({consequent})
-
-        # remove rules covering outliers
-        self.rules = [rule for i,rule in enumerate(self.rules) 
-                             if self.rule_labels[i] not in self.ignore]
-        self.rule_labels = [label for label in self.rule_labels 
-                                    if label not in self.ignore]
+            
         return self.rules, self.rule_labels
 
 

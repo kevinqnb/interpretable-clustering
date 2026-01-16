@@ -18,15 +18,12 @@ class DecisionSet:
         self,
         rules : List[Rule],
         rule_labels : List[Set[int]] = None,
-        ignore = set()
     ):
         """
         Args:
             rules (List[Rule], optional): List of rules to select from.
             rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
                 If None, the labels will be created using the input dataset. Defaults to None.
-            ignore (Set[int], optional): Set of labels to ignore when fitting the decision set.
-                Defaults to to the empty set.
 
         Attributes:
             decision_set (List[Rule]): List of rules in the selected decision set.
@@ -41,10 +38,6 @@ class DecisionSet:
             assert isinstance(rule_labels, list) and all(isinstance(lbl, set) for lbl in rule_labels), \
                 "rule_labels must be a list of sets."
         self.rule_labels = rule_labels
-        
-        if not isinstance(ignore, set):
-            raise ValueError("ignore must be a set of labels.")
-        self.ignore = ignore
 
         self.decision_set = None
         self.max_rule_length = 0
@@ -166,7 +159,7 @@ class DecisionSet:
         return assignment
     
 
-    def get_rules_to_clusters_assignment(self, n_labels : int, ignore : set[int] = set()) -> NDArray:
+    def get_rules_to_clusters_assignment(self, n_labels : int) -> NDArray:
         """
         Finds data points of X covered by each rule in the decision set.
         
@@ -178,7 +171,7 @@ class DecisionSet:
                 if point i is covered by rule j and False otherwise.
         """
         decision_set_labels = [{decision.label} for decision in self.decision_set]
-        assignment = labels_to_assignment(decision_set_labels, n_labels, ignore)
+        assignment = labels_to_assignment(decision_set_labels, n_labels)
         return assignment
     
     
@@ -206,9 +199,6 @@ class DecisionSet:
                     labels[j].add(i)
                 else:
                     labels[j] = labels[j].union({decision.label})
-
-        # Mark uncovered points with {-1}
-        labels = [label if label else {-1} for label in labels]
         
         return labels
 
