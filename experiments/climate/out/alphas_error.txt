@@ -1,0 +1,774 @@
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 6, in <module>
+    from intercluster.decision_sets import *
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/__init__.py", line 1, in <module>
+    from .decision_set_clustering import (
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 12, in <module>
+    from .objectives import (
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/__init__.py", line 1, in <module>
+    from .objectives import (
+ImportError: cannot import name 'TotalCoverageRuleCostObjective' from 'intercluster.decision_sets.objectives.objectives' (/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py). Did you mean: 'TotalCoverageCostObjective'?
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 492, in fit
+    self.dset = self.model(
+                ^^^^^^^^^^^
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'objective'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 176, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'objective'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 497, in fit
+    self.dset.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set.py", line 151, in fit
+    self.decision_set, self.decision_set_labels = self.select(X, y)
+                                                  ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 131, in select
+    self.objective.set_rules(self.decision_set, self.decision_set_labels)
+TypeError: 'bool' object is not callable
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 176, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+TypeError: 'bool' object is not callable
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 497, in fit
+    self.dset.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set.py", line 151, in fit
+    self.decision_set, self.decision_set_labels = self.select(X, y)
+                                                  ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 131, in select
+    self.objective.set_rules(self.decision_set, self.decision_set_labels)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 103, in set_rules
+    if self.data_to_cluster_assignment is None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'CoverageMistakeObjective' object has no attribute 'data_to_cluster_assignment'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 176, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+AttributeError: 'CoverageMistakeObjective' object has no attribute 'data_to_cluster_assignment'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 497, in fit
+    self.dset.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set.py", line 151, in fit
+    self.decision_set, self.decision_set_labels = self.select(X, y)
+                                                  ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 131, in select
+    self.objective.set_data(X, y, weights = self.weights)
+TypeError: Objective.set_data() got an unexpected keyword argument 'weights'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 176, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+TypeError: Objective.set_data() got an unexpected keyword argument 'weights'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 492, in fit
+    self.dset = self.model(
+                ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 77, in __init__
+    self.initialize_objective()
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 105, in initialize_objective
+    self.objective = TotalCoverageCostObjective(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 885, in __init__
+    self.data_to_center_distances = np.zeros((self.X.shape[0], cluster_centers.shape[0]))
+                                              ^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'shape'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 176, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+AttributeError: 'NoneType' object has no attribute 'shape'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 492, in fit
+    self.dset = self.model(
+                ^^^^^^^^^^^
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'method'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 178, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'method'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 492, in fit
+    self.dset = self.model(
+                ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 79, in __init__
+    self.initialize_objective()
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 107, in initialize_objective
+    cluster_cost_method = self.cluster_cost_method
+                          ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DSCluster' object has no attribute 'cluster_cost_method'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 178, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+AttributeError: 'DSCluster' object has no attribute 'cluster_cost_method'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 497, in fit
+    self.dset.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set.py", line 151, in fit
+    self.decision_set, self.decision_set_labels = self.select(X, y)
+                                                  ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 139, in select
+    self.objective.set_lambda(self.lambda_val)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 143, in set_lambda
+    lambda_vals = self.compute_lambdas()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 284, in compute_lambdas
+    h = self.cost(r_info)
+        ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 642, in cost
+    mistakes = r_coverage.difference(r_cluster_coverage)
+                                     ^^^^^^^^^^^^^^^^^^
+NameError: name 'r_cluster_coverage' is not defined. Did you mean: 'r_clustr_coverage'?
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 178, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+NameError: name 'r_cluster_coverage' is not defined
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 474, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 497, in fit
+    self.dset.fit(X, y)
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set.py", line 151, in fit
+    self.decision_set, self.decision_set_labels = self.select(X, y)
+                                                  ^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/decision_set_clustering.py", line 140, in select
+    selected_rules = self.objective.select()
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/decision_sets/objectives/objectives.py", line 412, in select
+    best_rule_points = rules_info[best_rule]['points']
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+KeyError: 'points'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 178, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 517, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+KeyError: 'points'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 179, in <module>
+    exp.save_results('data/experiments/climate/alphas/', '')
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 557, in save_results
+    with open(fname, 'w') as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/experiments/climate/alphas/exp.json'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 156, in <module>
+    dsclust = DSCluster(
+              ^^^^^^^^^^
+TypeError: intercluster.decision_sets.decision_set_clustering.DSCluster() got multiple values for keyword argument 'n_select'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 237, in <module>
+    TotalCoverage(weights = weights, name = 'total-coverage-weighted'),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: TotalCoverage.__init__() got an unexpected keyword argument 'weights'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 262, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 515, in run
+    baseline_dict = {'baseline': self.run_baseline()}
+                                 ^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 414, in run_baseline
+    fn_result = fn(
+                ^^^
+TypeError: Overlap.__call__() got an unexpected keyword argument 'data_to_rule_assignment'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 480, in run_module
+    module_result_dict[module.name]['lambda'][p] = module.lambda_val if hasattr(module, 'lambda_val') else None
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+KeyError: 'lambda'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 262, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 519, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+KeyError: 'lambda'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+joblib.externals.loky.process_executor._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 490, in _process_worker
+    r = call_item()
+        ^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/externals/loky/process_executor.py", line 291, in __call__
+    return self.fn(*self.args, **self.kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 607, in __call__
+    return [func(*args, **kwargs) for func, args, kwargs in self.items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 476, in run_module
+    ) = module.fit(self.data, self.baseline.labels)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/modules.py", line 495, in fit
+    self.dset = self.model(
+                ^^^^^^^^^^^
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'cluster_distance_method'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 262, in <module>
+    exp_results = exp.run()
+                  ^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/src/intercluster/experiments/experiments.py", line 520, in run
+    module_results = Parallel(n_jobs=self.cpu_count, backend = 'loky')(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 2072, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1682, in _get_outputs
+    yield from self._retrieve()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1784, in _retrieve
+    self._raise_error_fast()
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 1859, in _raise_error_fast
+    error_job.get_result(self.timeout)
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 758, in get_result
+    return self._return_or_raise()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/joblib/parallel.py", line 773, in _return_or_raise
+    raise self._result
+TypeError: DSCluster.__init__() got an unexpected keyword argument 'cluster_distance_method'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/project/mcnet/kevin/intercluster/repo/experiments/climate/alphas.py", line 208, in <module>
+    if module_name not in fixed_parameters['lambdas']:
+                          ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: 'lambdas'
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+warning: The `extra-build-dependencies` option is experimental and may change without warning. Pass `--preview-features extra-build-dependencies` to disable this warning.
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/pyogrio/raw.py:200: RuntimeWarning: driver ESRI Shapefile does not support open option DTYPE
+  return ogr_read(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(
+/project/mcnet/kevin/intercluster/repo/.venv/lib/python3.12/site-packages/sklearn/utils/deprecation.py:132: FutureWarning: 'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+  warnings.warn(

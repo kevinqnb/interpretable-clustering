@@ -167,9 +167,8 @@ data/mice_protein/
 older/
 .python-version
 
-experiments/*/*.sh
-experiments/*/*.txt
-experiments/*/*/*.txt
+experiments/*.sh
+experiments/*.txt
 
 examples/testing.ipynb
 examples/examples_older.ipynb

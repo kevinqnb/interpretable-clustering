@@ -1,0 +1,3 @@
+> /project/mcnet/kevin/intercluster/repo/experiments/mnist/max_rules.py(118)<module>()
+-> for i in n_rules_list}
+(Pdb) 
