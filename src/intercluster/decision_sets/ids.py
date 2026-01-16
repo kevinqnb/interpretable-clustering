@@ -3,14 +3,12 @@ import pandas as pd
 from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
-    Condition,
     Rule,
     Decision,
     interval_to_condition,
     decision_set_to_cars,
     flatten_labels
 )
-from .mining import RuleMiner
 from .decision_set import DecisionSet
 
 

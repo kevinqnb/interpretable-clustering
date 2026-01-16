@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Set, Tuple
+from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
     Rule,
@@ -8,7 +8,6 @@ from intercluster import (
     labels_to_assignment,
     unique_labels,
 )
-from .mining import RuleMiner
 
 
 class DecisionSet:

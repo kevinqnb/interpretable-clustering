@@ -1,3 +1,25 @@
+####################################################################################################
+# Path setup
+
+import sys
+from pathlib import Path
+
+# Ensure the repository root (the folder that contains `data/`) is on sys.path.
+# This makes `from data.preprocessing import ...` work when running this file directly.
+_HERE = Path(__file__).resolve()
+PROJECT_ROOT = next((p for p in _HERE.parents if (p / "data").is_dir()), None)
+if PROJECT_ROOT is None:
+    raise ModuleNotFoundError(
+        "Could not locate repository root."
+    )
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from data.preprocessing import *
+from experiments.experiment import Experiment
+from experiments.modules import *
+
+####################################################################################################
+
 import os
 import math
 import numpy as np
@@ -7,7 +29,7 @@ from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
-from intercluster.experiments import *
+from intercluster.measurements import *
 
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"

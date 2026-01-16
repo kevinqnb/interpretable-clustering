@@ -5,7 +5,6 @@ from typing import List, Set
 from intercluster import (
     uniform_bin,
     quantile_bin,
-    oned_cluster_bin,
     entropy_bin,
     interval_to_condition,
     Rule
@@ -56,15 +55,15 @@ class FrequentItemsetMiner(RuleMiner):
                 raise ValueError("max_length must be a positive integer.")
         self.max_length = max_length
 
-        if binning_method not in ["uniform", "quantile", "cluster"]:
-            raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile' or 'cluster'.")
+        if binning_method not in ["uniform", "quantile"]:
+            raise ValueError("Unsupported binning method. Choose 'uniform' or 'quantile'.")
         self.binning_method = binning_method
 
         self.bin_df = bin_df
         if self.bin_df is None:
-            if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
+            if binning_method not in ["uniform", "quantile", "entropy"]:
                 raise ValueError(
-                    "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
+                    "Unsupported binning method. Choose 'uniform', 'quantile', or 'entropy'."
                 )
             self.binning_method = binning_method
             self.bin_params = bin_params
@@ -95,8 +94,6 @@ class FrequentItemsetMiner(RuleMiner):
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":
             bin_df = uniform_bin(X, **self.bin_params)
-        elif self.binning_method == "cluster":
-            bin_df = oned_cluster_bin(X, **self.bin_params)
         else:
             bin_df = entropy_bin(X, y, **self.bin_params)
 

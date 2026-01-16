@@ -9,7 +9,6 @@ from .node import Node
 from .rules import Condition, Rule, Decision, LinearCondition
 
 from mdlp.discretization import MDLP
-from .oned_cluster_cy import oned_cluster_cy
 
 
 ####################################################################################################
@@ -127,46 +126,6 @@ def update_centers(X : NDArray, current_centers : NDArray, assignment : NDArray)
         updated_centers[i,:] = new_center
         
     return updated_centers
-
-
-####################################################################################################
-
-'''
-
-NOTE: I think this should be re-worked into a more general function that takes a 1d array of 
-distance measurements and returns a mask of outliers based on a threshold or a fraction to remove.
-
-def outlier_mask(
-        X : NDArray,
-        centers : NDArray,
-        frac_remove : float
-    ) -> NDArray:
-    """
-    Finds outliers to remove. Specifically, we take the convention that outliers are 
-    points for which the following ratio is small. 
-
-        (distance to second closest center / distance to closest center)
-
-    Args:
-        X (np.ndarray): Input (n x d) dataset. 
-
-        centers (np.ndarray): Input (k x d) array of cluster centers. 
-
-    Returns:
-        outliers_mask (np.ndarray): Array of boolean values in which a True value indicates that 
-            the point is an outlier and False indicates otherwise.
-    """
-    assert frac_remove <= 1, "Fractional size must be <= 1."
-    assert frac_remove >= 0, "Fractional size must be >= 0."
-    n,d = X.shape
-    out_mask = np.zeros(n, dtype = bool)
-    if frac_remove > 0:
-        dratios = distance_ratio(X, centers)
-        n_removes = int(n * frac_remove)
-        outliers = np.argsort(dratios)[:n_removes]
-        out_mask[outliers] = True
-    return out_mask
-'''
 
 
 ####################################################################################################
@@ -544,14 +503,6 @@ def get_decision_paths_with_labels(
     for path in traverse(root):
         last_node = path[-1]
         if last_node.type == 'leaf' and len(last_node.indices) > 0:
-            '''
-            indices_labels = [labels[i] for i in last_node.indices]
-            indices_labels = flatten_labels(indices_labels)
-            majority_label = mode(indices_labels)
-            if majority_label in select_labels:
-                paths.append(path)
-                path_labels.append({majority_label})
-            '''
             if last_node.label in select_labels:
                 paths.append(path)
                 path_labels.append({last_node.label})
@@ -668,76 +619,6 @@ def uniform_bin(
 ####################################################################################################
 
 
-def oned_cluster(
-        x : NDArray,
-        cluster_cost : float = 0.0,
-        method : str = "kmeans"
-    ) -> NDArray:
-    """
-    Clusters a 1d array into segments.
-
-    Args:
-        x (np.ndarray): 1d array of data points to cluster.
-        
-        cluster_cost (float, optional): Cost associated with adding a new cluster. 
-            Must be between 0.0 and 1.0. Defaults to 0.0.
-            
-        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
-            Defaults to "kmeans".
-
-    Returns:
-        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
-            of data points and k is the number of clusters found.
-    """
-    return oned_cluster_cy(x, cluster_cost, method)
-
-
-####################################################################################################
-
-
-def oned_cluster_bin(
-        X : NDArray,
-        cluster_cost : float = 0.0,
-        method : str = "kmeans"
-    ) -> NDArray:
-    """
-    Clusters a 1d array into segments.
-
-    Args:
-        x (np.ndarray): n x d data array
-        
-        cluster_cost (float, optional): Cost associated with adding a new cluster. 
-            Must be between 0.0 and 1.0. Defaults to 0.0.
-            
-        method (str, optional): Clustering method to use. Options are "kmeans" or "kmedians".
-            Defaults to "kmeans".
-
-    Returns:
-        assignment (np.ndarray): Boolean assignment matrix of size (n x k) where n is the number
-            of data points and k is the number of clusters found.
-    """
-    bin_df = {}
-    for i in range(X.shape[1]):
-        xi = X[:,i]
-        xi_labels = oned_cluster_cy(xi, cluster_cost, method)
-        xi_intervals = [None for _ in range(len(xi))]
-        for l in np.unique(xi_labels):
-            label_points = np.where(xi_labels == l)[0]
-            label_min = np.min(xi[xi_labels == l])
-            if label_min == np.min(xi):
-                label_min = -np.inf
-            label_max = np.max(xi[xi_labels == l])
-            for idx in label_points:
-                xi_intervals[idx] = pd.Interval(left = label_min, right = label_max, closed = 'right')
-
-        bin_df[i] = xi_intervals
-
-    return pd.DataFrame(bin_df, dtype = 'category')
-
-
-####################################################################################################
-
-
 def entropy_bin(
         X : NDArray,
         y : List[Set[int]],
@@ -786,107 +667,6 @@ def entropy_bin(
         interval_data[i] = interval_list
 
     bin_df = pd.DataFrame(interval_data)
-    return bin_df
-
-
-####################################################################################################
-
-
-def adaptive_grid_bin(
-    X, 
-    initial_bins=100, 
-    window_size=5, 
-    merge_threshold=0.20, 
-    fixed_partitions_if_equi=5
-):
-    """
-    Implements the Adaptive Grid algorithm from the MAFIA subspace clustering paper.
-    
-    It partitions each dimension of the dataset into adaptive intervals (bins) based on 
-    data distribution, merging regions of similar density.
-
-    Args:
-        dataset : numpy.ndarray
-            Input dataset of shape (n_samples, n_features).
-        initial_bins : int, default=1000
-            The number of fine-grained 'units' to divide the dimension into initially.
-            This corresponds to dividing |Ai| into units before windowing.
-        window_size : int, default=5
-            The number of units to group into a single 'window' (variable 'z' in Algorithm 1)[cite: 130, 454].
-        merge_threshold : float, default=0.20
-            The percentage difference threshold for merging adjacent windows (alpha)[cite: 131].
-        fixed_partitions_if_equi : int, default=5
-            The number of fixed partitions to use if a dimension is determined to be 
-            equi-distributed (single bin result)[cite: 136, 459].
-
-    Returns:
-        pd.DataFrame
-            A DataFrame with the same shape as X, where values are pd.Interval objects
-            representing the bin boundaries for each point.
-    """
-    n_samples, n_features = X.shape
-    discretized_data = {}
-    
-    for dim_idx in range(n_features):
-        col_data = X[:, dim_idx]
-        counts, edges = np.histogram(col_data, bins=initial_bins)
-        num_windows = int(np.ceil(len(counts) / window_size))
-        window_stats = []
-        
-        for w in range(num_windows):
-            start_unit = w * window_size
-            end_unit = min((w + 1) * window_size, len(counts))
-            units_in_window = counts[start_unit:end_unit]
-            window_max_val = np.max(units_in_window)  
-            window_stats.append({
-                'val': window_max_val,
-                'start_edge': edges[start_unit],
-                'end_edge': edges[end_unit]
-            })
-            
-        merged_bins = []
-        if not window_stats:
-             continue
-
-        current_bin_start = window_stats[0]['start_edge']
-        current_bin_val = window_stats[0]['val']
-        
-        # Helper to check merge condition
-        def should_merge(val1, val2, threshold):
-            denom = max(val1, val2)
-            if denom == 0:
-                return True # Both are 0, same density
-            diff = abs(val1 - val2) / denom
-            return diff <= threshold
-
-        for i in range(1, len(window_stats)):
-            next_window = window_stats[i]
-            
-            if should_merge(current_bin_val, next_window['val'], merge_threshold):
-                # Merge:
-                current_bin_val = max(current_bin_val, next_window['val']) 
-            else:
-                # Close the current bin
-                merged_bins.append(current_bin_start)
-                
-                # Start new bin
-                current_bin_start = next_window['start_edge']
-                current_bin_val = next_window['val']
-                
-        merged_bins.append(current_bin_start)
-        merged_bins.append(window_stats[-1]['end_edge'])
-        
-        # Handles Equi-distributed dimensions
-        if len(merged_bins) <= 2:
-            final_edges = np.linspace(col_data.min(), col_data.max(), fixed_partitions_if_equi + 1)
-        else:
-            final_edges = np.array(merged_bins)
-            
-        final_edges = np.unique(final_edges)
-        discretized_col = pd.cut(col_data, bins=final_edges, include_lowest=True)
-        discretized_data[dim_idx] = discretized_col
-
-    bin_df = pd.DataFrame(discretized_data)    
     return bin_df
 
 
@@ -1091,42 +871,9 @@ def filter_rules(
 ####################################################################################################
 
 
-def cartesian_product_labels(
-    rules : List[List[Condition]],
-    labels : List[Set[int]],
-    ignore : Set[int] = set()
-) -> Tuple[List[List[Condition]], List[Set[int]]]:
-    """
-    Given a list of rules and a list of labels, creates a new list of rules
-    where each rule is duplicated for each unique label in the labels list.
-
-    Args:
-        rules (List[List[Condition]]): List of rules to duplicate, where each rule is a list of conditions.
-        
-        labels (List[Set[int]]): List of label sets for each instance.
-            Each label set should contain only a single label.
-
-        ignore (Set[int], optional): Set of labels to ignore when duplicating rules. Defaults to an empty set.
-
-    Returns:
-        new_rules (List[List[Condition]]): New list of rules after duplication.
-    """
-    uni_labels = unique_labels(labels)
-    new_rules = []
-    new_rule_labels = []
-    for i, rule in enumerate(rules):
-        for label in uni_labels:
-            if label not in ignore:
-                new_rules.append(rule)
-                new_rule_labels.append({label})
-    return new_rules, new_rule_labels
-
-
-####################################################################################################
-
-
 def map_rules_to_decisions(
-    decision_set: list[Decision]) -> dict[Rule, Set[Decision]]:
+    decision_set: list[Decision]
+) -> dict[Rule, Set[Decision]]:
     """
     Given a decision set, returns a dictionary mapping unique rules to their associated decisions.
     Args:
@@ -1204,3 +951,6 @@ def compute_elbow(x: np.ndarray, y: np.ndarray, increasing: bool = True) -> int:
         idx = int(np.argmax(distances))
 
     return idx
+
+
+####################################################################################################

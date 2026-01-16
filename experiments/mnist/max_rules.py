@@ -1,3 +1,25 @@
+####################################################################################################
+# Path setup
+
+import sys
+from pathlib import Path
+
+# Ensure the repository root (the folder that contains `data/`) is on sys.path.
+# This makes `from data.preprocessing import ...` work when running this file directly.
+_HERE = Path(__file__).resolve()
+PROJECT_ROOT = next((p for p in _HERE.parents if (p / "data").is_dir()), None)
+if PROJECT_ROOT is None:
+    raise ModuleNotFoundError(
+        "Could not locate repository root."
+    )
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from data.preprocessing import *
+from experiments.experiment import Experiment
+from experiments.modules import *
+
+####################################################################################################
+
 import os
 import json
 import pandas as pd
@@ -8,7 +30,8 @@ from intercluster.decision_trees import *
 from intercluster.decision_sets import *
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
-from intercluster.experiments import *
+from intercluster.measurements import *
+from intercluster.rules import load_rules
 
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -63,69 +86,13 @@ max_distance = np.max(max_distances)
 fixed_parameters['alpha_rule_clustering_cost'] = 0.01 * n * max_distance
 
 ####################################################################################################
-# Rule Mining:
+# Load pre-mined rules:
 
-decision_tree_rule_miner = TreeMiner(
-    tree = DecisionTree(random_state = seed),
-)
-decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
+ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
 
-
-exkmc_rule_miner = TreeMiner(
-    tree = ExkmcTree(
-        k = fixed_parameters['n_clusters'],
-        kmeans = kmeans_base.clustering,
-        max_leaf_nodes = fixed_parameters['max_rules'],
-        imm = True
-    )
-)
-exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-
-shallow_tree_miner = TreeMiner(
-    tree = ShallowTree(
-        n_clusters = fixed_parameters['n_clusters'],
-        depth_factor = fixed_parameters['depth_factor'],
-        kmeans_random_state = seed
-    )
-)
-shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
-    X = data, y = kmeans_labels
-)
-
-forest_rules_list = []
-for _ in range(fixed_parameters['forest_samples']):
-    forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': np.random.randint(0, 10000)})
-    frules, _ = forest_rule_miner.fit(data, kmeans_base.labels)
-    forest_rules_list.append(frules)
-
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
-    max_length = fixed_parameters['max_rule_length'],
-    binning_method = "entropy",
-    bin_params = {
-        'random_state': seed,
-    }
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-rule_miner_dict = {}
-
-for i in range(fixed_parameters['forest_samples']):
-    forest_rules = forest_rules_list[i]
-    ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
-    ensemble_rules = filter_rules(
-        ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
-    )
-    rule_miner_dict[f'ensemble_{i}'] = (None, ensemble_rules, None)
+rule_miner_dict = {
+    'ensemble': (None, ensemble_rules, None),
+}
 
 
 ####################################################################################################

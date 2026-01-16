@@ -9,28 +9,34 @@ from .rules import (
     load_decisions,
 )
 
-from .measurements import (
+from .measurement_utils import (
     mode, 
     entropy,
     coverage,
     overlap,
     center_dists,
     kmeans_cost,
-    distance_ratio,
     distance_ratio_score,
     silhouette_score,
-    mutual_reachability_distance,
-    density_distance,
-    pairwise_distance_threshold,
-    max_intra_cluster_distance,
-    min_inter_cluster_distance,
     mistakes,
-    coverage_mistake_score,
-    uncovered_mistake_score,
-    label_differences,
     clustering_distance,
-    clustering_distance_cythonized
 )
+
+from .measurements import (
+    MeasurementFunction,
+    TotalCoverage,
+    TotalCoverageSet,
+    ClusterCoverage,
+    ClusterCoverageSet,
+    Overlap,
+    Mistakes,
+    ClusteringCost,
+    RuleClusteringCost,
+    PairwiseDistance,
+    RulePairwiseDistance,
+    Silhouette,
+)
+
 
 from .node import Node
 
@@ -59,14 +65,10 @@ from .utils import (
     entropy_bin,
     quantile_bin,
     uniform_bin,
-    oned_cluster_bin,
-    adaptive_grid_bin,
     interval_to_condition,
-    oned_cluster,
     decision_set_to_cars,
     cars_to_decision_set,
     filter_rules,
-    cartesian_product_labels,
     map_rules_to_decisions,
     compute_elbow,
 )

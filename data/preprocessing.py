@@ -7,7 +7,6 @@ from ucimlrepo import fetch_ucirepo
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
-
 ####################################################################################################
 
 

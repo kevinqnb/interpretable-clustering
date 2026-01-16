@@ -3,14 +3,9 @@ from numpy.typing import NDArray
 from typing import List, Set, Tuple
 from numpy.typing import NDArray
 from intercluster import (
-    Condition,
     Rule,
     Decision,
-    satisfies_rule,
-    labels_to_assignment,
-    unique_labels,
 )
-from .mining import RuleMiner
 from .objectives import (
     Objective, CoverageMistakeObjective, CoverageCostObjective,
     TotalCoverageMistakeObjective, TotalCoverageCostObjective

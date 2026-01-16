@@ -4,16 +4,13 @@ import fim
 from pyarc.algorithms.rule_generation import generateCARs
 from typing import List, Set, Tuple, Any
 from intercluster import (
-    Condition,
     Rule,
     entropy_bin,
     uniform_bin,
     quantile_bin,
-    oned_cluster_bin,
     interval_to_condition,
     can_flatten,
     flatten_labels,
-    cars_to_decision_set
 )
 
 from .rule_miner import RuleMiner
@@ -71,9 +68,9 @@ class ClassAssociationRuleMiner(RuleMiner):
 
         self.bin_df = bin_df
         if self.bin_df is None:
-            if binning_method not in ["uniform", "quantile", "cluster", "entropy"]:
+            if binning_method not in ["uniform", "quantile", "entropy"]:
                 raise ValueError(
-                    "Unsupported binning method. Choose 'uniform', 'quantile', 'cluster', or 'entropy'."
+                    "Unsupported binning method. Choose 'uniform', 'quantile', or 'entropy'."
                 )
             self.binning_method = binning_method
             self.bin_params = bin_params
@@ -107,8 +104,6 @@ class ClassAssociationRuleMiner(RuleMiner):
             bin_df = quantile_bin(X, **self.bin_params)
         elif self.binning_method == "uniform":
             bin_df = uniform_bin(X, **self.bin_params)
-        elif self.binning_method == "cluster":
-            bin_df = oned_cluster_bin(X, **self.bin_params)
         else: #elif self.binning_method == "entropy":
             bin_df = entropy_bin(X, y, **self.bin_params)
 

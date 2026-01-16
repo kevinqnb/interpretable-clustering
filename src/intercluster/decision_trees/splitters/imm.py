@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple, List, Set
-from intercluster.measurements import center_dists
+from intercluster.measurement_utils import center_dists
 from ._splitter import Splitter
 from intercluster import Condition, LinearCondition
  

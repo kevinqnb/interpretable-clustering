@@ -1,854 +1,709 @@
 import numpy as np
-import networkx as nx
-from itertools import combinations
-from sklearn.metrics.pairwise import pairwise_distances
-from typing import List, Set
 from numpy.typing import NDArray
-from .utils import (
-    covered_mask,
-    divide_with_zeros,
-    tiebreak,
-    labels_to_assignment,
-    unique_labels
+from typing import Any
+from intercluster.measurement_utils import (
+    overlap,
+    coverage,
+    silhouette_score,
+    clustering_distance
 )
-import warnings
-from .measurements_cython import clustering_distance_cython
-
-####################################################################################################
-
-
-def mode(x : NDArray) -> float:
-    """
-    Returns the mode of a list of values.
-    
-    Args:
-        x (np.ndarray): List of values.
-    """
-    unique, counts = np.unique(x, return_counts=True)
-    return unique[tiebreak(counts)[-1]]
+from intercluster.utils import (
+    assignment_to_labels,
+)
 
 
 ####################################################################################################
 
 
-def entropy(x : NDArray) -> float:
+class MeasurementFunction:
     """
-    Returns the entropy of a list of labels.
-    
-    Args:
-        x (np.ndarray): List of labels.
+    Base class for measurement functions. Measurement functions are designed to compute 
+    various metrics on clusterings. They are implemented as callable classes that take in
+    three consistent arguments, and may be initialized with additional parameters as needed.
+
+    Base Args:
+        name (str): Name of the measurement function.
     """
-    unique, counts = np.unique(x, return_counts=True)
-    p = counts / len(x)
-    return -np.sum(p * np.log2(p))
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> Any:
+        """
+        To make these functions compatible with our experimentation
+        framework, they are all designed as callable classes that take in three 
+        consistent arguments.
+
+        Args:
+            data_to_rule_assignment (NDArray): NDArray of size (n x r) where entry (i,j) is True if
+                data point i is assigned to rule j, and False otherwise.
+            rule_to_cluster_assignment (NDArray): NDArray of size (r x k) where entry (j,l) is True if
+                rule j is assigned to cluster l, and False otherwise.
+            data_to_cluster_assignment (NDArray): NDArray of size (n x k) where entry (i,l) is True if
+                data point i is assigned to cluster l, and False otherwise.
+
+        Returns:
+            Any : Computed measurement.
+        """
+        pass
 
 
 ####################################################################################################
 
 
-def coverage(assignment : np.ndarray, weights : np.ndarray = None, percentage : bool = True) -> float:
+class TotalCoverage(MeasurementFunction):
     """
-    Computes the coverage of a point assignment. 
-    
+    Computes the total coverage of all selected rules. 
+
     Args:
-        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
-            being True (1) if point i belongs to class j and False (0) otherwise. 
-
-        weights (np.ndarray, optional): n x 1 array of weights for each point. 
-            If None, all points are equally weighted. Defaults to None. 
-
-        percentage (bool, optional): If True, returns the coverage as a percentage of points
-            covered by at least one cluster. If False, returns the total number of points covered.
-        
-    Returns:
-        coverage (float): Fraction of points covered by at least one cluster.
+        weights (np.ndarray): Size (n,) array of weights for each data point.
+        name (str): Name of the measurement function.
     """
-    n,k = assignment.shape
-    if weights is not None:
-        assert weights.ndim == 1, "Weights array must be one dimensional."
-        if len(weights) != n:
-            raise ValueError("Weights array length does not match number of points.")
-    else:
-        weights = np.ones(n)
-    
-    #coverage = np.sum(np.sum(assignment, axis = 1) > 0) / n
-    if percentage:
-        coverage = np.sum(weights[covered_mask(assignment)]) / n
-    else:
-        coverage = np.sum(weights[covered_mask(assignment)])
-    return coverage
+    def __init__(self, weights = None, name : str = 'total-coverage'):
+        super().__init__(name)
+        self.weights = weights
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+            weights (np.ndarray): Size (n,) array of weights for each data point.
+
+        Returns:
+            float : Computed coverage.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        
+        return coverage(
+            assignment = data_to_cluster_assignment,
+            weights = self.weights,
+            percentage = False
+        )
 
 
 ####################################################################################################
 
 
-def overlap(assignment : np.ndarray) -> float:
+class TotalCoverageSet(MeasurementFunction):
     """
-    Computes the overlap of a point assignment, as the average of the 
-    number of clusters to which points are assigned. 
-    
-    NOTE: The average is taken over all points which are assigned to at least one cluster.
-    
+    Computes and returns the set of covered points by all selected rules. 
+
     Args:
-        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
-            being True (1) if point i belongs to class j and False (0) otherwise. 
-        
-    Returns:
-        overlap (float): Average over number of overlaps for each point.
+        name (str): Name of the measurement function.
     """
-    covered_mask = np.sum(assignment, axis = 1) > 0
-    if np.sum(covered_mask) > 0:
-        return np.mean(np.sum(assignment[covered_mask, :], axis = 1))
-    else:
-        # undefined when no points are covered. 
-        return np.nan
+    def __init__(self, name : str = 'total-coverage-set'):
+        super().__init__(name)
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> list[bool]:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+            weights (np.ndarray): Size (n,) array of weights for each data point.
+
+        Returns:
+            coverage_array (list[bool]) : List indicating which points are covered. Values 
+                are True if the point is covered by at least one cluster, and False otherwise.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        
+        return (np.sum(data_to_cluster_assignment, axis = 1) > 0).tolist()
 
 
 ####################################################################################################
 
 
-def center_dists(X : NDArray, centers : NDArray, norm : int = 2, square : bool = False) -> NDArray:
+class ClusterCoverage(MeasurementFunction):
     """
-    Computes the distance of each point in a dataset to a set of centers. 
-    
+    Computes the coverage of rules within their assigned clusters. 
+
     Args:
-        X (np.ndarray): (n x d) Dataset.
-        
-        centers (np.ndarray): (k x d) Set of representative centers.
-        
-        norm (int, optional): Norm to use for computing distances. 
-            Takes values 1 or 2. Defaults to 2.
-            
-        square (bool, optional): If using the 2 norm, optionally returns the squared distances. 
-            Defaults to False which gives the standard notion of L2 distance.
-            
-    Returns:
-        distances (np.ndarray): (n x k) Distance matrix where entry (i,j) is the distance
-            from point i to center j.
+        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. This should correspond 
+            to the clustering being approximated by the decision set.
+        weights (np.ndarray): Size (n,) array of weights for each data point.
+        name (str): Name of the measurement function.
     """
-    n,d = X.shape
-    k,d2 = centers.shape
-    
-    if d != d2:
-        raise ValueError("Data points and centers have different dimensionality.")
-    
-    if (norm != 2) and (norm != 1):
-        raise ValueError("Invalid norm, accepts values 1 or 2.")
-    
-    if norm == 2:
-        diffs = X[np.newaxis, :, :] - centers[:, np.newaxis, :]
-        if square:
-            distances = np.sum((diffs)**2, axis=-1)
-        else:
-            distances = np.sqrt(np.sum(diffs**2, axis=-1))
-    elif norm == 1:
-        diffs = X[np.newaxis, :, :] - centers[:, np.newaxis, :]
-        distances = np.sum(np.abs(diffs), axis=-1)
-    return distances.T
+    def __init__(self, baseline_assignment : NDArray, weights = None, name : str = 'cluster-coverage'):
+        super().__init__(name)    
+        self.baseline_assignment = baseline_assignment
+        self.weights = weights
+
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+            weights (np.ndarray): Size (n,) array of weights for each data point.
+
+        Returns:
+            float : Computed coverage.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        
+        within_cluster_assignment = data_to_cluster_assignment & self.baseline_assignment
+        
+        return coverage(
+            assignment = within_cluster_assignment,
+            weights = self.weights,
+            percentage = False
+        )
 
 
 ####################################################################################################
 
 
-def kmeans_cost(
-    X : NDArray,
-    centers : NDArray,
-    assignment : NDArray,
-    average : bool = False,
-    normalize : bool = False,
-    norm : int = 2
-) -> float:
+class ClusterCoverageSet(MeasurementFunction):
     """
-    Computes the squared L2 norm cost of a clustering with an associated set of centers.
+    Computes the set of covered points within their assigned clusters.
 
     Args:
-        X (np.ndarray): (n x d) Dataset
+        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. This should correspond 
+            to the clustering being approximated by the decision set.
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, baseline_assignment : NDArray, name : str = 'cluster-coverage-set'):
+        super().__init__(name)    
+        self.baseline_assignment = baseline_assignment
+
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> list[bool]:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters.
+
+        Returns:
+            coverage_array (list[bool]) : List indicating which points are covered within their 
+                assigned clusters. Values are True if the point is covered by at least one cluster, 
+                and False otherwise.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
         
-        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+        within_cluster_assignment = data_to_cluster_assignment & self.baseline_assignment
         
-        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
-            being True (1) if point i belongs to cluster j and False (0) otherwise. 
+        return (np.sum(within_cluster_assignment, axis = 1) > 0).tolist()
+
+
+####################################################################################################
+
+
+class Overlap(MeasurementFunction):
+    """
+    Computes the average overlap between clusters. 
+
+    Args:
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, name = 'overlap'):
+        super().__init__(name)
+
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> float:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed overlap.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
         
+        return overlap(data_to_cluster_assignment)
+
+
+####################################################################################################
+
+
+class Mistakes(MeasurementFunction):
+    """
+    Computes the sum of mistakes made by each rule. 
+
+    Args:
+        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j) 
+            being True (1) if point i belongs to cluster j and False (0) otherwise. This should correspond 
+            to the clustering being approximated by the decision set.
+
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, baseline_assignment : NDArray, name : str = 'mistakes'):
+        super().__init__(name)
+        self.baseline_assignment = baseline_assignment
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed mistake score.
+        """
+        if data_to_rule_assignment is None or rule_to_cluster_assignment is None:
+            return np.nan
+        
+        n,r = data_to_rule_assignment.shape
+        r2,k = rule_to_cluster_assignment.shape
+        assert r == r2, "Number of rules in data_to_rule_assignment and rule_to_cluster_assignment must match."
+        assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Each rule must be "
+                                                                "assigned to exactly one cluster.")
+        
+        total_mistakes = 0.0
+        for i in range(r):
+            assigned_cluster = np.where(rule_to_cluster_assignment[i,:])[0][0]
+            covered = np.sum(data_to_rule_assignment[:,i])
+            if covered == 0:
+                continue
+
+            correctly_covered = np.sum(
+                data_to_rule_assignment[:,i] & self.baseline_assignment[:,assigned_cluster]
+            )
+            mistakes = covered - correctly_covered
+            total_mistakes += mistakes
+        
+        return total_mistakes
+
+
+####################################################################################################
+
+    
+class ClusteringCost(MeasurementFunction):
+    """
+    Measures the cost of the clustering as the sum of distances between
+    each point in a cluster, and its assigned center.
+
+    NOTE: The cluster centers are computed as the mean or median 
+    of all points assigned to the cluster.
+
+    Args:
+        data (np.ndarray): (n x d) Dataset.
+        method (str): 'kmeans' or 'kmedians' distance.
         average (bool, optional): Whether to average the per-point cost by the number of clusters
-            that the point is assigned to. Defaults to False.
+                that the point is assigned to. Defaults to False.
+        normalize (bool): If True, the cost is normalized to adjust for 
+            overlapping clusters and uncovered points. Defaults to False.
+        name (str): Name of the measurement function.
+    """
+    def __init__(
+        self,
+        data : NDArray,
+        method : str = 'kmeans',
+        average : bool = False,
+        normalize : bool = False,
+        name : str = 'clustering-cost'
+    ):
+        super().__init__(name)
+        self.data = data
+        if method not in ['kmeans', 'kmedians']:
+            raise ValueError("Method must be one of 'kmeans' or 'kmedians'.")
+        self.method = method
+        self.average = average
+        self.normalize = normalize
         
-        normalize (bool, optional): Whether to normalize the cost by the number of points
-            covered in the clustering. Defaults to False.
-            
-        norm (int) : Norm with which to compute the distances to cluster centers. With norm = 2,
-            this produces the standard kmeans cost, whereas norm = 1 gives a kmedians cost. 
-            Defaults to 2.
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> float:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
 
-    Returns:
-        cost (float): Total cost of the clustering.
-    """
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed cost.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        n,k = data_to_cluster_assignment.shape
         
-    n,d= X.shape
-    n2,k = assignment.shape
-    
-    if n != n2:
-        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n2}.")
-    
-    center_dist_arr = center_dists(X, centers, norm = norm, square = True)
-    center_dist_arr = center_dist_arr * assignment
-    center_dist_sum = np.sum(center_dist_arr, axis = 1)
-    n_assigns = np.sum(assignment, axis = 1)
-    
-    cost = None
-    if average:
-        point_costs = np.divide(
-            center_dist_sum,
-            n_assigns,
-            out=np.zeros_like(center_dist_sum),
-            where=n_assigns!=0
-        )
-        cost = np.sum(point_costs)
-    else:
-        cost = np.sum(center_dist_sum)
-            
-    if normalize:
-        covered = coverage(assignment) * n
-        if covered == 0:
-            cost = np.inf
-        else:
-            cost /= covered
-        
-    return cost
+        cost = 0.0
+        for j in range(k):
+            cluster_points_idx = np.where(data_to_cluster_assignment[:,j])[0]
+            if len(cluster_points_idx) == 0:
+                continue
+            cluster_points = self.data[cluster_points_idx, :]
+            if self.method == 'kmeans':
+                center = np.mean(cluster_points, axis = 0)
+                dists = np.linalg.norm(cluster_points - center, ord = 2, axis = 1)
+            else:  # kmedians
+                center = np.median(cluster_points, axis = 0)
+                dists = np.linalg.norm(cluster_points - center, ord = 1, axis = 1)
 
-    
-####################################################################################################
-
-
-def distance_ratio(X : NDArray, centers : NDArray) -> NDArray:
-    """
-    For each data point, computes the ratio of the distance to its second closest cluster center
-    and the distance to its closest cluster center.
-
-    Args:
-        X (np.ndarray): (n x d) Dataset.
-        
-        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
-
-    Returns:
-        (np.ndarray): Length n distance ratio array.
-    """
-    n,d = X.shape
-    center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
-    sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
-    closest_dists = np.array(
-        [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]
-    )
-    second_closest_dists = np.array(
-        [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
-    )
-    return divide_with_zeros(second_closest_dists, closest_dists)
-
-
-####################################################################################################
-
-
-def distance_ratio_score(X : NDArray, centers : NDArray) -> NDArray:
-    """
-    For each data point, let a be the distance to its closest cluster center
-    and b be the distance to its second closest cluster center. This function computes the
-    a score as 1 - (a / b). Points which are equally close to their first and second closest
-    centers receive a score of 0, while points which are strongly tied to their closest center
-    receive a score close to 1.
-
-    Args:
-        X (np.ndarray): (n x d) Dataset.
-        
-        centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
-
-    Returns:
-        (np.ndarray): Length n distance ratio array.
-    """
-    n,d = X.shape
-    center_dist_matrix = center_dists(X, centers, norm = 2, square = False)
-    sorted_dist_matrix = np.argsort(center_dist_matrix, axis = 1)
-    closest_dists = np.array(
-        [center_dist_matrix[i, sorted_dist_matrix[i, 0]] for i in range(n)]
-    )
-    second_closest_dists = np.array(
-        [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
-    )
-    return 1 - divide_with_zeros(closest_dists, second_closest_dists)
-
-
-####################################################################################################
-
-
-def _point_silhouette_score(
-        distances : NDArray,
-        assignment : NDArray,
-        idx : int,
-        cluster_idx : int
-) -> float:
-    """
-    Computes the silhouette score of a single point from a distance matrix and an assignment matrix.
-    This is a private function, and should not be used directly. Use silhouette_score instead.
-    
-    Args:
-        distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
-        
-        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-
-        idx (int): Index of point to compute the score for.
-
-        cluster_idx (int): Index for the cluster which the point at idx belongs to,
-            and should be evaluated with.
-
-    Returns:
-        silhouette (float): Silhouette score.
-    """
-    n, k = assignment.shape
-    Ci = np.where(assignment[:,cluster_idx])[0]
-    assert idx in Ci, "Point at given index is not within given cluster."
-
-    if len(Ci) == 1:
-        # Singleton cluster, assuming 0/0 = 0:
-        avg_intracluster_distance = 0
-    else:
-        avg_intracluster_distance = distances[idx, Ci].sum() / (len(Ci) - 1)
-
-    avg_intercluster_distance = np.inf
-    for j in range(k):
-        if j != cluster_idx:
-            # Every point in cluster j, excluding the point at idx, if present.
-            Cj = np.where(assignment[:,j])[0]
-            if len(Cj) > 0:
-                inter_dist = np.inf
-                if idx in Cj:
-                    if len(Cj) == 1:
-                        # Assuming 0/0 = 0:
-                        inter_dist = 0
-                    else:
-                        inter_dist = distances[idx, Cj].sum() / (len(Cj) - 1) 
-                else:
-                    inter_dist = distances[idx, Cj].sum() / len(Cj)
-
-                if inter_dist < avg_intercluster_distance:
-                    avg_intercluster_distance = inter_dist
-
-
-    if avg_intercluster_distance == avg_intracluster_distance:
-        # No way to distinguish the point from at least one other cluster, return a score of 0.0.
-        return 0.0
-    
-    elif avg_intracluster_distance == np.inf:
-        # Otherwise, if the intra-cluster distance is infinite, 
-        # the point must be better distinguished by some other cluster.
-        return -1.0
-    
-    elif avg_intercluster_distance == np.inf:
-        # Otherwise, if the inter-cluster distance is infinite, 
-        # the point is best distinguished by its own cluster.
-        return 1.0
-    
-    else:
-        score = (
-            (avg_intercluster_distance - avg_intracluster_distance) / 
-            np.max([avg_intercluster_distance, avg_intracluster_distance])
-        )
-        return score
-
-
-
-####################################################################################################
-
-
-def silhouette_score(
-        distances : NDArray,
-        assignment : NDArray
-) -> float:
-    """
-    Computes the silhouette score from a distance matrix and an point to cluster assignment matrix.
-
-    Args:
-        distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
-        
-        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-    
-    Returns:
-        silhouette (float): Silhouette score.
-    """
-    n,n_ = distances.shape
-    if n != n_:
-        raise ValueError("Distance matrix must be square.")
-    
-    if np.any(distances) < 0:
-        raise ValueError("Distance matrix must only contain non-negative values.")
-    
-    n_, k = assignment.shape
-    if n != n_:
-        raise ValueError(f"Shape of data {n} does not match shape of shape of assignment {n_}.")
-
-    if k < 2 or (np.sum(assignment, axis = 0) > 0).sum() < 2:
-        warnings.warn("Silhoutte score is only defined for instances with two or more clusters.")
-        return np.nan
-    
-    
-    covered = coverage(assignment, percentage = False)
-    score_sum = 0.0
-    for i in range(k):
-        cluster_points = np.where(assignment[:, i])[0]
-        for j in cluster_points:
-            score = _point_silhouette_score(distances, assignment, j, i)
-            score_sum += score / np.sum(assignment[j,:])
-
-    return score_sum / covered
-
-
-####################################################################################################
-
-
-
-def mutual_reachability_distance(X : NDArray, n_core : int = 1) -> NDArray:
-    """
-    For each pair of points (i,j) in a dataset, computes the distance between them as the maximum of 
-    their {euclidean distance, the euclidean distance to the mu-th nearest neighbor of i, and 
-    the euclidean distance to the mu-th nearest neighbor of j}. In the context of DBSCAN, this is 
-    a value of epsilon at which the points i and j must belong to the same cluster (but not yet the 
-    minimum most).
-
-    Args:
-        X (np.ndarray): (n x d) Dataset.
-        
-        n_core (int, optional): Number of nearest neighbors to consider for a core point.
-            Defaults to 1.
-
-    Returns:
-        distances (np.ndarray): n x n array of mutual reachability distances.
-    """
-    n, d = X.shape
-    distances = np.zeros((n, n))
-    euclidean_distances = pairwise_distances(X, metric='euclidean')
-
-    # mu-th nearest neighbor distance for each point
-    euclidean_distance_sorted = np.sort(euclidean_distances, axis=1)
-    mu_distance = euclidean_distance_sorted[:, n_core - 1]
-
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                distances[i, j] = 0
-            else:
-                mutual_distance = max(
-                    euclidean_distances[i, j],
-                    mu_distance[i],
-                    mu_distance[j]
+            if self.average:
+                avg_dists = np.array(
+                    [dists[i] / np.sum(data_to_cluster_assignment[c, :]) for i,c in enumerate(cluster_points_idx)]
                 )
-                distances[i, j] = mutual_distance
+                cost += np.sum(avg_dists)
+            else:
+                cost += np.sum(dists)
 
-    return distances
+        if self.normalize:
+            covered = coverage(data_to_cluster_assignment, percentage = False)
+            cost /= covered if covered > 0 else 1.0
 
+        return cost
+    
 
 ####################################################################################################
+    
 
-
-def density_distance(X : NDArray, n_core : int = 1) -> NDArray:
+class RuleClusteringCost(MeasurementFunction):
     """
-    Computes the density distance between each pair of points in a dataset. The density distance 
-    between points i and j is the computed as the largest edge weight on the path 
-    between them in the minimum spanning tree of the graph where edge weights are given 
-    by euclidean distances. 
+    Measures the cost of the clustering individually for each rule, as the sum of distances between
+    each point covered by the rule and the center of the cluster that the rule is assigned to.
+    Returns the sum over all rules.
 
-    This is an implemenation of work seen in:
-    "Unsupervised representation learning with Minimax distance measures"
-    by Morteza Haghir Chehreghani 2020, https://arxiv.org/abs/1904.13223
+    NOTE: The cluster centers are fixed and should be provided at initialization.
     
     Args:
-        X (np.ndarray): (n x d) Dataset.
-
-        n_core (int, optional): Number of nearest neighbors to consider for a core point.
-            Defaults to 1.
-        
-    Returns:
-        distances (np.ndarray): n x n array of density distances.
+        data (np.ndarray): (n x d) Dataset.
+        cluster_centers (np.ndarray): (k x d) Array of cluster centers.
+        method (str): 'kmeans' or 'kmedians' distance.
+        name (str): Name of the measurement function.
     """
-    n, d = X.shape
-    density_distances = np.zeros((n,n))
-    reachability_distances = mutual_reachability_distance(X, n_core)
-
-    # Create a graph from the distance matrix
-    G = nx.from_numpy_array(reachability_distances)
-    T = nx.minimum_spanning_tree(G)
-
-    # Extract the edges of the minimum spanning tree, sorted by weight
-    sorted_mst_edges = sorted(T.edges(data=True), key=lambda x: x[2]['weight'])
-
-    # Compute minimax path distances by dynamic programming
-    component_list = [{i} for i in range(n)]
-    component_id = list(range(n))
-    current_id = n - 1
-    for u, v, data in sorted_mst_edges:
-        if component_id[u] != component_id[v]:
-            first_side = component_list[component_id[u]]
-            second_side = component_list[component_id[v]]
-            new_component = first_side.union(second_side)
-
-            component_list.append(new_component)
-            current_id += 1
-            component_id.append(current_id)
-            for i in new_component:
-                component_id[i] = current_id
-
-            weight = data['weight']
-            for i in first_side:
-                for j in second_side:
-                    density_distances[i, j] = weight
-                    density_distances[j, i] = weight
-
-    return density_distances
-
-
-####################################################################################################
-
-
-def pairwise_distance_threshold(D : NDArray, indices : NDArray, threshold : float) -> bool:
-    """
-    Given a distance matrix D and a subset of indices, determines if each pair of points 
-    within indices satisfies the distance threshold.
-    
-    Args:
-        D (np.ndarray): Distance matrix of size n x n.
+    def __init__(
+        self,
+        data : NDArray,
+        cluster_centers : NDArray = None,
+        method : str = 'kmeans',
+        name : str = 'rule-clustering-cost'
+    ):
+        super().__init__(name)
+        self.data = data
+        self.cluster_centers = cluster_centers
+        if method not in ['kmeans', 'kmedians']:
+            raise ValueError("Method must be one of 'kmeans' or 'kmedians'.")
+        self.method = method
         
-        indices (np.ndarray): Indices of points to consider.
-        
-        threshold (float): Distance threshold to satisfy.
-    
-    Returns:
-        (bool) : True if all pairs satisfy the distance threshold, False otherwise.
-    """
-    if D.shape[0] != D.shape[1]:
-        raise ValueError("Distance matrix must be square.")
-    
-    if np.any(D < 0):
-        raise ValueError("Distance matrix must only contain non-negative values.")
-    
-    if len(indices) == 0 or len(indices) == 1:
-        # If no indices or only one index, trivially satisfied.
-        return True
-    
-    if len(indices) > D.shape[0]:
-        raise ValueError("Indices length exceeds distance matrix size.")
-    
-    if threshold < 0:
-        raise ValueError("Threshold must be non-negative.")
-    
-    return np.all(D[np.ix_(indices, indices)] <= threshold)
-
-
-####################################################################################################
-
-
-def max_intra_cluster_distance(
-        distances : NDArray,
-        assignment : NDArray
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
     ) -> float:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed cost.
+        """
+        if data_to_rule_assignment is None or rule_to_cluster_assignment is None:
+            return np.nan
+        n,r = data_to_rule_assignment.shape
+        r2,k = rule_to_cluster_assignment.shape
+        assert r == r2, "Number of rules in data_to_rule_assignment and rule_to_cluster_assignment must match."
+        assert np.all(np.sum(rule_to_cluster_assignment, axis = 1) == 1), ("Each rule must be "
+                                                                "assigned to exactly one cluster.")
+        
+        
+        if self.cluster_centers is None:
+            cluster_centers = np.zeros((k, self.data.shape[1]))
+            for j in range(k):
+                cluster_points_idx = np.where(data_to_cluster_assignment[:,j])[0]
+                if len(cluster_points_idx) == 0:
+                    continue
+                cluster_points = self.data[cluster_points_idx, :]
+                center = np.mean(cluster_points, axis = 0)
+                cluster_centers[j,:] = center
+        else:
+            cluster_centers = self.cluster_centers
+        
+        
+        cost = 0.0
+        for i in range(r):
+            rule_points_idx = np.where(data_to_rule_assignment[:,i])[0]
+            if len(rule_points_idx) == 0:
+                continue
+            rule_points = self.data[rule_points_idx, :]
+            assigned_cluster = np.where(rule_to_cluster_assignment[i,:])[0][0]
+            center = cluster_centers[assigned_cluster, :]
+
+            if self.method == 'kmeans':
+                dists = np.linalg.norm(rule_points - center, ord = 2, axis = 1)
+            else:  # kmedians
+                dists = np.linalg.norm(rule_points - center, ord = 1, axis = 1)
+
+            cost += np.sum(dists)
+
+        return cost
+        
+
+####################################################################################################
+
+
+class PairwiseDistance(MeasurementFunction):
     """
-    Computes the maximum intra-cluster distance for a given assignment of points to clusters.
+    Computes the pairwise point clustering
+    distance between a reference clustering and a new, interpretable clustering.
+
+    Args:
+        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+            otherwise. This should correspond to a ground truth labeling of the data.
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, baseline_assignment : NDArray, name : str = 'pairwise-distance'):
+        super().__init__(name = name)
+        self.baseline_assignment = baseline_assignment
+        self.baseline_labels = assignment_to_labels(baseline_assignment)
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            int : Computed pairwise distance.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+        
+        new_labels = assignment_to_labels(data_to_cluster_assignment)
+        return clustering_distance(
+            self.baseline_labels,
+            new_labels,
+            percentage = False,
+            ignore = {-1}
+        )
+    
+
+####################################################################################################
+
+
+class RulePairwiseDistance(MeasurementFunction):
+    """
+    Computes the pairwise point clustering
+    distance between a reference clustering and a new, interpretable clustering, 
+    summed over each rule's covered points individually.
+
+    Args:
+        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
+            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
+            otherwise. This should correspond to a ground truth labeling of the data.
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, baseline_assignment : NDArray, name : str = 'rule-pairwise-distance'):
+        super().__init__(name = name)
+        self.baseline_assignment = baseline_assignment
+        self.baseline_labels = assignment_to_labels(baseline_assignment)
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
+    ) -> int:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            int : Computed pairwise distance.
+        """
+        if data_to_rule_assignment is None:
+            return np.nan
+        
+        n,r = data_to_rule_assignment.shape
+        
+        total_pairwise_distance = 0.0
+        for i in range(r):
+            rule_points_idx = np.where(data_to_rule_assignment[:,i])[0]
+            if len(rule_points_idx) <= 1:
+                continue
+            rule_labels = [{0} for _ in range(len(rule_points_idx))]
+            baseline_labels = [self.baseline_labels[idx] for idx in rule_points_idx]
+
+            total_pairwise_distance += clustering_distance(
+                baseline_labels,
+                rule_labels,
+                percentage = False,
+                ignore = {-1}
+            )
+        return total_pairwise_distance
+    
+
+####################################################################################################
+    
+
+class Silhouette(MeasurementFunction):
+    """
+    Computes the silhouette score of a clustering.
+
     Args:
         distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
-        
-        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-    Returns:
-        max_dist (float): Maximum intra-cluster distance.
+        name (str): Name of the measurement function.
     """
-    max_dist = 0
-    for i in range(assignment.shape[1]):
-        i_pts = np.where(assignment[:,i] == 1)[0]
-        if len(i_pts) > 0:
-            distance_sub = distances[np.ix_(i_pts, i_pts)]
-            sub_max = np.max(distance_sub)
-            if np.max(distance_sub) > max_dist:
-                max_dist = sub_max
-
-    return max_dist
-
-    
-####################################################################################################
-    
-
-def min_inter_cluster_distance(
-        distances : NDArray,
-        assignment : NDArray
+    def __init__(self, distances : NDArray, name : str = 'silhouette'):
+        super().__init__(name = name)
+        self.distances = distances
+        
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None
     ) -> float:
-    """
-    Computes the minimum inter-cluster distance for a given assignment of points to clusters.
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+                    data point i is assigned to rule j and `False` otherwise.
 
-    Args:
-        distances (np.ndarray): n x n array of pairwise distances between points in the dataset.
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
+                assigned to multiple clusters. 
+
+        Returns:
+            float : Computed silhouette score.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
         
-        assignment (np.ndarray: bool): n x k boolean matrix with entry (i,j) being True
-            if point i belongs to cluster j and False otherwise.
-    Returns:
-        min_dist (float): Minimum inter-cluster distance.
-    """
-    n,k = assignment.shape
-    min_dist = np.inf
-    for (i,j) in combinations(list(range(k)), 2):
-        i_pts = np.where(assignment[:,i] == 1)[0]
-        j_pts = np.where(assignment[:,j] == 1)[0]
-
-        if len(i_pts) > 0 and len(j_pts) > 0:
-            distance_sub = distances[np.ix_(i_pts, j_pts)]
-            np.fill_diagonal(distance_sub, np.inf)
-            new_min = np.min(distance_sub)
-            if new_min < min_dist:
-                min_dist = new_min
-
-    return min_dist
-
-
-####################################################################################################
-
-def mistakes(
-    ground_truth_assignment : NDArray,
-    data_to_rule_assignment : NDArray,
-    rule_to_cluster_assignment : NDArray
-) -> int:
-    """
-    Computes the number of mistakes made by a given point to cluster assignment, with respect to a ground truth.
-    """
-    n, k = ground_truth_assignment.shape
-    m = rule_to_cluster_assignment.shape[0]
-    assert rule_to_cluster_assignment.shape[1] == k, \
-        "The number of clusters in the rule assignment must match the data assignment."
-    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
-        "Each rule must belong to exactly one cluster."
-    assert data_to_rule_assignment.shape == (n, m), \
-        ("The data to rules assignment must have shape (n, m) where n is the number of data "
-        "points and m is the number of rules.")
+        return silhouette_score(self.distances, data_to_cluster_assignment)
     
-    mistakes = 0
-    for i, rule_points in enumerate(data_to_rule_assignment.T):
-        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
-        if len(rule_clusters) > 0:
-            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
-            mistakes += np.sum(rule_points & ~cluster_points)
-            
-    return mistakes
-
 
 ####################################################################################################
 
 
-def coverage_mistake_score(
-        lambda_val : float,
-        ground_truth_assignment : NDArray,
-        data_to_rule_assignment : NDArray,
-        rule_to_cluster_assignment : NDArray
-):
-    """
-    Sum of covered points minus lambda times the number of mistakes made by a given 
-    point to cluster assignment, with respect to a ground truth.
 
-    Args:
-        lambda_val (float): Weighting factor for the mistakes term in the objective function.
-        ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
-            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
-            otherwise. This should correspond to a ground truth labeling of the data. 
-        rule_to_cluster_assignment (np.ndarray: bool): m x k boolean (or binary) matrix 
-            with entry (i,j) being True (1) if rule i belongs to cluster j and False (0) 
-            otherwise. NOTE: each rule must belong to exactly one cluster.
-        data_to_rules_assignment (np.ndarray: bool): n x m boolean (or binary) matrix 
-            with entry (i,j)  being True (1) if point i satisfies rule j and False (0) 
-            otherwise.
-    """
-    n, k = ground_truth_assignment.shape
-    m = rule_to_cluster_assignment.shape[0]
-    assert rule_to_cluster_assignment.shape[1] == k, \
-        "The number of clusters in the rule assignment must match the data assignment."
-    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
-        "Each rule must belong to exactly one cluster."
-    assert data_to_rule_assignment.shape == (n, m), \
-        ("The data to rules assignment must have shape (n, m) where n is the number of data "
-        "points and m is the number of rules.")
+
+
     
-    cover = coverage(data_to_rule_assignment, percentage = False)
-    
-    mistakes = 0
-    for i, rule_points in enumerate(data_to_rule_assignment.T):
-        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
-        if len(rule_clusters) > 0:
-            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
-            mistakes += np.sum(rule_points & ~cluster_points)
-
-    return cover - lambda_val * mistakes
-
-
-####################################################################################################
-
-
-def uncovered_mistake_score(
-        ground_truth_assignment : NDArray,
-        data_to_rule_assignment : NDArray,
-        rule_to_cluster_assignment : NDArray
-):
-    """
-    Sum of uncovered points and the number of mistakes made by a given 
-    point to cluster assignment, with respect to a ground truth.
-
-    Args:
-        ground_truth_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
-            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
-            otherwise. This should correspond to a ground truth labeling of the data. 
-        rule_to_cluster_assignment (np.ndarray: bool): m x k boolean (or binary) matrix 
-            with entry (i,j) being True (1) if rule i belongs to cluster j and False (0) 
-            otherwise. NOTE: each rule must belong to exactly one cluster.
-        data_to_rules_assignment (np.ndarray: bool): n x m boolean (or binary) matrix 
-            with entry (i,j)  being True (1) if point i satisfies rule j and False (0) 
-            otherwise.
-    """
-    n, k = ground_truth_assignment.shape
-    m = rule_to_cluster_assignment.shape[0]
-    assert rule_to_cluster_assignment.shape[1] == k, \
-        "The number of clusters in the rule assignment must match the data assignment."
-    assert np.all(np.sum(rule_to_cluster_assignment, axis=1) <= 1), \
-        "Each rule must belong to exactly one cluster."
-    assert data_to_rule_assignment.shape == (n, m), \
-        ("The data to rules assignment must have shape (n, m) where n is the number of data "
-        "points and m is the number of rules.")
-    
-    uncovered = n - coverage(data_to_rule_assignment, percentage = False)
-    
-    mistakes = 0
-    for i, rule_points in enumerate(data_to_rule_assignment.T):
-        rule_clusters = np.where(rule_to_cluster_assignment[i])[0]
-        if len(rule_clusters) > 0:
-            cluster_points = ground_truth_assignment[:, rule_clusters[0]]
-            mistakes += np.sum(rule_points & ~cluster_points)
-
-    return uncovered + mistakes
-
-
-####################################################################################################
-
-
-def label_differences(
-        true_labels : list[Set[int]],
-        pred_labels : list[Set[int]],
-        percentage : bool = False,
-        ignore : Set[int] = None
-) -> int:
-    """
-    Computes the number of points which are assigned differently in two labelings.
-    This is a helper function for computing the robustness of a clustering.
-
-    Args:
-        true_labels (np.ndarray): Length n array of ground truth labels.
         
-        pred_labels (np.ndarray): Length n array of predicted labels.
-
-        percentage (bool, optional): If True, returns the fraction of points which differ
-            between the two labelings. If False, returns the total number of points which differ.
-            Defaults to False.
-
-    Returns:
-        differences (int): Number of points assigned to different clusters in the two labelings.
-    """
-    if len(true_labels) != len(pred_labels):
-        raise ValueError("Label arrays must have the same length.")
-    
-    differences = 0
-    for i in range(len(true_labels)):
-        if ignore is not None and (true_labels[i] == ignore or pred_labels[i] == ignore):
-            continue
-        else:
-            if true_labels[i] != pred_labels[i]:
-                differences += 1
-
-    if percentage:
-        if ignore is None:
-            return differences / len(true_labels)
-        else:
-            return differences / len([l for l in true_labels if l not in ignore])
-    else:
-        return differences
-    
-
-####################################################################################################
-
-
-def clustering_distance(
-    labels1 : List[Set[int]],
-    labels2 : List[Set[int]],
-    percentage : bool = False,
-    ignore : Set[int] = None
-) -> float:
-    """
-    Computes the distance between two clusterings as the number (or percentage) of pairs which are 
-    assigned to the same cluster in one clustering and different clusters in the other.
-
-    Args:
-        labels1 (list[set[int]]): Length n list of ground truth labels.
-        
-        labels2 (list[set[int]]): Length n list of predicted labels.
-
-        percentage (bool, optional): If True, returns the fraction of pairs which differ
-            between the two labelings. If False, returns the total number. Defaults to False.
-
-        ignore (set[int], optional): If provided, ignores points with this label in both
-            labelings. Defaults to None.
-
-    Returns:
-        distance (float): Number (or percentage) of pairs assigned to different clusters 
-            in the two labelings.
-    """
-    n = len(labels1)
-    if n != len(labels2):
-        raise ValueError("Label arrays must have the same length.")
-    
-    non_outliers = [
-        i for i in range(n) if (ignore is None or (labels1[i] != ignore and labels2[i] != ignore))
-    ]
-    n = len(non_outliers)
-    if n < 2:
-        raise ValueError("Not enough non-outlier points to compute clustering distance.")
-    
-    n_pairs = n * (n - 1) / 2
-    
-    differences = 0
-    for (i,j) in combinations(non_outliers, 2):
-        same1 = True if (labels1[i] & labels1[j]) else False
-        same2 = True if (labels2[i] & labels2[j]) else False
-        if same1 != same2:
-            differences += 1
-
-    if percentage:
-        return differences / n_pairs
-    else:
-        return differences
-    
-
-
-def clustering_distance_cythonized(
-    labels1 : List[Set[int]],
-    labels2 : List[Set[int]],
-    percentage : bool = False,
-    ignore : Set[int] = None
-) -> float:
-    """
-    Computes the distance between two clusterings as the number (or percentage) of pairs which are 
-    assigned to the same cluster in one clustering and different clusters in the other.
-
-    Args:
-        labels1 (list[set[int]]): Length n list of ground truth labels.
-        
-        labels2 (list[set[int]]): Length n list of predicted labels.
-
-        percentage (bool, optional): If True, returns the fraction of pairs which differ
-            between the two labelings. If False, returns the total number. Defaults to False.
-
-        ignore (set[int], optional): If provided, ignores points with this label in both
-            labelings. Defaults to None.
-
-    Returns:
-        distance (float): Number (or percentage) of pairs assigned to different clusters 
-            in the two labelings.
-    """
-    return clustering_distance_cython(labels1, labels2, percentage, ignore)

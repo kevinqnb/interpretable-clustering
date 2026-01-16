@@ -16,7 +16,7 @@ from ._splitter import (
     Splitter,
 )
 
-from .testing import (
+from .dummy import (
     DummySplitter,
     SimpleSplitter,
 )

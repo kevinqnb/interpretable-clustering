@@ -6,11 +6,9 @@ import warnings
 from intercluster import LinearCondition
 from intercluster import (
     Node,
-    mode,
     labels_format,
     can_flatten,
     flatten_labels,
-    traverse,
     get_decision_paths,
     satisfies_path
 )

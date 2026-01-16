@@ -9,10 +9,9 @@ from intercluster.decision_sets.objectives import *
 from intercluster.utils import (
     labels_format,
     labels_to_assignment,
-    update_centers,
     unique_labels,
 )
-from intercluster import Condition
+from intercluster import Rule
 
 
 ####################################################################################################
@@ -229,73 +228,6 @@ class AgglomerativeBase(Baseline):
         return self.assignment
 
 
-
-####################################################################################################
-
-
-class IMMBase(Baseline):
-    """
-    Baseline IMM clustering method.
-    
-    Args:
-        n_clusters (int): Number of clusters.
-        
-        kmeans_model (Any): Pretrained SKLearn KMeans model.
-        
-        name (str, optional): Name of the baseline method. Defaults to 'KMeans'.
-    """
-    def __init__(
-        self,
-        n_clusters : int,
-        kmeans_model : Any,
-        name : str = 'IMM'
-    ):
-        self.n_clusters = n_clusters
-        self.kmeans_model = kmeans_model
-        self.original_centers = kmeans_model.cluster_centers_
-        super().__init__(name)
-        self.fitted = False
-        self.assignment = None
-        self.centers = None
-        self.max_rule_length = np.nan
-        self.sum_rule_length = np.nan
-        self.weighted_average_rule_length = np.nan
-        
-    def assign(self, X : NDArray) -> Tuple[NDArray, NDArray]:
-        """
-        Fits the IMM model and returns the cluster assignment.
-        
-        Args:
-            X (np.ndarray): Data matrix.
-            
-        Returns:
-            assignment (np.ndarray): Cluster assignment boolean array of size n x k
-                with entry (i,j) being True if point i belongs to cluster j and False otherwise.
-            
-            centers (np.ndarray): Size k x d array of cluster centers. 
-        """
-        if not self.fitted:
-            exkmc_tree = ExkmcTree(
-                k=self.n_clusters,
-                kmeans=self.kmeans_model,
-                max_leaf_nodes=self.n_clusters,
-                imm=True
-            )
-            exkmc_tree.fit(X)
-            exkmc_labels = exkmc_tree.predict(X, leaf_labels = False)
-            self.assignment = labels_to_assignment(exkmc_labels, n_labels = self.n_clusters)
-            self.centers = update_centers(
-                X = X,
-                current_centers = self.original_centers,
-                assignment = self.assignment
-            )
-            self.max_rule_length = exkmc_tree.depth
-            self.sum_rule_length = exkmc_tree.get_sum_of_depths()
-            self.weighted_average_rule_length = exkmc_tree.get_weighted_average_depth(X)
-
-        return self.assignment, self.centers
-
-
 ####################################################################################################
 
 
@@ -344,7 +276,7 @@ class DecisionTreeMod(Module):
         self.fitting_params = fitting_params
 
 
-    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
@@ -433,7 +365,7 @@ class DecisionSetMod(Module):
         self,
         model : Any,
         fitting_params : Dict[str, Any] = None,
-        rules : List[List[Condition]] = None,
+        rules : List[Rule] = None,
         rule_labels : List[Set[int]] = None,
         name : str = 'Decision-Set'
     ):
@@ -467,7 +399,7 @@ class DecisionSetMod(Module):
         self.fitting_params = fitting_params
 
 
-    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray]:
+    def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray, NDArray]:
         """
         Increases the number of rules by one and fits the model.
         
@@ -488,9 +420,6 @@ class DecisionSetMod(Module):
                 `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
                 assigned to multiple clusters. 
         """
-        #if self.rules is None or self.rule_labels is None:
-        #    self.rules, self.rule_labels = self.rule_miner.fit(X, y)
-
         # Fit the model with the current number of rules
         self.dset = self.model(
             **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
@@ -499,7 +428,6 @@ class DecisionSetMod(Module):
         self.dset.fit(X, y)
         self.lambda_val = self.dset.lambda_val if hasattr(self.dset, 'lambda_val') else np.nan
         dset_labels = self.dset.predict(X)
-        #dset_rule_labels = self.dset.decision_set_labels
         n_unique = len(unique_labels(y, ignore = {-1}))
 
 
