@@ -8,7 +8,8 @@ from intercluster import (
 )
 from .objectives import (
     Objective, CoverageMistakeObjective, CoverageCostObjective,
-    TotalCoverageMistakeObjective, TotalCoverageCostObjective
+    TotalCoverageMistakeObjective, TotalCoverageCostObjective,
+    CoveragePairwiseDistanceObjective, TotalCoveragePairwiseDistanceObjective
 )
 from .decision_set import DecisionSet
 
@@ -119,14 +120,14 @@ class DSCluster(DecisionSet):
                 cluster_cost_method = self.cluster_cost_method
             )
         elif self.objective_type == "coverage-pairwise-distance":
-            self.objective = CoverageMistakeObjective(
+            self.objective = CoveragePairwiseDistanceObjective(
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights
             )
         elif self.objective_type == "total-coverage-pairwise-distance":
-            self.objective = TotalCoverageMistakeObjective(
+            self.objective = TotalCoveragePairwiseDistanceObjective(
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,

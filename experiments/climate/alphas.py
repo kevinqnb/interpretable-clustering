@@ -74,6 +74,8 @@ furthest_distance = np.max(np.max(kmeans_distances, axis=1))
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
+outfile = 'data/experiments/climate/alphas/'
+outfile_ref = '_bug_fix'
 
 ####################################################################################################
 # Rule Mining:
@@ -141,7 +143,6 @@ ensemble_rules = filter_rules(
 rule_miner_dict = {
     'ensemble' : (None, ensemble_rules, None),
 }
-
 
 ####################################################################################################
 # Define Objectives:
@@ -220,14 +221,14 @@ objective_alpha_dict = {
     'total-coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
     'total-coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-pairwise-distance': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
     'coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'total-coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
     'total-coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
 }
 
 
@@ -284,7 +285,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/alphas/', '_even_smaller_alphas')
+exp.save_results(outfile, outfile_ref)
 end = time.time()
 print("Experiment time:", end - start)
 

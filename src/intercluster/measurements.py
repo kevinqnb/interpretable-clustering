@@ -641,8 +641,8 @@ class RulePairwiseDistance(MeasurementFunction):
         total_pairwise_distance = 0.0
         for i in range(r):
             rule_points_idx = np.where(data_to_rule_assignment[:,i])[0]
-            if len(rule_points_idx) <= 1:
-                continue
+            #if len(rule_points_idx) < 1:
+            #    continue
             rule_labels = [{0} for _ in range(len(rule_points_idx))]
             baseline_labels = [self.baseline_labels[idx] for idx in rule_points_idx]
 

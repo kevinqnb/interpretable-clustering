@@ -430,8 +430,10 @@ def clustering_distance(
     if n != len(labels2):
         raise ValueError("Label arrays must have the same length.")
     
-    if n < 2:
-        raise ValueError("Not enough points to compute clustering distance.")
+    if n < 1:
+        return np.nan
+    elif n == 1:
+        return 0.0
     
     n_pairs = n * (n - 1) / 2
     

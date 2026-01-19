@@ -66,8 +66,8 @@ n,d = data.shape
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'max_rules': 12,
+    'n_clusters': 5,
+    'max_rules': 11,
     'min_support': 0.05,
     'min_confidence': 0.85,
     'car_max_rule_length': 4,
