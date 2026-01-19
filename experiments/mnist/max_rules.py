@@ -59,15 +59,28 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 10,
-    'max_rules': 20,
+    'max_rules': 16,
     'min_support': 0.1,
-    'min_confidence': 0.9,
-    'max_rule_length': 4,
+    'min_confidence': 0.85,
+    'car_max_rule_length': 4,
+    'n'
     'depth_factor': 0.03,
     'ids_samples': 1,
-    'forest_samples': 10,
-    'alpha_mistakes': 0.01 * n * 1.0,
-    'lambdas' : {},
+}
+
+fixed_parameters = {
+    'n' : n,
+    'd' : d,
+    'n_clusters': 6,
+    'max_rules': 12,
+    'min_support': 0.05,
+    'min_confidence': 0.85,
+    'car_max_rule_length': 4,
+    'n_forest': 100,
+    'max_depth': None,
+    'depth_factor': 0.03,
+    'ids_samples': 1,
+    'seed': seed,
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))

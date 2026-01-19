@@ -36,7 +36,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 8
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -99,13 +99,13 @@ alpha_dict = {
     'dscluster; total-coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
 }
 
-with open("data/experiments/protein/alphas/selected_alphas.json") as f:
+with open("data/experiments/protein/alphas/selected_alphas_smaller_alphas.json") as f:
     selected_alpha_dict = json.load(f)
 alpha_dict = alpha_dict | selected_alpha_dict
 fixed_parameters['alpha'] = alpha_dict
 
 outfile = 'data/experiments/protein/max_rules/'
-outfile_ref = '_update'
+outfile_ref = '_smaller_alphas'
 
 ####################################################################################################
 # Rule Mining:
@@ -224,7 +224,6 @@ shallow_tree_mod = DecisionTreeMod(
 
 
 # IDS:
-'''
 rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
 ids_lambdas = [
     1/rule_comb,
@@ -236,21 +235,35 @@ ids_lambdas = [
     1/(data.shape[0])
 ]
 
+
+# Run an initial fitting to prepare the IDS cache:
+ids_set = IDS(
+    rules = class_association_rules,
+    rule_labels = class_association_rule_labels,
+    lambdas = ids_lambdas,
+    bin_df = class_association_rule_miner.bin_df
+)
+ids_set.fit(data, kmeans_labels)
+ids_cacher = ids_set.cacher
+ids_lambdas = ids_set.lambdas
+
+
 ids_module_list = []
 for s in range(fixed_parameters['ids_samples']):
     ids_params = {
         tuple(n_rules_list) : {
-            'lambdas' : ids_lambdas
+            'lambdas' : ids_lambdas,
+            'bin_df': class_association_rule_miner.bin_df,
+            'ids_cacher' : ids_cacher,
         }
     }
     ids_mod = DecisionSetMod(
         model = IDS,
-        fitting_params = {'bin_df': class_association_rule_miner.bin_df},
         rules = class_association_rules,
+        rule_labels = class_association_rule_labels,
         name = f"IDS_{s}"
     )
     ids_module_list.append((ids_mod, ids_params))
-'''
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
@@ -337,7 +350,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-] + dscluster_module_list #+ ids_module_list
+] + dscluster_module_list + ids_module_list
 
 measurement_fns = [
     TotalCoverage(),

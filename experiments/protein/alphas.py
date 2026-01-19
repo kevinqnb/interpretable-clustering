@@ -283,7 +283,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/protein/', '_smaller_alphas')
+exp.save_results('data/experiments/protein/alphas/', '_smaller_alphas')
 end = time.time()
 print("Experiment time:", end - start)
 

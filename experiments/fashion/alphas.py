@@ -23,7 +23,6 @@ from experiments.modules import *
 import os
 import math
 import numpy as np
-import pandas as pd
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
@@ -35,7 +34,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 8
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -45,25 +44,25 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 n,d = data.shape
-bin_df = pd.read_csv("../data/experiments/fashion/bin_df.csv")
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 6,
-    'n_select': 6,
+    'n_clusters': 10,
+    'max_rules': 16,
+    'n_select': 10,
     'min_support': 0.05, 
-    'min_confidence': 0.85,
+    'min_confidence': 0.90,
     'max_rule_length': 4,
-    'max_depth': 20,
+    'n_forest': 100,
+    'max_depth': None,
     'depth_factor': 0.03,
-    'lambdas': {},
-    'seed': seed
+    'seed': seed,
 }
 
-np.random.seed(seed)
+np.random.seed(fixed_parameters['seed'])
 
 # Do baseline clustering
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
@@ -75,6 +74,7 @@ furthest_distance = np.max(np.max(kmeans_distances, axis=1))
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
+
 
 ####################################################################################################
 # Rule Mining:
@@ -90,6 +90,7 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
         k = fixed_parameters['n_clusters'],
+        max_leaf_nodes = fixed_parameters['max_rules'],
         kmeans = kmeans_base.clustering,
         imm = True
     )
@@ -102,7 +103,7 @@ shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
         n_clusters = fixed_parameters['n_clusters'],
         depth_factor = fixed_parameters['depth_factor'],
-        kmeans_random_state = fixed_parameters['seed'],
+        kmeans_random_state = fixed_parameters['seed']
     )
 )
 shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
@@ -110,22 +111,33 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
 )
 
 
-forest_rule_miner = RandomForestMiner(forest_params = {'n_estimators': 100, 'random_state': fixed_parameters['seed']})
+forest_rule_miner = RandomForestMiner(
+    forest_params = {
+        'n_estimators': fixed_parameters['n_forest'],
+        'max_depth': fixed_parameters['max_depth'],
+        'random_state': fixed_parameters['seed']
+    }
+)
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 
+'''
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
     max_length = fixed_parameters['max_rule_length'],
-    bin_df = bin_df,
+    binning_method = "entropy",
+    bin_params = {
+        'random_state': fixed_parameters['seed'],
+    }
 )
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+'''
 
 
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules #+ class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
@@ -194,29 +206,32 @@ objective_dict = {
     },
     'coverage-pairwise-distance-weighted': {
         'n_select': fixed_parameters['n_select'],
+        'weights': weights,
         'objective_type': 'coverage-pairwise-distance',
     },
     'total-coverage-pairwise-distance-weighted': {
         'n_select': fixed_parameters['n_select'],
+        'weights': weights,
         'objective_type': 'total-coverage-pairwise-distance',
     },
 }
 
 
 # List of alpha values to try for each objective
+n_compare = 25
 objective_alpha_dict = {
-    'coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 25),
-    'total-coverage-mistake': np.linspace(0.0, fixed_parameters['n'], num = 25),
-    'coverage-cost': np.linspace(0.0, furthest_distance * n, num = 25),
-    'total-coverage-cost': np.linspace(0.0, furthest_distance * n, num = 25),
-    'coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
-    'total-coverage-pairwise-distance': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
-    'coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = 25),
-    'total-coverage-mistake-weighted': np.linspace(0.0, fixed_parameters['n'], num = 25),
-    'coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = 25),
-    'total-coverage-cost-weighted': np.linspace(0.0, furthest_distance * n, num = 25),
-    'coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
-    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, math.comb(fixed_parameters['n'], 2), num = 25),
+    'coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'total-coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'total-coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'total-coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
+    'coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'total-coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
+    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * math.comb(fixed_parameters['n'], 2), num = n_compare),
 }
 
 
@@ -227,8 +242,6 @@ module_list = []
 for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
     for obj_name, obj_params in objective_dict.items():
         module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        if module_name not in fixed_parameters['lambdas']:
-            fixed_parameters['lambdas'][module_name] = {}
         alpha_vals = objective_alpha_dict[obj_name]
         for alpha in alpha_vals:
             obj_parameterized = {
@@ -275,7 +288,7 @@ exp = Experiment(
 import time 
 start = time.time()
 exp_results = exp.run()
-exp.save_results('data/experiments/climate/alphas/', '')
+exp.save_results('data/experiments/fashion/alphas/', '')
 end = time.time()
 print("Experiment time:", end - start)
 

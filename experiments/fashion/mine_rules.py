@@ -52,7 +52,7 @@ fixed_parameters = {
     'max_rules': 16,
     'min_support': 0.05,
     'min_confidence': 0.85,
-    'car_max_rule_length': 4,
+    'car_max_rule_length': 3,
     'n_forest': 100,
     'max_depth': 10,
     'depth_factor': 0.03,
@@ -76,7 +76,7 @@ kmeans_labels = kmeans_base.labels
 
 #bin_df.to_csv('data/experiments/fashion/rules/bin_df.csv', index = False)
 
-bin_df = pd.read_csv('data/experiments/fashion/rules/bin_df.csv')
+bin_df = pd.read_csv('data/experiments/fashion/rules/bin_df2.csv')
 
 ####################################################################################################
 # Mine for rules:

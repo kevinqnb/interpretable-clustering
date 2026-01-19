@@ -37,6 +37,11 @@ class DecisionSet:
         if rule_labels is not None:
             assert isinstance(rule_labels, list) and all(isinstance(lbl, set) for lbl in rule_labels), \
                 "rule_labels must be a list of sets."
+            
+            for lbl in rule_labels:
+                if len(lbl) != 1:
+                    raise ValueError("Each set in rule_labels must contain exactly one label.")
+
         self.rule_labels = rule_labels
 
         self.decision_set = None
@@ -113,7 +118,7 @@ class DecisionSet:
             self.decision_set = set()
             for i, rule in enumerate(self.rules):
                 self.decision_set.add(
-                    Decision(rule, self.rule_labels[i])
+                    Decision(rule, next(iter(self.rule_labels[i])))
                 )
 
             y = [set() for _ in range(X.shape[0])]
@@ -126,7 +131,7 @@ class DecisionSet:
             self.decision_set = set()
             for i, rule in enumerate(self.rules):
                 self.decision_set.add(
-                    Decision(rule, self.rule_labels[i])
+                    Decision(rule, next(iter(self.rule_labels[i])))
                 )
             
         

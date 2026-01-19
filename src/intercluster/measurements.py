@@ -633,7 +633,7 @@ class RulePairwiseDistance(MeasurementFunction):
         Returns:
             int : Computed pairwise distance.
         """
-        if data_to_rule_assignment is None:
+        if data_to_rule_assignment is None or data_to_cluster_assignment is None:
             return np.nan
         
         n,r = data_to_rule_assignment.shape

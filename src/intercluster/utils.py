@@ -272,6 +272,7 @@ def assignment_to_labels(assignment : NDArray) -> List[Set[int]]:
             labels.append(set(l))
         else:
             labels.append(set())
+    return labels
 
 
 ####################################################################################################
@@ -755,7 +756,8 @@ def decision_set_to_cars(
     for i, decision in enumerate(decision_set):
         consequent = f"class:=:{decision.label}"
         antecedent_dict = {}
-        support_bool = np.ones(X.shape[0], dtype=bool)
+        support_bool = decision.rule.evaluate(X)
+
         for condition in decision.rule.conditions:
             feature = condition.features[0]
             if feature not in antecedent_dict:
@@ -771,11 +773,8 @@ def decision_set_to_cars(
             else:
                 raise ValueError("Condition direction must be -1 or 1.")
             
-            evals = condition.evaluate(X)
-            support_bool = support_bool & evals
-            
         antecedent = [
-            f"{feature}:=:({interval[0]}, {interval[1]})"
+            f"{feature}:=:({interval[0]}, {interval[1]}]"
             for feature, interval in antecedent_dict.items()
         ]
         antecedent = sorted(list(antecedent))

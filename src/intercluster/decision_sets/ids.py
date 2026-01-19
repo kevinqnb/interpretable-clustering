@@ -67,16 +67,15 @@ class IDS(DecisionSet):
     def __init__(
         self,
         rules : List[Rule] = None,
+        rule_labels : List[Set[int]] = None,
         bin_df : pd.DataFrame = None,
         lambdas : list[float] = None,
         lambda_search_dict : dict[str, tuple[float, float]] = None,
         ternary_search_precision : float = 1.0,
         max_iterations : int = 50,
         ids_cacher:  IDSCacher = None,
-        rule_labels : List[Set[int]] = None,
     ):
-        assert rule_labels is None, 'rule_labels must be None for IDS.'
-        super().__init__(rules = rules, rule_labels = None)
+        super().__init__(rules = rules, rule_labels = rule_labels)
 
         if bin_df is None:
             raise ValueError("bin_df must be provided to initialize IDS.")
@@ -128,6 +127,7 @@ class IDS(DecisionSet):
         decision_set = []
         for car in cars:
             car_dict = car.to_dict()
+            print(car_dict)
             car_interval_dict = car_dict['antecedent']
             rule_conditions = []
             for interval_dict in car_interval_dict:
@@ -135,6 +135,8 @@ class IDS(DecisionSet):
                 interval = interval_dict['value']
                 # Convert the interval to two Conditions
                 # (one for the lower bound and one for the upper bound)
+                print(feature, interval)
+                print()
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
                 rule_conditions.append(lower_condition)
                 rule_conditions.append(upper_condition)
@@ -142,6 +144,7 @@ class IDS(DecisionSet):
             label = int(car_dict['consequent']['value'])
             decision_set.append(Decision(rule, label))
         return decision_set
+    
 
 
     def select(self, X : NDArray, y : List[Set[int]] = None):
@@ -154,7 +157,7 @@ class IDS(DecisionSet):
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
         y_ = flatten_labels(y)
-        if len(y_) != len(y):
+        if (len(y_) != len(y)):
             raise ValueError("Each data point must have exactly one label.")
         if self.decision_set is None:
             raise ValueError('Decision set has not been fitted yet.')
@@ -163,12 +166,13 @@ class IDS(DecisionSet):
             X, y,
             self.decision_set
         )
+        cars = [car for car in cars if car.confidence > 0 and car.support > 0]
         valid_cars = [car for i,car in enumerate(cars) if int(cars[i].consequent[1]) != -1]
         if len(valid_cars) == 0:
             raise ValueError("No valid (non-outlier) class association rules found. " \
             "Try increasing the number of mined rules.")
         ids_rules = list(map(IDSRule, valid_cars))
-        all_rules = IDSRuleSet(ids_rules)
+        ids_ruleset = IDSRuleSet(ids_rules)
         bin_df = self.bin_df.assign(**{'class': y_})
         bin_df['class'] = bin_df['class'].astype(str)
         quant_df = QuantitativeDataFrame(bin_df)
@@ -176,16 +180,16 @@ class IDS(DecisionSet):
         if self.ids_cacher is None:
             import time; start_time = time.time()
             print('Calculating IDS cacher overlaps...')
-            self.ids_cacher = IDSCacher()
-            self.ids_cacher.calculate_overlap(all_rules, quant_df)
+            ids_cacher = IDSCacher()
+            ids_cacher.calculate_overlap(ids_ruleset, quant_df)
             end = time.time()
             print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
 
         if self.lambdas is None:
             def fmax(lambda_dict):
                 ids = IDS_pyids(algorithm="SLS")
-                ids.ids_ruleset = all_rules
-                ids.cacher = self.ids_cacher
+                ids.ids_ruleset = ids_ruleset
+                ids.cacher = ids_cacher
                 ids.fit(
                     quant_dataframe=quant_df,
                     lambda_array=list(lambda_dict.values())
@@ -202,17 +206,18 @@ class IDS(DecisionSet):
             )
 
             lambdas = coord_asc.fit()
-            #print("Lambdas found:", lambdas)
         else:
             lambdas = self.lambdas
-
+        
 
         print('Starting IDS selection...')
         import time; start_time = time.time()
-        ids = IDS_pyids(algorithm="DLS")
-        ids.ids_ruleset = all_rules
-        ids.cacher = self.ids_cacher
+
+        ids = IDS_pyids(algorithm="SLS")
+        ids.ids_ruleset = ids_ruleset
+        ids.cacher = ids_cacher
         ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
+        #ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
         end = time.time()
         print(f"IDS selection finished in {end - start_time:.2f} seconds.")
         selected_decision_set = self.ids_to_decision_set(ids.clf.rules)
