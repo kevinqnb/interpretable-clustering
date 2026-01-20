@@ -31,6 +31,8 @@ class DSCluster(DecisionSet):
         weights : NDArray = None,
         objective_type : str = "coverage-cost",
         cluster_cost_method : str = "kmeans",
+        selection_algorithm : str = "distorted-greedy",
+        decision_info_dict_path : str = None,
         rule_labels : List[Set[int]] = None, # DUMMY ARGUMENT TO MATCH PARENT CLASS, must be None
     ):
         """
@@ -47,6 +49,10 @@ class DSCluster(DecisionSet):
                 Options are "coverage-mistake", "total-coverage-mistake", "coverage-cost", and 
                 "total-coverage-cost". Defaults to "coverage-cost".
             cluster_cost_method (str, optional): Method to use for clustering costs. Defaults to "kmeans".
+            selection_algorithm (str, optional): Algorithm to use for selection. Defaults to "distorted-greedy".
+            decision_info_dict_path (str, optional): Path to decision info dictionary, for use of precomputed decisions. 
+                Defaults to None. Note that if this is given, a decision set will be initialized from it, 
+                rather than from the rules provided.
         """
         assert rule_labels is None, 'rule_labels must be None for DSCluster.'
         super().__init__(rules = rules, rule_labels = None)
@@ -79,6 +85,12 @@ class DSCluster(DecisionSet):
             'cluster_cost_method must be either "kmeans" or "kmedians".'
         self.cluster_cost_method = cluster_cost_method
 
+        assert selection_algorithm in ['distorted-greedy', 'lazy-greedy'], \
+            'selection_algorithm must be either "distorted-greedy" or "lazy-greedy".'
+        self.selection_algorithm = selection_algorithm
+
+        self.decision_info_dict_path = decision_info_dict_path
+
         self.objective_type = objective_type
         self.initialize_objective()
         
@@ -92,14 +104,16 @@ class DSCluster(DecisionSet):
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
-                weights = self.weights
+                weights = self.weights,
+                selection_algorithm = self.selection_algorithm
             )
         elif self.objective_type == "total-coverage-mistake":
             self.objective = TotalCoverageMistakeObjective(
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
-                weights = self.weights
+                weights = self.weights,
+                selection_algorithm = self.selection_algorithm
             )
         elif self.objective_type == "coverage-cost":
             self.objective = CoverageCostObjective(
@@ -108,7 +122,8 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                cluster_cost_method = self.cluster_cost_method
+                cluster_cost_method = self.cluster_cost_method,
+                selection_algorithm = self.selection_algorithm
             )
         elif self.objective_type == "total-coverage-cost":
             self.objective = TotalCoverageCostObjective(
@@ -117,21 +132,24 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                cluster_cost_method = self.cluster_cost_method
+                cluster_cost_method = self.cluster_cost_method,
+                selection_algorithm = self.selection_algorithm
             )
         elif self.objective_type == "coverage-pairwise-distance":
             self.objective = CoveragePairwiseDistanceObjective(
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
-                weights = self.weights
+                weights = self.weights,
+                selection_algorithm = self.selection_algorithm
             )
         elif self.objective_type == "total-coverage-pairwise-distance":
             self.objective = TotalCoveragePairwiseDistanceObjective(
                 n_select = self.n_select,
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
-                weights = self.weights
+                weights = self.weights,
+                selection_algorithm = self.selection_algorithm
             ) 
         else:
             raise ValueError(f'Unknown objective type: {self.objective_type}')
@@ -153,6 +171,10 @@ class DSCluster(DecisionSet):
             raise ValueError('Decision set has not been initialized yet.')
         
         self.objective.initialize_data(X, y)
+        if self.decision_info_dict_path is not None:
+            self.objective.load_decision_info_dict(self.decision_info_dict_path)
+            self.decision_set = set(self.objective.decision_info_dict.keys())
+        
         self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
         self.lambda_val = self.objective.lambda_val

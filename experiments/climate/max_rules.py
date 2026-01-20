@@ -48,7 +48,6 @@ seed = 342
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
-euclidean_distances = pairwise_distances(data)
 n,d = data.shape
 
 fixed_parameters = {

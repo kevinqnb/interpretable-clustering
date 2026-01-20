@@ -33,14 +33,16 @@ class CoverageCostObjective(Objective):
             lambda_val : float = None,
             cluster_centers : NDArray = None,
             weights : NDArray = None,
-            cluster_cost_method : str = "kmeans"
+            cluster_cost_method : str = "kmeans",
+            selection_algorithm : str = 'distorted-greedy',
         ):
         super().__init__(
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
             cluster_centers = cluster_centers,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
         if self.cluster_centers is None:
             raise ValueError("Cluster_centers must be provided for this objective.")
@@ -120,7 +122,8 @@ class CoverageCostObjective(Objective):
 
     def cost(
         self,
-        selected_decisions_info: dict[Decision, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected decisions.
@@ -131,6 +134,9 @@ class CoverageCostObjective(Objective):
         Returns:
             cost (float): The cost of the selected decisions.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_cost = 0.0
         length_penalty = 0.0
         for decision, info in selected_decisions_info.items():
@@ -140,7 +146,7 @@ class CoverageCostObjective(Objective):
                 coverage_array = info['coverage_array']
                 cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
                 total_cost += cluster_cost
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_cost + length_penalty
 
@@ -198,14 +204,16 @@ class TotalCoverageCostObjective(Objective):
             lambda_val : float = None,
             cluster_centers : NDArray = None,
             weights : NDArray = None,
-            cluster_cost_method : str = "kmeans"
+            cluster_cost_method : str = "kmeans",
+            selection_algorithm : str = "distorted-greedy"
         ):
         super().__init__(
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
             cluster_centers = cluster_centers,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
         if self.cluster_centers is None:
             raise ValueError("Cluster_centers must be provided for this objective.")
@@ -277,7 +285,8 @@ class TotalCoverageCostObjective(Objective):
 
     def cost(
         self,
-        selected_decisions_info: dict[Decision, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected decisions.
@@ -288,6 +297,9 @@ class TotalCoverageCostObjective(Objective):
         Returns:
             cost (float): The cost of the selected decisions.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_cost = 0.0
         length_penalty = 0.0
         for decision, info in selected_decisions_info.items():
@@ -297,7 +309,7 @@ class TotalCoverageCostObjective(Objective):
                 coverage_array = info['coverage_array']
                 cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
                 total_cost += cluster_cost
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_cost + length_penalty
 

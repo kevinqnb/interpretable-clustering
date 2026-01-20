@@ -23,7 +23,8 @@ class CoveragePairwiseDistanceObjective(Objective):
         n_select : int,
         alpha_val : float = 0.0,
         lambda_val : float = None, 
-        weights : NDArray = None
+        weights : NDArray = None,
+        selection_algorithm : str = 'distorted-greedy',
     ):
         """
         Args:
@@ -36,7 +37,8 @@ class CoveragePairwiseDistanceObjective(Objective):
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
 
 
@@ -71,6 +73,7 @@ class CoveragePairwiseDistanceObjective(Objective):
     def cost(
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected rules.
@@ -81,6 +84,9 @@ class CoveragePairwiseDistanceObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_pairwise_distance = 0
         length_penalty = 0
         for decision, info in selected_decisions_info.items():
@@ -93,7 +99,7 @@ class CoveragePairwiseDistanceObjective(Objective):
                 rule_labels,
                 percentage = False,
             )
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_pairwise_distance + length_penalty
 
@@ -143,7 +149,8 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         n_select : int,
         alpha_val : float = 0.0,
         lambda_val : float = None,
-        weights : NDArray = None
+        weights : NDArray = None,
+        selection_algorithm : str = 'distorted-greedy',
     ):
         """
         Args:
@@ -156,7 +163,8 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
 
 
@@ -184,6 +192,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
     def cost(
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected rules.
@@ -194,6 +203,9 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_pairwise_distance = 0
         length_penalty = 0
         for decision, info in selected_decisions_info.items():
@@ -206,7 +218,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
                 rule_labels,
                 percentage = False,
             )
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_pairwise_distance + length_penalty
 

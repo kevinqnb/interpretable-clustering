@@ -21,7 +21,8 @@ class CoverageMistakeObjective(Objective):
         n_select : int,
         alpha_val : float = 0.0,
         lambda_val : float = None, 
-        weights : NDArray = None
+        weights : NDArray = None,
+        selection_algorithm : str = 'distorted-greedy',
     ):
         """
         Args:
@@ -34,7 +35,8 @@ class CoverageMistakeObjective(Objective):
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
 
 
@@ -69,6 +71,7 @@ class CoverageMistakeObjective(Objective):
     def cost(
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected rules.
@@ -79,6 +82,9 @@ class CoverageMistakeObjective(Objective):
         Returns:
             cost (float): The cost of the selected rules.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_mistakes = 0
         length_penalty = 0
         for decision, info in selected_decisions_info.items():
@@ -86,7 +92,7 @@ class CoverageMistakeObjective(Objective):
             r_cluster_coverage = info['cluster_coverage']
             mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_mistakes + length_penalty
 
@@ -136,7 +142,8 @@ class TotalCoverageMistakeObjective(Objective):
         n_select : int,
         alpha_val : float = 0.0,
         lambda_val : float = None,
-        weights : NDArray = None
+        weights : NDArray = None,
+        selection_algorithm : str = 'distorted-greedy',
     ):
         """
         Args:
@@ -149,7 +156,8 @@ class TotalCoverageMistakeObjective(Objective):
             n_select = n_select,
             alpha_val = alpha_val,
             lambda_val = lambda_val,
-            weights = weights
+            weights = weights,
+            selection_algorithm = selection_algorithm
         )
 
 
@@ -176,7 +184,8 @@ class TotalCoverageMistakeObjective(Objective):
 
     def cost(
         self,
-        selected_decisions_info: dict[Decision, dict[str, any]]
+        selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
     ) -> float:
         """
         Computes the cost of the selected decisions.
@@ -187,6 +196,9 @@ class TotalCoverageMistakeObjective(Objective):
         Returns:
             cost (float): The cost of the selected decisions.
         """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
         total_mistakes = 0
         length_penalty = 0
         for decision, info in selected_decisions_info.items():
@@ -194,7 +206,7 @@ class TotalCoverageMistakeObjective(Objective):
             r_cluster_coverage = info['cluster_coverage']
             mistakes = r_coverage.difference(r_cluster_coverage)
             total_mistakes += len(mistakes)
-            length_penalty += self.alpha_val * info['length']
+            length_penalty += alpha_val * info['length']
 
         return total_mistakes + length_penalty
 
