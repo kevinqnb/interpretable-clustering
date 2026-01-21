@@ -29,7 +29,7 @@ from intercluster.decision_sets import *
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.measurements import *
-from intercluster.rules import save_rules, load_rules
+from intercluster.rules import save_rules
 
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -52,7 +52,7 @@ fixed_parameters = {
     'max_rules': 16,
     'min_support': 0.05,
     'min_confidence': 0.80,
-    'car_max_rule_length': 2,
+    'car_max_rule_length': 3,
     'n_forest': 100,
     'max_depth': 10,
     'depth_factor': 0.03,
@@ -67,6 +67,13 @@ kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_see
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 
+# Weights for uncertainty objectives
+weights = distance_ratio_score(data, kmeans_base.centers)
+fixed_parameters['weights'] = weights.tolist()
+
+rules_directory = 'data/experiments/mnist/rules/'
+os.makedirs(rules_directory, exist_ok = True)
+
 ####################################################################################################
 # Create bin_df for rule mining:
 
@@ -74,13 +81,12 @@ kmeans_labels = kmeans_base.labels
 #    data, kmeans_labels, random_state = fixed_parameters['seed']
 #)
 
-#bin_df.to_csv('data/experiments/fashion/rules/bin_df.csv', index = False)
+#bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
 
 bin_df = pd.read_csv('data/experiments/mnist/rules/bin_df.csv')
 
 ####################################################################################################
 # Mine for rules:
-
 
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = fixed_parameters['seed']),
@@ -90,6 +96,7 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 )
 
 print("Mined DT rules:", len(decision_tree_rules))
+save_rules(decision_tree_rules, rules_directory + 'decision_tree_rules.pkl')
 
 
 exkmc_rule_miner = TreeMiner(
@@ -105,6 +112,7 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 print("Mined ExKMC rules:", len(exkmc_rules))
+save_rules(exkmc_rules, rules_directory + 'exkmc_rules.pkl')
 
 shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
@@ -117,8 +125,8 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
     X = data, y = kmeans_labels
 )
 
-
 print("Mined Shallow rules:", len(shallow_rules))
+save_rules(shallow_rules, rules_directory + 'shallow_rules.pkl')
 
 
 forest_rule_miner = RandomForestMiner(
@@ -131,7 +139,9 @@ forest_rule_miner = RandomForestMiner(
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 print("Mined Forest rules:", len(forest_rules))
+save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
 
+'''
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
@@ -143,18 +153,62 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 
 print("Mined CAR rules:", len(class_association_rules))
+save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
+'''
 
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules #+ class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
+save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
 
-# Save mined rules and their labels:
-save_rules(decision_tree_rules, 'data/experiments/mnist/rules/decision_tree_rules.pkl')
-save_rules(exkmc_rules, 'data/experiments/mnist/rules/exkmc_rules.pkl')
-save_rules(shallow_rules, 'data/experiments/mnist/rules/shallow_rules.pkl')
-save_rules(forest_rules, 'data/experiments/mnist/rules/forest_rules.pkl')
-save_rules(class_association_rules, 'data/experiments/mnist/rules/class_association_rules.pkl')
-save_rules(ensemble_rules, 'data/experiments/mnist/rules/ensemble_rules.pkl')
+
+####################################################################################################
+# Objectives for Decision Set Clustering:
+
+objective_dict = {
+    'coverage-mistake': {
+        'objective_type': 'coverage-mistake'
+    },
+    'total-coverage-mistake': {
+        'objective_type': 'total-coverage-mistake'
+    },
+    'coverage-cost': {
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'total-coverage-cost': {
+        'cluster_centers': kmeans_base.centers,
+        'objective_type': 'total-coverage-cost',
+        'cluster_cost_method': 'kmeans'
+    },
+    'coverage-pairwise-distance': {
+        'objective_type': 'coverage-pairwise-distance',
+    },
+    'total-coverage-pairwise-distance': {
+        'objective_type': 'total-coverage-pairwise-distance',
+    },
+}
+
+
+####################################################################################################
+# Save decision info dict for ensemble rules:
+
+for objective_type in objective_dict.keys():
+    print("Processing objective:", objective_type)
+    dsclust = DSCluster(
+        rules = ensemble_rules,
+        alpha_val = 0.0,
+        **objective_dict[objective_type]
+    )
+    dsclust.set_labels(data, kmeans_labels)
+    dsclust.objective.initialize_data(data, kmeans_labels)
+    dsclust.objective.initialize_decision_set(dsclust.decision_set)
+    decision_info_dict = dsclust.objective.decision_info_dict
+
+    # Save decision info dict
+    save_path = rules_directory + f'decision_info_dict_{objective_type.replace("-", "_")}.pkl'
+    dsclust.objective.save_decision_info_dict(save_path)

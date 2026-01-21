@@ -71,6 +71,9 @@ kmeans_labels = kmeans_base.labels
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
+rules_directory = 'data/experiments/climate/rules/'
+os.makedirs(rules_directory, exist_ok = True)
+
 ####################################################################################################
 # Create bin_df for rule mining:
 
@@ -78,7 +81,7 @@ bin_df = entropy_bin(
     data, kmeans_labels, random_state = fixed_parameters['seed']
 )
 
-bin_df.to_csv('data/experiments/climate/rules/bin_df.csv', index = False)
+bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
 
 ####################################################################################################
 # Mine for rules:
@@ -91,7 +94,7 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 )
 
 print("Mined DT rules:", len(decision_tree_rules))
-save_rules(decision_tree_rules, 'data/experiments/climate/rules/decision_tree_rules.pkl')
+save_rules(decision_tree_rules, rules_directory + 'decision_tree_rules.pkl')
 
 
 exkmc_rule_miner = TreeMiner(
@@ -107,7 +110,7 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 print("Mined ExKMC rules:", len(exkmc_rules))
-save_rules(exkmc_rules, 'data/experiments/climate/rules/exkmc_rules.pkl')
+save_rules(exkmc_rules, rules_directory + 'exkmc_rules.pkl')
 
 shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
@@ -121,7 +124,7 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
 )
 
 print("Mined Shallow rules:", len(shallow_rules))
-save_rules(shallow_rules, 'data/experiments/climate/rules/shallow_rules.pkl')
+save_rules(shallow_rules, rules_directory + 'shallow_rules.pkl')
 
 
 forest_rule_miner = RandomForestMiner(
@@ -134,7 +137,7 @@ forest_rule_miner = RandomForestMiner(
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 print("Mined Forest rules:", len(forest_rules))
-save_rules(forest_rules, 'data/experiments/climate/rules/forest_rules.pkl')
+save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
@@ -147,7 +150,7 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 
 print("Mined CAR rules:", len(class_association_rules))
-save_rules(class_association_rules, 'data/experiments/climate/rules/class_association_rules.pkl')
+save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
 
 ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
@@ -155,7 +158,7 @@ ensemble_rules = filter_rules(
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
-save_rules(ensemble_rules, 'data/experiments/climate/rules/ensemble_rules.pkl')
+save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
 
 
 ####################################################################################################
@@ -203,5 +206,5 @@ for objective_type in objective_dict.keys():
     decision_info_dict = dsclust.objective.decision_info_dict
 
     # Save decision info dict
-    save_path = f'data/experiments/climate/rules/decision_info_dict_{objective_type.replace("-", "_")}.pkl'
+    save_path = rules_directory + f'decision_info_dict_{objective_type.replace("-", "_")}.pkl'
     dsclust.objective.save_decision_info_dict(save_path)

@@ -42,19 +42,19 @@ seed = 342
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
+data, data_labels, feature_labels, scaler = load_preprocessed_protein()
 n,d = data.shape
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 10,
-    'max_rules': 16,
-    'min_support': 0.05,
+    'n_clusters': 6,
+    'max_rules': 12,
+    'min_support': 0.07,
     'min_confidence': 0.85,
-    'car_max_rule_length': 3,
+    'car_max_rule_length': 4,
     'n_forest': 100,
-    'max_depth': 10,
+    'max_depth': None,
     'depth_factor': 0.03,
     'ids_samples': 1,
     'seed': seed,
@@ -71,19 +71,17 @@ kmeans_labels = kmeans_base.labels
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-rules_directory = 'data/experiments/fashion/rules/'
+rules_directory = 'data/experiments/protein/rules/'
 os.makedirs(rules_directory, exist_ok = True)
 
 ####################################################################################################
 # Create bin_df for rule mining:
 
-#bin_df = entropy_bin(
-#    data, kmeans_labels, random_state = fixed_parameters['seed']
-#)
+bin_df = entropy_bin(
+    data, kmeans_labels, random_state = fixed_parameters['seed']
+)
 
-#bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
-
-bin_df = pd.read_csv('data/experiments/fashion/rules/bin_df2.csv')
+bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
 
 ####################################################################################################
 # Mine for rules:
@@ -141,7 +139,6 @@ forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.label
 print("Mined Forest rules:", len(forest_rules))
 save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
 
-'''
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
@@ -154,9 +151,8 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
-'''
 
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules #+ class_association_rules
+ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
@@ -201,12 +197,12 @@ for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
     dsclust = DSCluster(
         rules = ensemble_rules,
+        n_select = fixed_parameters['n_clusters'],
         alpha_val = 0.0,
+        lambda_val = 0.0,
         **objective_dict[objective_type]
     )
-    dsclust.set_labels(data, kmeans_labels)
-    dsclust.objective.initialize_data(data, kmeans_labels)
-    dsclust.objective.initialize_decision_set(dsclust.decision_set)
+    dsclust.fit(data, kmeans_labels)
     decision_info_dict = dsclust.objective.decision_info_dict
 
     # Save decision info dict

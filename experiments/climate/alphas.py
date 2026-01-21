@@ -42,15 +42,29 @@ experiment_cpu_count = 12
 # reset the seed each time they are given one. 
 seed = 342
 
+def _memoryview_safe(x):
+    """
+    Make array safe to run in a Cython memoryview-based kernel. 
+    As far as I can tell, this sometimes is an issue when data is pickled in 
+    multiprocessing environments.
+    """
+    if not x.flags.writeable:
+        if not x.flags.owndata:
+            x = x.copy(order='C')
+        x.setflags(write=True)
+    return x
+
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
+    'max_rules': 12,
     'n_select': 6,
     'min_support': 0.05, 
     'min_confidence': 0.85,

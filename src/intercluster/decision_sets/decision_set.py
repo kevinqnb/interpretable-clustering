@@ -80,17 +80,16 @@ class DecisionSet:
                 trimmed_rule = Rule(trimmed_conditions)
                 trimmed_set.add(Decision(trimmed_rule, decision.label))
         return trimmed_set
-        
-        
-    def fit(self, X : NDArray, y : List[Set[int]] = None):
+    
+
+    def set_labels(self, X : NDArray, y : List[Set[int]]):
         """
-        Public fit function. 
-        Fits a decision set to an input dataset. 
+        Sets the labels of the decision rules in the decision set based on the input dataset.
         
         Args:
             X (np.ndarray): Input dataset.
             
-            y (List[Set[int]], optional): Target labels. Defaults to None.
+            y (List[Set[int]]): Target labels.
         """
         if self.rule_labels is None and y is None:
             # Each decision rule gets its own unique label, independent of y
@@ -139,6 +138,22 @@ class DecisionSet:
         self.decision_set = {
             decision for decision in self.decision_set if decision.label != -1
         }
+
+        return y
+        
+        
+        
+    def fit(self, X : NDArray, y : List[Set[int]] = None):
+        """
+        Public fit function. 
+        Fits a decision set to an input dataset. 
+        
+        Args:
+            X (np.ndarray): Input dataset.
+            
+            y (List[Set[int]], optional): Target labels. Defaults to None.
+        """
+        y = self.set_labels(X, y)
         self.decision_set = self.select(X, y)
         self.decision_set = self.trim()
         self.max_rule_length = max([len(decision.rule) for decision in self.decision_set]) \

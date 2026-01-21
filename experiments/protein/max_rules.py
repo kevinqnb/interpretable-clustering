@@ -33,10 +33,11 @@ from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.measurements import *
 
+
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 12
+experiment_cpu_count = 4
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -44,10 +45,22 @@ experiment_cpu_count = 12
 # reset the seed each time they are given one. 
 seed = 342
 
+def _memoryview_safe(x):
+    """
+    Make array safe to run in a Cython memoryview-based kernel. 
+    As far as I can tell, this sometimes is an issue when data is pickled in 
+    multiprocessing environments.
+    """
+    if not x.flags.writeable:
+        if not x.flags.owndata:
+            x = x.copy(order='C')
+        x.setflags(write=True)
+    return x
+
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_protein()
-euclidean_distances = pairwise_distances(data)
+data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
@@ -79,79 +92,19 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-# Hard coded for now; will be selected via separate experiment later:
-kmeans_distances = pairwise_distances(data, kmeans_base.centers)
-max_distances = np.max(kmeans_distances, axis=1)
-max_distance = np.max(max_distances)
-
-alpha_dict = {
-    'dscluster; coverage-mistake; ensemble': 0.01 * n * 1.0,
-    'dscluster; total-coverage-mistake; ensemble': 0.01 * n * 1.0,
-    'dscluster; coverage-cost; ensemble': 0.01 * n * max_distance,
-    'dscluster; total-coverage-cost; ensemble': 0.01 * n * max_distance,
-    'dscluster; coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; total-coverage-pairwise-distance; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
-    'dscluster; total-coverage-mistake-weighted; ensemble': 0.01 * n * 1.0,
-    'dscluster; coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
-    'dscluster; total-coverage-cost-weighted; ensemble': 0.01 * n * max_distance,
-    'dscluster; coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
-    'dscluster; total-coverage-pairwise-distance-weighted; ensemble': 0.01 * math.comb(n, 2),
-}
-
-with open("data/experiments/protein/alphas/selected_alphas_smaller_alphas.json") as f:
+with open("data/experiments/protein/alphas/selected_alphas_bug_fix.json") as f:
     selected_alpha_dict = json.load(f)
-alpha_dict = alpha_dict | selected_alpha_dict
-fixed_parameters['alpha'] = alpha_dict
+fixed_parameters['alpha'] = selected_alpha_dict
+
+decision_info_dict_directory = 'data/experiments/protein/rules/'
 
 outfile = 'data/experiments/protein/max_rules/'
-outfile_ref = '_smaller_alphas'
+outfile_ref = '_bug_fix'
 
 ####################################################################################################
-# Rule Mining:
+# Load pre-mined rules:
 
-decision_tree_rule_miner = TreeMiner(
-    tree = DecisionTree(random_state = fixed_parameters['seed']),
-)
-decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-
-
-exkmc_rule_miner = TreeMiner(
-    tree = ExkmcTree(
-        k = fixed_parameters['n_clusters'],
-        kmeans = kmeans_base.clustering,
-        imm = True
-    )
-)
-exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
-    X = data.copy(), y = kmeans_base.labels
-)
-
-
-shallow_tree_miner = TreeMiner(
-    tree = ShallowTree(
-        n_clusters = fixed_parameters['n_clusters'],
-        depth_factor = fixed_parameters['depth_factor'],
-        kmeans_random_state = fixed_parameters['seed']
-    )
-)
-shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
-    X = data, y = kmeans_labels
-)
-
-
-forest_rule_miner = RandomForestMiner(
-    forest_params = {
-        'n_estimators': fixed_parameters['n_forest'],
-        'max_depth': fixed_parameters['max_depth'],
-        'random_state': fixed_parameters['seed']
-    }
-)
-forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
-
-
+'''
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
@@ -164,16 +117,13 @@ class_association_rule_miner = ClassAssociationRuleMiner(
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+'''
 
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
-ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
-)
+ensemble_rules = load_rules('data/experiments/protein/rules/ensemble_rules.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
 }
-
 
 ####################################################################################################
 # Comparison Modules:
@@ -222,7 +172,7 @@ shallow_tree_mod = DecisionTreeMod(
     name = 'Shallow-Tree'
 )
 
-
+'''
 # IDS:
 rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
 ids_lambdas = [
@@ -235,8 +185,8 @@ ids_lambdas = [
     1/(data.shape[0])
 ]
 
-
 # Run an initial fitting to prepare the IDS cache:
+
 ids_set = IDS(
     rules = class_association_rules,
     rule_labels = class_association_rule_labels,
@@ -253,7 +203,7 @@ for s in range(fixed_parameters['ids_samples']):
     ids_params = {
         tuple(n_rules_list) : {
             'lambdas' : ids_lambdas,
-            'bin_df': class_association_rule_miner.bin_df,
+            'bin_df' : class_association_rule_miner.bin_df,
             'ids_cacher' : ids_cacher,
         }
     }
@@ -264,60 +214,97 @@ for s in range(fixed_parameters['ids_samples']):
         name = f"IDS_{s}"
     )
     ids_module_list.append((ids_mod, ids_params))
+'''
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
 
 objective_dict = {
     'coverage-mistake': {
-        'objective_type': 'coverage-mistake'
+        'objective_type': 'coverage-mistake',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        )
     },
     'total-coverage-mistake': {
-        'objective_type': 'total-coverage-mistake'
+        'objective_type': 'total-coverage-mistake',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        )
     },
     'coverage-cost': {
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
-        'cluster_cost_method': 'kmeans'
+        'cluster_cost_method': 'kmeans',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        )
     },
     'total-coverage-cost': {
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
-        'cluster_cost_method': 'kmeans'
+        'cluster_cost_method': 'kmeans',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        )
     },
     'total-coverage-pairwise-distance': {
         'objective_type': 'total-coverage-pairwise-distance',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        )
     },
     'coverage-mistake-weighted': {
         'weights': weights,
-        'objective_type': 'coverage-mistake'
+        'objective_type': 'coverage-mistake',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        )
     },
     'total-coverage-mistake-weighted': {
         'weights': weights,
-        'objective_type': 'total-coverage-mistake'
+        'objective_type': 'total-coverage-mistake',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        )
     },
     'coverage-cost-weighted': {
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
         'objective_type': 'coverage-cost',
-        'cluster_cost_method': 'kmeans'
+        'cluster_cost_method': 'kmeans',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        )
     },
     'total-coverage-cost-weighted': {
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
         'objective_type': 'total-coverage-cost',
-        'cluster_cost_method': 'kmeans'
+        'cluster_cost_method': 'kmeans',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        )
     },
     'coverage-pairwise-distance-weighted': {
         'weights': weights,
         'objective_type': 'coverage-pairwise-distance',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        )
     },
     'total-coverage-pairwise-distance-weighted': {
         'weights': weights,
         'objective_type': 'total-coverage-pairwise-distance',
+        'decision_info_dict_path': os.path.join(
+            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        )
     },
 }
 
@@ -328,7 +315,7 @@ dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
     for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
         module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        alpha_val = alpha_dict[module_name]
+        alpha_val = fixed_parameters['alpha'][module_name]
         dsclust_params = {
             (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params
             for i,r in enumerate(n_rules_list)
@@ -350,7 +337,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-] + dscluster_module_list + ids_module_list
+] + dscluster_module_list #+ ids_module_list
 
 measurement_fns = [
     TotalCoverage(),

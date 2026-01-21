@@ -924,15 +924,26 @@ def compute_elbow(x: np.ndarray, y: np.ndarray, increasing: bool = True) -> int:
     if len(x) < 2:
         raise ValueError("Need at least two points to compute an elbow")
 
-    x1, y1 = x[0], y[0]
-    x2, y2 = x[-1], y[-1]
+    # Exclude invalid points: any index where x or y is NaN must never be returned.
+    # (np.isfinite also filters +/-inf, which likewise can't yield a useful distance.)
+    valid_mask = np.isfinite(x) & np.isfinite(y)
+    valid_idx = np.flatnonzero(valid_mask)
+    if valid_idx.size < 2:
+        raise ValueError("Need at least two finite (non-NaN/inf) points to compute an elbow")
+
+    # Use the first/last *valid* points as the endpoints of the reference line.
+    i1 = int(valid_idx[0])
+    i2 = int(valid_idx[-1])
+
+    x1, y1 = x[i1], y[i1]
+    x2, y2 = x[i2], y[i2]
 
     dx = x2 - x1
     dy = y2 - y1
 
     # Degenerate case: end points are identical.
     if dx == 0.0 and dy == 0.0:
-        # Signed distance is arbitrary here; treat all points as eligible.
+        # Signed distance is arbitrary here; treat all finite points as eligible.
         signed = np.zeros_like(x, dtype=float)
         distances = np.sqrt((x - x1) ** 2 + (y - y1) ** 2)
     else:
@@ -943,16 +954,20 @@ def compute_elbow(x: np.ndarray, y: np.ndarray, increasing: bool = True) -> int:
         denom = np.sqrt(dx * dx + dy * dy)
         distances = np.abs(signed) / denom
 
+    # Invalidate any non-finite points so they are not considered solutions.
+    distances = np.where(valid_mask, distances, -np.inf)
+
     # Keep only points on the requested side.
     # Note: points exactly on the line (signed==0) are excluded.
-    mask = signed > 0 if increasing else signed < 0
+    side_mask = (signed > 0) if increasing else (signed < 0)
+    mask = valid_mask & side_mask
 
     if np.any(mask):
         masked = np.where(mask, distances, -np.inf)
         idx = int(np.argmax(masked))
     else:
-        # Fallback: if all points are on the other side (or collinear),
-        # return the unconstrained maximum.
+        # Fallback: if all finite points are on the other side (or collinear),
+        # return the unconstrained maximum among finite points.
         idx = int(np.argmax(distances))
 
     return idx

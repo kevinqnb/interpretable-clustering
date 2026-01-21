@@ -184,6 +184,13 @@ class Objective:
             lambda_vals = self.compute_lambdas()
             if len(lambda_vals) == 0:
                 lambda_val = 0.0
+                # No valid ratios found; set lambda to 0.
+                print('No valid lambda values found; setting lambda to 0.0 and defaulting to lazy-greedy selection.')
+                self.selection_algorithm = 'lazy-greedy'
+            elif lambda_vals[0] == np.inf:
+                print('All coverage/cost ratios are infinite; setting lambda to 0.0 and defaulting to lazy-greedy selection.')
+                lambda_val = 0.0
+                self.selection_algorithm = 'lazy-greedy'
             else:
                 lambda_val = lambda_vals[0]
     
@@ -275,7 +282,7 @@ class Objective:
                 d_cost = decision_info['cost']
                 h = d_cost
 
-                if h > 0:
+                if h > 0 and not np.isnan(h):
                     d_info = {
                         decision: {
                             'coverage': r_coverage,
