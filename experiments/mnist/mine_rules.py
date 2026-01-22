@@ -201,6 +201,7 @@ for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
     dsclust = DSCluster(
         rules = ensemble_rules,
+        n_select = fixed_parameters['n_clusters'],
         alpha_val = 0.0,
         **objective_dict[objective_type]
     )

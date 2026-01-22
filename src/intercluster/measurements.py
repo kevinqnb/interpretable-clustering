@@ -5,7 +5,8 @@ from intercluster.measurement_utils import (
     overlap,
     coverage,
     silhouette_score,
-    clustering_distance
+    clustering_distance,
+    rule_pairwise_difference,
 )
 from intercluster.utils import (
     assignment_to_labels,
@@ -641,14 +642,10 @@ class RulePairwiseDistance(MeasurementFunction):
         total_pairwise_distance = 0.0
         for i in range(r):
             rule_points_idx = np.where(data_to_rule_assignment[:,i])[0]
-            #if len(rule_points_idx) < 1:
-            #    continue
-            rule_labels = [{0} for _ in range(len(rule_points_idx))]
             baseline_labels = [self.baseline_labels[idx] for idx in rule_points_idx]
 
-            total_pairwise_distance += clustering_distance(
+            total_pairwise_distance += rule_pairwise_difference(
                 baseline_labels,
-                rule_labels,
                 percentage = False
             )
         return total_pairwise_distance

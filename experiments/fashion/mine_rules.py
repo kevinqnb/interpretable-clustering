@@ -51,7 +51,7 @@ fixed_parameters = {
     'n_clusters': 10,
     'max_rules': 16,
     'min_support': 0.05,
-    'min_confidence': 0.85,
+    'min_confidence': 0.90,
     'car_max_rule_length': 3,
     'n_forest': 100,
     'max_depth': 10,
@@ -201,6 +201,7 @@ for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
     dsclust = DSCluster(
         rules = ensemble_rules,
+        n_select = fixed_parameters['n_clusters'],
         alpha_val = 0.0,
         **objective_dict[objective_type]
     )

@@ -20,6 +20,7 @@ from .measurement_utils import (
     silhouette_score,
     mistakes,
     clustering_distance,
+    rule_pairwise_difference,
 )
 
 from .measurements import (

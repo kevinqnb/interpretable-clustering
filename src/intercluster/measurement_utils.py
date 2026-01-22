@@ -9,7 +9,9 @@ from .utils import (
     divide_with_zeros,
     tiebreak,
     labels_to_assignment,
-    unique_labels
+    unique_labels,
+    flatten_labels,
+    can_flatten,
 )
 import warnings
 
@@ -218,7 +220,7 @@ def kmeans_cost(
 ####################################################################################################
 
 
-def distance_ratio_score(X : NDArray, centers : NDArray) -> NDArray:
+def distance_ratio_score(X : NDArray, centers : NDArray, sigma = 5) -> NDArray:
     """
     For each data point, let a be the distance to its closest cluster center
     and b be the distance to its second closest cluster center. This function computes the
@@ -230,6 +232,8 @@ def distance_ratio_score(X : NDArray, centers : NDArray) -> NDArray:
         X (np.ndarray): (n x d) Dataset.
         
         centers (np.ndarray): (k x d) Set of representative centers for each of the k clusters.
+
+        sigma (float, optional): Scaling parameter for the exponential transformation. Defaults to 5.
 
     Returns:
         (np.ndarray): Length n distance ratio array.
@@ -243,7 +247,8 @@ def distance_ratio_score(X : NDArray, centers : NDArray) -> NDArray:
     second_closest_dists = np.array(
         [center_dist_matrix[i, sorted_dist_matrix[i, 1]] for i in range(n)]
     )
-    return 1 - divide_with_zeros(closest_dists, second_closest_dists)
+    #return 1 - divide_with_zeros(closest_dists, second_closest_dists)
+    return np.exp(-sigma * divide_with_zeros(closest_dists, second_closest_dists))
 
 
 ####################################################################################################
@@ -445,6 +450,54 @@ def clustering_distance(
             differences += 1
 
     if percentage:
+        return differences / n_pairs
+    else:
+        return differences
+    
+
+####################################################################################################
+
+
+def rule_pairwise_difference(
+    labels : List[Set[int]],
+    percentage : bool = False,
+) -> float:
+    """
+    Analagous to clustering_distance, but computes the pairwise distance when the labels 
+    from one group of points are known to be homogenous. This is useful when computing 
+    pairwise differences for all points covered by an individual rule, and is more efficient
+    algorithm: O(nk^2) rather than O(n^2).
+
+    Args:
+        labels (list[set[int]]): Length n list of ground truth labels.
+        percentage (bool, optional): If True, returns the fraction of pairs which differ
+            between the two labelings. If False, returns the total number. Defaults to False.
+    Returns:
+        distance (float): Number (or percentage) of pairs assigned to different clusters 
+            in the two labelings.
+    """
+    if not can_flatten(labels):
+        raise ValueError(
+            "Each label must contain exactly one element to use rule_pairwise_difference."
+        )
+    labels_ = flatten_labels(labels)
+    n = len(labels_)
+
+    label_dict = {}
+    for i in range(n):
+        label_i = labels_[i]
+        if label_i not in label_dict:
+            label_dict[label_i] = 0
+        label_dict[label_i] += 1
+
+    differences = 0
+    for (i,j) in combinations(label_dict.keys(), 2):
+        count_i = label_dict[i]
+        count_j = label_dict[j]
+        differences += count_i * count_j
+
+    if percentage:
+        n_pairs = n * (n - 1) / 2
         return differences / n_pairs
     else:
         return differences

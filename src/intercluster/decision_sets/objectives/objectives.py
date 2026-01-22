@@ -11,6 +11,9 @@ import pickle
 from pathlib import Path
 from typing import Any, Union
 
+# Added for more memory-efficient persistence
+import gzip
+
 ####################################################################################################
 
 
@@ -537,17 +540,22 @@ class Objective:
         self,
         path: Union[str, Path],
         protocol: int = pickle.HIGHEST_PROTOCOL,
+        *,
+        minimal: bool = True,
+        compress: bool = True,
     ) -> None:
-        """Save the precomputed ``decision_info_dict`` to disk using pickle.
+        """Save the precomputed ``decision_info_dict`` to disk.
 
-        Notes:
-            - Pickle is Python-specific and **must not** be used with untrusted files.
-            - This persists ``Decision`` objects as dict keys. This works because `Decision` is a
-              frozen dataclass and (in your codebase) is pickleable.
+        This can get very large because each rule may store per-sample coverage information.
+        To avoid ``MemoryError`` during serialization, this method defaults to a *minimal*
+        representation and (optionally) gzip compression.
 
         Args:
-            path: Output file path (e.g. "decision_info.pkl").
-            protocol: Pickle protocol; defaults to highest available.
+            path: Output file path.
+            protocol: Pickle protocol.
+            minimal: If True (default), drop redundant/heavy fields (``coverage_array`` and
+                ``coverage_labels``) and store only what is needed to reconstruct them.
+            compress: If True (default), write a gzip-compressed pickle.
         """
         if not self.decision_set_initialized or self.decision_info_dict is None:
             raise ValueError("Decision set must be initialized before saving decision_info_dict.")
@@ -555,8 +563,6 @@ class Objective:
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        # Normalize a few fields so the pickle is smaller/more robust.
-        # (Sets -> sorted lists; numpy arrays -> numpy arrays are pickleable but normalize anyway.)
         serializable: dict[Decision, dict[str, Any]] = {}
         for decision, info in self.decision_info_dict.items():
             if not isinstance(decision, Decision):
@@ -566,48 +572,63 @@ class Objective:
 
             out: dict[str, Any] = dict(info)
 
-            # Ensure coverage is saved deterministically.
-            if "coverage" in out and isinstance(out["coverage"], set):
-                out["coverage"] = sorted(out["coverage"])
+            # Normalize coverages to a compact ndarray representation.
+            # (frozenset/set/list -> int64 ndarray)
+            if "coverage" in out and out["coverage"] is not None:
+                cov = out["coverage"]
+                if isinstance(cov, np.ndarray):
+                    cov_arr = np.asarray(cov, dtype=np.int64)
+                else:
+                    cov_arr = np.fromiter(cov, dtype=np.int64)
+                out["coverage"] = cov_arr
 
-            if "cluster_coverage" in out and isinstance(out["cluster_coverage"], set):
-                out["cluster_coverage"] = sorted(out["cluster_coverage"])
+            if "cluster_coverage" in out and out["cluster_coverage"] is not None:
+                ccov = out["cluster_coverage"]
+                if isinstance(ccov, np.ndarray):
+                    ccov_arr = np.asarray(ccov, dtype=np.int64)
+                else:
+                    ccov_arr = np.fromiter(ccov, dtype=np.int64)
+                out["cluster_coverage"] = ccov_arr
 
-            # coverage_array is redundant; can be rebuilt from coverage. Keep it if present,
-            # but ensure it's a numpy array (pickleable).
-            if "coverage_array" in out and out["coverage_array"] is not None:
-                out["coverage_array"] = np.asarray(out["coverage_array"], dtype=np.int64)
+            # Drop heavy/redundant fields unless the caller explicitly wants them.
+            if minimal:
+                out.pop("coverage_array", None)
+                out.pop("coverage_labels", None)
 
-            # Storing coverage_labels makes the file large; keep only if the user already computed it.
-            # (It can be recomputed from self.y if needed.)
             serializable[decision] = out
 
-        with p.open("wb") as f:
+        opener = gzip.open if compress else Path.open
+        with opener(p, "wb") as f:
             pickle.dump(serializable, f, protocol=protocol)
 
     def load_decision_info_dict(
         self,
         path: Union[str, Path],
     ) -> dict[Decision, dict[str, Any]]:
-        """Load a previously saved ``decision_info_dict`` from disk.
+        """Load a previously saved ``decision_info_dict``.
 
-        This is the inverse of :meth:`save_decision_info_dict`. It loads the pickled mapping and
-        normalizes a few fields back to the in-memory representation expected by selection code:
+        Supports both regular pickle and gzip-compressed pickle.
 
-        - ``coverage`` and ``cluster_coverage`` are converted to ``set[int]`` if they were saved as lists.
+        Normalizations performed:
+        - ``coverage`` and ``cluster_coverage`` are converted to ``frozenset[int]``.
         - ``coverage_array`` is rebuilt from ``coverage`` if missing.
+        - ``coverage_labels`` is rebuilt from ``self.y`` if missing.
 
         Notes:
-            Only load pickle files you created yourself (or otherwise trust).
-
-        Args:
-            path: Input file path (e.g. "decision_info.pkl").
-
-        Returns:
-            The loaded decision_info_dict (also stored on ``self.decision_info_dict``).
+            Recomputing ``coverage_labels`` requires that ``initialize_data`` was called (so ``self.y``
+            is available). If data is not initialized, ``coverage_labels`` will be set to ``None``.
         """
         p = Path(path)
-        with p.open("rb") as f:
+
+        def _open_for_read(pp: Path):
+            # gzip magic header: 1f 8b
+            with pp.open("rb") as raw:
+                head = raw.read(2)
+            if head == b"\x1f\x8b":
+                return gzip.open(pp, "rb")
+            return pp.open("rb")
+
+        with _open_for_read(p) as f:
             obj = pickle.load(f)
 
         if not isinstance(obj, dict):
@@ -622,11 +643,20 @@ class Objective:
 
             out: dict[str, Any] = dict(info)
 
-            # Restore sets as *immutable* frozenset to prevent accidental mutation.
-            if "coverage" in out and isinstance(out["coverage"], (list, tuple, set, frozenset)):
-                out["coverage"] = frozenset(out["coverage"])
-            if "cluster_coverage" in out and isinstance(out["cluster_coverage"], (list, tuple, set, frozenset)):
-                out["cluster_coverage"] = frozenset(out["cluster_coverage"])
+            # Restore coverages as frozenset for in-memory usage.
+            if "coverage" in out and out["coverage"] is not None:
+                cov = out["coverage"]
+                if isinstance(cov, np.ndarray):
+                    out["coverage"] = frozenset(np.asarray(cov, dtype=np.int64).tolist())
+                else:
+                    out["coverage"] = frozenset(cov)
+
+            if "cluster_coverage" in out and out["cluster_coverage"] is not None:
+                ccov = out["cluster_coverage"]
+                if isinstance(ccov, np.ndarray):
+                    out["cluster_coverage"] = frozenset(np.asarray(ccov, dtype=np.int64).tolist())
+                else:
+                    out["cluster_coverage"] = frozenset(ccov)
 
             # Ensure coverage_array exists and is the expected dtype.
             if out.get("coverage_array") is None:
@@ -634,6 +664,14 @@ class Objective:
                     out["coverage_array"] = np.fromiter(out["coverage"], dtype=np.int64)
             else:
                 out["coverage_array"] = np.asarray(out["coverage_array"], dtype=np.int64)
+
+            # Rebuild coverage_labels if missing (minimal saves omit it).
+            if out.get("coverage_labels") is None:
+                if self.y is not None and "coverage" in out and isinstance(out["coverage"], frozenset):
+                    # self.y is list[set[int]]; keep same structure as initialize_decision_set
+                    out["coverage_labels"] = [self.y[i] for i in out["coverage"]]
+                else:
+                    out["coverage_labels"] = None
 
             loaded[decision] = out
 

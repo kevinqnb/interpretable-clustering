@@ -345,7 +345,9 @@ measurement_fns = [
     TotalCoverageSet(),
     ClusterCoverage(baseline_assignment = kmeans_assignment),
     ClusterCoverage(
-        baseline_assignment = kmeans_assignment, weights = weights, name = 'cluster-coverage-weighted'
+        baseline_assignment = kmeans_assignment,
+        weights = weights,
+        name = 'cluster-coverage-weighted'
     ),
     ClusterCoverageSet(baseline_assignment = kmeans_assignment),
     Overlap(),
