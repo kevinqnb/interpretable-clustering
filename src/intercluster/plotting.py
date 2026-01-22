@@ -89,21 +89,22 @@ def plot_rule_boxes(
         ax (matplotlib axes, optional): Axes for plotting. If None, uses the current axes.
     """
     assert X.shape[1] == 2, "X must be a 2D array with shape (n_samples, 2)."
+    decision_set_labels = [{decision.label} for decision in model.decision_set]
     if color_dict is None:
-        color_dict = {list(i)[0]: 'grey' for i in model.decision_set_labels}
+        color_dict = {list(i)[0]: 'grey' for i in decision_set_labels}
 
-    supported_plot = ['DSCluster', 'IdsSet']
+    supported_plot = ['DSCluster', 'IDS']
     if model.__class__.__name__ not in supported_plot:
         raise ValueError(
             f"Plotting for {model.__class__.__name__} is not supported. "
-            "Supported models are: {supported_plot}"
+            f"Supported models are: {supported_plot}"
         )
     
-    for i,rule in enumerate(model.decision_set):
+    for i,decision in enumerate(model.decision_set):
         x_bounds = [np.min(X[:,0]), np.max(X[:,0])]
         y_bounds = [np.min(X[:,1]), np.max(X[:,1])]
 
-        for condition in rule:
+        for condition in decision.rule.conditions:
             if condition.features[0] == 0:
                 if condition.direction == -1:
                     x_bounds[1] = min(x_bounds[1], condition.threshold)
@@ -122,7 +123,7 @@ def plot_rule_boxes(
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
                     fill=True,
-                    facecolor=color_dict[list(model.decision_set_labels[i])[0]],
+                    facecolor=color_dict[list(decision_set_labels[i])[0]],
                     alpha=0.25,
                     linestyle='solid',
                     edgecolor='black',
@@ -136,7 +137,7 @@ def plot_rule_boxes(
                     x_bounds[1] - x_bounds[0],
                     y_bounds[1] - y_bounds[0],
                     fill=True, 
-                    facecolor=color_dict[list(model.decision_set_labels[i])[0]],
+                    facecolor=color_dict[list(decision_set_labels[i])[0]],
                     alpha=0.25,
                     linestyle='solid',
                     edgecolor='black',

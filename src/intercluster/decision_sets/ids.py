@@ -44,6 +44,10 @@ class IDS(DecisionSet):
     Github: https://github.com/jirifilip/pyIDS
 
     Args:
+        rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
+            If None, the rules will be generated using the rule_miner. Defaults to None.
+        rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
+            If None, the labels will be generated using the rule_miner. Defaults to None.
         lambdas (list[float], optional): List of 7 lambda values for the submodular objective function.
             If None, a coordinate ascent search will be used to find good lambdas. Defaults to None.
         lambda_search_dict (dict[str, tuple[float, float]], optional): Dictionary specifying the 
@@ -54,28 +58,29 @@ class IDS(DecisionSet):
             ascent. Defaults to 1. For more information, see the absolute_precision parameter 
             used in the following pseudocode: https://en.wikipedia.org/wiki/Ternary_search
         max_iterations (int, optional): Maximum number of iterations for coordinate ascent.
-        rule_miner (RuleMiner, optional): Rule mining algorithm used to generate the rules.
-            If None, the rules must be provided directly. Defaults to None.
-        rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
-            If None, the rules will be generated using the rule_miner. Defaults to None.
-        rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
-            If None, the labels will be generated using the rule_miner. Defaults to None.
         ids_cacher (IDSCacher, optional): An optional IDSCacher object to cache computations
             during IDS fitting. Defaults to None.
+        algorithm (str, optional): The IDS algorithm to use. Options are "DLS" (default) or "SLS".
 
     """
     def __init__(
         self,
         rules : List[Rule] = None,
         rule_labels : List[Set[int]] = None,
+        n_select : int = None,
         bin_df : pd.DataFrame = None,
         lambdas : list[float] = None,
         lambda_search_dict : dict[str, tuple[float, float]] = None,
         ternary_search_precision : float = 1.0,
         max_iterations : int = 50,
         ids_cacher:  IDSCacher = None,
+        algorithm: str = "DLS"
     ):
         super().__init__(rules = rules, rule_labels = rule_labels)
+
+        if n_select is not None:
+            assert isinstance(n_select, int) and n_select > 0, "n_select must be a positive integer."
+        self.n_select = n_select
 
         if bin_df is None:
             raise ValueError("bin_df must be provided to initialize IDS.")
@@ -114,6 +119,7 @@ class IDS(DecisionSet):
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
         self.ids_cacher = ids_cacher
+        self.algorithm = algorithm
 
     
     def ids_to_decision_set(self, cars : List[IDSRule]) -> List[Rule]:
@@ -184,10 +190,12 @@ class IDS(DecisionSet):
             ids_cacher.calculate_overlap(ids_ruleset, quant_df)
             end = time.time()
             print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
+        else:
+            ids_cacher = self.ids_cacher
 
         if self.lambdas is None:
             def fmax(lambda_dict):
-                ids = IDS_pyids(algorithm="SLS")
+                ids = IDS_pyids(n_select=self.n_select, algorithm=self.algorithm)
                 ids.ids_ruleset = ids_ruleset
                 ids.cacher = ids_cacher
                 ids.fit(
@@ -198,6 +206,8 @@ class IDS(DecisionSet):
                 auc = ids.score_auc(quant_df)
                 return auc
 
+            print('Starting coordinate ascent for lambda selection...')
+            import time; start_time = time.time()
             coord_asc = CoordinateAscent(
                 func=fmax,
                 func_args_ranges=self.lambda_search_dict,
@@ -206,6 +216,9 @@ class IDS(DecisionSet):
             )
 
             lambdas = coord_asc.fit()
+            end = time.time()
+            print(f"Coordinate ascent finished in {end - start_time:.2f} seconds.")
+            print(f"Selected lambdas: {lambdas}")
         else:
             lambdas = self.lambdas
         
@@ -213,7 +226,7 @@ class IDS(DecisionSet):
         print('Starting IDS selection...')
         import time; start_time = time.time()
 
-        ids = IDS_pyids(algorithm="SLS")
+        ids = IDS_pyids(n_select = self.n_select, algorithm=self.algorithm)
         ids.ids_ruleset = ids_ruleset
         ids.cacher = ids_cacher
         ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
@@ -221,6 +234,8 @@ class IDS(DecisionSet):
         end = time.time()
         print(f"IDS selection finished in {end - start_time:.2f} seconds.")
         selected_decision_set = self.ids_to_decision_set(ids.clf.rules)
+        print("IDS marginal contribution scores:")
+        print
         return selected_decision_set
 
     def get_cacher(self) -> IDSCacher:

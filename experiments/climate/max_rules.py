@@ -74,7 +74,7 @@ fixed_parameters = {
     'n_forest': 100,
     'max_depth': None,
     'depth_factor': 0.03,
-    'ids_samples': 10,
+    'ids_samples': 1,
     'seed': seed,
 }
 
@@ -99,12 +99,12 @@ fixed_parameters['alpha'] = selected_alpha_dict
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/max_rules/'
-outfile_ref = '_bug_fix'
+outfile_ref = '_ids'
 
 ####################################################################################################
 # Load pre-mined rules:
 
-'''
+
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['min_support'],
     min_confidence = fixed_parameters['min_confidence'],
@@ -117,7 +117,7 @@ class_association_rule_miner = ClassAssociationRuleMiner(
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
-'''
+
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
 
@@ -172,7 +172,7 @@ shallow_tree_mod = DecisionTreeMod(
     name = 'Shallow-Tree'
 )
 
-'''
+
 # IDS:
 rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
 ids_lambdas = [
@@ -186,17 +186,16 @@ ids_lambdas = [
 ]
 
 # Run an initial fitting to prepare the IDS cache:
-
+'''
 ids_set = IDS(
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
+    rules = class_association_rules[:100],
+    rule_labels = class_association_rule_labels[:100],
     lambdas = ids_lambdas,
     bin_df = class_association_rule_miner.bin_df
 )
 ids_set.fit(data, kmeans_labels)
-ids_cacher = ids_set.cacher
+ids_cacher = ids_set.ids_cacher
 ids_lambdas = ids_set.lambdas
-
 
 ids_module_list = []
 for s in range(fixed_parameters['ids_samples']):
@@ -209,12 +208,57 @@ for s in range(fixed_parameters['ids_samples']):
     }
     ids_mod = DecisionSetMod(
         model = IDS,
-        rules = class_association_rules,
-        rule_labels = class_association_rule_labels,
+        rules = class_association_rules[:100],
+        rule_labels = class_association_rule_labels[:100],
         name = f"IDS_{s}"
     )
     ids_module_list.append((ids_mod, ids_params))
 '''
+
+max_rule_len = max(len(r) for r in class_association_rules)
+lambda_search_dict = {
+    'l1': (0, 1 / len(class_association_rules)),
+    'l2': (0, 1 / (max_rule_len * len(class_association_rules))),
+    'l3': (0, 1 / (n * (len(class_association_rules) **2))),
+    'l4': (0, 1 / (n * (len(class_association_rules) **2))),
+    'l5': (0, 1 / fixed_parameters['n_clusters']),
+    'l6': (0, 1 / (n * len(class_association_rules))),
+    'l7': (0, 1 / n),
+}
+ternary_search_precision = 0.5 * (1 / (n * len(class_association_rules)**2))
+max_iterations = 10
+
+# Run an initial fitting to prepare the IDS cache:
+ids_set = IDS(
+    rules = class_association_rules,
+    rule_labels = class_association_rule_labels,
+    n_select = None,
+    bin_df = class_association_rule_miner.bin_df,
+    lambdas = ids_lambdas,
+    #lambda_search_dict = lambda_search_dict,
+    #ternary_search_precision = ternary_search_precision,
+    #max_iterations = max_iterations,
+)
+ids_set.fit(data, kmeans_labels)
+ids_cacher = ids_set.ids_cacher
+ids_lambdas = ids_set.lambdas
+
+
+ids_params = {
+    (i,) : {
+        'n_select' : i,
+        'lambdas' : ids_lambdas,
+        'bin_df' : class_association_rule_miner.bin_df,
+        'ids_cacher' : ids_cacher,
+    } for i in n_rules_list
+}
+ids_mod = DecisionSetMod(
+    model = IDS,
+    rules = class_association_rules,
+    rule_labels = class_association_rule_labels,
+    name = f"IDS"
+)
+
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
@@ -337,6 +381,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
+    (ids_mod, ids_params),
 ] + dscluster_module_list #+ ids_module_list
 
 measurement_fns = [
