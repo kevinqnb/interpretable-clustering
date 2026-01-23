@@ -69,7 +69,7 @@ fixed_parameters = {
     'n_clusters': 6,
     'max_rules': 12,
     'min_support': 0.05,
-    'min_confidence': 0.85,
+    'min_confidence': 0.95,
     'car_max_rule_length': 4,
     'n_forest': 100,
     'max_depth': None,

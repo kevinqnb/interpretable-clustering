@@ -10,6 +10,7 @@ from intercluster import (
     flatten_labels
 )
 from .decision_set import DecisionSet
+import time; start_time = time.time()
 
 
 ####################################################################################################
@@ -184,20 +185,18 @@ class IDS(DecisionSet):
         quant_df = QuantitativeDataFrame(bin_df)
 
         if self.ids_cacher is None:
-            import time; start_time = time.time()
             print('Calculating IDS cacher overlaps...')
             ids_cacher = IDSCacher()
             ids_cacher.calculate_overlap(ids_ruleset, quant_df)
             end = time.time()
             print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
-        else:
-            ids_cacher = self.ids_cacher
+            self.ids_cacher = ids_cacher
 
         if self.lambdas is None:
             def fmax(lambda_dict):
                 ids = IDS_pyids(n_select=self.n_select, algorithm=self.algorithm)
                 ids.ids_ruleset = ids_ruleset
-                ids.cacher = ids_cacher
+                ids.cacher = self.ids_cacher
                 ids.fit(
                     quant_dataframe=quant_df,
                     lambda_array=list(lambda_dict.values())
@@ -207,7 +206,6 @@ class IDS(DecisionSet):
                 return auc
 
             print('Starting coordinate ascent for lambda selection...')
-            import time; start_time = time.time()
             coord_asc = CoordinateAscent(
                 func=fmax,
                 func_args_ranges=self.lambda_search_dict,
@@ -224,11 +222,10 @@ class IDS(DecisionSet):
         
 
         print('Starting IDS selection...')
-        import time; start_time = time.time()
 
         ids = IDS_pyids(n_select = self.n_select, algorithm=self.algorithm)
         ids.ids_ruleset = ids_ruleset
-        ids.cacher = ids_cacher
+        ids.cacher = self.ids_cacher
         ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
         #ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
         end = time.time()

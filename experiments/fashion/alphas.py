@@ -34,7 +34,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 12
+experiment_cpu_count = 4
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -110,6 +110,7 @@ objective_dict = {
     'coverage-mistake': {
         'n_select': fixed_parameters['n_select'],
         'objective_type': 'coverage-mistake',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
         )
@@ -117,6 +118,7 @@ objective_dict = {
     'total-coverage-mistake': {
         'n_select': fixed_parameters['n_select'],
         'objective_type': 'total-coverage-mistake',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
         )
@@ -126,6 +128,7 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
         )
@@ -135,6 +138,7 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
         )
@@ -143,6 +147,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'objective_type': 'coverage-mistake',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
         )
@@ -151,6 +156,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'objective_type': 'total-coverage-mistake',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
         )
@@ -161,6 +167,7 @@ objective_dict = {
         'weights': weights,
         'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
         )
@@ -171,6 +178,7 @@ objective_dict = {
         'weights': weights,
         'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'lazy-greedy',
         'decision_info_dict_path': os.path.join(
             decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
         )
