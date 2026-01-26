@@ -187,3 +187,4 @@ src/intercluster/decision_sets/mining/clique_miner.py
 *bin_df.csv
 
 *.pkl
+*.pkl.gz

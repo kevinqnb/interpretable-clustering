@@ -974,3 +974,19 @@ def compute_elbow(x: np.ndarray, y: np.ndarray, increasing: bool = True) -> int:
 
 
 ####################################################################################################
+
+
+def _pack_bool_matrix(mat: np.ndarray) -> np.ndarray:
+    """Pack a 2D boolean matrix along the last axis using np.packbits."""
+    if mat.dtype != np.bool_:
+        mat = mat.astype(np.bool_, copy=False)
+    return np.packbits(mat, axis=-1)
+
+
+def _unpack_bool_matrix(packed: np.ndarray, n_bits: int) -> np.ndarray:
+    """Unpack a packed-bits 2D matrix back to boolean with a known original width."""
+    out = np.unpackbits(packed, axis=-1)
+    return out[..., :n_bits].astype(np.bool_, copy=False)
+
+
+####################################################################################################

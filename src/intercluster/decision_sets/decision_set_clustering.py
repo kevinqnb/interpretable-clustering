@@ -12,6 +12,8 @@ from .objectives import (
     CoveragePairwiseDistanceObjective, TotalCoveragePairwiseDistanceObjective
 )
 from .decision_set import DecisionSet
+from pathlib import Path
+from typing import Any, Union
 
 
 ####################################################################################################
@@ -24,15 +26,17 @@ class DSCluster(DecisionSet):
     def __init__(
         self,
         rules : List[Rule],
-        n_select : int,
+        objective_type : str = "coverage-cost",
+        n_select : int = 0,
         alpha_val : float = 0.0,
         lambda_val : float = None,
         cluster_centers : NDArray = None,
-        weights : NDArray = None,
-        objective_type : str = "coverage-cost",
         cluster_cost_method : str = "kmeans",
+        weights : NDArray = None,
         selection_algorithm : str = "distorted-greedy",
-        decision_info_dict_path : str = None,
+        precomputed_path: Union[str, Path] = None,
+        output_path: Union[str, Path] = None,
+        pack_bits: bool = True,
         rule_labels : List[Set[int]] = None, # DUMMY ARGUMENT TO MATCH PARENT CLASS, must be None
     ):
         """
@@ -50,9 +54,12 @@ class DSCluster(DecisionSet):
                 "total-coverage-cost". Defaults to "coverage-cost".
             cluster_cost_method (str, optional): Method to use for clustering costs. Defaults to "kmeans".
             selection_algorithm (str, optional): Algorithm to use for selection. Defaults to "distorted-greedy".
-            decision_info_dict_path (str, optional): Path to decision info dictionary, for use of precomputed decisions. 
-                Defaults to None. Note that if this is given, a decision set will be initialized from it, 
+            precomputed_path (str, optional): Path to precomputed data for the decision set. 
+                Defaults to None. If this is given, a decision set will be initialized from it, 
                 rather than from the rules provided.
+            output_path (str, optional): Path to save output data. Defaults to None.
+            pack_bits (bool, optional): Whether to pack bits for rule coverage matrix. Defaults to True.
+            rule_labels (List[Set[int]], optional): Labels for each rule. Must be None for DSCluster.
         """
         assert rule_labels is None, 'rule_labels must be None for DSCluster.'
         super().__init__(rules = rules, rule_labels = None)
@@ -60,7 +67,7 @@ class DSCluster(DecisionSet):
         if (objective_type == "coverage-cost" or objective_type == "total-coverage-cost") and cluster_centers is None:
             raise ValueError('Cluster centers must be provided for cost-based objectives.')
 
-        assert n_select > 0, 'n_select must be positive.'
+        assert n_select > 0, 'n_select must be given a positive value as input.'
         self.n_select = n_select
 
         assert alpha_val >= 0.0, 'alpha_val must be non-negative.'
@@ -89,7 +96,16 @@ class DSCluster(DecisionSet):
             'selection_algorithm must be either "distorted-greedy" or "lazy-greedy".'
         self.selection_algorithm = selection_algorithm
 
-        self.decision_info_dict_path = decision_info_dict_path
+        assert precomputed_path is None or isinstance(precomputed_path, (str, Path)), \
+            'precomputed_path must be a string or Path.'
+        self.precomputed_path = precomputed_path
+
+        assert output_path is None or isinstance(output_path, (str, Path)), \
+            'output_path must be a string or Path.'
+        self.output_path = output_path
+
+        assert isinstance(pack_bits, bool), 'pack_bits must be a boolean.'
+        self.pack_bits = pack_bits
 
         self.objective_type = objective_type
         self.initialize_objective()
@@ -105,7 +121,10 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                selection_algorithm = self.selection_algorithm
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
             )
         elif self.objective_type == "total-coverage-mistake":
             self.objective = TotalCoverageMistakeObjective(
@@ -113,7 +132,10 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                selection_algorithm = self.selection_algorithm
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
             )
         elif self.objective_type == "coverage-cost":
             self.objective = CoverageCostObjective(
@@ -123,7 +145,10 @@ class DSCluster(DecisionSet):
                 lambda_val = self.lambda_val,
                 weights = self.weights,
                 cluster_cost_method = self.cluster_cost_method,
-                selection_algorithm = self.selection_algorithm
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
             )
         elif self.objective_type == "total-coverage-cost":
             self.objective = TotalCoverageCostObjective(
@@ -133,7 +158,10 @@ class DSCluster(DecisionSet):
                 lambda_val = self.lambda_val,
                 weights = self.weights,
                 cluster_cost_method = self.cluster_cost_method,
-                selection_algorithm = self.selection_algorithm
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
             )
         elif self.objective_type == "coverage-pairwise-distance":
             self.objective = CoveragePairwiseDistanceObjective(
@@ -141,7 +169,10 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                selection_algorithm = self.selection_algorithm
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
             )
         elif self.objective_type == "total-coverage-pairwise-distance":
             self.objective = TotalCoveragePairwiseDistanceObjective(
@@ -149,8 +180,11 @@ class DSCluster(DecisionSet):
                 alpha_val = self.alpha_val,
                 lambda_val = self.lambda_val,
                 weights = self.weights,
-                selection_algorithm = self.selection_algorithm
-            ) 
+                selection_algorithm = self.selection_algorithm,
+                precomputed_path = self.precomputed_path,
+                output_path = self.output_path,
+                pack_bits = self.pack_bits
+            )
         else:
             raise ValueError(f'Unknown objective type: {self.objective_type}')
 
@@ -170,11 +204,10 @@ class DSCluster(DecisionSet):
         if self.decision_set is None:
             raise ValueError('Decision set has not been initialized yet.')
         
+        print('Initializing objective with data...')
         self.objective.initialize_data(X, y)
-        if self.decision_info_dict_path is not None:
-            self.objective.load_decision_info_dict(self.decision_info_dict_path)
-            self.decision_set = set(self.objective.decision_info_dict.keys())
-        
+        print('Data initialized.')
+
         self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
         self.lambda_val = self.objective.lambda_val

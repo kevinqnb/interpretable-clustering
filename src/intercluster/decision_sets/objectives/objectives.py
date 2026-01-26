@@ -3,7 +3,12 @@ import numpy as np
 from numpy.typing import NDArray
 from intercluster import Decision
 from intercluster.utils import (
-    assignment_to_dict, labels_to_assignment, unique_labels, satisfies_rule, map_rules_to_decisions
+    labels_to_assignment,
+    unique_labels,
+    satisfies_rule,
+    map_rules_to_decisions,
+    _pack_bool_matrix,
+    _unpack_bool_matrix,
 )
 
 # Added for simple persistence of decision_info_dict
@@ -27,6 +32,13 @@ class Objective:
             Larger values penalize longer rules more heavily. Defaults to 0.0.
         lambda_val (float): A hyperparameter that controls tradeoff between reward and cost.
             Defaults to None, in which case it may be selected automatically.
+        cluster_centers (NDArray): (k x d) Array of cluster centers for computing coverage.
+        weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
+        selection_algorithm (str): The selection algorithm to use. Options are
+            'distorted-greedy' and 'lazy-greedy'. Defaults to 'distorted-greedy'.
+        precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
+        output_path (Union[str, Path]): Path to save output data. Defaults to None.
+        pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
 
     Attrs:
         name (str): Name of the objective.
@@ -35,14 +47,17 @@ class Objective:
     """
     def __init__(
         self,
-        n_select : int,
-        alpha_val : float = 0.0,
-        lambda_val : float = None,
-        cluster_centers : NDArray = None,
-        weights : NDArray = None,
-        selection_algorithm : str = 'distorted-greedy',
+        n_select: int = 0,
+        alpha_val: float = 0.0,
+        lambda_val: float = None,
+        cluster_centers: NDArray = None,
+        weights: NDArray = None,
+        selection_algorithm: str = 'distorted-greedy',
+        precomputed_path: Union[str, Path] = None,
+        output_path: Union[str, Path] = None,
+        pack_bits: bool = True,
     ):
-        assert n_select > 0, 'n_select must be positive.'
+        assert n_select > 0, 'n_select must be given a positive value as input.'
         self.n_select = n_select
 
         assert alpha_val >= 0.0, 'alpha_val must be non-negative.'
@@ -67,6 +82,8 @@ class Objective:
             'selection_algorithm must be either "distorted-greedy" or "lazy-greedy".'
         self.selection_algorithm = selection_algorithm
 
+        self.pack_bits = pack_bits
+
         self.data_initialized = False
         self.decision_set_initialized = False
 
@@ -74,15 +91,34 @@ class Objective:
         self.y = None
         self.label_set = None
         self.n_labels = 0
-        self.cluster_coverage_dict = None
         self.rule_to_decision_dict = None
-        self.decision_info_dict = None
+
+        # New storage:
+        # - rule_coverage_packed: (R, ceil(N/8)) uint8
+        # - cluster_membership_packed: (k, ceil(N/8)) uint8
+        # - decision_info_dict: {Decision: {'coverage_idx': int, 'label': int, 'length': int, ...}}
+        self.rule_coverage_packed: np.ndarray | None = None
+        self.cluster_membership_packed: np.ndarray | None = None
+        self.n_rules: int = 0
+        self.n_samples: int = 0
+        self.decision_info_dict: dict[Decision, dict[str, Any]] | None = None
+        self.data_to_center_distances: NDArray | None = None
+
+        if precomputed_path is not None:
+            self.load_precomputed(precomputed_path)
+            self.precomputed = True
+        else:
+            self.precomputed = False
+        
+        assert output_path is None or isinstance(output_path, (str, Path)), \
+            'output_path must be a string or Path.'
+        self.output_path = output_path
 
 
     def initialize_data(
-        self, 
-        X : NDArray,
-        y : list[set[int]],
+        self,
+        X: NDArray,
+        y: list[set[int]],
     ):
         """
         Sets the data for the objective.
@@ -101,18 +137,55 @@ class Objective:
             
         self.X = X
         self.y = y
+        self.n_samples = X.shape[0]
+
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
-        data_to_cluster_assignment = labels_to_assignment(
-            y, n_labels = self.n_labels
-        )
-        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
+
+        if not self.precomputed:
+            cluster_membership = labels_to_assignment(
+                y, n_labels=self.n_labels
+            ).T
+            self.cluster_membership_packed = _pack_bool_matrix(cluster_membership) if self.pack_bits else cluster_membership
+
         self.data_initialized = True
 
 
+    def _iter_covered_indices_from_rule_idx(self, rule_idx: int):
+        """Iterate covered sample indices for a rule (used for label reconstruction).
+
+        This avoids storing per-decision coverage lists. It unpacks only the selected rule.
+        """
+        if self.rule_coverage_packed is None:
+            return iter(())
+
+        if self.pack_bits:
+            row = self.rule_coverage_packed[rule_idx:rule_idx + 1]
+            bits = _unpack_bool_matrix(row, self.n_samples)[0]
+            return np.flatnonzero(bits)
+
+        # Unpacked bool matrix
+        return np.flatnonzero(self.rule_coverage_packed[rule_idx])
+
+
+    def get_coverage_labels(self, decision: Decision):
+        """Reconstruct coverage labels for a decision efficiently.
+
+        Returns a list[set[int]] matching the old structure, but computed on-demand.
+        """
+        if self.y is None or self.decision_info_dict is None:
+            raise ValueError(
+                'Data and decision_info_dict must be initialized before computing coverage labels.'
+            )
+        info = self.decision_info_dict[decision]
+        ridx = int(info['coverage_idx'])
+        idxs = self._iter_covered_indices_from_rule_idx(ridx)
+        return [self.y[int(i)] for i in idxs]
+    
+
     def initialize_decision_set(
         self,
-        decision_set : set[Decision],
+        decision_set: set[Decision],
     ):
         """
         Sets the decisions for the objective to select from.
@@ -130,48 +203,62 @@ class Objective:
                 'Decisions must cover the same labels as the input data.'
             )
 
-        # Isolate unique rules and map them to their decisions.
-        self.rule_to_decision_dict = map_rules_to_decisions(decision_set)
+        if not self.precomputed:
+            # Map unique rules -> decisions
+            self.rule_to_decision_dict = map_rules_to_decisions(decision_set)
 
-        # Track info for each decision.
-        if self.decision_info_dict is None:
+            # Assign each unique rule a stable index
+            rules = list(self.rule_to_decision_dict.keys())
+            rule_to_idx = {rule: i for i, rule in enumerate(rules)}
+            self.n_rules = len(rules)
+
+            # Precompute rule coverage matrix (R, N) bool (then pack bits if enabled)
+            rule_cov_bool = np.zeros((self.n_rules, self.n_samples), dtype=np.bool_)
+            for rule, idx in rule_to_idx.items():
+                covered = satisfies_rule(self.X, rule)
+                # covered may be list/iterable of indices
+                covered_arr = np.fromiter(covered, dtype=np.int64)
+                if covered_arr.size > 0:
+                    rule_cov_bool[idx, covered_arr] = True
+
+            self.rule_coverage_packed = _pack_bool_matrix(rule_cov_bool) if self.pack_bits else rule_cov_bool
+
             self.decision_info_dict = {}
             for decision in decision_set:
-                rule_coverage = frozenset(list(satisfies_rule(self.X, decision.rule)))
-                coverage_array = np.fromiter(rule_coverage, dtype=np.int64)
-                coverage_labels = [self.y[i] for i in rule_coverage]
-                rule_cluster_coverage = frozenset(
-                    self.cluster_coverage_dict[decision.label].intersection(rule_coverage)
-                )
+                ridx = int(rule_to_idx[decision.rule])
                 rule_length = len(decision.rule)
 
-                decision_info = {
+                # Compute cost_alpha_zero using a minimal info dict understandable by subclasses.
+                # Subclasses that require coverage should use coverage_idx + rule_coverage_packed.
+                minimal_info = {
                     decision: {
-                        'coverage': rule_coverage,
-                        'coverage_array': coverage_array,
-                        'coverage_labels': coverage_labels,
-                        'cluster_coverage': rule_cluster_coverage,
+                        'coverage_idx': ridx,
+                        'label': decision.label,
                         'length': rule_length,
-                        'label': decision.label
                     }
                 }
-                rule_cost_alpha_zero = self.cost(decision_info, alpha_val=0.0)
+                rule_cost_alpha_zero = self.cost(minimal_info, alpha_val=0.0)
                 rule_cost = rule_cost_alpha_zero + self.alpha_val * rule_length
 
-                self.decision_info_dict[decision] = decision_info[decision] | {
-                    'cost': rule_cost,
-                    'cost_alpha_zero': rule_cost_alpha_zero
+                self.decision_info_dict[decision] = {
+                    'coverage_idx': ridx,
+                    'label': decision.label,
+                    'length': rule_length,
+                    'cost': float(rule_cost),
+                    'cost_alpha_zero': float(rule_cost_alpha_zero),
                 }
-
+            print(f'Initialized objective with {len(decision_set)} decisions.')
         else:
-            # While this isn't always necessary, we update costs here in case alpha_val has changed.
-            for decision, decision_info in self.decision_info_dict.items():
-                rule_cost = decision_info['cost_alpha_zero'] + self.alpha_val * decision_info['length']
-                self.decision_info_dict[decision]['cost'] = rule_cost
-
+            # Update costs in case alpha_val changed.
+            for decision, info in self.decision_info_dict.items():
+                rule_cost = info['cost_alpha_zero'] + self.alpha_val * info['length']
+                info['cost'] = float(rule_cost)
+            print(f'Updated costs for {len(self.decision_info_dict)} precomputed decisions.')
 
         self.decision_set_initialized = True
-        print(f'Initialized objective with {len(decision_set)} decisions.')
+
+        if self.output_path is not None:
+            self.save_precomputed(self.output_path)
 
 
     def set_lambda(self, lambda_val : float = None):
@@ -186,9 +273,8 @@ class Objective:
         elif lambda_val is None:
             lambda_vals = self.compute_lambdas()
             if len(lambda_vals) == 0:
-                lambda_val = 0.0
-                # No valid ratios found; set lambda to 0.
                 print('No valid lambda values found; setting lambda to 0.0 and defaulting to lazy-greedy selection.')
+                lambda_val = 0.0
                 self.selection_algorithm = 'lazy-greedy'
             elif lambda_vals[0] == np.inf:
                 print('All coverage/cost ratios are infinite; setting lambda to 0.0 and defaulting to lazy-greedy selection.')
@@ -212,6 +298,26 @@ class Objective:
                 decision to its information, including labels, points, coverage, and lengths.
         Returns:
             reward (float): The reward from the selected decisions.
+        """
+        pass
+
+
+    def marginal_reward(
+        self,
+        decision_info: dict[str, any],
+        total_coverage : NDArray,
+        cluster_coverage : NDArray
+    ) -> float:
+        """
+        Computes the marginal reward from selected decision.
+
+        Args:
+            decision_info (dict): A dictionary containing information about the decision being considered.
+            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
+                label to the set of data points already covered by selected decisions.
+        
+        Returns:
+            coverage (float): The coverage of the selected decisions.
         """
         pass
 
@@ -278,22 +384,15 @@ class Objective:
             for decision in self.rule_to_decision_dict[rule]:
                 decision_info = self.decision_info_dict[decision]
 
-                r_coverage = decision_info['coverage']
-                r_cluster_coverage = decision_info['cluster_coverage']
-                r_length = decision_info['length']
-                d_label = decision_info['label']
-                d_cost = decision_info['cost']
-                h = d_cost
+                h = decision_info['cost']
 
                 if h > 0 and not np.isnan(h):
                     d_info = {
                         decision: {
-                            'coverage': r_coverage,
-                            'coverage_array': np.fromiter(r_coverage, dtype=np.int64),
-                            'cluster_coverage': r_cluster_coverage,
-                            'length': r_length,
-                            'label': d_label,
-                            'cost': d_cost
+                            'coverage_idx': decision_info['coverage_idx'],
+                            'label': decision_info['label'],
+                            'length': decision_info['length'],
+                            'cost': decision_info['cost'],
                         }
                     }
                     g = self.reward(d_info)
@@ -317,26 +416,6 @@ class Objective:
         return np.sort(ratios + [second_max_ratio])
 
 
-    def marginal_reward(
-        self,
-        decision_info: dict[str, any],
-        total_coverage : set[int],
-        cluster_coverage : dict[int, set[int]]
-    ) -> float:
-        """
-        Computes the marginal reward from selected decision.
-
-        Args:
-            decision_info (dict): A dictionary containing information about the decision being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected decisions.
-        
-        Returns:
-            coverage (float): The coverage of the selected decisions.
-        """
-        pass
-
-
     def distorted_greedy_select(
         self,
     ) -> set[Decision]:
@@ -353,54 +432,56 @@ class Objective:
         if not (self.data_initialized and self.decision_set_initialized):
             raise ValueError('Data and decisions must be initialized before selection.')
 
-        total_coverage = set()
-        total_cluster_coverage = {l: set() for l in range(self.n_labels)}
-        selected_decisions = set()
-        discarded_decisions = set()
+        # Track covered sets as packed bit vectors to speed marginal computations in subclasses.
+        if self.pack_bits:
+            covered_total = np.zeros((1, self.rule_coverage_packed.shape[1]), dtype=np.uint8)
+            covered_by_cluster = np.zeros((self.n_labels, self.cluster_membership_packed.shape[1]), dtype=np.uint8)
+        else:
+            covered_total = np.zeros((self.n_samples,), dtype=np.bool_)
+            covered_by_cluster = np.zeros((self.n_labels, self.n_samples), dtype=np.bool_)
+
+        selected_decisions: set[Decision] = set()
+        discarded_decisions: set[Decision] = set()
+
         for i in range(self.n_select):
             best_decision = None
             best_decision_score = 0.0
 
-            # NOTE: Should this iterate over decisions in a sorted order?
             for decision, decision_info in self.decision_info_dict.items():
-                if (decision not in selected_decisions) and (decision not in discarded_decisions):
-                    g = self.marginal_reward(
-                        decision_info,
-                        total_coverage,
-                        total_cluster_coverage
-                    )
+                if (decision in selected_decisions) or (decision in discarded_decisions):
+                    continue
 
-                    h = decision_info['cost']
+                g = self.marginal_reward(decision_info, covered_total, covered_by_cluster)
+                h = decision_info['cost']
 
-                    # Early discard since the marginal reward will only decrease from here on out, 
-                    # and its score coefficient will be at most 1.
-                    # Therefore if g - lambda * c <= 0, the score will never be positive, 
-                    # and it can never be selected.
-                    if g - self.lambda_val * h <= 0:
-                        discarded_decisions.add(decision)
-                    
-                    score = (1 - 1/self.n_select)**(self.n_select - (i + 1)) * g - self.lambda_val * h
+                if g - self.lambda_val * h <= 0:
+                    discarded_decisions.add(decision)
 
-                    if score > best_decision_score:
-                        best_decision = decision
-                        best_decision_score = score
+                score = (1 - 1 / self.n_select) ** (self.n_select - (i + 1)) * g - self.lambda_val * h
+                if score > best_decision_score:
+                    best_decision = decision
+                    best_decision_score = score
 
-            if best_decision_score > 0:
+            if best_decision_score > 0 and best_decision is not None:
                 selected_decisions.add(best_decision)
-                best_decision_label = self.decision_info_dict[best_decision]['label']
-                best_decision_coverage = self.decision_info_dict[best_decision]['coverage']
-                best_decision_cluster_coverage = self.decision_info_dict[best_decision]['cluster_coverage']
-                total_cluster_coverage[best_decision_label] = total_cluster_coverage[
-                    best_decision_label
-                ].union(
-                    best_decision_cluster_coverage
-                )
-                total_coverage = total_coverage.union(best_decision_coverage)
 
-        # Compute final objective value (pass defensive copies to avoid accidental mutation).
-        selected_info = {
-            decision: dict(self.decision_info_dict[decision]) for decision in selected_decisions
-        }
+                info = self.decision_info_dict[best_decision]
+                ridx = int(info['coverage_idx'])
+                lbl = int(info['label'])
+
+                if self.pack_bits:
+                    rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                    cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+                    new_cluster_bits = np.bitwise_and(rule_bits, cluster_bits)
+                    covered_by_cluster[lbl:lbl + 1] = np.bitwise_or(covered_by_cluster[lbl:lbl + 1], new_cluster_bits)
+                    covered_total = np.bitwise_or(covered_total, rule_bits)
+                else:
+                    rule_mask = self.rule_coverage_packed[ridx]
+                    cluster_mask = self.cluster_membership_packed[lbl]
+                    covered_by_cluster[lbl] |= (rule_mask & cluster_mask)
+                    covered_total |= rule_mask
+
+        selected_info = {d: dict(self.decision_info_dict[d]) for d in selected_decisions}
         self.reward_value = self.reward(selected_info)
         self.cost_value = self.cost(selected_info)
         self.objective_value = self.compute_objective(selected_info)
@@ -421,31 +502,30 @@ class Objective:
         if not (self.data_initialized and self.decision_set_initialized):
             raise ValueError('Data and decisions must be initialized before selection.')
 
-        total_coverage = set()
-        total_cluster_coverage = {l: set() for l in range(self.n_labels)}
+        if self.pack_bits:
+            covered_total = np.zeros((1, self.rule_coverage_packed.shape[1]), dtype=np.uint8)
+            covered_by_cluster = np.zeros((self.n_labels, self.cluster_membership_packed.shape[1]), dtype=np.uint8)
+        else:
+            covered_total = np.zeros((self.n_samples,), dtype=np.bool_)
+            covered_by_cluster = np.zeros((self.n_labels, self.n_samples), dtype=np.bool_)
+
         eligible_decisions = set(self.decision_info_dict.keys())
-        selected_decisions = set()
-        selected_rules = set()
+        selected_decisions: set[Decision] = set()
+        selected_rule_idxs: set[int] = set()
 
-        # Initialize heap
         heap = []
-        counter = 0  # tie-breaker so heap never compares Decision objects
+        counter = 0
         for decision in eligible_decisions:
-            decision_info = self.decision_info_dict[decision]
-            g = self.marginal_reward(decision_info, total_coverage, total_cluster_coverage)
-            h = decision_info["cost"]
-
-            # Optional: early discard (same logic you already have)
+            info = self.decision_info_dict[decision]
+            g = self.marginal_reward(info, covered_total, covered_by_cluster)
+            h = info['cost']
             score = g - 2 * self.lambda_val * h
             if score <= 0:
                 continue
-
             heap.append((-score, counter, decision))
             counter += 1
 
         heapq.heapify(heap)
-
-        # If everything was filtered out during initialization, exit early.
         if not heap:
             self.reward_value = 0.0
             self.cost_value = 0.0
@@ -453,63 +533,49 @@ class Objective:
             return set()
 
         while heap and len(eligible_decisions) > 0:
-            best_decision = None
-            best_decision_score = 0.0
-            removals = set()
-
             heap_best_score, _, heap_best_decision = heapq.heappop(heap)
-            second_best_score, _, second_best_decision = heap[0] if len(heap) > 0 else (float('-inf'), None, None)
+            second_best_score = heap[0][0] if len(heap) > 0 else 0.0
 
-            # Recompute marginal reward for the top decision
-            decision_info = self.decision_info_dict[heap_best_decision]
-            g = self.marginal_reward(
-                decision_info,
-                total_coverage,
-                total_cluster_coverage
-            )
-            h = decision_info['cost']
-
+            info = self.decision_info_dict[heap_best_decision]
+            g = self.marginal_reward(info, covered_total, covered_by_cluster)
+            h = info['cost']
             score = g - 2 * self.lambda_val * h
 
-            if second_best_decision is None or score >= -second_best_score:
-                best_decision = heap_best_decision
-                best_decision_score = score
+            if score >= -second_best_score:
+                if score > 0:
+                    selected_decisions.add(heap_best_decision)
+                    ridx = int(info['coverage_idx'])
+                    lbl = int(info['label'])
+                    selected_rule_idxs.add(ridx)
 
-                if best_decision_score > 0:
-                    selected_decisions.add(best_decision)
-                    selected_rules.add(best_decision.rule)
-                    best_decision_label = self.decision_info_dict[best_decision]['label']
-                    best_decision_coverage = self.decision_info_dict[best_decision]['coverage']
-                    best_decision_cluster_coverage = self.decision_info_dict[best_decision]['cluster_coverage']
-                    total_cluster_coverage[best_decision_label] = total_cluster_coverage[
-                        best_decision_label
-                    ].union(
-                        best_decision_cluster_coverage
-                    )
-                    total_coverage = total_coverage.union(best_decision_coverage)
+                    if self.pack_bits:
+                        rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                        cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+                        new_cluster_bits = np.bitwise_and(rule_bits, cluster_bits)
+                        covered_by_cluster[lbl:lbl + 1] = np.bitwise_or(covered_by_cluster[lbl:lbl + 1], new_cluster_bits)
+                        covered_total = np.bitwise_or(covered_total, rule_bits)
+                    else:
+                        rule_mask = self.rule_coverage_packed[ridx]
+                        cluster_mask = self.cluster_membership_packed[lbl]
+                        covered_by_cluster[lbl] |= (rule_mask & cluster_mask)
+                        covered_total |= rule_mask
 
-                    # Update eligible decisions with matroid constraints:
+                    # Matroid-like constraint: at most one decision per rule
+                    removals = set()
                     if len(selected_decisions) >= self.n_select:
                         removals = eligible_decisions.copy()
                     else:
-                        for decision in eligible_decisions.copy():
-                            if decision.rule in selected_rules:
-                                removals.add(decision)
-
+                        for d in eligible_decisions:
+                            if int(self.decision_info_dict[d]['coverage_idx']) in selected_rule_idxs:
+                                removals.add(d)
+                    eligible_decisions.difference_update(removals)
                 else:
-                    removals.add(best_decision)
-
+                    eligible_decisions.discard(heap_best_decision)
             else:
-                # Reinsert with updated score (always use an integer counter to avoid comparing Decisions)
                 heapq.heappush(heap, (-score, counter, heap_best_decision))
                 counter += 1
 
-            eligible_decisions.difference_update(removals)
-
-        # Compute final objective value (pass defensive copies to avoid accidental mutation).
-        selected_info = {
-            decision: dict(self.decision_info_dict[decision]) for decision in selected_decisions
-        }
+        selected_info = {d: dict(self.decision_info_dict[d]) for d in selected_decisions}
         self.reward_value = self.reward(selected_info)
         self.cost_value = self.cost(selected_info)
         self.objective_value = self.compute_objective(selected_info)
@@ -536,146 +602,65 @@ class Objective:
                 f'Unknown selection algorithm: {self.selection_algorithm}'
             )
 
-    def save_decision_info_dict(
-        self,
-        path: Union[str, Path],
-        protocol: int = pickle.HIGHEST_PROTOCOL,
-        *,
-        minimal: bool = True,
-        compress: bool = True,
-    ) -> None:
-        """Save the precomputed ``decision_info_dict`` to disk.
+    def save_precomputed(self, path: Union[str, Path], *, compress: bool = True) -> None:
+        """Save precomputed arrays and decision_info_dict.
 
-        This can get very large because each rule may store per-sample coverage information.
-        To avoid ``MemoryError`` during serialization, this method defaults to a *minimal*
-        representation and (optionally) gzip compression.
-
-        Args:
-            path: Output file path.
-            protocol: Pickle protocol.
-            minimal: If True (default), drop redundant/heavy fields (``coverage_array`` and
-                ``coverage_labels``) and store only what is needed to reconstruct them.
-            compress: If True (default), write a gzip-compressed pickle.
+        The output is a single gzip-compressed pickle by default containing:
+        - metadata (n_samples, n_labels, pack_bits)
+        - rule_coverage (packed or unpacked)
+        - cluster_membership (packed or unpacked)
+        - rule_to_decision_dict (for lambda computations)
+        - decision_info_dict (lightweight)
         """
-        if not self.decision_set_initialized or self.decision_info_dict is None:
-            raise ValueError("Decision set must be initialized before saving decision_info_dict.")
+        if not self.decision_set_initialized:
+            raise ValueError('Decision set must be initialized before saving precomputed data.')
 
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        serializable: dict[Decision, dict[str, Any]] = {}
-        for decision, info in self.decision_info_dict.items():
-            if not isinstance(decision, Decision):
-                raise TypeError("decision_info_dict keys must be Decision objects")
-            if not isinstance(info, dict):
-                raise TypeError("decision_info_dict values must be dicts")
-
-            out: dict[str, Any] = dict(info)
-
-            # Normalize coverages to a compact ndarray representation.
-            # (frozenset/set/list -> int64 ndarray)
-            if "coverage" in out and out["coverage"] is not None:
-                cov = out["coverage"]
-                if isinstance(cov, np.ndarray):
-                    cov_arr = np.asarray(cov, dtype=np.int64)
-                else:
-                    cov_arr = np.fromiter(cov, dtype=np.int64)
-                out["coverage"] = cov_arr
-
-            if "cluster_coverage" in out and out["cluster_coverage"] is not None:
-                ccov = out["cluster_coverage"]
-                if isinstance(ccov, np.ndarray):
-                    ccov_arr = np.asarray(ccov, dtype=np.int64)
-                else:
-                    ccov_arr = np.fromiter(ccov, dtype=np.int64)
-                out["cluster_coverage"] = ccov_arr
-
-            # Drop heavy/redundant fields unless the caller explicitly wants them.
-            if minimal:
-                out.pop("coverage_array", None)
-                out.pop("coverage_labels", None)
-
-            serializable[decision] = out
+        blob = {
+            'n_samples': self.n_samples,
+            'n_labels': self.n_labels,
+            'pack_bits': self.pack_bits,
+            'rule_coverage': self.rule_coverage_packed,
+            'cluster_membership': self.cluster_membership_packed,
+            'rule_to_decision_dict': self.rule_to_decision_dict,
+            'decision_info_dict': self.decision_info_dict,
+            'data_to_center_distances': self.data_to_center_distances,
+        }
 
         opener = gzip.open if compress else Path.open
-        with opener(p, "wb") as f:
-            pickle.dump(serializable, f, protocol=protocol)
+        with opener(p, 'wb') as f:
+            pickle.dump(blob, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def load_decision_info_dict(
-        self,
-        path: Union[str, Path],
-    ) -> dict[Decision, dict[str, Any]]:
-        """Load a previously saved ``decision_info_dict``.
 
-        Supports both regular pickle and gzip-compressed pickle.
-
-        Normalizations performed:
-        - ``coverage`` and ``cluster_coverage`` are converted to ``frozenset[int]``.
-        - ``coverage_array`` is rebuilt from ``coverage`` if missing.
-        - ``coverage_labels`` is rebuilt from ``self.y`` if missing.
-
-        Notes:
-            Recomputing ``coverage_labels`` requires that ``initialize_data`` was called (so ``self.y``
-            is available). If data is not initialized, ``coverage_labels`` will be set to ``None``.
-        """
+    def load_precomputed(self, path: Union[str, Path]) -> None:
+        """Load previously saved precomputed arrays and decision_info_dict."""
         p = Path(path)
 
         def _open_for_read(pp: Path):
-            # gzip magic header: 1f 8b
-            with pp.open("rb") as raw:
+            with pp.open('rb') as raw:
                 head = raw.read(2)
             if head == b"\x1f\x8b":
-                return gzip.open(pp, "rb")
-            return pp.open("rb")
+                return gzip.open(pp, 'rb')
+            return pp.open('rb')
 
         with _open_for_read(p) as f:
-            obj = pickle.load(f)
+            blob = pickle.load(f)
 
-        if not isinstance(obj, dict):
-            raise TypeError("Loaded object is not a dict; expected a decision_info_dict")
+        if not isinstance(blob, dict):
+            raise TypeError('Loaded object is not a dict; expected precomputed bundle.')
 
-        loaded: dict[Decision, dict[str, Any]] = {}
-        for decision, info in obj.items():
-            if not isinstance(decision, Decision):
-                raise TypeError("Loaded decision_info_dict contains a non-Decision key")
-            if not isinstance(info, dict):
-                raise TypeError("Loaded decision_info_dict contains a non-dict value")
+        self.n_samples = int(blob['n_samples'])
+        self.n_labels = int(blob['n_labels'])
+        self.pack_bits = bool(blob['pack_bits'])
 
-            out: dict[str, Any] = dict(info)
+        self.rule_coverage_packed = blob['rule_coverage']
+        self.cluster_membership_packed = blob['cluster_membership']
+        self.rule_to_decision_dict = blob.get('rule_to_decision_dict')
+        self.decision_info_dict = blob.get('decision_info_dict')
+        self.data_to_center_distances = blob.get('data_to_center_distances')
 
-            # Restore coverages as frozenset for in-memory usage.
-            if "coverage" in out and out["coverage"] is not None:
-                cov = out["coverage"]
-                if isinstance(cov, np.ndarray):
-                    out["coverage"] = frozenset(np.asarray(cov, dtype=np.int64).tolist())
-                else:
-                    out["coverage"] = frozenset(cov)
-
-            if "cluster_coverage" in out and out["cluster_coverage"] is not None:
-                ccov = out["cluster_coverage"]
-                if isinstance(ccov, np.ndarray):
-                    out["cluster_coverage"] = frozenset(np.asarray(ccov, dtype=np.int64).tolist())
-                else:
-                    out["cluster_coverage"] = frozenset(ccov)
-
-            # Ensure coverage_array exists and is the expected dtype.
-            if out.get("coverage_array") is None:
-                if "coverage" in out and isinstance(out["coverage"], frozenset):
-                    out["coverage_array"] = np.fromiter(out["coverage"], dtype=np.int64)
-            else:
-                out["coverage_array"] = np.asarray(out["coverage_array"], dtype=np.int64)
-
-            # Rebuild coverage_labels if missing (minimal saves omit it).
-            if out.get("coverage_labels") is None:
-                if self.y is not None and "coverage" in out and isinstance(out["coverage"], frozenset):
-                    # self.y is list[set[int]]; keep same structure as initialize_decision_set
-                    out["coverage_labels"] = [self.y[i] for i in out["coverage"]]
-                else:
-                    out["coverage_labels"] = None
-
-            loaded[decision] = out
-
-        self.decision_info_dict = loaded
-        return loaded
+        #self.decision_set_initialized = self.decision_info_dict is not None and self.rule_coverage_packed is not None
 
 ####################################################################################################

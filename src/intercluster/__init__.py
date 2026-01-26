@@ -72,6 +72,8 @@ from .utils import (
     filter_rules,
     map_rules_to_decisions,
     compute_elbow,
+    _pack_bool_matrix,
+    _unpack_bool_matrix,
 )
 
 

@@ -2,9 +2,15 @@ import numpy as np
 from numpy.typing import NDArray
 from intercluster import Decision
 from intercluster.utils import (
-    assignment_to_dict, labels_to_assignment, unique_labels
+    assignment_to_dict,
+    labels_to_assignment,
+    unique_labels, 
+    _pack_bool_matrix,
+    _unpack_bool_matrix,
 )
 from .objectives import Objective
+from pathlib import Path
+from typing import Any, Union
 
 
 ####################################################################################################
@@ -15,26 +21,34 @@ class CoverageCostObjective(Objective):
     Objective that selects rules based on a coverage and cluster cost objective.
 
     Args:
-        data (NDArray): (n x d) array.
-        cluster_centers (NDArray): (k x d) array where each row i is the given 
-                representative for cluster i.
         n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
         alpha_val (float): A hyperparameter for tuning the size of the selected rules.
             Larger values penalize longer rules more heavily. Defaults to 1.0.
+        cluster_centers (NDArray): (k x d) array where each row i is the given 
+                representative for cluster i.
         cluster_cost_method (str): The cluster_cost_method used to compute cluster costs. 
             Currently only "kmeans" or "kmedians" are supported.
+        weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
+        selection_algorithm (str): The selection algorithm to use. Options are
+            'distorted-greedy' and 'lazy-greedy'. Defaults to 'distorted-greedy'.
+        precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
+        output_path (Union[str, Path]): Path to save output data. Defaults to None.
+        pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
     """
     def __init__(
             self,
-            n_select : int,
+            n_select : int = 0,
             alpha_val : float = 0.0,
             lambda_val : float = None,
             cluster_centers : NDArray = None,
-            weights : NDArray = None,
             cluster_cost_method : str = "kmeans",
+            weights : NDArray = None,
             selection_algorithm : str = 'distorted-greedy',
+            precomputed_path: Union[str, Path] = None,
+            output_path: Union[str, Path] = None,
+            pack_bits: bool = True,
         ):
         super().__init__(
             n_select = n_select,
@@ -42,7 +56,10 @@ class CoverageCostObjective(Objective):
             lambda_val = lambda_val,
             cluster_centers = cluster_centers,
             weights = weights,
-            selection_algorithm = selection_algorithm
+            selection_algorithm = selection_algorithm,
+            precomputed_path = precomputed_path,
+            output_path = output_path,
+            pack_bits = pack_bits,
         )
         if self.cluster_centers is None:
             raise ValueError("Cluster_centers must be provided for this objective.")
@@ -73,13 +90,21 @@ class CoverageCostObjective(Objective):
 
         self.X = X
         self.y = y
+        self.n_samples = X.shape[0]
             
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
-        data_to_cluster_assignment = labels_to_assignment(
+
+        if self.precomputed:
+            self.data_initialized = True
+            return
+        
+        cluster_membership = labels_to_assignment(
             y, n_labels = self.n_labels
-        )
-        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
+        ).T
+        self.cluster_membership_packed = _pack_bool_matrix(
+            cluster_membership
+        ) if self.pack_bits else cluster_membership
 
         # Compute n x k distance matrix between data points and cluster centers.
         self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
@@ -96,27 +121,36 @@ class CoverageCostObjective(Objective):
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
-        """
-        Computes the reward from the selected decisions.
+        if self.pack_bits:
+            total_by_cluster = np.zeros((self.n_labels, self.cluster_membership_packed.shape[1]), dtype=np.uint8)
+            for _, info in selected_decisions_info.items():
+                lbl = int(info['label'])
+                ridx = int(info['coverage_idx'])
+                rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+                total_by_cluster[lbl:lbl + 1] = np.bitwise_or(
+                    total_by_cluster[lbl:lbl + 1], np.bitwise_and(rule_bits, cluster_bits)
+                )
 
-        Args:
-            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each 
-                selected decision to its information (points, coverage, length, label).
-        Returns:
-            reward (float): The reward from the selected decisions.
-        """
-        total_cluster_coverage = {}
-        for decision, info in selected_decisions_info.items():
-            label = info['label']
-            if label not in total_cluster_coverage:
-                total_cluster_coverage[label] = set()
-            total_cluster_coverage[label].update(info['cluster_coverage'])
-        
-        total_weighted_coverage = 0
-        for covered in total_cluster_coverage.values():
-            if covered:  # Only process non-empty sets
-                covered_array = np.fromiter(covered, dtype=np.int64)
-                total_weighted_coverage += np.sum(self.weights[covered_array])
+            total_weighted_coverage = 0.0
+            for lbl in range(self.n_labels):
+                bits = np.unpackbits(total_by_cluster[lbl:lbl + 1], axis=-1)[0][: self.n_samples]
+                idxs = np.flatnonzero(bits)
+                if idxs.size:
+                    total_weighted_coverage += float(np.sum(self.weights[idxs]))
+            return total_weighted_coverage
+
+        total_by_cluster = np.zeros((self.n_labels, self.n_samples), dtype=np.bool_)
+        for _, info in selected_decisions_info.items():
+            lbl = int(info['label'])
+            ridx = int(info['coverage_idx'])
+            total_by_cluster[lbl] |= (self.rule_coverage_packed[ridx] & self.cluster_membership_packed[lbl])
+
+        total_weighted_coverage = 0.0
+        for lbl in range(self.n_labels):
+            idxs = np.flatnonzero(total_by_cluster[lbl])
+            if idxs.size:
+                total_weighted_coverage += float(np.sum(self.weights[idxs]))
         return total_weighted_coverage
 
 
@@ -125,56 +159,52 @@ class CoverageCostObjective(Objective):
         selected_decisions_info: dict[Decision, dict[str, any]],
         alpha_val : float = None,
     ) -> float:
-        """
-        Computes the cost of the selected decisions.
-
-        Args:
-            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
-                selected decision to its information (points, coverage, length, label).
-        Returns:
-            cost (float): The cost of the selected decisions.
-        """
         if alpha_val is None:
             alpha_val = self.alpha_val
 
         total_cost = 0.0
         length_penalty = 0.0
-        for decision, info in selected_decisions_info.items():
-            r_coverage = info['coverage']
-            r_center = info['label']
-            if r_coverage:  # Only process non-empty sets
-                coverage_array = info['coverage_array']
-                cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
-                total_cost += cluster_cost
-            length_penalty += alpha_val * info['length']
 
-        return total_cost + length_penalty
+        for _, info in selected_decisions_info.items():
+            ridx = int(info['coverage_idx'])
+            center = int(info['label'])
+
+            if self.pack_bits:
+                bits = np.unpackbits(self.rule_coverage_packed[ridx:ridx + 1], axis=-1)[0][: self.n_samples]
+                idxs = np.flatnonzero(bits)
+            else:
+                idxs = np.flatnonzero(self.rule_coverage_packed[ridx])
+
+            if idxs.size:
+                total_cost += float(np.sum(self.data_to_center_distances[idxs, center]))
+
+            length_penalty += float(alpha_val) * float(info['length'])
+
+        return float(total_cost + length_penalty)
 
 
     def marginal_reward(
         self,
         decision_info: dict[str, any],
-        total_coverage : set[int],
-        total_cluster_coverage : dict[int, set[int]]
+        total_coverage : NDArray,
+        total_cluster_coverage : NDArray
     ) -> float:
-        """
-        Computes the marginal reward as new coverage from selected decision.
+        lbl = int(decision_info['label'])
+        ridx = int(decision_info['coverage_idx'])
 
-        Args:
-            decision_info (dict[str, any]): A dictionary containing information about the decision 
-                being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
-                set of data points already covered by selected decisions.
+        if self.pack_bits:
+            rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+            cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+            r_cluster_bits = np.bitwise_and(rule_bits, cluster_bits)
+            new_bits = np.bitwise_and(
+                r_cluster_bits, np.bitwise_not(total_cluster_coverage[lbl:lbl + 1])
+            )
+            new_mask = np.unpackbits(new_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+            return float(np.sum(self.weights[new_mask]))
 
-        Returns:
-            coverage (float): The coverage of the selected decisions.
-        """
-        r_cluster_coverage = decision_info['cluster_coverage']
-        s_coverage = total_cluster_coverage[decision_info['label']]
-        new_coverage = r_cluster_coverage.difference(s_coverage)
-        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
-        new_coverage_weighted = np.sum(self.weights[new_coverage_array])
-        return new_coverage_weighted
+        r_cluster_mask = self.rule_coverage_packed[ridx] & self.cluster_membership_packed[lbl]
+        new_mask = r_cluster_mask & ~total_cluster_coverage[lbl]
+        return float(np.sum(self.weights[new_mask]))
 
 
 ####################################################################################################
@@ -187,25 +217,34 @@ class TotalCoverageCostObjective(Objective):
     rather than within each cluster.
 
     Args:
-        data (NDArray): (n x d) data array.
-        cluster_centers (NDArray): (k x d) array where each row i is the given 
-            representative for cluster i.
         n_select (int): The *maximum* number of rules to select.
         lambda_val (float): A hyperparameter that controls tradeoff between coverage and overlap.
             Defaults to 1.0.
-        alpha_val (float): A hyperparameter that controls the length penalty. Defaults to 1.0.
+        alpha_val (float): A hyperparameter for tuning the size of the selected rules.
+            Larger values penalize longer rules more heavily. Defaults to 1.0.
+        cluster_centers (NDArray): (k x d) array where each row i is the given 
+                representative for cluster i.
         cluster_cost_method (str): The cluster_cost_method used to compute cluster costs. 
             Currently only "kmeans" or "kmedians" are supported.
+        weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
+        selection_algorithm (str): The selection algorithm to use. Options are
+            'distorted-greedy' and 'lazy-greedy'. Defaults to 'distorted-greedy'.
+        precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
+        output_path (Union[str, Path]): Path to save output data. Defaults to None.
+        pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
     """
     def __init__(
             self,
-            n_select : int,
+            n_select : int = 0,
             alpha_val : float = 0.0,
             lambda_val : float = None,
             cluster_centers : NDArray = None,
-            weights : NDArray = None,
             cluster_cost_method : str = "kmeans",
-            selection_algorithm : str = "distorted-greedy"
+            weights : NDArray = None,
+            selection_algorithm : str = "distorted-greedy",
+            precomputed_path : Union[str, Path] = None,
+            output_path : Union[str, Path] = None,
+            pack_bits : bool = True
         ):
         super().__init__(
             n_select = n_select,
@@ -213,7 +252,10 @@ class TotalCoverageCostObjective(Objective):
             lambda_val = lambda_val,
             cluster_centers = cluster_centers,
             weights = weights,
-            selection_algorithm = selection_algorithm
+            selection_algorithm = selection_algorithm,
+            precomputed_path = precomputed_path,
+            output_path = output_path,
+            pack_bits = pack_bits,
         )
         if self.cluster_centers is None:
             raise ValueError("Cluster_centers must be provided for this objective.")
@@ -244,13 +286,21 @@ class TotalCoverageCostObjective(Objective):
             
         self.X = X
         self.y = y
+        self.n_samples = X.shape[0]
 
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
-        data_to_cluster_assignment = labels_to_assignment(
+        
+        if self.precomputed:
+            self.data_initialized = True
+            return
+        
+        cluster_membership = labels_to_assignment(
             y, n_labels = self.n_labels
-        )
-        self.cluster_coverage_dict = assignment_to_dict(data_to_cluster_assignment)
+        ).T
+        self.cluster_membership_packed = _pack_bool_matrix(
+            cluster_membership
+        ) if self.pack_bits else cluster_membership
 
         # Compute n x k distance matrix between data points and cluster centers.
         self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
@@ -267,75 +317,66 @@ class TotalCoverageCostObjective(Objective):
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
     ) -> float:
-        """
-        Computes the reward from the selected decisions.
+        if self.pack_bits:
+            total_bits = np.zeros((1, self.rule_coverage_packed.shape[1]), dtype=np.uint8)
+            for _, info in selected_decisions_info.items():
+                total_bits = np.bitwise_or(
+                    total_bits, self.rule_coverage_packed[int(info['coverage_idx']):int(info['coverage_idx']) + 1]
+                )
+            mask = np.unpackbits(total_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+            return float(np.sum(self.weights[mask]))
 
-        Args:
-            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
-                selected decision to its information (points, coverage, length, label).
-        Returns:
-            reward (float): The reward from the selected decisions.
-        """
-        total_coverage = set()
-        for decision, info in selected_decisions_info.items():
-            r_coverage = info['coverage']
-            total_coverage = total_coverage.union(r_coverage)
-        return np.sum(self.weights[list(total_coverage)])
+        total_mask = np.zeros((self.n_samples,), dtype=np.bool_)
+        for _, info in selected_decisions_info.items():
+            total_mask |= self.rule_coverage_packed[int(info['coverage_idx'])]
+        return float(np.sum(self.weights[total_mask]))
 
 
     def cost(
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
-        alpha_val : float = None,
+        alpha_val: float = None,
     ) -> float:
-        """
-        Computes the cost of the selected decisions.
-
-        Args:
-            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each
-                selected decision to its information (points, coverage, length, label).
-        Returns:
-            cost (float): The cost of the selected decisions.
-        """
         if alpha_val is None:
             alpha_val = self.alpha_val
 
         total_cost = 0.0
         length_penalty = 0.0
-        for decision, info in selected_decisions_info.items():
-            r_coverage = info['coverage']
-            r_center = info['label']
-            if r_coverage:  # Only process non-empty sets
-                coverage_array = info['coverage_array']
-                cluster_cost = np.sum(self.data_to_center_distances[coverage_array, r_center])
-                total_cost += cluster_cost
-            length_penalty += alpha_val * info['length']
 
-        return total_cost + length_penalty
+        for _, info in selected_decisions_info.items():
+            ridx = int(info['coverage_idx'])
+            center = int(info['label'])
+
+            if self.pack_bits:
+                bits = np.unpackbits(self.rule_coverage_packed[ridx:ridx + 1], axis=-1)[0][: self.n_samples]
+                idxs = np.flatnonzero(bits)
+            else:
+                idxs = np.flatnonzero(self.rule_coverage_packed[ridx])
+
+            if idxs.size:
+                total_cost += float(np.sum(self.data_to_center_distances[idxs, center]))
+
+            length_penalty += float(alpha_val) * float(info['length'])
+
+        return float(total_cost + length_penalty)
 
 
     def marginal_reward(
         self,
         decision_info: dict[str, any],
-        total_coverage : set[int],
-        total_cluster_coverage : dict[int, set[int]]
+        total_coverage : NDArray,
+        total_cluster_coverage : NDArray,
     ) -> float:
-        """
-        Computes the marginal reward as new coverage from selected decision.
+        ridx = int(decision_info['coverage_idx'])
 
-        Args:
-            decision_info (dict[str, any]): A dictionary containing information about the decision 
-                being considered.
-            cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster label to the 
-                set of data points already covered by selected decisions.
-        Returns:
-            coverage (float): The coverage of the selected decisions.
-        """
-        r_coverage = decision_info['coverage']
-        new_coverage = r_coverage.difference(total_coverage)
-        new_coverage_array = np.fromiter(new_coverage, dtype=np.int64)
-        new_points_weighted = np.sum(self.weights[new_coverage_array])
-        return new_points_weighted
+        if self.pack_bits:
+            rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+            new_bits = np.bitwise_and(rule_bits, np.bitwise_not(total_coverage))
+            new_mask = np.unpackbits(new_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+            return float(np.sum(self.weights[new_mask]))
+
+        new_mask = self.rule_coverage_packed[ridx] & ~total_coverage
+        return float(np.sum(self.weights[new_mask]))
 
 
 ####################################################################################################

@@ -37,7 +37,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 4
+experiment_cpu_count = 8
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -68,8 +68,8 @@ fixed_parameters = {
     'd' : d,
     'n_clusters': 6,
     'max_rules': 12,
-    'min_support': 0.05,
-    'min_confidence': 0.95,
+    'car_min_support': 0.05,
+    'car_min_confidence': 0.95,
     'car_max_rule_length': 4,
     'n_forest': 100,
     'max_depth': None,
@@ -92,7 +92,7 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/climate/alphas/selected_alphas_bug_fix.json") as f:
+with open("data/experiments/climate/alphas/selected_alphas_opt_update.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
@@ -104,15 +104,13 @@ outfile_ref = '_ids'
 ####################################################################################################
 # Load pre-mined rules:
 
+bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
+    min_support = fixed_parameters['car_min_support'],
+    min_confidence = fixed_parameters['car_min_confidence'],
     max_length = fixed_parameters['car_max_rule_length'],
-    binning_method = "entropy",
-    bin_params = {
-        'random_state': fixed_parameters['seed'],
-    }
+    bin_df = bin_df,
 )
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
@@ -174,59 +172,33 @@ shallow_tree_mod = DecisionTreeMod(
 
 
 # IDS:
-rule_comb = len(class_association_rules) * fixed_parameters['n_clusters']
+max_rule_len = max(len(r) for r in class_association_rules)
 ids_lambdas = [
-    1/rule_comb,
-    1/(2 * data.shape[1] * rule_comb),
-    1/(len(data) * (rule_comb**2)),
-    1/(len(data) * (rule_comb**2)),
-    1/fixed_parameters['n_clusters'],
-    1/(data.shape[0] * rule_comb),
-    1/(data.shape[0])
+    1 / len(class_association_rules),
+    1 / (max_rule_len * len(class_association_rules)),
+    1 / (n * (len(class_association_rules) **2)),
+    1 / (n * (len(class_association_rules) **2)),
+    1 / fixed_parameters['n_clusters'],
+    1 / (n * len(class_association_rules)),
+    1 / n,
 ]
 
-# Run an initial fitting to prepare the IDS cache:
-'''
-ids_set = IDS(
-    rules = class_association_rules[:100],
-    rule_labels = class_association_rule_labels[:100],
-    lambdas = ids_lambdas,
-    bin_df = class_association_rule_miner.bin_df
-)
-ids_set.fit(data, kmeans_labels)
-ids_cacher = ids_set.ids_cacher
-ids_lambdas = ids_set.lambdas
 
-ids_module_list = []
-for s in range(fixed_parameters['ids_samples']):
-    ids_params = {
-        tuple(n_rules_list) : {
-            'lambdas' : ids_lambdas,
-            'bin_df' : class_association_rule_miner.bin_df,
-            'ids_cacher' : ids_cacher,
-        }
-    }
-    ids_mod = DecisionSetMod(
-        model = IDS,
-        rules = class_association_rules[:100],
-        rule_labels = class_association_rule_labels[:100],
-        name = f"IDS_{s}"
-    )
-    ids_module_list.append((ids_mod, ids_params))
 '''
-
+# Fit parameters with coordinate ascent:
 max_rule_len = max(len(r) for r in class_association_rules)
 lambda_search_dict = {
-    'l1': (0, 1 / len(class_association_rules)),
-    'l2': (0, 1 / (max_rule_len * len(class_association_rules))),
-    'l3': (0, 1 / (n * (len(class_association_rules) **2))),
-    'l4': (0, 1 / (n * (len(class_association_rules) **2))),
-    'l5': (0, 1 / fixed_parameters['n_clusters']),
-    'l6': (0, 1 / (n * len(class_association_rules))),
-    'l7': (0, 1 / n),
+    'l1': (0, ids_lambdas[0]),
+    'l2': (0, ids_lambdas[1]),
+    'l3': (0, ids_lambdas[2]),
+    'l4': (0, ids_lambdas[3]),
+    'l5': (0, ids_lambdas[4]),
+    'l6': (0, ids_lambdas[5]),
+    'l7': (0, ids_lambdas[6]),
 }
 ternary_search_precision = 0.5 * (1 / (n * len(class_association_rules)**2))
 max_iterations = 10
+
 
 # Run an initial fitting to prepare the IDS cache:
 ids_set = IDS(
@@ -242,14 +214,14 @@ ids_set = IDS(
 ids_set.fit(data, kmeans_labels)
 ids_cacher = ids_set.ids_cacher
 ids_lambdas = ids_set.lambdas
-
+'''
 
 ids_params = {
     (i,) : {
         'n_select' : i,
         'lambdas' : ids_lambdas,
         'bin_df' : class_association_rule_miner.bin_df,
-        'ids_cacher' : ids_cacher,
+        #'ids_cacher' : ids_cacher,
     } for i in n_rules_list
 }
 ids_mod = DecisionSetMod(
@@ -266,88 +238,88 @@ ids_mod = DecisionSetMod(
 objective_dict = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'total-coverage-mistake': {
         'objective_type': 'total-coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost': {
-        'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
+        'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'total-coverage-cost': {
-        'cluster_centers': kmeans_base.centers,
         'objective_type': 'total-coverage-cost',
+        'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'total-coverage-pairwise-distance': {
         'objective_type': 'total-coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
-        'weights': weights,
         'objective_type': 'coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        'weights': weights,
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'total-coverage-mistake-weighted': {
-        'weights': weights,
         'objective_type': 'total-coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'weights': weights,
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
+        'objective_type': 'coverage-cost',
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'total-coverage-cost-weighted': {
+        'objective_type': 'total-coverage-cost',
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
-        'weights': weights,
         'objective_type': 'coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        'weights': weights,
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'total-coverage-pairwise-distance-weighted': {
-        'weights': weights,
         'objective_type': 'total-coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        'weights': weights,
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
 }

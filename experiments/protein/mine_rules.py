@@ -40,9 +40,22 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # reset the seed each time they are given one. 
 seed = 342
 
+def _memoryview_safe(x):
+    """
+    Make array safe to run in a Cython memoryview-based kernel. 
+    As far as I can tell, this sometimes is an issue when data is pickled in 
+    multiprocessing environments.
+    """
+    if not x.flags.writeable:
+        if not x.flags.owndata:
+            x = x.copy(order='C')
+        x.setflags(write=True)
+    return x
+
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_protein()
+data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
@@ -95,7 +108,6 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 
 print("Mined DT rules:", len(decision_tree_rules))
 save_rules(decision_tree_rules, rules_directory + 'decision_tree_rules.pkl')
-
 
 exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
@@ -152,7 +164,7 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
 
-ensemble_rules = decision_tree_rules + exkmc_rules + shallow_rules + forest_rules + class_association_rules
+ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
@@ -166,26 +178,27 @@ save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
 
 objective_dict = {
     'coverage-mistake': {
-        'objective_type': 'coverage-mistake'
-    },
-    'total-coverage-mistake': {
-        'objective_type': 'total-coverage-mistake'
+        'objective_type': 'coverage-mistake',
+        'n_select': fixed_parameters['n_clusters'],
+        'alpha_val': 0.0,
+        'lambda_val': 0.0,
+        'output_path': rules_directory + "mistake_info_dict.pkl.gz"
     },
     'coverage-cost': {
-        'cluster_centers': kmeans_base.centers,
         'objective_type': 'coverage-cost',
-        'cluster_cost_method': 'kmeans'
-    },
-    'total-coverage-cost': {
         'cluster_centers': kmeans_base.centers,
-        'objective_type': 'total-coverage-cost',
-        'cluster_cost_method': 'kmeans'
+        'cluster_cost_method': 'kmeans',
+        'n_select': fixed_parameters['n_clusters'],
+        'alpha_val': 0.0,
+        'lambda_val': 0.0,
+        'output_path': rules_directory + "cost_info_dict.pkl.gz"
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
-    },
-    'total-coverage-pairwise-distance': {
-        'objective_type': 'total-coverage-pairwise-distance',
+        'n_select': fixed_parameters['n_clusters'],
+        'alpha_val': 0.0,
+        'lambda_val': 0.0,
+        'output_path': rules_directory + "pairwise_distance_info_dict.pkl.gz"
     },
 }
 
@@ -197,14 +210,6 @@ for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
     dsclust = DSCluster(
         rules = ensemble_rules,
-        n_select = fixed_parameters['n_clusters'],
-        alpha_val = 0.0,
-        lambda_val = 0.0,
         **objective_dict[objective_type]
     )
     dsclust.fit(data, kmeans_labels)
-    decision_info_dict = dsclust.objective.decision_info_dict
-
-    # Save decision info dict
-    save_path = rules_directory + f'decision_info_dict_{objective_type.replace("-", "_")}.pkl'
-    dsclust.objective.save_decision_info_dict(save_path)

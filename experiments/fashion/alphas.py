@@ -34,7 +34,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 4
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -91,7 +91,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/fashion/rules/'
 
 outfile = 'data/experiments/fashion/alphas/'
-outfile_ref = ''
+outfile_ref = '_opt_update'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -108,86 +108,65 @@ rule_miner_dict = {
 
 objective_dict = {
     'coverage-mistake': {
-        'n_select': fixed_parameters['n_select'],
         'objective_type': 'coverage-mistake',
-        'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
-        )
-    },
-    'total-coverage-mistake': {
         'n_select': fixed_parameters['n_select'],
-        'objective_type': 'total-coverage-mistake',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost': {
+        'objective_type': 'coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
-        'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
-    'total-coverage-cost': {
+    'coverage-pairwise-distance': {
+        'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
-        'cluster_centers': kmeans_base.centers,
-        'objective_type': 'total-coverage-cost',
-        'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
-        'n_select': fixed_parameters['n_select'],
-        'weights': weights,
         'objective_type': 'coverage-mistake',
-        'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
-        )
-    },
-    'total-coverage-mistake-weighted': {
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
-        'objective_type': 'total-coverage-mistake',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
+        'objective_type': 'coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
-    'total-coverage-cost-weighted': {
+    'coverage-pairwise-distance-weighted': {
+        'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
-        'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'total-coverage-cost',
-        'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'lazy-greedy',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
 }
 
 
 # List of alpha values to try for each objective
-n_compare = 2
+n_compare = 25
 objective_alpha_dict = {
     'coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'total-coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),

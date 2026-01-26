@@ -91,7 +91,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/anuran/rules/'
 
 outfile = 'data/experiments/anuran/alphas/'
-outfile_ref = '_bug_fix'
+outfile_ref = '_opt_update'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -108,101 +108,101 @@ rule_miner_dict = {
 
 objective_dict = {
     'coverage-mistake': {
-        'n_select': fixed_parameters['n_select'],
         'objective_type': 'coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        'n_select': fixed_parameters['n_select'],
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'total-coverage-mistake': {
-        'n_select': fixed_parameters['n_select'],
         'objective_type': 'total-coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'n_select': fixed_parameters['n_select'],
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost': {
+        'objective_type': 'coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
-        'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'total-coverage-cost': {
+        'objective_type': 'total-coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
-        'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
-        'n_select': fixed_parameters['n_select'],
         'objective_type': 'coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        'n_select': fixed_parameters['n_select'],
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'total-coverage-pairwise-distance': {
-        'n_select': fixed_parameters['n_select'],
         'objective_type': 'total-coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        'n_select': fixed_parameters['n_select'],
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
+        'objective_type': 'coverage-mistake',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
-        'objective_type': 'coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'total-coverage-mistake-weighted': {
+        'objective_type': 'total-coverage-mistake',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
-        'objective_type': 'total-coverage-mistake',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_mistake.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
+        'objective_type': 'coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'total-coverage-cost-weighted': {
+        'objective_type': 'total-coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
-        'objective_type': 'total-coverage-cost',
         'cluster_cost_method': 'kmeans',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_cost.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
+        'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
-        'objective_type': 'coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_coverage_pairwise_distance.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'total-coverage-pairwise-distance-weighted': {
+        'objective_type': 'total-coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
-        'objective_type': 'total-coverage-pairwise-distance',
-        'decision_info_dict_path': os.path.join(
-            decision_info_dict_directory, 'decision_info_dict_total_coverage_pairwise_distance.pkl'
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
 }
