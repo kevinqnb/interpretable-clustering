@@ -160,7 +160,7 @@ def can_flatten(labels : List[Set[int]]) -> bool:
         (bool): True if the labels can be flattened and False otherwise.
     """
     label_lengths = np.array([len(labs) for labs in labels])
-    return np.all(label_lengths == 1)
+    return np.all(label_lengths <= 1)
 
 
 ####################################################################################################
