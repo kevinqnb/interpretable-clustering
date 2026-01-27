@@ -69,7 +69,7 @@ fixed_parameters = {
     'n_clusters': 6,
     'max_rules': 12,
     'car_min_support': 0.07,
-    'car_min_confidence': 0.95,
+    'car_min_confidence': 0.85,
     'car_max_rule_length': 4,
     'n_forest': 100,
     'max_depth': None,
@@ -92,18 +92,18 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/protein/alphas/selected_alphas_opt_update.json") as f:
+with open("data/experiments/protein/alphas/selected_alphas_pairwise_update.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/protein/rules/'
 
 outfile = 'data/experiments/protein/max_rules/'
-outfile_ref = '_ids'
+outfile_ref = '_pairwise_update'
 
 ####################################################################################################
 # Load pre-mined rules:
-
+'''
 bin_df = pd.read_csv('data/experiments/protein/rules/bin_df.csv')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
@@ -115,6 +115,7 @@ class_association_rule_miner = ClassAssociationRuleMiner(
 class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
     X = data, y = kmeans_base.labels
 )
+'''
 
 
 ensemble_rules = load_rules('data/experiments/protein/rules/ensemble_rules.pkl')
@@ -172,6 +173,7 @@ shallow_tree_mod = DecisionTreeMod(
 
 
 # IDS:
+'''
 max_rule_len = max(len(r) for r in class_association_rules)
 ids_lambdas = [
     1 / len(class_association_rules),
@@ -184,7 +186,7 @@ ids_lambdas = [
 ]
 
 
-'''
+
 # Fit parameters with coordinate ascent:
 max_rule_len = max(len(r) for r in class_association_rules)
 lambda_search_dict = {
@@ -214,7 +216,7 @@ ids_set = IDS(
 ids_set.fit(data, kmeans_labels)
 ids_cacher = ids_set.ids_cacher
 ids_lambdas = ids_set.lambdas
-'''
+
 
 ids_params = {
     (i,) : {
@@ -230,7 +232,7 @@ ids_mod = DecisionSetMod(
     rule_labels = class_association_rule_labels,
     name = f"IDS"
 )
-
+'''
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
@@ -238,12 +240,6 @@ ids_mod = DecisionSetMod(
 objective_dict = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-mistake': {
-        'objective_type': 'total-coverage-mistake',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
@@ -256,35 +252,14 @@ objective_dict = {
             decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
-    'total-coverage-cost': {
-        'objective_type': 'total-coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
-    'total-coverage-pairwise-distance': {
-        'objective_type': 'total-coverage-pairwise-distance',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
     'coverage-mistake-weighted': {
         'objective_type': 'coverage-mistake',
-        'weights': weights,
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-mistake-weighted': {
-        'objective_type': 'total-coverage-mistake',
         'weights': weights,
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
@@ -299,24 +274,8 @@ objective_dict = {
             decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
-    'total-coverage-cost-weighted': {
-        'objective_type': 'total-coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'weights': weights,
-        'cluster_cost_method': 'kmeans',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
     'coverage-pairwise-distance-weighted': {
         'objective_type': 'coverage-pairwise-distance',
-        'weights': weights,
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-pairwise-distance-weighted': {
-        'objective_type': 'total-coverage-pairwise-distance',
         'weights': weights,
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
@@ -353,7 +312,7 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    (ids_mod, ids_params),
+    #(ids_mod, ids_params),
 ] + dscluster_module_list #+ ids_module_list
 
 measurement_fns = [
@@ -371,7 +330,7 @@ measurement_fns = [
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
-    PairwiseDistance(baseline_assignment = kmeans_assignment),
+    #PairwiseDistance(baseline_assignment = kmeans_assignment),
     RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
 

@@ -51,6 +51,7 @@ class CoveragePairwiseDistanceObjective(Objective):
             output_path = output_path,
             pack_bits = pack_bits,
         )
+        self.cluster_sizes = None
 
 
     def reward(
@@ -96,7 +97,7 @@ class CoveragePairwiseDistanceObjective(Objective):
                 total_weighted_coverage += float(np.sum(self.weights[idxs]))
         return total_weighted_coverage
 
-
+    '''
     def cost(
         self,
         selected_decisions_info: dict[Decision, dict[str, any]],
@@ -133,6 +134,88 @@ class CoveragePairwiseDistanceObjective(Objective):
             length_penalty += float(alpha_val) * float(info['length'])
 
         return float(total_pairwise_distance + length_penalty)
+
+    '''
+
+    def cost(
+        self,
+        selected_decisions_info: dict[Decision, dict[str, any]],
+        alpha_val : float = None,
+    ) -> float:
+        """
+        Computes the cost of the selected rules.
+
+        Args:
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping each 
+                selected decision to its information (coverage, cluster coverage, length, label).
+        Returns:
+            cost (float): The cost of the selected rules.
+        """
+        if alpha_val is None:
+            alpha_val = self.alpha_val
+
+        # Cache cluster sizes as *counts of items* per label.
+        # NOTE: when `self.pack_bits` is True, `cluster_membership_packed` is packed (uint8 bytes)
+        # so a plain sum() is NOT a count; we need a popcount.
+        if self.cluster_sizes is None:
+            if self.pack_bits:
+                self.cluster_sizes = np.array(
+                    [
+                        int(
+                            np.unpackbits(self.cluster_membership_packed[l:l+1], axis=-1)[0][: self.n_samples].sum()
+                        )
+                        for l in range(self.n_labels)
+                    ],
+                    dtype=np.int64,
+                )
+            else:
+                self.cluster_sizes = np.sum(self.cluster_membership_packed, axis=1).astype(np.int64, copy=False)
+
+        # Precompute per-sample weight = size of the cluster it was originally assigned to.
+        # `self.y` is a list of singleton sets: [{i}, {j}, ...]
+        y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
+        weight_by_sample = self.cluster_sizes[y_labels]
+
+        total_pairwise = 0
+        length_penalty = 0.0
+
+        if self.pack_bits:
+            # mistakes_bits = rule_bits & ~cluster_bits
+            # weighted_mistakes = sum(weight_by_sample[i] for i in mistakes)
+            for _, info in selected_decisions_info.items():
+                lbl = int(info['label'])
+                ridx = int(info['coverage_idx'])
+
+                rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+
+                assigned_cluster_size = int(self.cluster_sizes[lbl])
+
+                mistakes_bits = np.bitwise_and(rule_bits, np.bitwise_not(cluster_bits))
+                mistakes_mask = np.unpackbits(mistakes_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+
+                weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+
+                total_pairwise += weighted_mistakes * assigned_cluster_size
+                length_penalty += float(alpha_val) * float(info['length'])
+
+            return float(total_pairwise) + float(length_penalty)
+
+        # Unpacked/boolean path
+        for _, info in selected_decisions_info.items():
+            lbl = int(info['label'])
+            ridx = int(info['coverage_idx'])
+
+            rule_mask = self.rule_coverage_packed[ridx]
+            assigned_cluster_size = int(self.cluster_sizes[lbl])
+
+            mistakes_mask = rule_mask & ~self.cluster_membership_packed[lbl]
+            weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+
+            total_pairwise += weighted_mistakes * assigned_cluster_size
+            length_penalty += float(alpha_val) * float(info['length'])
+
+        return float(total_pairwise) + float(length_penalty)
 
 
     def marginal_reward(
@@ -259,25 +342,68 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         if alpha_val is None:
             alpha_val = self.alpha_val
 
-        total_pairwise_distance = 0.0
+        # Cache cluster sizes as *counts of items* per label.
+        # NOTE: when `self.pack_bits` is True, `cluster_membership_packed` is packed (uint8 bytes)
+        # so a plain sum() is NOT a count; we need a popcount.
+        if self.cluster_sizes is None:
+            if self.pack_bits:
+                self.cluster_sizes = np.array(
+                    [
+                        int(
+                            np.unpackbits(self.cluster_membership_packed[l:l+1], axis=-1)[0][: self.n_samples].sum()
+                        )
+                        for l in range(self.n_labels)
+                    ],
+                    dtype=np.int64,
+                )
+            else:
+                self.cluster_sizes = np.sum(self.cluster_membership_packed, axis=1).astype(np.int64, copy=False)
+
+        # Precompute per-sample weight = size of the cluster it was originally assigned to.
+        # `self.y` is a list of singleton sets: [{i}, {j}, ...]
+        y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
+        weight_by_sample = self.cluster_sizes[y_labels]
+
+        total_pairwise = 0
         length_penalty = 0.0
 
-        # NOTE: this objective needs baseline_labels (coverage_labels). We now reconstruct them
-        # on-demand from coverage_idx + self.y.
-        for decision, info in selected_decisions_info.items():
-            #baseline_labels = self.get_coverage_labels(decision)
+        if self.pack_bits:
+            # mistakes_bits = rule_bits & ~cluster_bits
+            # weighted_mistakes = sum(weight_by_sample[i] for i in mistakes)
+            for _, info in selected_decisions_info.items():
+                lbl = int(info['label'])
+                ridx = int(info['coverage_idx'])
+
+                rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+
+                assigned_cluster_size = int(self.cluster_sizes[lbl])
+
+                mistakes_bits = np.bitwise_and(rule_bits, np.bitwise_not(cluster_bits))
+                mistakes_mask = np.unpackbits(mistakes_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+
+                weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+
+                total_pairwise += weighted_mistakes * assigned_cluster_size
+                length_penalty += float(alpha_val) * float(info['length'])
+
+            return float(total_pairwise) + float(length_penalty)
+
+        # Unpacked/boolean path
+        for _, info in selected_decisions_info.items():
+            lbl = int(info['label'])
             ridx = int(info['coverage_idx'])
-            idxs = self._iter_covered_indices_from_rule_idx(ridx)
-            baseline_labels = [self.y[int(i)] for i in idxs]
-            total_pairwise_distance += float(
-                rule_pairwise_difference(
-                    baseline_labels,
-                    percentage=False,
-                )
-            )
+
+            rule_mask = self.rule_coverage_packed[ridx]
+            assigned_cluster_size = int(self.cluster_sizes[lbl])
+
+            mistakes_mask = rule_mask & ~self.cluster_membership_packed[lbl]
+            weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+
+            total_pairwise += weighted_mistakes * assigned_cluster_size
             length_penalty += float(alpha_val) * float(info['length'])
 
-        return float(total_pairwise_distance + length_penalty)
+        return float(total_pairwise) + float(length_penalty)
 
 
     def marginal_reward(

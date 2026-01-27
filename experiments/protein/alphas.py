@@ -66,9 +66,6 @@ fixed_parameters = {
     'n_clusters': 6,
     'max_rules': 12,
     'n_select': 6,
-    'min_support': 0.07,
-    'min_confidence': 0.85,
-    'car_max_rule_length': 4,
     'n_forest': 100,
     'max_depth': None,
     'depth_factor': 0.03,
@@ -92,7 +89,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/protein/rules/'
 
 outfile = 'data/experiments/protein/alphas/'
-outfile_ref = '_opt_update'
+outfile_ref = '_pairwise_update'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -115,24 +112,8 @@ objective_dict = {
             decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
-    'total-coverage-mistake': {
-        'objective_type': 'total-coverage-mistake',
-        'n_select': fixed_parameters['n_select'],
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
     'coverage-cost': {
         'objective_type': 'coverage-cost',
-        'n_select': fixed_parameters['n_select'],
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-cost': {
-        'objective_type': 'total-coverage-cost',
         'n_select': fixed_parameters['n_select'],
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
@@ -147,23 +128,8 @@ objective_dict = {
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
-    'total-coverage-pairwise-distance': {
-        'objective_type': 'total-coverage-pairwise-distance',
-        'n_select': fixed_parameters['n_select'],
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
     'coverage-mistake-weighted': {
         'objective_type': 'coverage-mistake',
-        'n_select': fixed_parameters['n_select'],
-        'weights': weights,
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-mistake-weighted': {
-        'objective_type': 'total-coverage-mistake',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'precomputed_path': os.path.join(
@@ -180,26 +146,8 @@ objective_dict = {
             decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
-    'total-coverage-cost-weighted': {
-        'objective_type': 'total-coverage-cost',
-        'n_select': fixed_parameters['n_select'],
-        'cluster_centers': kmeans_base.centers,
-        'weights': weights,
-        'cluster_cost_method': 'kmeans',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
     'coverage-pairwise-distance-weighted': {
         'objective_type': 'coverage-pairwise-distance',
-        'n_select': fixed_parameters['n_select'],
-        'weights': weights,
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
-    'total-coverage-pairwise-distance-weighted': {
-        'objective_type': 'total-coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'precomputed_path': os.path.join(
@@ -213,17 +161,11 @@ objective_dict = {
 n_compare = 25
 objective_alpha_dict = {
     'coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
-    'total-coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'total-coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
     'coverage-pairwise-distance': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
     'coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
-    'total-coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'total-coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
     'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
-    'total-coverage-pairwise-distance-weighted': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
 }
 
 
@@ -263,7 +205,7 @@ measurement_fns = [
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),
-    PairwiseDistance(baseline_assignment = kmeans_assignment),
+    #PairwiseDistance(baseline_assignment = kmeans_assignment),
     RulePairwiseDistance(baseline_assignment = kmeans_assignment),
 ]
 
