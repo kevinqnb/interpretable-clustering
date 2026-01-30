@@ -80,6 +80,7 @@ kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 kmeans_distances = pairwise_distances(data, kmeans_base.centers)
 furthest_distance = np.max(np.max(kmeans_distances, axis=1))
+largest_cluster_size = np.max(np.bincount(flatten_labels(kmeans_labels)))
 
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
@@ -88,7 +89,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/alphas/'
-outfile_ref = '_pairwise_update'
+outfile_ref = '_pairwise_update_alpha'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -161,10 +162,10 @@ n_compare = 25
 objective_alpha_dict = {
     'coverage-mistake': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-pairwise-distance': np.linspace(0.0, 0.01 * n * 2 * largest_cluster_size, num = n_compare),
     'coverage-mistake-weighted': np.linspace(0.0, 0.5 * fixed_parameters['n'], num = n_compare),
     'coverage-cost-weighted': np.linspace(0.0, 0.5 * furthest_distance * n, num = n_compare),
-    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.1 * math.comb(fixed_parameters['n'], 2), num = n_compare),
+    'coverage-pairwise-distance-weighted': np.linspace(0.0, 0.01 * n * 2 * largest_cluster_size, num = n_compare),
 }
 
 

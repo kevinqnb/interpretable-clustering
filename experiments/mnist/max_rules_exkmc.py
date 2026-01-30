@@ -37,7 +37,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 12
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -99,7 +99,7 @@ fixed_parameters['alpha'] = selected_alpha_dict
 decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
 outfile = 'data/experiments/mnist/max_rules/'
-outfile_ref = '_pairwise_update_dscluster'
+outfile_ref = '_pairwise_update_exkmc'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -118,14 +118,8 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 '''
 
-decision_tree_rules = load_rules('data/experiments/mnist/rules/decision_tree_rules.pkl')
-exkmc_rules = load_rules('data/experiments/mnist/rules/exkmc_rules.pkl')
-forest_rules = load_rules('data/experiments/mnist/rules/forest_rules.pkl')
-class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
+
 ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
-ensemble_rules = ensemble_rules + class_association_rules
-print("total class association rules:", len(class_association_rules))
-print("Total ensemble rules:", len(ensemble_rules))
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -133,23 +127,6 @@ rule_miner_dict = {
 
 ####################################################################################################
 # Comparison Modules:
-
-# Decision Tree
-decision_tree_params = {(i,) : {'max_leaf_nodes' : i, 'random_state' : fixed_parameters['seed']}
-                        for i in n_rules_list}
-decision_tree_mod = DecisionTreeMod(
-    model = DecisionTree,
-    name = 'Decision-Tree'
-)
-
-
-# Explanation Tree
-exp_tree_params = {tuple(n_rules_list) : {'num_clusters' : fixed_parameters['n_clusters']}}
-exp_tree_mod = DecisionTreeMod(
-    model = ExplanationTree,
-    name = 'Exp-Tree'
-)
-
 
 # ExKMC
 exkmc_params = {
@@ -164,106 +141,11 @@ exkmc_mod = DecisionTreeMod(
     name = 'ExKMC'
 )
 
-
-# Shallow Tree
-shallow_tree_params = {
-    tuple(n_rules_list) : {
-        'n_clusters' : fixed_parameters['n_clusters'],
-        'depth_factor' : fixed_parameters['depth_factor'],
-        'kmeans_random_state' : fixed_parameters['seed']
-    } for i in n_rules_list
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-
-####################################################################################################
-# Objectives for Decision Set Clustering:
-
-objective_dict = {
-    'coverage-mistake': {
-        'objective_type': 'coverage-mistake',
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'coverage-cost': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
-    'coverage-pairwise-distance': {
-        'objective_type': 'coverage-pairwise-distance',
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
-    'coverage-mistake-weighted': {
-        'objective_type': 'coverage-mistake',
-        'weights': weights,
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'coverage-cost-weighted': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'weights': weights,
-        'cluster_cost_method': 'kmeans',
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
-    'coverage-pairwise-distance-weighted': {
-        'objective_type': 'coverage-pairwise-distance',
-        'weights': weights,
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
-}
-
-####################################################################################################
-# Decision Set Clustering Modules:
-
-dscluster_module_list = []
-for obj_name, obj_params in objective_dict.items():
-    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        alpha_val = fixed_parameters['alpha'][module_name]
-        dsclust_params = {
-            (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params
-            for i,r in enumerate(n_rules_list)
-        }
-        dsclust_mod = DecisionSetMod(
-            model = DSCluster,
-            rules = rules,
-            name = module_name
-        )
-        dscluster_module_list.append((dsclust_mod, dsclust_params))
-
-
 ####################################################################################################
 
 
 baseline = kmeans_base
-module_list = [
-    (decision_tree_mod, decision_tree_params),
-    #(exp_tree_mod, exp_tree_params),
-    #(exkmc_mod, exkmc_params),
-    (shallow_tree_mod, shallow_tree_params),
-] + dscluster_module_list
+module_list = [(exkmc_mod, exkmc_params)]
 
 measurement_fns = [
     TotalCoverage(),

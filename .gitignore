@@ -161,9 +161,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-
-data/anuran/
-data/mice_protein/
+figures
+data/experiments/*
+data/anuran/*
+data/kddcup/*
 older/
 .python-version
 
@@ -172,19 +173,8 @@ experiments/*.txt
 *.sh
 *.txt
 
-examples/testing.ipynb
-examples/examples_older.ipynb
-data/experiments/fashion/rules/*
-data/experiments/mnist/rules/*
-
-src/intercluster/decision_sets/mining/clique_miner.py
 *.DS_Store
-
 *.c
-
 .nfs*
-
-*bin_df.csv
-
 *.pkl
 *.pkl.gz

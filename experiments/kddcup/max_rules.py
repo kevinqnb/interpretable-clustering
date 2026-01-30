@@ -37,7 +37,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 1
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT 
 # within the parameters of any sub-function or class (except for select 
@@ -59,22 +59,22 @@ def _memoryview_safe(x):
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
 data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
     'n' : n,
     'd' : d,
-    'n_clusters': 5,
-    'max_rules': 11,
+    'n_clusters': 10,
+    'max_rules': 16,
+    'n_select': 10,
     'car_min_support': 0.05,
-    'car_min_confidence': 0.85,
-    'car_max_rule_length': 4,
+    'car_min_confidence': 0.90,
+    'car_max_rule_length': 3,
     'n_forest': 100,
-    'max_depth': None,
+    'max_depth': 10,
     'depth_factor': 0.03,
-    'ids_samples': 10,
     'seed': seed,
 }
 
@@ -92,20 +92,20 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/anuran/alphas/selected_alphas_pairwise_update_alpha.json") as f:
+with open("data/experiments/mnist/alphas/selected_alphas_pairwise_update_distorted_greedy.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
-decision_info_dict_directory = 'data/experiments/anuran/rules/'
+decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
-outfile = 'data/experiments/anuran/max_rules/'
-outfile_ref = '_pairwise_update_alpha'
+outfile = 'data/experiments/mnist/max_rules/'
+outfile_ref = '_pairwise_update_dscluster'
 
 ####################################################################################################
 # Load pre-mined rules:
 
 '''
-bin_df = pd.read_csv('data/experiments/anuran/rules/bin_df.csv')
+bin_df = pd.read_csv('data/experiments/mnist/rules/bin_df.csv')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['car_min_support'],
@@ -118,8 +118,11 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 '''
 
-
-ensemble_rules = load_rules('data/experiments/anuran/rules/ensemble_rules.pkl')
+class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
+ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
+ensemble_rules = ensemble_rules + class_association_rules
+print("total class association rules:", len(class_association_rules))
+print("Total ensemble rules:", len(ensemble_rules))
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -173,73 +176,13 @@ shallow_tree_mod = DecisionTreeMod(
 )
 
 
-# IDS:
-'''
-max_rule_len = max(len(r) for r in class_association_rules)
-ids_lambdas = [
-    1 / len(class_association_rules),
-    1 / (max_rule_len * len(class_association_rules)),
-    1 / (n * (len(class_association_rules) **2)),
-    1 / (n * (len(class_association_rules) **2)),
-    1 / fixed_parameters['n_clusters'],
-    1 / (n * len(class_association_rules)),
-    1 / n,
-]
-
-
-# Fit parameters with coordinate ascent:
-max_rule_len = max(len(r) for r in class_association_rules)
-lambda_search_dict = {
-    'l1': (0, ids_lambdas[0]),
-    'l2': (0, ids_lambdas[1]),
-    'l3': (0, ids_lambdas[2]),
-    'l4': (0, ids_lambdas[3]),
-    'l5': (0, ids_lambdas[4]),
-    'l6': (0, ids_lambdas[5]),
-    'l7': (0, ids_lambdas[6]),
-}
-ternary_search_precision = 0.5 * (1 / (n * len(class_association_rules)**2))
-max_iterations = 10
-
-
-# Run an initial fitting to prepare the IDS cache:
-ids_set = IDS(
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    n_select = None,
-    bin_df = class_association_rule_miner.bin_df,
-    lambdas = ids_lambdas,
-    #lambda_search_dict = lambda_search_dict,
-    #ternary_search_precision = ternary_search_precision,
-    #max_iterations = max_iterations,
-)
-ids_set.fit(data, kmeans_labels)
-ids_cacher = ids_set.ids_cacher
-ids_lambdas = ids_set.lambdas
-
-
-ids_params = {
-    (i,) : {
-        'n_select' : i,
-        'lambdas' : ids_lambdas,
-        'bin_df' : class_association_rule_miner.bin_df,
-        #'ids_cacher' : ids_cacher,
-    } for i in n_rules_list
-}
-ids_mod = DecisionSetMod(
-    model = IDS,
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    name = f"IDS"
-)
-'''
-
 ####################################################################################################
 # Objectives for Decision Set Clustering:
 
 objective_dict = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
@@ -248,12 +191,14 @@ objective_dict = {
         'objective_type': 'coverage-cost',
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
@@ -261,6 +206,7 @@ objective_dict = {
     'coverage-mistake-weighted': {
         'objective_type': 'coverage-mistake',
         'weights': weights,
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
@@ -270,6 +216,7 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'weights': weights,
         'cluster_cost_method': 'kmeans',
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
@@ -277,6 +224,7 @@ objective_dict = {
     'coverage-pairwise-distance-weighted': {
         'objective_type': 'coverage-pairwise-distance',
         'weights': weights,
+        'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
@@ -309,11 +257,10 @@ for obj_name, obj_params in objective_dict.items():
 baseline = kmeans_base
 module_list = [
     (decision_tree_mod, decision_tree_params),
-    (exp_tree_mod, exp_tree_params),
-    (exkmc_mod, exkmc_params),
+    #(exp_tree_mod, exp_tree_params),
+    #(exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    #(ids_mod, ids_params),
-] + dscluster_module_list #+ ids_module_list
+] + dscluster_module_list
 
 measurement_fns = [
     TotalCoverage(),

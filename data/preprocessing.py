@@ -310,6 +310,43 @@ def load_preprocessed_fashion():
 ####################################################################################################
 
 
+
+def load_preprocessed_kddcup(filepath):
+    """
+    Loads a preprocessed KDD Cup dataset. Values are normalized via standard scaling.
+
+    Args:
+        filepath (str): This should be the filepath to the common folder in which the 
+            all of the digits data is contained. I.e. 'data/anuran' or some variation 
+            on this depending upon the current working directory. 
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points. In this case, 
+            the dataset does not have any labels and will return None. 
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    data_filepath = os.path.join(filepath, 'kddcup_data.csv')
+    kddcup = pd.read_csv(data_filepath)
+
+    scaler = StandardScaler()
+
+    scaled_data = scaler.fit_transform(kddcup)
+
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, None, feature_labels, scaler
+
+
+####################################################################################################
+
+
 def load_preprocessed_mnist():
     """
     Loads a preprocessed MNIST digits dataset. Values are normalized to the range 
@@ -428,6 +465,41 @@ def load_preprocessed_spiral(filepath = "data/synthetic"):
     feature_labels = [str(i) for i in range(scaled_data.shape[1])]
 
     return scaled_data, y_spiral_noisy, feature_labels, scaler
+
+
+####################################################################################################
+
+
+def load_preprocessed_aggregation(filepath = "data/synthetic"):
+    """
+    Loads a preprocessed aggregation synthetic dataset. Values are normalized to the range 
+    with standard scaling.
+
+    Args:
+        filepath (str): This should be the filepath to the common folder in which the 
+            all of the synthetic data is contained. I.e. 'data/synthetic'.
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points.
+        
+        feature_labels (List[str]): List of feature names associated 
+            with each of the columns in the scaled data array.
+
+        scaler (Scaler): Sklearn MinMaxScaler, which is handy for returning data to 
+            its original values. 
+    """
+    filename = os.path.join(filepath, 'aggregation.csv')
+    X_aggregation = pd.read_csv(filename, index_col = 0).to_numpy()[:,0:2]
+    y_aggregation = pd.read_csv(filename, index_col = 0).to_numpy()[:,2]
+
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(X_aggregation)
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, y_aggregation, feature_labels, scaler
 
 
 ####################################################################################################

@@ -711,12 +711,9 @@ class RulePairwiseDistance(MeasurementFunction):
             assigned_cluster_size = np.sum(self.baseline_assignment[:,assigned_cluster])
 
             mistakes_mask = data_to_rule_assignment[:,i] & (~self.baseline_assignment[:,assigned_cluster])
-            mistakes_weights = self.weight_by_sample[mistakes_mask]
+            mistake_weights = self.weight_by_sample + assigned_cluster_size
 
-            mistakes = np.sum(mistakes_mask)
-            weighted_mistakes = np.sum(mistakes_weights)
-
-            total_pairwise += mistakes * assigned_cluster_size + weighted_mistakes
+            total_pairwise += int(np.sum(mistake_weights[mistakes_mask]))
 
         return total_pairwise
 

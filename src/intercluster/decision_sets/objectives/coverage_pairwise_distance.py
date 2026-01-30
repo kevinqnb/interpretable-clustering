@@ -174,7 +174,7 @@ class CoveragePairwiseDistanceObjective(Objective):
         # Precompute per-sample weight = size of the cluster it was originally assigned to.
         # `self.y` is a list of singleton sets: [{i}, {j}, ...]
         y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
-        weight_by_sample = self.cluster_sizes[y_labels]
+        weight_by_sample = self.cluster_sizes[y_labels] - 1
 
         total_pairwise = 0
         length_penalty = 0.0
@@ -193,10 +193,9 @@ class CoveragePairwiseDistanceObjective(Objective):
 
                 mistakes_bits = np.bitwise_and(rule_bits, np.bitwise_not(cluster_bits))
                 mistakes_mask = np.unpackbits(mistakes_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+                mistake_weights = weight_by_sample + assigned_cluster_size
 
-                weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
-
-                total_pairwise += weighted_mistakes * assigned_cluster_size
+                total_pairwise += int(np.sum(mistake_weights[mistakes_mask]))
                 length_penalty += float(alpha_val) * float(info['length'])
 
             return float(total_pairwise) + float(length_penalty)
@@ -210,9 +209,9 @@ class CoveragePairwiseDistanceObjective(Objective):
             assigned_cluster_size = int(self.cluster_sizes[lbl])
 
             mistakes_mask = rule_mask & ~self.cluster_membership_packed[lbl]
-            weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+            mistake_weights = weight_by_sample + assigned_cluster_size
 
-            total_pairwise += weighted_mistakes * assigned_cluster_size
+            total_pairwise += int(np.sum(mistake_weights[mistakes_mask]))
             length_penalty += float(alpha_val) * float(info['length'])
 
         return float(total_pairwise) + float(length_penalty)
@@ -362,7 +361,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         # Precompute per-sample weight = size of the cluster it was originally assigned to.
         # `self.y` is a list of singleton sets: [{i}, {j}, ...]
         y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
-        weight_by_sample = self.cluster_sizes[y_labels]
+        weight_by_sample = self.cluster_sizes[y_labels] - 1
 
         total_pairwise = 0
         length_penalty = 0.0
@@ -381,10 +380,9 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
 
                 mistakes_bits = np.bitwise_and(rule_bits, np.bitwise_not(cluster_bits))
                 mistakes_mask = np.unpackbits(mistakes_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
+                mistake_weights = weight_by_sample + assigned_cluster_size
 
-                weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
-
-                total_pairwise += weighted_mistakes * assigned_cluster_size
+                total_pairwise += int(np.sum(mistake_weights[mistakes_mask]))
                 length_penalty += float(alpha_val) * float(info['length'])
 
             return float(total_pairwise) + float(length_penalty)
@@ -398,9 +396,9 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
             assigned_cluster_size = int(self.cluster_sizes[lbl])
 
             mistakes_mask = rule_mask & ~self.cluster_membership_packed[lbl]
-            weighted_mistakes = int(np.sum(weight_by_sample[mistakes_mask]))
+            mistake_weights = weight_by_sample + assigned_cluster_size
 
-            total_pairwise += weighted_mistakes * assigned_cluster_size
+            total_pairwise += int(np.sum(mistake_weights[mistakes_mask]))
             length_penalty += float(alpha_val) * float(info['length'])
 
         return float(total_pairwise) + float(length_penalty)

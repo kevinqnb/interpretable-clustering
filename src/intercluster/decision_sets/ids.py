@@ -134,7 +134,7 @@ class IDS(DecisionSet):
         decision_set = []
         for car in cars:
             car_dict = car.to_dict()
-            print(car_dict)
+            #print(car_dict)
             car_interval_dict = car_dict['antecedent']
             rule_conditions = []
             for interval_dict in car_interval_dict:
@@ -142,8 +142,6 @@ class IDS(DecisionSet):
                 interval = interval_dict['value']
                 # Convert the interval to two Conditions
                 # (one for the lower bound and one for the upper bound)
-                print(feature, interval)
-                print()
                 lower_condition, upper_condition = interval_to_condition(feature, interval)
                 rule_conditions.append(lower_condition)
                 rule_conditions.append(upper_condition)
@@ -185,11 +183,11 @@ class IDS(DecisionSet):
         quant_df = QuantitativeDataFrame(bin_df)
 
         if self.ids_cacher is None:
-            print('Calculating IDS cacher overlaps...')
+            #print('Calculating IDS cacher overlaps...')
             ids_cacher = IDSCacher()
             ids_cacher.calculate_overlap(ids_ruleset, quant_df)
             end = time.time()
-            print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
+            #print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
             self.ids_cacher = ids_cacher
 
         if self.lambdas is None:
@@ -205,7 +203,7 @@ class IDS(DecisionSet):
                 auc = ids.score_auc(quant_df)
                 return auc
 
-            print('Starting coordinate ascent for lambda selection...')
+            #print('Starting coordinate ascent for lambda selection...')
             coord_asc = CoordinateAscent(
                 func=fmax,
                 func_args_ranges=self.lambda_search_dict,
@@ -221,7 +219,7 @@ class IDS(DecisionSet):
             lambdas = self.lambdas
         
 
-        print('Starting IDS selection...')
+        #print('Starting IDS selection...')
 
         ids = IDS_pyids(n_select = self.n_select, algorithm=self.algorithm)
         ids.ids_ruleset = ids_ruleset
@@ -229,10 +227,8 @@ class IDS(DecisionSet):
         ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
         #ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
         end = time.time()
-        print(f"IDS selection finished in {end - start_time:.2f} seconds.")
+        #print(f"IDS selection finished in {end - start_time:.2f} seconds.")
         selected_decision_set = self.ids_to_decision_set(ids.clf.rules)
-        print("IDS marginal contribution scores:")
-        print
         return selected_decision_set
 
     def get_cacher(self) -> IDSCacher:

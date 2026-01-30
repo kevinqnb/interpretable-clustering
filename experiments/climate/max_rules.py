@@ -92,14 +92,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/climate/alphas/selected_alphas_pairwise_update.json") as f:
+with open("data/experiments/climate/alphas/selected_alphas_pairwise_update_alpha.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/max_rules/'
-outfile_ref = '_pairwise_update'
+outfile_ref = '_pairwise_update_alpha'
 
 ####################################################################################################
 # Load pre-mined rules:

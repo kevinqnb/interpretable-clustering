@@ -51,8 +51,8 @@ fixed_parameters = {
     'n_clusters': 10,
     'max_rules': 16,
     'min_support': 0.05,
-    'min_confidence': 0.90,
-    'car_max_rule_length': 3,
+    'min_confidence': 0.6,
+    'car_max_rule_length': 2,
     'n_forest': 100,
     'max_depth': 10,
     'depth_factor': 0.03,
@@ -154,8 +154,9 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
 '''
+class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
 
-ensemble_rules = decision_tree_rules + shallow_rules + forest_rules #+ class_association_rules
+ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
 )
