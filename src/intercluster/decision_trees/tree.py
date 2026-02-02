@@ -11,7 +11,11 @@ from intercluster import (
     get_decision_paths,
     satisfies_path,
     collect_nodes,
-    collect_leaves
+    collect_leaves,
+    collect_leaf_rules,
+    satisfies_rule,
+    Rule,
+    simplified_rule_length,
 )
 from .splitters import Splitter
 from ..node import Node
@@ -336,30 +340,52 @@ class Tree():
         leaves = collect_leaves(self.root)
         return leaves
     
-
+    '''
     def get_weighted_average_depth(self, X : NDArray) -> float:
-        """
-        Finds the weighted average depth of the tree, which is adjusted by the number 
-        data points which fall into each leaf node. 
+        """Weighted average decision-path length after redundancy removal.
 
-        Args:
-            X : Input dataset to predict with. 
-
-        Returns:
-            wad (float): Weighted average depth.
+        For each root->leaf path we build a `Rule` from the internal-node conditions,
+        simplify it (dropping redundant/dead conditions), and use the simplified number
+        of conditions as the path length.
         """
         wad = 0
         total_covers = 0
         decision_paths = get_decision_paths(self.root)
         for path in decision_paths:
-             satisfies = satisfies_path(X, path)
-             total_covers += len(satisfies)
-             if len(satisfies) != 0:
-                wad += len(satisfies) * (len(path) - 1) # not including leaf node
+            satisfies = satisfies_path(X, path)
+            total_covers += len(satisfies)
+            if len(satisfies) != 0:
+                # Internal nodes only (exclude leaf)
+                conditions = [node.condition for node in path if getattr(node, "type", None) != 'leaf']
+                depth_eff = len(simplify_rule(Rule(conditions)))
+                wad += len(satisfies) * depth_eff
 
-        return wad/total_covers
+        if total_covers == 0:
+            return np.nan
+        return wad / total_covers
+    '''
+
+    
+    def get_weighted_average_depth(self, X : NDArray) -> float:
+        """
+        Finds the weighted average length of the rules (after redundancy removal),
+        weighted by the number of data points covered by each rule.
+        """
+        wad = 0
+        total_covers = 0
+        tree_rules = collect_leaf_rules(self.root)
+        for rule in tree_rules:
+            r_covers = satisfies_rule(X, rule)
+            total_covers += len(r_covers)
+            if len(r_covers) != 0:
+                wad += len(r_covers) * simplified_rule_length(rule)
+
+        if total_covers == 0:
+            return np.nan
+        return wad / total_covers
     
 
+    '''
     def get_sum_of_depths(self) -> float:
         """
         Finds the sum of depths of all leaves in the tree.
@@ -375,6 +401,22 @@ class Tree():
         for path in decision_paths:
             sum_depths += (len(path) - 1) # not including leaf node
         return sum_depths
+    '''
+
+    def get_sum_of_depths(self) -> float:
+        """
+        Finds the sum of the lengths of the rules.
+
+        NOTE: If the decision set has been selectd this will automatically use the 
+            selectd decision set.
+
+        Args:
+
+        Returns:
+            sum (float): Sum of lengths of all rules.
+        """
+        tree_rules = collect_leaf_rules(self.root)
+        return sum([simplified_rule_length(rule) for rule in tree_rules])
     
 
     def get_data_to_rules_assignment(self, X : NDArray) -> NDArray:
@@ -407,4 +449,3 @@ class Tree():
         leaves = self.get_leaves()
         labels = [{leaf.label} for leaf in leaves]
         return labels
-            

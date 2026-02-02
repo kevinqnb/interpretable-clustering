@@ -64,18 +64,19 @@ data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
-    'n' : n,
-    'd' : d,
+    'n': n,
+    'd': d,
     'n_clusters': 6,
+    'n_select': 6,
     'max_rules': 12,
-    'car_min_support': 0.07,
-    'car_min_confidence': 0.85,
-    'car_max_rule_length': 4,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': None,
-    'depth_factor': 0.03,
-    'ids_samples': 1,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.05,
+    'car_min_confidence': 0.85,
+    'car_max_rule_length': 3, # (really means 6 by pyfim convention)
+    'filter_confidence': 0.85,
+    'seed': seed
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -92,14 +93,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/protein/alphas/selected_alphas_pairwise_update_alpha.json") as f:
+with open("data/experiments/protein/alphas/selected_alphas_rule_length.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/protein/rules/'
 
 outfile = 'data/experiments/protein/max_rules/'
-outfile_ref = '_pairwise_update_alpha'
+outfile_ref = '_rule_length'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -162,7 +163,7 @@ exkmc_mod = DecisionTreeMod(
 shallow_tree_params = {
     tuple(n_rules_list) : {
         'n_clusters' : fixed_parameters['n_clusters'],
-        'depth_factor' : fixed_parameters['depth_factor'],
+        'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
         'kmeans_random_state' : fixed_parameters['seed']
     } for i in n_rules_list
 }

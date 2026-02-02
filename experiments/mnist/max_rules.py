@@ -64,18 +64,19 @@ data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
-    'n' : n,
-    'd' : d,
+    'n': n,
+    'd': d,
     'n_clusters': 10,
-    'max_rules': 16,
     'n_select': 10,
-    'car_min_support': 0.05,
-    'car_min_confidence': 0.90,
-    'car_max_rule_length': 3,
+    'max_rules': 16,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': 10,
-    'depth_factor': 0.03,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.65,
+    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
+    'filter_confidence': 0.65,
+    'seed': seed
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -92,14 +93,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/mnist/alphas/selected_alphas_pairwise_update_distorted_greedy.json") as f:
+with open("data/experiments/mnist/alphas/selected_alphas_rule_length.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
 outfile = 'data/experiments/mnist/max_rules/'
-outfile_ref = '_pairwise_update_dscluster'
+outfile_ref = '_rule_length'
 
 ####################################################################################################
 # Load pre-mined rules:
@@ -118,15 +119,8 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 '''
 
-decision_tree_rules = load_rules('data/experiments/mnist/rules/decision_tree_rules.pkl')
-exkmc_rules = load_rules('data/experiments/mnist/rules/exkmc_rules.pkl')
-forest_rules = load_rules('data/experiments/mnist/rules/forest_rules.pkl')
-class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
-ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
-ensemble_rules = ensemble_rules + class_association_rules
-print("total class association rules:", len(class_association_rules))
-print("Total ensemble rules:", len(ensemble_rules))
 
+ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
 }
@@ -169,7 +163,7 @@ exkmc_mod = DecisionTreeMod(
 shallow_tree_params = {
     tuple(n_rules_list) : {
         'n_clusters' : fixed_parameters['n_clusters'],
-        'depth_factor' : fixed_parameters['depth_factor'],
+        'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
         'kmeans_random_state' : fixed_parameters['seed']
     } for i in n_rules_list
 }

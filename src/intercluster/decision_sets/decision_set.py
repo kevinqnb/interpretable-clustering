@@ -7,6 +7,8 @@ from intercluster import (
     satisfies_rule,
     labels_to_assignment,
     unique_labels,
+    simplify_decision,
+    simplified_rule_length
 )
 
 
@@ -64,21 +66,15 @@ class DecisionSet:
     
 
     def trim(self) -> set[Decision]:
-        """
-        Trims the rules in the decision set to remove any redundant conditions.
-        """
+        """Simplify rules in the decision set (remove degenerate + redundant conditions)."""
         if self.decision_set is None:
             raise ValueError('Decision set has not been fitted yet.')
 
-        trimmed_set = set()
+        trimmed_set: set[Decision] = set()
         for decision in self.decision_set:
-            trimmed_conditions = []
-            for j, condition in enumerate(decision.rule.conditions):
-                if np.abs(condition.threshold) < np.inf:
-                    trimmed_conditions.append(condition)
-            if len(trimmed_conditions) > 0:
-                trimmed_rule = Rule(trimmed_conditions)
-                trimmed_set.add(Decision(trimmed_rule, decision.label))
+            trimmed_decision = simplify_decision(decision)
+            if len(trimmed_decision.rule) > 0:
+                trimmed_set.add(trimmed_decision)
         return trimmed_set
     
 
@@ -225,30 +221,20 @@ class DecisionSet:
 
     def get_weighted_average_rule_length(self, X : NDArray) -> float:
         """
-        Finds the weighted average length of the rules, which is adjusted by the number 
-        data points which fall into each rule. 
-
-        NOTE: If the decision set has been selectd this will automatically use the 
-            selectd decision set.
-
-        Args:
-            X : Input dataset to predict with. 
-
-        Returns:
-            wad (float): Weighted average depth.
+        Finds the weighted average length of the rules (after redundancy removal),
+        weighted by the number of data points covered by each rule.
         """
         wad = 0
         total_covers = 0
-        for i, decision in enumerate(self.decision_set):
+        for decision in self.decision_set:
             r_covers = satisfies_rule(X, decision.rule)
             total_covers += len(r_covers)
             if len(r_covers) != 0:
-                wad += len(r_covers) * (len(decision.rule))
-            
+                wad += len(r_covers) * simplified_rule_length(decision.rule)
+
         if total_covers == 0:
             return np.nan
-        else:
-            return wad/total_covers
+        return wad / total_covers
         
     
     def get_sum_of_rule_lengths(self) -> float:
@@ -263,4 +249,4 @@ class DecisionSet:
         Returns:
             sum (float): Sum of lengths of all rules.
         """
-        return sum([len(decision.rule) for decision in self.decision_set])
+        return sum([simplified_rule_length(decision.rule) for decision in self.decision_set])

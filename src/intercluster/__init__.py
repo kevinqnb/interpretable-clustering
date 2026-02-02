@@ -7,6 +7,9 @@ from .rules import (
     load_rules,
     save_decisions,
     load_decisions,
+    simplify_rule,
+    simplify_decision,
+    simplified_rule_length
 )
 
 from .measurement_utils import (

@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from numpy.typing import NDArray
-from typing import Callable, List
+from typing import Callable, List, Optional, Dict, Tuple
 from dataclasses import dataclass
 
 # Added for simple persistence of rules/decisions
@@ -398,7 +398,154 @@ class LinearCondition(Condition):
 
 
 ####################################################################################################
+# Redundancy removal:
+####################################################################################################
 
+def _is_finite_threshold(cond: "Condition") -> bool:
+    """Best-effort check for whether a condition is a degenerate 'no-op'.
+
+    Currently, only `LinearCondition` is supported (it has a `threshold` attribute).
+    For unknown condition types, we assume it is meaningful.
+    """
+    thr = getattr(cond, "threshold", None)
+    if thr is None:
+        return True
+    try:
+        return bool(np.isfinite(thr))
+    except Exception:
+        return True
+    
+
+def get_bound_type_and_value(c: LinearCondition) -> Optional[Tuple[str, float]]:
+    w = float(c.weights.reshape(-1)[0])
+    if w == 0.0:
+        return None
+    f = int(c.features.reshape(-1)[0])
+    t = float(c.threshold)
+
+    # direction == -1: w*x <= t
+    if c.direction == -1:
+        if w > 0:
+            return ("ub", t / w)
+        else:
+            # w < 0: x >= t/w  (since dividing flips inequality)
+            return ("lb", t / w)
+
+    # direction == 1: w*x > t
+    if w > 0:
+        return ("lb", t / w)
+    else:
+        return ("ub", t / w)
+
+
+def simplify_rule(
+    rule: Rule,
+    *,
+    drop_nonfinite_thresholds: bool = True,
+    deduplicate: bool = True,
+    simplify_axis_aligned_linear: bool = True,
+) -> Rule:
+    """Return a simplified rule with redundant conditions removed.
+
+    This is intended as a *safe* simplifier:
+    - Always preserves semantics for the supported cases.
+    - Only attempts redundancy removal for axis-aligned `LinearCondition` constraints.
+
+    Notes on axis-aligned logic:
+        We treat `LinearCondition` with `len(features)==1` and `weights` length 1 as a
+        single-feature constraint of the form:
+
+            direction == -1:  (w * x_f) <= threshold
+            direction ==  1:  (w * x_f) >  threshold
+
+        When w != 0, this can be rewritten as a bound on x_f. We use that bound to
+        detect dominated constraints and keep only the tightest constraint in each
+        direction.
+    """
+    conditions: List[Condition] = list(rule.conditions)
+
+    if drop_nonfinite_thresholds:
+        conditions = [c for c in conditions if _is_finite_threshold(c)]
+
+    if deduplicate:
+        # Preserve order while deduplicating (stable).
+        seen = set()
+        uniq: List[Condition] = []
+        for c in conditions:
+            if c not in seen:
+                uniq.append(c)
+                seen.add(c)
+        conditions = uniq
+
+    if simplify_axis_aligned_linear:
+        axis: List[LinearCondition] = []
+        other: List[Condition] = []
+        for c in conditions:
+            if isinstance(c, LinearCondition):
+                try:
+                    if c.features.size == 1 and c.weights.size == 1:
+                        axis.append(c)
+                        continue
+                except Exception:
+                    pass
+            other.append(c)
+
+        # Pick tightest constraints per feature and constraint type.
+        # Key includes whether it's an upper or lower bound on x_f.
+        best: Dict[Tuple[int, str], LinearCondition] = {}
+
+        # Record the best (tightest) constraint for each (feature, bound-type)
+        for c in axis:
+            bt = get_bound_type_and_value(c)
+            if bt is None:
+                # Can't reason about it; keep it verbatim.
+                other.append(c)
+                continue
+
+            btype, bval = bt
+            f = int(c.features.reshape(-1)[0])
+            key = (f, btype)
+            if key not in best:
+                best[key] = c
+            else:
+                prev = best[key]
+                prev_bt = get_bound_type_and_value(prev)
+                if prev_bt is None:
+                    best[key] = c
+                else:
+                    _, prev_val = prev_bt
+                    # Tightness: upper bound => smaller is tighter; lower bound => larger is tighter
+                    if (btype == "ub" and bval < prev_val) or (btype == "lb" and bval > prev_val):
+                        best[key] = c
+
+        # Keep the best axis-aligned constraints, plus all unhandled conditions.
+        conditions = other + list(best.values())
+
+        if deduplicate:
+            seen = set()
+            uniq = []
+            for c in conditions:
+                if c not in seen:
+                    uniq.append(c)
+                    seen.add(c)
+            conditions = uniq
+
+    return Rule(list(conditions))
+
+
+def simplify_decision(decision: Decision, **kwargs) -> Decision:
+    """Return a copy of `decision` with a simplified `rule`."""
+    return Decision(simplify_rule(decision.rule, **kwargs), decision.label)
+
+
+def simplified_rule_length(rule: Rule, **kwargs) -> int:
+    """Convenience: length of rule after simplification."""
+    return len(simplify_rule(rule, **kwargs))
+
+
+####################################################################################################
+# Saving and loading rules/decisions
+####################################################################################################
 
 def save_rules(rules: Sequence[Rule], path: Union[str, Path], protocol: int = pickle.HIGHEST_PROTOCOL) -> None:
     """Save a list/sequence of :class:`Rule` objects to disk using pickle.

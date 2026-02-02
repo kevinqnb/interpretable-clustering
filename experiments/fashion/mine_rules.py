@@ -46,18 +46,19 @@ data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 n,d = data.shape
 
 fixed_parameters = {
-    'n' : n,
-    'd' : d,
+    'n': n,
+    'd': d,
     'n_clusters': 10,
+    'n_select': 10,
     'max_rules': 16,
-    'min_support': 0.05,
-    'min_confidence': 0.6,
-    'car_max_rule_length': 2,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': 10,
-    'depth_factor': 0.03,
-    'ids_samples': 1,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.75,
+    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
+    'filter_confidence': 0.75,
+    'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
@@ -77,17 +78,19 @@ os.makedirs(rules_directory, exist_ok = True)
 ####################################################################################################
 # Create bin_df for rule mining:
 
-#bin_df = entropy_bin(
-#    data, kmeans_labels, random_state = fixed_parameters['seed']
-#)
+bin_df_path = rules_directory + 'bin_df.csv'
+if os.path.exists(bin_df_path):
+    bin_df = pd.read_csv(bin_df_path)
+else:
+    bin_df = entropy_bin(
+        data, kmeans_labels, random_state = fixed_parameters['seed']
+    )
 
-#bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
-
-bin_df = pd.read_csv('data/experiments/fashion/rules/bin_df.csv')
+    bin_df.to_csv(rules_directory + 'bin_df.csv', index = False)
 
 ####################################################################################################
 # Mine for rules:
-
+'''
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = fixed_parameters['seed']),
 )
@@ -116,7 +119,7 @@ save_rules(exkmc_rules, rules_directory + 'exkmc_rules.pkl')
 shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
         n_clusters = fixed_parameters['n_clusters'],
-        depth_factor = fixed_parameters['depth_factor'],
+        depth_factor = fixed_parameters['shallow_tree_depth_factor'],
         kmeans_random_state = fixed_parameters['seed']
     )
 )
@@ -131,7 +134,7 @@ save_rules(shallow_rules, rules_directory + 'shallow_rules.pkl')
 forest_rule_miner = RandomForestMiner(
     forest_params = {
         'n_estimators': fixed_parameters['n_forest'],
-        'max_depth': fixed_parameters['max_depth'],
+        'max_depth': fixed_parameters['forest_max_depth'],
         'random_state': fixed_parameters['seed']
     }
 )
@@ -140,10 +143,10 @@ forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.label
 print("Mined Forest rules:", len(forest_rules))
 save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
 
-'''
+
 class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
+    min_support = fixed_parameters['car_min_support'],
+    min_confidence = fixed_parameters['car_min_confidence'],
     max_length = fixed_parameters['car_max_rule_length'],
     bin_df = bin_df
 )
@@ -153,13 +156,25 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
+#class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
+
+ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
+ensemble_rules = filter_rules(
+    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
+)
 '''
+
+decision_tree_rules = load_rules('data/experiments/mnist/rules/decision_tree_rules.pkl')
+exkmc_rules = load_rules('data/experiments/mnist/rules/exkmc_rules.pkl')
+shallow_rules = load_rules('data/experiments/mnist/rules/shallow_rules.pkl')
+forest_rules = load_rules('data/experiments/mnist/rules/forest_rules.pkl')
 class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
+    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
+
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
 save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')

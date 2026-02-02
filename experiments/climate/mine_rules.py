@@ -49,15 +49,16 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
+    'n_select': 6,
     'max_rules': 12,
-    'min_support': 0.05,
-    'min_confidence': 0.85,
-    'car_max_rule_length': 4,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': None,
-    'depth_factor': 0.03,
-    'ids_samples': 10,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.85,
+    'car_max_rule_length': 3, # (really means 6 by pyfim convention)
+    'filter_confidence': 0.85,
+    'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
@@ -114,7 +115,7 @@ save_rules(exkmc_rules, rules_directory + 'exkmc_rules.pkl')
 shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
         n_clusters = fixed_parameters['n_clusters'],
-        depth_factor = fixed_parameters['depth_factor'],
+        depth_factor = fixed_parameters['shallow_tree_depth_factor'],
         kmeans_random_state = fixed_parameters['seed']
     )
 )
@@ -129,7 +130,7 @@ save_rules(shallow_rules, rules_directory + 'shallow_rules.pkl')
 forest_rule_miner = RandomForestMiner(
     forest_params = {
         'n_estimators': fixed_parameters['n_forest'],
-        'max_depth': fixed_parameters['max_depth'],
+        'max_depth': fixed_parameters['forest_max_depth'],
         'random_state': fixed_parameters['seed']
     }
 )
@@ -139,8 +140,8 @@ print("Mined Forest rules:", len(forest_rules))
 save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['min_support'],
-    min_confidence = fixed_parameters['min_confidence'],
+    min_support = fixed_parameters['car_min_support'],
+    min_confidence = fixed_parameters['car_min_confidence'],
     max_length = fixed_parameters['car_max_rule_length'],
     bin_df = bin_df
 )
@@ -153,7 +154,7 @@ save_rules(class_association_rules, rules_directory + 'class_association_rules.p
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['min_confidence']
+    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))

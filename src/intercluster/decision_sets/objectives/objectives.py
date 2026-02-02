@@ -1,7 +1,11 @@
 import heapq
+from itertools import combinations
 import numpy as np
 from numpy.typing import NDArray
-from intercluster import Decision
+from intercluster import (
+    Decision,
+    simplified_rule_length
+)
 from intercluster.utils import (
     labels_to_assignment,
     unique_labels,
@@ -226,7 +230,8 @@ class Objective:
             self.decision_info_dict = {}
             for decision in decision_set:
                 ridx = int(rule_to_idx[decision.rule])
-                rule_length = len(decision.rule)
+                #rule_length = len(decision.rule)
+                rule_length = simplified_rule_length(decision.rule)
 
                 # Compute cost_alpha_zero using a minimal info dict understandable by subclasses.
                 # Subclasses that require coverage should use coverage_idx + rule_coverage_packed.

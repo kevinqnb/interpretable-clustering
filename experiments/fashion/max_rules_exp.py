@@ -64,18 +64,19 @@ data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
-    'n' : n,
-    'd' : d,
+    'n': n,
+    'd': d,
     'n_clusters': 10,
-    'max_rules': 16,
     'n_select': 10,
-    'car_min_support': 0.05,
-    'car_min_confidence': 0.90,
-    'car_max_rule_length': 3,
+    'max_rules': 16,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': 10,
-    'depth_factor': 0.03,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.75,
+    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
+    'filter_confidence': 0.75,
+    'seed': seed
 }
 
 n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_rules'] + 1))
@@ -92,14 +93,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/fashion/alphas/selected_alphas_pairwise_update_distorted_greedy.json") as f:
+with open("data/experiments/fashion/alphas/selected_alphas_rule_length.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/fashion/rules/'
 
 outfile = 'data/experiments/fashion/max_rules/'
-outfile_ref = '_pairwise_update_exp'
+outfile_ref = '_rule_length_exp'
 
 ####################################################################################################
 # Load pre-mined rules:

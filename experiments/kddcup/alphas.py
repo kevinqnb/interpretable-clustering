@@ -61,15 +61,19 @@ data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
-    'n' : n,
-    'd' : d,
-    'n_clusters': 10,
-    'max_rules': 16,
-    'n_select': 10,
+    'n': n,
+    'd': d,
+    'n_clusters': 20,
+    'n_select': 20,
+    'max_rules': 26,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': 10,
-    'depth_factor': 0.03,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.65,
+    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
+    'filter_confidence': 0.65,
+    'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
@@ -86,15 +90,15 @@ largest_cluster_size = np.max(np.bincount(flatten_labels(kmeans_labels)))
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-decision_info_dict_directory = 'data/experiments/mnist/rules/'
+decision_info_dict_directory = 'data/experiments/kddcup/rules/'
 
-outfile = 'data/experiments/mnist/alphas/'
-outfile_ref = '_pairwise_update_alpha'
+outfile = 'data/experiments/kddcup/alphas/'
+outfile_ref = '_filter'
 
 ####################################################################################################
 # Load pre-mined rules:
 
-ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
+ensemble_rules = load_rules('data/experiments/kddcup/rules/ensemble_rules.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),

@@ -1,8 +1,9 @@
 import json
 
 max_rules_dir = "data/experiments/mnist/max_rules/"
-main_ref = "_pairwise_update_dscluster"
-combine_refs = ["_pairwise_update_exkmc"]
+main_ref = "_filter_dscluster"
+combine_refs = ["_filter_exkmc"]
+out_ref = "_filter"
 
 # Load main experiment dict
 fname = max_rules_dir + "exp" + main_ref + ".json"
@@ -22,8 +23,8 @@ for ref in combine_refs:
         else:
             main_experiment_dict['modules'][key] = combine_experiment_dict['modules'][key]
 
-# Save merged experiment dict
-out_ref = "_pairwise_update"
-output_fname = max_rules_dir + "exp" + out_ref + "_combined.json"
+
+# Save combined experiment dict
+output_fname = max_rules_dir + "exp" + out_ref + ".json"
 with open(output_fname, 'w') as f:
     json.dump(main_experiment_dict, f, indent=4)

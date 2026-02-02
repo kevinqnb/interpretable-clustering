@@ -64,12 +64,16 @@ fixed_parameters = {
     'n' : n,
     'd' : d,
     'n_clusters': 6,
-    'max_rules': 12,
     'n_select': 6,
+    'max_rules': 12,
+    'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
-    'max_depth': None,
-    'depth_factor': 0.03,
-    'seed': seed,
+    'forest_max_depth': 6,
+    'car_min_support': 0.025,
+    'car_min_confidence': 0.85,
+    'car_max_rule_length': 3, # (really means 6 by pyfim convention)
+    'filter_confidence': 0.85,
+    'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
@@ -89,7 +93,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/alphas/'
-outfile_ref = '_pairwise_update_alpha'
+outfile_ref = '_rule_length'
 
 ####################################################################################################
 # Load pre-mined rules:
