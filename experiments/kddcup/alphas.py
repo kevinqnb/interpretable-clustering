@@ -56,7 +56,7 @@ def _memoryview_safe(x):
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+data, data_labels, feature_labels, scaler = load_preprocessed_kddcup("data/kddcup")
 data = _memoryview_safe(data)
 n,d = data.shape
 
@@ -70,9 +70,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.65,
+    'car_min_confidence': 0.5,
     'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': 0.65,
+    'filter_confidence': 0.5,
     'seed': seed
 }
 
@@ -93,12 +93,12 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/kddcup/rules/'
 
 outfile = 'data/experiments/kddcup/alphas/'
-outfile_ref = '_filter'
+outfile_ref = '_rule_length2'
 
 ####################################################################################################
 # Load pre-mined rules:
 
-ensemble_rules = load_rules('data/experiments/kddcup/rules/ensemble_rules.pkl')
+ensemble_rules = load_rules('data/experiments/kddcup/rules/ensemble_rules2.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -114,7 +114,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
+            decision_info_dict_directory, 'mistake_info_dict2.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -124,7 +124,7 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
+            decision_info_dict_directory, 'cost_info_dict2.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
@@ -132,7 +132,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
+            decision_info_dict_directory, 'pairwise_distance_info_dict2.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
@@ -141,7 +141,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
+            decision_info_dict_directory, 'mistake_info_dict2.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
@@ -152,7 +152,7 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
+            decision_info_dict_directory, 'cost_info_dict2.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
@@ -161,7 +161,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
+            decision_info_dict_directory, 'pairwise_distance_info_dict2.pkl.gz'
         )
     },
 }

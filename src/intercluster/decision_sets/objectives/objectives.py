@@ -414,6 +414,7 @@ class Objective:
             ratios.append(max_rule_ratio)
             if second_max_rule_ratio > second_max_ratio:
                 second_max_ratio = second_max_rule_ratio
+
                     
         ratios = [r for r in ratios if r >= second_max_ratio]
         if second_max_ratio == 0.0:

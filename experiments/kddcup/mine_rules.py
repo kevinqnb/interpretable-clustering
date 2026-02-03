@@ -55,9 +55,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.65,
+    'car_min_confidence': 0.85,
     'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': 0.65,
+    'filter_confidence': 0.85,
     'seed': seed
 }
 
@@ -102,7 +102,7 @@ decision_tree_rules, decision_tree_rule_labels = decision_tree_rule_miner.fit(
 )
 
 print("Mined DT rules:", len(decision_tree_rules))
-save_rules(decision_tree_rules, rules_directory + 'decision_tree_rules.pkl')
+save_rules(decision_tree_rules, rules_directory + 'decision_tree_rules2.pkl')
 
 exkmc_rule_miner = TreeMiner(
     tree = ExkmcTree(
@@ -117,7 +117,7 @@ exkmc_rules, exkmc_rule_labels = exkmc_rule_miner.fit(
 )
 
 print("Mined ExKMC rules:", len(exkmc_rules))
-save_rules(exkmc_rules, rules_directory + 'exkmc_rules.pkl')
+save_rules(exkmc_rules, rules_directory + 'exkmc_rules2.pkl')
 
 shallow_tree_miner = TreeMiner(
     tree = ShallowTree(
@@ -131,7 +131,7 @@ shallow_rules, shallow_rule_labels = shallow_tree_miner.fit(
 )
 
 print("Mined Shallow rules:", len(shallow_rules))
-save_rules(shallow_rules, rules_directory + 'shallow_rules.pkl')
+save_rules(shallow_rules, rules_directory + 'shallow_rules2.pkl')
 
 
 forest_rule_miner = RandomForestMiner(
@@ -144,7 +144,7 @@ forest_rule_miner = RandomForestMiner(
 forest_rules, forest_rule_labels = forest_rule_miner.fit(data, kmeans_base.labels)
 
 print("Mined Forest rules:", len(forest_rules))
-save_rules(forest_rules, rules_directory + 'forest_rules.pkl')
+save_rules(forest_rules, rules_directory + 'forest_rules2.pkl')
 
 class_association_rule_miner = ClassAssociationRuleMiner(
     min_support = fixed_parameters['car_min_support'],
@@ -157,7 +157,7 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 )
 
 print("Mined CAR rules:", len(class_association_rules))
-save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
+save_rules(class_association_rules, rules_directory + 'class_association_rules2.pkl')
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules #+ class_association_rules
 ensemble_rules = filter_rules(
@@ -165,7 +165,7 @@ ensemble_rules = filter_rules(
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
-save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
+save_rules(ensemble_rules, rules_directory + 'ensemble_rules2.pkl')
 
 
 ####################################################################################################
@@ -177,7 +177,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "mistake_info_dict.pkl.gz"
+        'output_path': rules_directory + "mistake_info_dict2.pkl.gz"
     },
     'coverage-cost': {
         'objective_type': 'coverage-cost',
@@ -186,14 +186,14 @@ objective_dict = {
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "cost_info_dict.pkl.gz"
+        'output_path': rules_directory + "cost_info_dict2.pkl.gz"
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "pairwise_distance_info_dict.pkl.gz"
+        'output_path': rules_directory + "pairwise_distance_info_dict2.pkl.gz"
     },
 }
 

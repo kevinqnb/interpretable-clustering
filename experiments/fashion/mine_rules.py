@@ -156,7 +156,7 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
-#class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
+#class_association_rules = load_rules('data/experiments/fashion/rules/class_association_rules.pkl')
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
@@ -164,11 +164,11 @@ ensemble_rules = filter_rules(
 )
 '''
 
-decision_tree_rules = load_rules('data/experiments/mnist/rules/decision_tree_rules.pkl')
-exkmc_rules = load_rules('data/experiments/mnist/rules/exkmc_rules.pkl')
-shallow_rules = load_rules('data/experiments/mnist/rules/shallow_rules.pkl')
-forest_rules = load_rules('data/experiments/mnist/rules/forest_rules.pkl')
-class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
+decision_tree_rules = load_rules('data/experiments/fashion/rules/decision_tree_rules2.pkl')
+exkmc_rules = load_rules('data/experiments/fashion/rules/exkmc_rules2.pkl')
+shallow_rules = load_rules('data/experiments/fashion/rules/shallow_rules2.pkl')
+forest_rules = load_rules('data/experiments/fashion/rules/forest_rules2.pkl')
+class_association_rules = load_rules('data/experiments/fashion/rules/class_association_rules2.pkl')
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
@@ -177,7 +177,7 @@ ensemble_rules = filter_rules(
 
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
-save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
+save_rules(ensemble_rules, rules_directory + 'ensemble_rules3.pkl')
 
 
 ####################################################################################################
@@ -189,7 +189,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "mistake_info_dict.pkl.gz"
+        'output_path': rules_directory + "mistake_info_dict3.pkl.gz"
     },
     'coverage-cost': {
         'objective_type': 'coverage-cost',
@@ -198,14 +198,14 @@ objective_dict = {
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "cost_info_dict.pkl.gz"
+        'output_path': rules_directory + "cost_info_dict3.pkl.gz"
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_clusters'],
         'alpha_val': 0.0,
         'lambda_val': 0.0,
-        'output_path': rules_directory + "pairwise_distance_info_dict.pkl.gz"
+        'output_path': rules_directory + "pairwise_distance_info_dict3.pkl.gz"
     },
 }
 

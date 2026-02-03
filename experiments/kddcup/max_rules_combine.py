@@ -1,9 +1,9 @@
 import json
 
-max_rules_dir = "data/experiments/mnist/max_rules/"
-main_ref = "_rule_length_dscluster"
-combine_refs = ["_rule_length_exkmc", "_rule_length_exp"]
-out_ref = "_rule_length"
+max_rules_dir = "data/experiments/kddcup/max_rules/"
+main_ref = "_rule_length2_dscluster"
+combine_refs = ["_rule_length2_exkmc"]
+out_ref = "_rule_length2"
 
 # Load main experiment dict
 fname = max_rules_dir + "exp" + main_ref + ".json"
@@ -23,8 +23,7 @@ for ref in combine_refs:
         else:
             main_experiment_dict['modules'][key] = combine_experiment_dict['modules'][key]
 
-
-# Save combined experiment dict
+# Save merged experiment dict
 output_fname = max_rules_dir + "exp" + out_ref + ".json"
 with open(output_fname, 'w') as f:
     json.dump(main_experiment_dict, f, indent=4)

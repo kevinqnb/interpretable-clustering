@@ -1,9 +1,9 @@
 import json
 
 max_rules_dir = "data/experiments/fashion/max_rules/"
-main_ref = "_filter_dscluster"
-combine_refs = ["_filter_exkmc"]
-out_ref = "_filter"
+main_ref = "_rule_length3_dscluster"
+combine_refs = ["_rule_length3_exkmc"]
+out_ref = "_rule_length3"
 
 # Load main experiment dict
 fname = max_rules_dir + "exp" + main_ref + ".json"

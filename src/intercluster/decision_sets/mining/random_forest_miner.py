@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from intercluster import Node, collect_node_rules
+from intercluster import Node, collect_node_rules, collect_leaf_rules
 from intercluster.rules import Rule
 from intercluster.decision_trees import DecisionTree
 from intercluster.utils import can_flatten, flatten_labels
@@ -13,6 +13,8 @@ class RandomForestMiner(RuleMiner):
 
     Args:
         forest_params (dict, optional): Parameters for the RandomForestClassifier. Defaults to None.
+        leaf_rules (bool, optional): Whether to only extract rules from leaf nodes. 
+            Defaults to False.
 
     Attrs:
         rules (List[Rule]): The mined rules,
@@ -20,10 +22,11 @@ class RandomForestMiner(RuleMiner):
 
         rule_labels (List[Set[int]]): The labels corresponding to each rule. None, dummy variable.
     """
-    def __init__(self, forest_params = None):
+    def __init__(self, forest_params = None, leaf_rules: bool = False):
         if forest_params is None:
             forest_params = {}
         self.forest_params = forest_params
+        self.leaf_rules = leaf_rules
         super().__init__()
 
     def fit(self, X : np.ndarray, y : np.ndarray) -> tuple[list[Rule], None]:
@@ -55,6 +58,9 @@ class RandomForestMiner(RuleMiner):
             indices = np.arange(len(X))
             dtree.grow(indices, 0, dtree.root, 0)
             dtree.node_count += 1
-            self.rules.extend(collect_node_rules(dtree.root))
+            if self.leaf_rules:
+                self.rules.extend(collect_leaf_rules(dtree.root))
+            else:
+                self.rules.extend(collect_node_rules(dtree.root))
 
         return self.rules, None
