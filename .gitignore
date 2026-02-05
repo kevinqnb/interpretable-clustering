@@ -165,6 +165,7 @@ figures
 data/experiments/*
 data/anuran/*
 data/kddcup/*
+data/yeast/*
 older/
 .python-version
 

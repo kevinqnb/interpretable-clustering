@@ -505,4 +505,35 @@ def load_preprocessed_aggregation(filepath = "data/synthetic"):
 ####################################################################################################
 
 
+def load_preprocessed_yeast():
+    """
+    Loads a preprocessed yeast dataset. Values are normalized via standard scaling.
+
+    Args:
+
+
+    Returns:
+        data (np.ndarray): (samples x features) numpy array of preprocessed data. 
+
+        data_labels (np.ndarray): Array of labels associated with data points. In this case, 
+            the dataset does not have any labels and will return None.
+
+    """
+   # fetch dataset 
+    yeast = fetch_ucirepo(id=110) 
+  
+    # data (as pandas dataframes) 
+    X = yeast.data.features 
+    y = yeast.data.targets 
+
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(X.to_numpy())
+    feature_labels = [str(i) for i in range(scaled_data.shape[1])]
+
+    return scaled_data, y.to_numpy(), feature_labels, scaler
+
+
+####################################################################################################
+
+
 

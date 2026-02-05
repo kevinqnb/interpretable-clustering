@@ -2,7 +2,7 @@ import json
 
 max_rules_dir = "data/experiments/fashion/max_rules/"
 main_ref = "_rule_length3_dscluster"
-combine_refs = ["_rule_length3_exkmc"]
+combine_refs = ["_rule_length3_exkmc", "_rule_length3_exp"]
 out_ref = "_rule_length3"
 
 # Load main experiment dict
