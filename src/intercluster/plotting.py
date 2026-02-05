@@ -6,7 +6,7 @@ from typing import Callable, List, Dict, Tuple, Any, Set
 from numpy.typing import NDArray
 from .node import Node
 from .utils import can_flatten, flatten_labels, labels_to_assignment
-from .rules import Condition
+from .rules import Decision
 
 
 ####################################################################################################
@@ -245,8 +245,7 @@ def draw_tree(
 
 
 def plot_decision_set(
-    decision_set : List[List[Condition]],
-    rule_labels : List[Set[int]],
+    decision_set : List[Decision],
     feature_labels : List[str] = None,
     data_scaler : Callable = None,
     color_dict : Dict[int, Any] = None,
@@ -282,10 +281,8 @@ def plot_decision_set(
         
         filename (str, optional): File to save the resulting image. Defaults to None
     """
-    assert can_flatten(rule_labels), "Each rule must have exactly one label."
-    rule_label_array = flatten_labels(rule_labels)
-
     max_rule_length = np.max([len(d.rule) for d in decision_set])
+    rule_label_array = np.array([d.label for d in decision_set])
 
     if size_factor is None:
         size_factor = max(1, max_rule_length // 2)
