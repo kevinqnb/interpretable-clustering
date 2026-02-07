@@ -167,9 +167,7 @@ data/experiments/*/*/*.csv
 data/experiments/*/*/*.pkl
 data/experiments/*/*/*.pkl.gz
 
-data/anuran/*
 data/kddcup/*
-data/yeast/*
 older/
 .python-version
 
