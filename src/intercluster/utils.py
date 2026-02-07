@@ -835,7 +835,8 @@ def filter_rules(
     rules : List[Rule],
     X : NDArray,
     y : List[Set[int]],
-    confidence : float = 0.5
+    confidence : float = 0.0,
+    support : float = 0.0,
 ) -> List[Rule]:
     """
     Filters a list of rules to only include those with a minimum 
@@ -850,8 +851,10 @@ def filter_rules(
             Each label set should contain only a single label.
 
         confidence (float, optional): Minimum confidence threshold for a rule to be kept.
-            Defaults to 0.5, in which case rules must have at least 50% confidence and be 
-            simple majority rules. 
+            Defaults to 0.0, in which case rules must have at least 0% confidence.
+
+        support (float, optional): Minimum support threshold for a rule to be kept.
+            Defaults to 0.0, in which case rules must have at least 0% support.
 
     Returns:
         filtered_rules (List[List[Condition]]): Filtered list of rules.
@@ -863,10 +866,11 @@ def filter_rules(
     filtered_rules = []
     for rule in rules:
         covered_indices = satisfies_rule(X, rule)
+        if len(covered_indices) == 0 or (len(covered_indices) / X.shape[0]) < support:
+            continue
+
         covered_labels = y_[covered_indices]
         labs, counts = np.unique(covered_labels, return_counts=True)
-        if len(counts) == 0:
-            continue
         if np.max(counts) / len(covered_indices) >= confidence:
             filtered_rules.append(rule)
 

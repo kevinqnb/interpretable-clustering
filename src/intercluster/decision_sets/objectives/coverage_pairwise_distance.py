@@ -173,7 +173,7 @@ class CoveragePairwiseDistanceObjective(Objective):
 
         # Precompute per-sample weight = size of the cluster it was originally assigned to.
         # `self.y` is a list of singleton sets: [{i}, {j}, ...]
-        y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
+        y_labels = np.fromiter((next(iter(s)) if len(s) > 0 else 0 for s in self.y), dtype=np.int64, count=self.n_samples)
         weight_by_sample = self.cluster_sizes[y_labels] - 1
 
         total_pairwise = 0
