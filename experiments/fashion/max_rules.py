@@ -93,34 +93,20 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/fashion/alphas/selected_alphas_rule_length3.json") as f:
+with open("data/experiments/fashion/alphas/selected_alphas_rule_length.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/fashion/rules/'
 
 outfile = 'data/experiments/fashion/max_rules/'
-outfile_ref = '_rule_length3_dscluster'
+outfile_ref = '_rule_length_dscluster'
 
 ####################################################################################################
 # Load pre-mined rules:
 
-'''
-bin_df = pd.read_csv('data/experiments/fashion/rules/bin_df.csv')
 
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['car_min_support'],
-    min_confidence = fixed_parameters['car_min_confidence'],
-    max_length = fixed_parameters['car_max_rule_length'],
-    bin_df = bin_df,
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-'''
-
-
-ensemble_rules = load_rules('data/experiments/fashion/rules/ensemble_rules3.pkl')
+ensemble_rules = load_rules('data/experiments/fashion/rules/ensemble_rules.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -181,7 +167,7 @@ objective_dict = {
         'objective_type': 'coverage-mistake',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -190,14 +176,14 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
@@ -205,7 +191,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
@@ -215,7 +201,7 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
@@ -223,7 +209,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict3.pkl.gz'
+            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
 }
@@ -241,7 +227,7 @@ for obj_name, obj_params in objective_dict.items():
             for i,r in enumerate(n_rules_list)
         }
         dsclust_mod = DecisionSetMod(
-            model = DSCluster,
+            model = PEC,
             rules = rules,
             name = module_name
         )

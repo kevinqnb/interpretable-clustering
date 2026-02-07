@@ -19,7 +19,7 @@ from typing import Any, Union
 ####################################################################################################
 
 
-class DSCluster(DecisionSet):
+class PEC(DecisionSet):
     """
     Collection of rules drawn as boxes (rules) around collections of points in the dataset.
     """
@@ -204,10 +204,7 @@ class DSCluster(DecisionSet):
         if self.decision_set is None:
             raise ValueError('Decision set has not been initialized yet.')
         
-        print('Initializing objective with data...')
         self.objective.initialize_data(X, y)
-        print('Data initialized.')
-
         self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
         self.lambda_val = self.objective.lambda_val

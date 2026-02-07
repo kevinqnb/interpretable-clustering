@@ -162,7 +162,11 @@ cython_debug/
 #.idea/
 
 figures
-data/experiments/*
+data/experiments/*/*/*.json
+data/experiments/*/*/*.csv
+data/experiments/*/*/*.pkl
+data/experiments/*/*/*.pkl.gz
+
 data/anuran/*
 data/kddcup/*
 data/yeast/*
@@ -179,3 +183,6 @@ experiments/*.txt
 .nfs*
 *.pkl
 *.pkl.gz
+
+examples/examples.ipynb
+examples/pond_lake.ipynb

@@ -105,20 +105,6 @@ outfile_ref = '_rule_length'
 ####################################################################################################
 # Load pre-mined rules:
 
-'''
-bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['car_min_support'],
-    min_confidence = fixed_parameters['car_min_confidence'],
-    max_length = fixed_parameters['car_max_rule_length'],
-    bin_df = bin_df,
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-'''
-
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
 
@@ -296,7 +282,7 @@ for obj_name, obj_params in objective_dict.items():
             for i,r in enumerate(n_rules_list)
         }
         dsclust_mod = DecisionSetMod(
-            model = DSCluster,
+            model = PEC,
             rules = rules,
             name = module_name
         )

@@ -252,13 +252,11 @@ class Objective:
                     'cost': float(rule_cost),
                     'cost_alpha_zero': float(rule_cost_alpha_zero),
                 }
-            print(f'Initialized objective with {len(decision_set)} decisions.')
         else:
             # Update costs in case alpha_val changed.
             for decision, info in self.decision_info_dict.items():
                 rule_cost = info['cost_alpha_zero'] + self.alpha_val * info['length']
                 info['cost'] = float(rule_cost)
-            print(f'Updated costs for {len(self.decision_info_dict)} precomputed decisions.')
 
         self.decision_set_initialized = True
 

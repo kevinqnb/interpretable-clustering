@@ -1,5 +1,5 @@
-from .decision_set_clustering import (
-    DSCluster
+from .pec import (
+    PEC
 )
 
 from .ids import (

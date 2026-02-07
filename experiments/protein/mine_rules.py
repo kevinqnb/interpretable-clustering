@@ -209,7 +209,7 @@ objective_dict = {
 
 for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
-    dsclust = DSCluster(
+    dsclust = PEC(
         rules = ensemble_rules,
         **objective_dict[objective_type]
     )

@@ -1,84 +1,49 @@
 # Interpretable Clustering :deciduous_tree:
 
 ## Getting Started
-To build a minimal installation, first ensure that poetry is installed 
-as a package manager. If you do not have poetry installed, 
-instructions and basic usage  may be found [here](https://python-poetry.org/docs/). 
-This library uses python version 3.9 to satisfy its dependencies, 
-and specifically we recommend the stable 3.9.20 version. 
-
-Once poetry is installed, clone the repository
-and run:
-
+To install dependencies, you may use a package manager of your choice. We 
+provide the necessary `pyproject.toml` and `setup.py` files to manage installation. 
+We reccomend using UV, which makes installation simple:
 ```
-poetry install
+uv sync
 ```
 
-This creates a virtual environment 
-with all the required dependencies. 
-If you run into any issues with the `poetry.lock` file, it may be 
-because you are using an outdated version of poetry. In that case, 
-you may either consider updating, or deleting the lock file and 
-regenerating a new one with the `poetry lock` command.
-
-Part of this library's functionality is to be a wrapper for 
-existing interpretable clustering methods. Aftering created a virtual environment,
-these need to be installed manually using the follwing commands:
-
+Note that since some of our dependencies are outdated, you may need to first run the following command 
+to fix installation issues with sklearn.
 ```
 export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
-poetry run pip install ExKMC ShallowTree pyarc git+https://github.com/kevinqnb/pyIDS.git git+https://github.com/hlin117/mdlp-discretization
 ```
 
-For visualization of decision trees, this package uses pygraphviz 
-(which also requires installing graphviz), which can be tricky to install. 
+While not strictly necessary for installation, this package uses pygraphviz to 
+visualize decision trees. This requires installing graphviz, which can be tricky. 
 For MacOS, the following seems somewhat robust.
 ```
 brew install graphviz
-poetry run python -m pip install \
-    --global-option=build_ext \
-    --global-option="-I$(brew --prefix graphviz)/include/" \
-    --global-option="-L$(brew --prefix graphviz)/lib/" \
-    pygraphviz
-```
-The environment may then be used and activated by running 
-```
-eval $(poetry env activate)
+
+env \
+  CFLAGS="-I$(brew --prefix graphviz)/include" \
+  LDFLAGS="-L$(brew --prefix graphviz)/lib" \
+  uv pip install pygraphviz
 ```
 
 ## Examples + Experiments
 Example notebooks are provided to showcase the inner workings of the repository. 
-Specifically, the `examples/` folder contains notebooks, including a case study for the 
+Specifically, the `examples/` directory contains notebooks, including a case study for the 
 climate dataset. 
 
-Likewise, our experiments are easily reproducible using the files provided in the `experiments`
-folder. For each dataset we include a `relative_coverage.py` file to run an experiment which measures the 
-result of changing coverage requirements. Similarly, the `interpretable_measurements.py` and `explanation_tree.py`
-files contain code for computing and plotting interpretability metrics for both our algorithms as well as 
-the explanation tree algorithm of Bandyapadhyay et al [2]. Pre-computed data and visualizations are available within 
-the `data/experiments/` and `figures` folders.
+Likewise, our experiments are easily reproducible using the information 
+and code provided in the `experiments/` directory. 
+
 ## Datasets 
 
 Most experiments may be run by downloading datasets with sklearn and our preprocessing functions 
-defined in `intercluster/experiments/preprocessing.py`. We also include a NOAA climate dataset 
-within `data/climate`. The exception is the Anuran dataset, which may be downloaded 
-from the UCI machine learning repository. 
+defined in `data/preprocessing.py`. We also include a NOAA climate dataset 
+within `data/climate` and the anuran dataset in `data/anuran`.
 
 * NOAA National Centers for Environmental information, Climate at a Glance: Divisional Mapping, published March 2025,
   retrieved on March 14, 2025 from https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/divisional/mapping
 
 * Colonna, J., Nakamura, E., Cristo, M., & Gordo, M. (2015). Anuran Calls (MFCCs) [Dataset]. 
 UCI Machine Learning Repository. https://doi.org/10.24432/C5CC9H.
-
-## References
-1. Bandyapadhyay, S., Fomin, F.V., Golovach, P.A., Lochet, W., Purohit, N., Si-
-monov, K.: How to find a good explanation for clustering? Artificial Intelligence
-322, 103948 (2023)
-   
-2. Frost,N.,Moshkovitz,M.,Rashtchian,C.: ExKMC: Expanding Explainable K-means
-Clustering. arXiv preprint arXiv:2006.02399 (2020)
-
-2. Moshkovitz, M., Dasgupta, S., Rashtchian, C., Frost, N.: Explainable k-means and
-k-medians clustering. In: International conference on machine learning. pp. 7055–7065. PMLR (2020)
 
 

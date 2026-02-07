@@ -104,20 +104,6 @@ outfile_ref = '_rule_length'
 
 ####################################################################################################
 # Load pre-mined rules:
-'''
-bin_df = pd.read_csv('data/experiments/yeast/rules/bin_df.csv')
-
-class_association_rule_miner = ClassAssociationRuleMiner(
-    min_support = fixed_parameters['car_min_support'],
-    min_confidence = fixed_parameters['car_min_confidence'],
-    max_length = fixed_parameters['car_max_rule_length'],
-    bin_df = bin_df
-)
-class_association_rules, class_association_rule_labels = class_association_rule_miner.fit(
-    X = data, y = kmeans_base.labels
-)
-'''
-
 
 ensemble_rules = load_rules('data/experiments/yeast/rules/ensemble_rules.pkl')
 
@@ -171,69 +157,6 @@ shallow_tree_mod = DecisionTreeMod(
     model = ShallowTree,
     name = 'Shallow-Tree'
 )
-
-
-# IDS:
-'''
-max_rule_len = max(len(r) for r in class_association_rules)
-ids_lambdas = [
-    1 / len(class_association_rules),
-    1 / (max_rule_len * len(class_association_rules)),
-    1 / (n * (len(class_association_rules) **2)),
-    1 / (n * (len(class_association_rules) **2)),
-    1 / fixed_parameters['n_clusters'],
-    1 / (n * len(class_association_rules)),
-    1 / n,
-]
-
-
-
-# Fit parameters with coordinate ascent:
-max_rule_len = max(len(r) for r in class_association_rules)
-lambda_search_dict = {
-    'l1': (0, ids_lambdas[0]),
-    'l2': (0, ids_lambdas[1]),
-    'l3': (0, ids_lambdas[2]),
-    'l4': (0, ids_lambdas[3]),
-    'l5': (0, ids_lambdas[4]),
-    'l6': (0, ids_lambdas[5]),
-    'l7': (0, ids_lambdas[6]),
-}
-ternary_search_precision = 0.5 * (1 / (n * len(class_association_rules)**2))
-max_iterations = 10
-
-
-# Run an initial fitting to prepare the IDS cache:
-ids_set = IDS(
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    n_select = None,
-    bin_df = class_association_rule_miner.bin_df,
-    lambdas = ids_lambdas,
-    #lambda_search_dict = lambda_search_dict,
-    #ternary_search_precision = ternary_search_precision,
-    #max_iterations = max_iterations,
-)
-ids_set.fit(data, kmeans_labels)
-ids_cacher = ids_set.ids_cacher
-ids_lambdas = ids_set.lambdas
-
-
-ids_params = {
-    (i,) : {
-        'n_select' : i,
-        'lambdas' : ids_lambdas,
-        'bin_df' : class_association_rule_miner.bin_df,
-        #'ids_cacher' : ids_cacher,
-    } for i in n_rules_list
-}
-ids_mod = DecisionSetMod(
-    model = IDS,
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    name = f"IDS"
-)
-'''
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
@@ -297,7 +220,7 @@ for obj_name, obj_params in objective_dict.items():
             for i,r in enumerate(n_rules_list)
         }
         dsclust_mod = DecisionSetMod(
-            model = DSCluster,
+            model = PEC,
             rules = rules,
             name = module_name
         )

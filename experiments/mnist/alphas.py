@@ -194,7 +194,7 @@ for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items()
             }
 
             module = DecisionSetMod(
-                model = DSCluster,
+                model = PEC,
                 rules = rules,
                 name = f'dscluster; {obj_name}; {rule_miner_name}'
             )

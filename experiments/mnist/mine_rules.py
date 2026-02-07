@@ -90,7 +90,7 @@ else:
 
 ####################################################################################################
 # Mine for rules:
-'''
+
 decision_tree_rule_miner = TreeMiner(
     tree = DecisionTree(random_state = fixed_parameters['seed']),
 )
@@ -156,13 +156,15 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
-#class_association_rules = load_rules('data/experiments/mnist/rules/class_association_rules.pkl')
 
 ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
+
+
 '''
+# Alternatively, load a pre-mined set of rules:
 decision_tree_rules = load_rules('data/experiments/mnist/rules/decision_tree_rules.pkl')
 exkmc_rules = load_rules('data/experiments/mnist/rules/exkmc_rules.pkl')
 shallow_rules = load_rules('data/experiments/mnist/rules/shallow_rules.pkl')
@@ -173,6 +175,7 @@ ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_asso
 ensemble_rules = filter_rules(
     ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
+'''
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
 save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
@@ -213,7 +216,7 @@ objective_dict = {
 
 for objective_type in objective_dict.keys():
     print("Processing objective:", objective_type)
-    dsclust = DSCluster(
+    dsclust = PEC(
         rules = ensemble_rules,
         **objective_dict[objective_type]
     )

@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
-from typing import Callable, List, Dict, Tuple, Any, Set
+from typing import Callable, List, Dict, Tuple, Any
 from numpy.typing import NDArray
 from .node import Node
-from .utils import can_flatten, flatten_labels, labels_to_assignment
+from .utils import flatten_labels
 from .rules import Decision
 
 
@@ -34,6 +34,8 @@ def plot_decision_boundaries(
             labels represented as as 1d array. `False` if the labels should instead be a 2 label
             set. Defaults to False.
     """
+    assert X.shape[1] == 2, "X must be a 2D array with shape (n_samples, 2)."
+
     # Define the axis boundaries of the plot
     x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
     y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
@@ -55,24 +57,12 @@ def plot_decision_boundaries(
             plt.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.25)
         else:
             ax.contourf(xx, yy, Z, levels=[l-0.5, l+0.5], colors=[color_dict[l]], alpha=0.25)
-    
-    '''
-    # Plot the decision boundaries
-    if ax is None:
-        
-        plt.contourf(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='solid',
-                    alpha = 0.5, linewidths = 2)
-        plt.contourf
-    else:
-        ax.contourf(xx, yy, Z, levels = len(np.unique(Z)), colors='k', linestyles='solid',
-                   alpha = 0.5, linewidths = 2)
-    '''
         
 
 ####################################################################################################
 
 
-def plot_rule_boxes(
+def plot_rule_decision_boundaries(
     model : Callable,
     X : NDArray,
     color_dict : Dict[int, Any] = None,
@@ -80,7 +70,7 @@ def plot_rule_boxes(
 ):
     """
     Plots the decision boundaries of a given model as boxes around the rules.
-    This is useful for visualizing the rules of a decision set, which are often overlapping.
+    This is useful for visualizing the rules of a general decision set, which are often overlapping.
 
     Args:
         model (Callable): Prediction object which should have a predict() method.
@@ -93,7 +83,7 @@ def plot_rule_boxes(
     if color_dict is None:
         color_dict = {list(i)[0]: 'grey' for i in decision_set_labels}
 
-    supported_plot = ['DSCluster', 'IDS']
+    supported_plot = ['PEC', 'IDS']
     if model.__class__.__name__ not in supported_plot:
         raise ValueError(
             f"Plotting for {model.__class__.__name__} is not supported. "
@@ -169,13 +159,12 @@ def build_networkx_graph(graph : Callable, node : Node):
 ####################################################################################################
 
 
-def draw_tree(
+def plot_tree(
     root : Node,
     feature_labels : List[str] = None,
     leaf_labels : List[str] = None,
     data_scaler : Callable = None,
     color_dict : Dict[int, Any] = None,
-    display_node_info : bool = True,
     output_file : str = None,
 ):
     """
@@ -196,9 +185,6 @@ def draw_tree(
             
         cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) gives the 
             color for cluster i.
-
-        display_node_info (bool): Boolean for deciding whether to display 
-            additional node information (size, cost, etc.).
         
         output_file (str, optional): File to save the resulting image. Defaults to None.
     """
@@ -377,118 +363,4 @@ def plot_decision_set(
         plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
     
 
-####################################################################################################
-
-
-def experiment_plotter(
-    measurement_df : pd.DataFrame,
-    std_df : pd.DataFrame,
-    domain_df : pd.DataFrame,
-    xlabel : str,
-    ylabel : str,
-    cmap : Callable,
-    baseline_list : List[str] = None,
-    legend : bool = True,
-    xlim : Tuple[float, float] = None,
-    ylim : Tuple[float, float] = None,
-    xaxis : bool = True,
-    yaxis : bool = True,
-    filename : str = None
-):
-    """
-    Plots experiment results (for coverage/cost experiments).
-
-    Args:
-        measurement_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
-            corresponds to an experiment module, containing experimental measurements 
-            over t different trial settings. 
-        
-        std_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
-            corresponds to an experiment module, containing the standard deviation 
-            for experimental measurements over t different trial settings. In other words, 
-            this shows std for the measurement dataframe.
-
-        domain_df (pd.DataFrame): Size (t x m) pandas dataframe where each of the m columns 
-            corresponds to an experiment module, containing the domain values for each
-            of experimental measurements over t different trial settings. In other words, 
-            these are the x-axis values ofr the measurement dataframe.
-
-        xlabel (str): Label to plot on the x-axis.
-
-        ylabel (str): Label to plot on the y-axis.
-
-        cmap (Callable): cmap (Callable): Matplotlib colormap. Should be callable so that cmap(i) 
-            gives the color for cluster i.
-
-        baseline_list (List[str]): List of names for modules within the measurement/std/domain 
-            dataframes to treat like baselines for comparison. This usually means they have 
-            values which do not vary over the t trials and can be plotted as horizontal 
-            baselines.
-
-        legend (bool): If True, plot the legend. Defaults to False.
-
-        xlim (Tuple[float, float]): Tuple of (low, high) x limit values.
-
-        ylim (Tuple[float, float]): Tuple of (low, high) y limit values.
-
-        filename (str): If given, saves the plot. Defaults to None in which case nothing is saved.
-
-    """
-    fig,ax = plt.subplots(figsize = (6,4))
-    if baseline_list is None:
-        baseline_list = ['KMeans']
-    baseline_linestyles = ['-', 'dashed']
-    baselines = [_ for _ in measurement_df.columns if _ in baseline_list]
-    modules = [_ for _ in measurement_df.columns if _ not in baselines]
-    
-    for i,b in enumerate(baselines):
-        ax.hlines(
-            measurement_df[b].iloc[0],
-            xmin = domain_df.min().min(),
-            xmax = domain_df.max().max(),
-            color = 'k',
-            label = fr'$\texttt{{{b}}}$',
-            linestyle = baseline_linestyles[i],
-            linewidth = 3,
-            alpha = 0.6
-        )
-    
-    for i,m in enumerate(modules):
-        ax.plot(
-            np.array(domain_df[m]),
-            np.array(measurement_df[m]),
-            linewidth = 6,
-            marker='o',
-            markersize = 8,
-            c = cmap(i),
-            label = fr'$\texttt{{{m}}}$'
-        )
-        ax.fill_between(
-            np.array(domain_df[m]), 
-            np.array(measurement_df[m]) - np.array(std_df[m]),
-            np.array(measurement_df[m]) + np.array(std_df[m]),
-            color= cmap(i),
-            alpha=0.3
-        )
-
-    if legend:
-        plt.legend(loc = 'upper right', bbox_to_anchor=(2, 1))
-
-    if xlim is not None:
-        plt.xlim(xlim)
-    
-    if ylim is not None:
-        plt.ylim(ylim)
-
-    if not xaxis:
-        plt.xticks([])
-    if not yaxis:
-        plt.yticks([])
-        
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    if filename is not None:
-        plt.savefig(filename, bbox_inches = 'tight', dpi = 300)
-        
-        
 ####################################################################################################

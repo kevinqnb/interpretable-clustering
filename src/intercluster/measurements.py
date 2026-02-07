@@ -595,62 +595,6 @@ class PairwiseDistance(MeasurementFunction):
 
 ####################################################################################################
 
-'''
-class RulePairwiseDistance(MeasurementFunction):
-    """
-    Computes the pairwise point clustering
-    distance between a reference clustering and a new, interpretable clustering, 
-    summed over each rule's covered points individually.
-
-    Args:
-        baseline_assignment (np.ndarray: bool): n x k boolean (or binary) matrix 
-            with entry (i,j) being True (1) if point i belongs to cluster j and False (0) 
-            otherwise. This should correspond to a ground truth labeling of the data.
-        name (str): Name of the measurement function.
-    """
-    def __init__(self, baseline_assignment : NDArray, name : str = 'rule-pairwise-distance'):
-        super().__init__(name = name)
-        self.baseline_assignment = baseline_assignment
-        self.baseline_labels = assignment_to_labels(baseline_assignment)
-        
-    def __call__(
-        self,
-        data_to_rule_assignment : NDArray = None,
-        rule_to_cluster_assignment : NDArray = None,
-        data_to_cluster_assignment : NDArray = None
-    ) -> int:
-        """
-        Args:
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
-                    data point i is assigned to rule j and `False` otherwise.
-
-            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
-                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
-                be assigned to a single cluster.
-
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
-
-        Returns:
-            int : Computed pairwise distance.
-        """
-        if data_to_rule_assignment is None or data_to_cluster_assignment is None:
-            return np.nan
-        
-        n,r = data_to_rule_assignment.shape
-        
-        total_pairwise_distance = 0.0
-        for i in range(r):
-            rule_points_idx = np.where(data_to_rule_assignment[:,i])[0]
-            baseline_labels = [self.baseline_labels[idx] for idx in rule_points_idx]
-
-            total_pairwise_distance += rule_pairwise_difference(
-                baseline_labels,
-                percentage = False
-            )
-        return total_pairwise_distance
-'''
 
 class RulePairwiseDistance(MeasurementFunction):
     """
