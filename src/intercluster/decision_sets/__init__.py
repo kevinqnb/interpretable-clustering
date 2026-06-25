@@ -5,3 +5,7 @@ from .pec import (
 from .ids import (
     IDS
 )
+
+from .wra import (
+    WRABaseline
+)

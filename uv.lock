@@ -1282,7 +1282,7 @@ wheels = [
 [[package]]
 name = "pyids"
 version = "0.1.0"
-source = { git = "https://github.com/kevinqnb/pyIDS.git#5d84ee017fef55466579b124bdd6798b65606f45" }
+source = { git = "https://github.com/kevinqnb/pyIDS.git#eaa6385dcbe796cd6acd1d6b55430d783a827bcd" }
 dependencies = [
     { name = "numpy" },
     { name = "pandas" },
