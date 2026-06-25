@@ -184,3 +184,5 @@ experiments/*.txt
 
 examples/examples.ipynb
 examples/pond_lake.ipynb
+
+CLAUDE.md

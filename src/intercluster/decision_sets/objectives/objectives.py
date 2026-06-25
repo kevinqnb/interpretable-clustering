@@ -495,10 +495,10 @@ class Objective:
         self,
     ) -> set[Decision]:
         """
-        Selects a subset rules using a lazy greedy algorithm. 
+        Selects a subset rules using a lazy greedy algorithm.
 
         Args:
-            
+
         Returns:
             decision_set (Set[Decision]): The selected set of decisions.
         """
@@ -512,21 +512,28 @@ class Objective:
             covered_total = np.zeros((self.n_samples,), dtype=np.bool_)
             covered_by_cluster = np.zeros((self.n_labels, self.n_samples), dtype=np.bool_)
 
-        eligible_decisions = set(self.decision_info_dict.keys())
         selected_decisions: set[Decision] = set()
-        selected_rule_idxs: set[int] = set()
+        # Tracks decisions removed by matroid constraint, budget, or score-drop.
+        # The heap is the authoritative set of remaining candidates; disqualified
+        # enables O(1) lazy deletion when items are popped.
+        disqualified: set[Decision] = set()
+
+        # Precompute reverse map for O(|decisions per rule|) matroid disqualification,
+        # avoiding an O(|all decisions|) scan after each selection.
+        coverage_idx_to_decisions: dict[int, list[Decision]] = {}
+        for decision, info in self.decision_info_dict.items():
+            ridx = int(info['coverage_idx'])
+            coverage_idx_to_decisions.setdefault(ridx, []).append(decision)
 
         heap = []
         counter = 0
-        for decision in eligible_decisions:
-            info = self.decision_info_dict[decision]
+        for decision, info in self.decision_info_dict.items():
             g = self.marginal_reward(info, covered_total, covered_by_cluster)
             h = info['cost']
             score = g - 2 * self.lambda_val * h
-            if score <= 0:
-                continue
-            heap.append((-score, counter, decision))
-            counter += 1
+            if score > 0:
+                heap.append((-score, counter, decision))
+                counter += 1
 
         heapq.heapify(heap)
         if not heap:
@@ -535,21 +542,25 @@ class Objective:
             self.objective_value = 0.0
             return set()
 
-        while heap and len(eligible_decisions) > 0:
-            heap_best_score, _, heap_best_decision = heapq.heappop(heap)
-            second_best_score = heap[0][0] if len(heap) > 0 else 0.0
+        while heap:
+            _, _, heap_best_decision = heapq.heappop(heap)
+
+            # Lazy deletion: skip decisions removed since they were last scored.
+            if heap_best_decision in disqualified:
+                continue
+
+            second_best_score = -heap[0][0] if heap else 0.0
 
             info = self.decision_info_dict[heap_best_decision]
             g = self.marginal_reward(info, covered_total, covered_by_cluster)
             h = info['cost']
             score = g - 2 * self.lambda_val * h
 
-            if score >= -second_best_score:
+            if score >= second_best_score:
                 if score > 0:
                     selected_decisions.add(heap_best_decision)
                     ridx = int(info['coverage_idx'])
                     lbl = int(info['label'])
-                    selected_rule_idxs.add(ridx)
 
                     if self.pack_bits:
                         rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
@@ -563,17 +574,14 @@ class Objective:
                         covered_by_cluster[lbl] |= (rule_mask & cluster_mask)
                         covered_total |= rule_mask
 
-                    # Matroid-like constraint: at most one decision per rule
-                    removals = set()
+                    # Matroid constraint: disqualify all decisions sharing this rule.
+                    for d in coverage_idx_to_decisions.get(ridx, []):
+                        disqualified.add(d)
+
                     if len(selected_decisions) >= self.n_select:
-                        removals = eligible_decisions.copy()
-                    else:
-                        for d in eligible_decisions:
-                            if int(self.decision_info_dict[d]['coverage_idx']) in selected_rule_idxs:
-                                removals.add(d)
-                    eligible_decisions.difference_update(removals)
+                        break
                 else:
-                    eligible_decisions.discard(heap_best_decision)
+                    disqualified.add(heap_best_decision)
             else:
                 heapq.heappush(heap, (-score, counter, heap_best_decision))
                 counter += 1
