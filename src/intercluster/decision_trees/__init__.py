@@ -20,3 +20,7 @@ from .explanation_tree import (
 from .shallow_tree import (
     ShallowTree
 )
+
+from .outlier_decision_tree import (
+    OutlierDecisionTree
+)
