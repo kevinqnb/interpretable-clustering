@@ -13,6 +13,7 @@ dependencies = [
     "mdlp-discretization",
     "networkx>=3.6",
     "numpy>=2.3.5",
+    "orange3>=3.39.0",
     "pandas>=2.3.3",
     "pyarc>=1.1.4",
     "pyclustering>=0.10.1.2",

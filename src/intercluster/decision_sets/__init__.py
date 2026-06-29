@@ -9,3 +9,11 @@ from .ids import (
 from .wra import (
     WRABaseline
 )
+
+from .cba import (
+    CBA
+)
+
+from .cn2 import (
+    CN2
+)
