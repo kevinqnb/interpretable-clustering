@@ -18,6 +18,7 @@ from experiments.modules import *
 import os
 import json
 import time
+import pickle
 import numpy as np
 import pandas as pd
 from intercluster import *
@@ -44,9 +45,15 @@ y_flat = flatten_labels(kmeans_labels)
 n_select = 6
 
 ####################################################################################################
-# Load pre-mined CAR rules
+# Load pre-mined ensemble rules
 
-class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
+ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
+print(f"Ensemble rule set size: {len(ensemble_rules)}")
+
+# TODO: remove subset for full run — using 100 rules for testing only
+_test_idx = np.random.choice(len(ensemble_rules), size=100, replace=False)
+ids_rules = [ensemble_rules[i] for i in _test_idx]
+print(f"[TEST] Using random subset of {len(ids_rules)} rules")
 
 ####################################################################################################
 # Pre-compute IDSCoverageCache (the expensive O(N²) step, done once)
@@ -54,12 +61,12 @@ class_association_rules = load_rules('data/experiments/climate/rules/class_assoc
 # We construct the full decision set (one Decision per rule × cluster label),
 # then build the cache using Rule.evaluate(data) directly — no bin_df needed.
 
-print(f"Building coverage cache for {len(class_association_rules)} rules...")
+print(f"Building coverage cache for {len(ids_rules)} rules...")
 t0 = time.time()
 
 # Temporarily construct an IDS with n_select=None to trigger cache building
 _pre = IDS(
-    rules=class_association_rules,
+    rules=ids_rules,
     n_select=None,
     lambdas=[1.0] * 7,  # placeholder lambdas (cache build doesn't depend on them)
 )
@@ -67,6 +74,11 @@ _pre.fit(data, kmeans_labels)
 ids_cache = _pre.get_cache()
 
 print(f"Cache ready: {len(ids_cache.decisions)} valid decisions in {time.time() - t0:.1f}s")
+
+cache_path = 'data/experiments/climate/rules/ids_coverage_cache.pkl'
+with open(cache_path, 'wb') as f:
+    pickle.dump(ids_cache, f)
+print(f"Cache saved to {cache_path}")
 
 ####################################################################################################
 # Coordinate ascent using the IDS objective as the scoring function.
@@ -89,17 +101,18 @@ def fmax(lambdas):
     return obj.evaluate(set(selected))
 
 
-search_space = [(0.0, 1.0)] * 7
+search_space = [(0.01, 1.0)] * 7
 
 print("Starting coordinate ascent...")
-print(f"  7 lambdas × 10 iterations, ternary search precision=0.001")
+print(f"  7 lambdas × up to 5 iterations, precision=0.01, tol=1e-3")
 t1 = time.time()
 
 coord_asc = IDSCoordinateAscent(
     func=fmax,
     ranges=search_space,
-    precision=0.001,
-    max_iterations=10,
+    precision=0.01,
+    max_iterations=5,
+    tol=1e-3,
 )
 best_lambdas = coord_asc.fit()
 

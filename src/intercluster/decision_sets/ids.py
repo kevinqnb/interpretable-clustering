@@ -273,11 +273,13 @@ class IDSCoordinateAscent:
         ranges: List[tuple],
         precision: float = 0.001,
         max_iterations: int = 10,
+        tol: float = 0.0,
     ):
         self.func = func
         self.ranges = list(ranges)
         self.precision = precision
         self.max_iterations = max_iterations
+        self.tol = tol
 
     @staticmethod
     def _ternary_search(func_1d, lo: float, hi: float, precision: float) -> float:
@@ -306,9 +308,12 @@ class IDSCoordinateAscent:
 
                 lambdas[j] = self._ternary_search(func_1d, lo, hi, self.precision)
             val = self.func(lambdas)
+            improvement = val - best_val
             if val > best_val:
                 best_val = val
                 best_lambdas = list(lambdas)
+            if improvement < self.tol:
+                break
         return best_lambdas
 
 

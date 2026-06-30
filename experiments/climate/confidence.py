@@ -19,6 +19,7 @@ import os
 import json
 import math
 import time
+import pickle
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import pairwise_distances
@@ -84,8 +85,6 @@ with open("data/experiments/climate/alphas/selected_alphas_rule_length.json") as
 # Load rule pools and IDS lambdas
 
 pre_filter_ensemble = load_rules('data/experiments/climate/rules/pre_filter_ensemble_rules.pkl')
-class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
-car_rule_set = set(class_association_rules)
 
 with open('data/experiments/climate/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
@@ -298,15 +297,18 @@ print("Pool-independent algorithms ready.")
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
 
-print("Pre-computing IDS coverage cache on full CAR rule pool...")
-_ids_full = IDS(
-    rules=class_association_rules,
-    n_select=n_select,
-    lambdas=ids_lambdas,
-)
-_ids_full.fit(data, kmeans_labels)
-ids_full_cache = _ids_full.get_cache()
-print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
+_ids_cache_path = 'data/experiments/climate/rules/ids_coverage_cache.pkl'
+if os.path.exists(_ids_cache_path):
+    print("Loading pre-built IDS cache...")
+    with open(_ids_cache_path, 'rb') as f:
+        ids_full_cache = pickle.load(f)
+    print(f"IDS cache loaded ({len(ids_full_cache.decisions)} decisions).")
+else:
+    print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
+    _ids_full = IDS(rules=pre_filter_ensemble, n_select=n_select, lambdas=ids_lambdas)
+    _ids_full.fit(data, kmeans_labels)
+    ids_full_cache = _ids_full.get_cache()
+    print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
 
 ####################################################################################################
 # Main confidence sweep
@@ -321,14 +323,12 @@ for conf in confidence_values:
     print(f"\n[confidence={conf_key:.2f}] filtering rules...")
 
     filtered_rules = filter_rules(pre_filter_ensemble, data, kmeans_labels, confidence=conf)
-    filtered_car_rules = [r for r in class_association_rules if r in set(filtered_rules)]
     has_rules = len(filtered_rules) > 0
 
-    print(f"  {len(filtered_rules)} ensemble rules, {len(filtered_car_rules)} CAR rules")
+    print(f"  {len(filtered_rules)} ensemble rules")
 
     conf_result = {
         'n_filtered_rules': len(filtered_rules),
-        'n_filtered_car_rules': len(filtered_car_rules),
         'lambda': {},
     }
 
@@ -375,18 +375,18 @@ for conf in confidence_values:
         pool_dep['CBA'] = _empty_info()
 
     # ----------------------------------------------------------------
-    # IDS — subset the full cache to filtered CAR rules each iteration;
+    # IDS — subset the full cache to filtered ensemble rules each iteration;
     # lambdas are fixed (fitted via coordinate ascent on the full pool).
     # ----------------------------------------------------------------
-    if filtered_car_rules:
-        filtered_rule_set = set(filtered_car_rules)
+    if filtered_rules:
+        filtered_rule_set = set(filtered_rules)
         filtered_indices = [
             i for i, d in enumerate(ids_full_cache.decisions)
             if d.rule in filtered_rule_set
         ]
         ids_sub_cache = ids_full_cache.subset(filtered_indices)
         _ids = IDS(
-            rules=filtered_car_rules,
+            rules=filtered_rules,
             n_select=n_select,
             lambdas=ids_lambdas,
             cache=ids_sub_cache,

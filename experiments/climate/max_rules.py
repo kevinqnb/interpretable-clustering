@@ -23,6 +23,7 @@ from experiments.modules import *
 import os
 import json
 import math
+import pickle
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
@@ -107,7 +108,6 @@ outfile_ref = '_rule_length'
 
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
-class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -200,15 +200,18 @@ with open('data/experiments/climate/rules/ids_lambdas.json') as f:
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-print("Pre-computing IDS cache...")
-_ids_pre = IDS(
-    rules=class_association_rules,
-    n_select=None,
-    lambdas=ids_lambdas,
-)
-_ids_pre.fit(data, kmeans_labels)
-ids_cache = _ids_pre.get_cache()
-print("IDS cache ready.")
+_ids_cache_path = 'data/experiments/climate/rules/ids_coverage_cache.pkl'
+if os.path.exists(_ids_cache_path):
+    print("Loading pre-built IDS cache...")
+    with open(_ids_cache_path, 'rb') as f:
+        ids_cache = pickle.load(f)
+    print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
+else:
+    print("Pre-computing IDS cache...")
+    _ids_pre = IDS(rules=ensemble_rules, n_select=None, lambdas=ids_lambdas)
+    _ids_pre.fit(data, kmeans_labels)
+    ids_cache = _ids_pre.get_cache()
+    print("IDS cache ready.")
 
 ids_params = {
     (r,): {
@@ -219,7 +222,7 @@ ids_params = {
 }
 ids_mod = DecisionSetMod(
     model=IDS,
-    rules=class_association_rules,
+    rules=ensemble_rules,
     name='IDS'
 )
 
