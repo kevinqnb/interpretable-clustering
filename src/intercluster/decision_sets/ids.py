@@ -1,29 +1,315 @@
 import numpy as np
-import pandas as pd
 from typing import List, Set
 from numpy.typing import NDArray
 from intercluster import (
     Rule,
     Decision,
-    interval_to_condition,
-    decision_set_to_cars,
-    flatten_labels
+    flatten_labels,
 )
 from .decision_set import DecisionSet
-import time; start_time = time.time()
 
 
 ####################################################################################################
 
-# NOTE: The following code is a private submodule used to interface with the PyIDS package.
-# Since PyIDS is not a dependency of Intercluster, it must be installed separately.
 
-from pyids.algorithms.ids import IDS as IDS_pyids
-from pyids.data_structures.ids_cacher import IDSCacher
-from pyids.data_structures.ids_ruleset import IDSRuleSet
-from pyids.model_selection.coordinate_ascent import CoordinateAscent
-from pyids.data_structures.ids_rule import IDSRule
-from pyarc.qcba.data_structures import QuantitativeDataFrame
+class IDSCoverageCache:
+    """
+    Precomputed per-decision coverage statistics for IDS optimization.
+
+    Building this cache once allows reuse across multiple n_select values or
+    confidence-sweep subsets (via subset()).
+    """
+
+    def __init__(self):
+        self.decisions: List[Decision] = None
+        self.antecedent_masks: NDArray = None   # (D, N) bool
+        self.correct_masks: NDArray = None      # (D, N) bool
+        self.overlap_matrix: NDArray = None     # (D, D) int32
+        self.same_class_matrix: NDArray = None  # (D, D) bool
+        self.N: int = None
+        self.L_max: int = None
+
+    def compute(self, decisions: List[Decision], X: NDArray, y_flat: NDArray) -> None:
+        """
+        Compute coverage statistics for the given decisions on dataset (X, y_flat).
+
+        Args:
+            decisions: Ordered list of Decision objects.
+            X:         (N, d) data matrix.
+            y_flat:    (N,) integer array of cluster labels.
+        """
+        D = len(decisions)
+        N = len(y_flat)
+        self.decisions = list(decisions)
+        self.N = N
+        self.L_max = max(len(d.rule) for d in decisions) if decisions else 0
+
+        antecedent = np.zeros((D, N), dtype=bool)
+        correct = np.zeros((D, N), dtype=bool)
+        for i, d in enumerate(decisions):
+            antecedent[i] = d.rule.evaluate(X)
+            correct[i] = antecedent[i] & (y_flat == d.label)
+
+        self.antecedent_masks = antecedent
+        self.correct_masks = correct
+        ant_int = antecedent.astype(np.int32)
+        self.overlap_matrix = ant_int @ ant_int.T
+
+        labels = np.array([d.label for d in decisions])
+        self.same_class_matrix = (labels[:, None] == labels[None, :])
+
+    def subset(self, indices) -> 'IDSCoverageCache':
+        """
+        Return a new cache restricted to the given decision indices.
+
+        Slices all precomputed arrays — useful for confidence-sweep experiments
+        where only a subset of the full rule pool is active at each iteration.
+        """
+        idx = np.asarray(indices)
+        cache = IDSCoverageCache()
+        cache.decisions = [self.decisions[i] for i in idx]
+        cache.N = self.N
+        cache.L_max = max(len(d.rule) for d in cache.decisions) if cache.decisions else 0
+        cache.antecedent_masks = self.antecedent_masks[idx]
+        cache.correct_masks = self.correct_masks[idx]
+        cache.overlap_matrix = self.overlap_matrix[np.ix_(idx, idx)]
+        cache.same_class_matrix = self.same_class_matrix[np.ix_(idx, idx)]
+        return cache
+
+
+####################################################################################################
+
+
+class IDSObjective:
+    """
+    7-term weighted IDS objective function (Lakkaraju et al., KDD 2016).
+
+    f = lambda · [f0, f1, f2, f3, f4, f5, f6] where:
+        f0: M - |S|                    (fewer rules is better)
+        f1: L_max·M - sum_length(S)    (shorter rules are better)
+        f2: N·M² - intraclass_overlap  (less intra-class antecedent overlap)
+        f3: N·M² - interclass_overlap  (less inter-class antecedent overlap)
+        f4: |distinct classes in S|    (more class diversity)
+        f5: N·M - sum_incorrect(S)     (more correct coverage)
+        f6: |union of correct covers|  (more distinct correctly covered points)
+
+    Args:
+        lambdas: List of 7 non-negative weights.
+        cache:   IDSCoverageCache for the candidate decision pool.
+        N:       Number of data points.
+        M:       Number of decisions in the candidate pool (= len(cache.decisions)).
+    """
+
+    def __init__(self, lambdas: List[float], cache: IDSCoverageCache, N: int, M: int):
+        if len(lambdas) != 7:
+            raise ValueError("lambdas must have exactly 7 elements.")
+        self.lambdas = list(lambdas)
+        self.cache = cache
+        self.N = N
+        self.M = M
+
+    def evaluate(self, solution_indices) -> float:
+        """
+        Evaluate the objective on a solution set given as indices into cache.decisions.
+
+        Args:
+            solution_indices: Iterable of int indices (set, list, etc.).
+
+        Returns:
+            Scalar objective value.
+        """
+        S = sorted(solution_indices)
+        if not S:
+            terms = [
+                self.M,
+                self.cache.L_max * self.M,
+                self.N * self.M ** 2,
+                self.N * self.M ** 2,
+                0,
+                self.N * self.M,
+                0,
+            ]
+        else:
+            sub_overlap = self.cache.overlap_matrix[np.ix_(S, S)]
+            sub_same = self.cache.same_class_matrix[np.ix_(S, S)]
+            intra = int(np.triu(sub_overlap * sub_same, k=1).sum())
+            inter = int(np.triu(sub_overlap * (~sub_same), k=1).sum())
+            correct_union = np.logical_or.reduce(self.cache.correct_masks[S])
+            terms = [
+                self.M - len(S),
+                self.cache.L_max * self.M - sum(len(self.cache.decisions[i].rule) for i in S),
+                self.N * self.M ** 2 - intra,
+                self.N * self.M ** 2 - inter,
+                len({self.cache.decisions[i].label for i in S}),
+                self.N * self.M - sum(self.N - int(self.cache.correct_masks[i].sum()) for i in S),
+                int(correct_union.sum()),
+            ]
+        return float(np.dot(self.lambdas, terms))
+
+
+####################################################################################################
+
+
+class SLSOptimizer:
+    """
+    Stochastic Local Search for unconstrained submodular maximization.
+
+    Implements the SLS algorithm from Mirzasoleiman et al. adapted for the IDS
+    objective. Runs two variants of optimize_delta and returns the better solution.
+
+    Args:
+        objective:   IDSObjective instance.
+        all_indices: List of integer indices into objective.cache.decisions.
+    """
+
+    def __init__(self, objective: IDSObjective, all_indices: List[int]):
+        self.objective = objective
+        self.all_indices = list(all_indices)
+        self.n = len(all_indices)
+
+    def _sample_random_set(self, S: set, delta: float) -> set:
+        p_in = (delta + 1) / 2     # inclusion prob for elements in S
+        p_out = (1 - delta) / 2    # inclusion prob for elements not in S
+        u = np.random.random(self.n)
+        result = set()
+        for k, i in enumerate(self.all_indices):
+            p = p_in if i in S else p_out
+            if u[k] < p:
+                result.add(i)
+        return result
+
+    def _estimate_opt(self, n_trials: int = 5) -> float:
+        best = 0.0
+        for _ in range(n_trials):
+            u = np.random.random(self.n)
+            subset = {i for i, ui in zip(self.all_indices, u) if ui < 0.5}
+            val = self.objective.evaluate(subset)
+            best = max(best, val)
+        return best
+
+    def _estimate_omega(
+        self,
+        rule_idx: int,
+        S: set,
+        delta: float,
+        error_threshold: float = 0.05,
+        min_samples: int = 5,
+        max_samples: int = 100,
+    ) -> float:
+        """Estimate E[f(T | {r}) - f(T - {r})] with adaptive sampling."""
+        samples = []
+        while len(samples) < max_samples:
+            T = self._sample_random_set(S, delta)
+            omega = (
+                self.objective.evaluate(T | {rule_idx})
+                - self.objective.evaluate(T - {rule_idx})
+            )
+            samples.append(omega)
+            if len(samples) >= min_samples:
+                std = np.std(samples)
+                if std == 0 or std / np.sqrt(len(samples)) <= error_threshold:
+                    break
+        return float(np.mean(samples))
+
+    def _optimize_delta(self, delta: float, delta_prime: float) -> set:
+        OPT = self._estimate_opt()
+        threshold = 2.0 / max(self.n ** 2, 1) * max(OPT, 0.0)
+        S: set = set()
+        for r in self.all_indices:
+            omega = self._estimate_omega(r, S, delta)
+            if omega > threshold:
+                S.add(r)
+            elif omega < -threshold:
+                S.discard(r)
+        # delta_prime = -1.0 → sample the complement of S
+        return self._sample_random_set(S, delta_prime)
+
+    def _backward_eliminate(self, S: set, n_select: int) -> set:
+        S = set(S)
+        while len(S) > n_select:
+            # Remove the least important element (removal causes smallest decrease)
+            to_remove = max(S, key=lambda i: self.objective.evaluate(S - {i}))
+            S.remove(to_remove)
+        return S
+
+    def optimize(self, n_select: int = None) -> List[int]:
+        """
+        Run SLS and optionally trim the result to n_select rules.
+
+        Returns:
+            List of selected indices into objective.cache.decisions.
+        """
+        if self.n == 0:
+            return []
+        S1 = self._optimize_delta(delta=1 / 3, delta_prime=1 / 3)
+        S2 = self._optimize_delta(delta=1 / 3, delta_prime=-1.0)
+        S = S1 if self.objective.evaluate(S1) >= self.objective.evaluate(S2) else S2
+        if n_select is not None and len(S) > n_select:
+            S = self._backward_eliminate(S, n_select)
+        return list(S)
+
+
+####################################################################################################
+
+
+class IDSCoordinateAscent:
+    """
+    Coordinate ascent with ternary search for IDS lambda optimization.
+
+    Optimizes a scoring function over the 7-dimensional lambda space by
+    holding 6 lambdas fixed and ternary-searching over the remaining one,
+    cycling through all 7 for max_iterations rounds.
+
+    Args:
+        func:           Callable(List[float]) -> float. The scoring function.
+        ranges:         List of 7 (lo, hi) tuples defining the search space.
+        precision:      Ternary search stops when interval width < precision.
+        max_iterations: Number of full coordinate-sweep rounds.
+    """
+
+    def __init__(
+        self,
+        func,
+        ranges: List[tuple],
+        precision: float = 0.001,
+        max_iterations: int = 10,
+    ):
+        self.func = func
+        self.ranges = list(ranges)
+        self.precision = precision
+        self.max_iterations = max_iterations
+
+    @staticmethod
+    def _ternary_search(func_1d, lo: float, hi: float, precision: float) -> float:
+        while hi - lo > precision:
+            m1 = lo + (hi - lo) / 3
+            m2 = hi - (hi - lo) / 3
+            if func_1d(m1) < func_1d(m2):
+                lo = m1
+            else:
+                hi = m2
+        return (lo + hi) / 2
+
+    def fit(self) -> List[float]:
+        """Run coordinate ascent. Returns list of 7 lambda values."""
+        lambdas = [lo + np.random.random() * (hi - lo) for lo, hi in self.ranges]
+        best_val = self.func(lambdas)
+        best_lambdas = list(lambdas)
+        for _ in range(self.max_iterations):
+            for j, (lo, hi) in enumerate(self.ranges):
+                base = list(lambdas)
+
+                def func_1d(val, j=j, base=base):
+                    lam = list(base)
+                    lam[j] = val
+                    return self.func(lam)
+
+                lambdas[j] = self._ternary_search(func_1d, lo, hi, self.precision)
+            val = self.func(lambdas)
+            if val > best_val:
+                best_val = val
+                best_lambdas = list(lambdas)
+        return best_lambdas
 
 
 ####################################################################################################
@@ -31,214 +317,121 @@ from pyarc.qcba.data_structures import QuantitativeDataFrame
 
 class IDS(DecisionSet):
     """
-    A Decision Set mined with an apriori search, then selected using a combination of submodular 
-    objective functions.
+    Interpretable Decision Sets (Lakkaraju et al., KDD 2016), reimplemented
+    from scratch using Stochastic Local Search.
 
-    This algorithm is based upon the paper:
-    "Interpretable Decision Sets: A Joint Framework for Description and Prediction"
-    by Lakkaraju et al., KDD 2016.
-
-    We make use of the PyIDS package to implement the algorithm:
-    Jiri Filip, Tomas Kliegr. 
-    PyIDS - Python Implementation of Interpretable Decision Sets Algorithm by Lakkaraju et al, 2016. 
-    RuleML+RR2019@Rule Challenge 2019. http://ceur-ws.org/Vol-2438/paper8.pdf
-    Github: https://github.com/jirifilip/pyIDS
+    Differences from the pyIDS-backed version:
+      - No bin_df required: rules are evaluated directly via Rule.evaluate(X).
+      - Accepts any Rule type (decision tree rules, forest rules, CARs, etc.).
+      - IDSCoverageCache can be precomputed once and reused across n_select
+        values or confidence-sweep subsets via cache.subset(indices).
+      - Native n_select cap via backward elimination inside SLS.
 
     Args:
-        rules (List[List[Condition]], optional): List of rules to initialize the decision set with.
-            If None, the rules will be generated using the rule_miner. Defaults to None.
-        rule_labels (List[Set[int]], optional): List of labels corresponding to each rule.
-            If None, the labels will be generated using the rule_miner. Defaults to None.
-        lambdas (list[float], optional): List of 7 lambda values for the submodular objective function.
-            If None, a coordinate ascent search will be used to find good lambdas. Defaults to None.
-        lambda_search_dict (dict[str, tuple[float, float]], optional): Dictionary specifying the 
-            search space for each lambda value when using coordinate ascent. 
-            Each key should be a string 'l1' to 'l7', and each value should be a tuple (min, max).
-            If None and lambdas is also None, default search spaces will be used. Defaults to None.
-        ternary_search_precision (float, optional): Precision for ternary search in coordinate 
-            ascent. Defaults to 1. For more information, see the absolute_precision parameter 
-            used in the following pseudocode: https://en.wikipedia.org/wiki/Ternary_search
-        max_iterations (int, optional): Maximum number of iterations for coordinate ascent.
-        ids_cacher (IDSCacher, optional): An optional IDSCacher object to cache computations
-            during IDS fitting. Defaults to None.
-        algorithm (str, optional): The IDS algorithm to use. Options are "DLS" (default) or "SLS".
-
+        rules:                     Candidate rule pool.
+        rule_labels:               Optional per-rule cluster labels.
+        n_select:                  Maximum number of rules to select. If None,
+                                   SLS determines the set size automatically.
+        lambdas:                   List of 7 lambda weights. If None, coordinate
+                                   ascent is run to find good lambdas.
+        lambda_search_dict:        Search space for coordinate ascent. Either a
+                                   dict (values are (lo, hi) tuples) or a list
+                                   of 7 (lo, hi) tuples. Default: [(0,1)] * 7.
+        ternary_search_precision:  Stopping precision for ternary search.
+        max_iterations:            Max coordinate-ascent rounds.
+        cache:                     Pre-built IDSCoverageCache. Pass this to skip
+                                   recomputation when reusing across experiments.
     """
+
     def __init__(
         self,
-        rules : List[Rule] = None,
-        rule_labels : List[Set[int]] = None,
-        n_select : int = None,
-        bin_df : pd.DataFrame = None,
-        lambdas : list[float] = None,
-        lambda_search_dict : dict[str, tuple[float, float]] = None,
-        ternary_search_precision : float = 1.0,
-        max_iterations : int = 50,
-        ids_cacher:  IDSCacher = None,
-        algorithm: str = "DLS"
+        rules: List[Rule] = None,
+        rule_labels: List[Set[int]] = None,
+        n_select: int = None,
+        lambdas: List[float] = None,
+        lambda_search_dict=None,
+        ternary_search_precision: float = 0.001,
+        max_iterations: int = 10,
+        cache: IDSCoverageCache = None,
     ):
-        super().__init__(rules = rules, rule_labels = rule_labels)
+        super().__init__(rules=rules, rule_labels=rule_labels)
 
         if n_select is not None:
-            assert isinstance(n_select, int) and n_select > 0, "n_select must be a positive integer."
+            assert isinstance(n_select, int) and n_select > 0, \
+                "n_select must be a positive integer."
         self.n_select = n_select
 
-        if bin_df is None:
-            raise ValueError("bin_df must be provided to initialize IDS.")
-        self.bin_df = bin_df
-            
-        if lambdas is not None:
-            if not isinstance(lambdas, list):
-                raise ValueError("lambdas must be a list of floats.")
-            if len(lambdas) != 7:
-                raise ValueError("Lambdas must be a list of length 7.")
-        if lambda_search_dict is not None:
-            if not isinstance(lambda_search_dict, dict):
-                raise ValueError("lambda_search_dict must be a dictionary.")
-            if len(lambda_search_dict) != 7:
-                raise ValueError("Lambda search dictionary must have 7 entries.")
-            if not all(isinstance(v, tuple) and len(v) == 2 for v in lambda_search_dict.values()):
-                raise ValueError("Each value in the lambda search dictionary must be a tuple of (min, max).")
-        elif lambdas is None:
-            # Default search space for each lambda
-            lambda_search_dict = {
-                'l1': (0, 1000),
-                'l2': (0, 1000),
-                'l3': (0, 1000),
-                'l4': (0, 1000),
-                'l5': (0, 1000),
-                'l6': (0, 1000),
-                'l7': (0, 1000)
-            }
-        if not isinstance(ternary_search_precision, float) or ternary_search_precision <= 0:
-            raise ValueError("ternary_search_precision must be a positive floating point.")
-        if not isinstance(max_iterations, int) or max_iterations <= 0:
-            raise ValueError("max_iterations must be a positive integer.")
+        if lambdas is not None and len(lambdas) != 7:
+            raise ValueError("lambdas must be a list of 7 floats.")
+        self.lambdas = list(lambdas) if lambdas is not None else None
 
-        self.lambdas = lambdas
-        self.lambda_search_dict = lambda_search_dict
+        if lambda_search_dict is not None:
+            if isinstance(lambda_search_dict, dict):
+                self._lambda_ranges = list(lambda_search_dict.values())
+            else:
+                self._lambda_ranges = list(lambda_search_dict)
+        else:
+            self._lambda_ranges = [(0.0, 1.0)] * 7
+
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
-        self.ids_cacher = ids_cacher
-        self.algorithm = algorithm
+        self.cache = cache
 
-    
-    def ids_to_decision_set(self, cars : List[IDSRule]) -> List[Rule]:
-        """
-        Convert a list of rules found with PyIDS to a list of Conditions.
-        Args:
-            cars (List[IDSRule]): A list of Class Association Rules (CARs).
-        Returns:
-            list: A list of Rule objects.
-        """
-        decision_set = []
-        for car in cars:
-            car_dict = car.to_dict()
-            #print(car_dict)
-            car_interval_dict = car_dict['antecedent']
-            rule_conditions = []
-            for interval_dict in car_interval_dict:
-                feature = int(interval_dict['name'])
-                interval = interval_dict['value']
-                # Convert the interval to two Conditions
-                # (one for the lower bound and one for the upper bound)
-                lower_condition, upper_condition = interval_to_condition(feature, interval)
-                rule_conditions.append(lower_condition)
-                rule_conditions.append(upper_condition)
-            rule = Rule(rule_conditions)
-            label = int(car_dict['consequent']['value'])
-            decision_set.append(Decision(rule, label))
-        return decision_set
-    
-
-
-    def select(self, X : NDArray, y : List[Set[int]] = None):
-        """
-        selects the decision set using the selectr.
-        
-        Args:
-            X (np.ndarray): Input dataset.
-            
-            y (List[Set[int]], optional): Target labels. Defaults to None.
-        """
-        y_ = flatten_labels(y)
-        if (len(y_) != len(y)):
+    def select(self, X: NDArray, y: List[Set[int]]) -> set:
+        y_flat = flatten_labels(y)
+        if len(y_flat) != len(y):
             raise ValueError("Each data point must have exactly one label.")
-        if self.decision_set is None:
-            raise ValueError('Decision set has not been fitted yet.')
-        
-        cars = decision_set_to_cars(
-            X, y,
-            self.decision_set
+
+        if self.cache is None:
+            cache = IDSCoverageCache()
+            cache.compute(list(self.decision_set), X, y_flat)
+            self.cache = cache
+
+        cache = self.cache
+        N = cache.N
+
+        # Filter to decisions that cover at least one point
+        valid_indices = [
+            i for i in range(len(cache.decisions))
+            if cache.antecedent_masks[i].any()
+        ]
+        if not valid_indices:
+            return set()
+
+        sub_cache = (
+            cache.subset(valid_indices)
+            if len(valid_indices) < len(cache.decisions)
+            else cache
         )
-        cars = [car for car in cars if car.confidence > 0 and car.support > 0]
-        valid_cars = [car for i,car in enumerate(cars) if int(cars[i].consequent[1]) != -1]
-        if len(valid_cars) == 0:
-            raise ValueError("No valid (non-outlier) class association rules found. " \
-            "Try increasing the number of mined rules.")
-        ids_rules = list(map(IDSRule, valid_cars))
-        ids_ruleset = IDSRuleSet(ids_rules)
-        bin_df = self.bin_df.assign(**{'class': y_})
-        bin_df['class'] = bin_df['class'].astype(str)
-        quant_df = QuantitativeDataFrame(bin_df)
+        D = len(sub_cache.decisions)
+        M = D
 
-        if self.ids_cacher is None:
-            #print('Calculating IDS cacher overlaps...')
-            ids_cacher = IDSCacher()
-            ids_cacher.calculate_overlap(ids_ruleset, quant_df)
-            end = time.time()
-            #print(f"IDS cacher overlaps calculated in {end - start_time:.2f} seconds.")
-            self.ids_cacher = ids_cacher
+        lambdas = self.lambdas
+        if lambdas is None:
+            def fmax(lam):
+                obj = IDSObjective(lam, sub_cache, N, M)
+                opt = SLSOptimizer(obj, list(range(D)))
+                selected = opt.optimize(n_select=self.n_select)
+                return obj.evaluate(set(selected))
 
-        if self.lambdas is None:
-            def fmax(lambda_dict):
-                ids = IDS_pyids(n_select=self.n_select, algorithm=self.algorithm)
-                ids.ids_ruleset = ids_ruleset
-                ids.cacher = self.ids_cacher
-                ids.fit(
-                    quant_dataframe=quant_df,
-                    lambda_array=list(lambda_dict.values())
-                )
-
-                auc = ids.score_auc(quant_df)
-                return auc
-
-            #print('Starting coordinate ascent for lambda selection...')
-            coord_asc = CoordinateAscent(
-                func=fmax,
-                func_args_ranges=self.lambda_search_dict,
-                ternary_search_precision=self.ternary_search_precision,
-                max_iterations=self.max_iterations
+            coord_asc = IDSCoordinateAscent(
+                fmax,
+                self._lambda_ranges,
+                precision=self.ternary_search_precision,
+                max_iterations=self.max_iterations,
             )
-
             lambdas = coord_asc.fit()
-            end = time.time()
-            print(f"Coordinate ascent finished in {end - start_time:.2f} seconds.")
-            print(f"Selected lambdas: {lambdas}")
-        else:
-            lambdas = self.lambdas
-        
+            self.lambdas = lambdas
 
-        #print('Starting IDS selection...')
+        obj = IDSObjective(lambdas, sub_cache, N, M)
+        optimizer = SLSOptimizer(obj, list(range(D)))
+        selected_indices = optimizer.optimize(n_select=self.n_select)
 
-        ids = IDS_pyids(n_select = self.n_select, algorithm=self.algorithm)
-        ids.ids_ruleset = ids_ruleset
-        ids.cacher = self.ids_cacher
-        ids.fit(quant_dataframe=quant_df, lambda_array=lambdas)
-        #ids.fit(class_association_rules=valid_cars, quant_dataframe=quant_df, lambda_array=lambdas)
-        end = time.time()
-        #print(f"IDS selection finished in {end - start_time:.2f} seconds.")
-        selected_decision_set = self.ids_to_decision_set(ids.clf.rules)
-        return selected_decision_set
+        return {sub_cache.decisions[i] for i in selected_indices}
 
-    def get_cacher(self) -> IDSCacher:
-        """
-        Get the IDSCacher used during fitting.
-        
-        Returns:
-            IDSCacher: The IDSCacher object.
-        """
-        return self.ids_cacher
-    
+    def get_cache(self) -> IDSCoverageCache:
+        """Return the precomputed coverage cache (built during fit)."""
+        return self.cache
+
 
 ####################################################################################################

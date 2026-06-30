@@ -108,7 +108,6 @@ outfile_ref = '_rule_length'
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
 class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
-bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -198,24 +197,24 @@ cn2_mod = DecisionSetMod(
 # IDS:
 with open('data/experiments/climate/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
+if isinstance(ids_lambdas, dict):
+    ids_lambdas = list(ids_lambdas.values())
 
-print("Pre-computing IDS cacher...")
+print("Pre-computing IDS cache...")
 _ids_pre = IDS(
     rules=class_association_rules,
     n_select=None,
-    bin_df=bin_df,
     lambdas=ids_lambdas,
 )
 _ids_pre.fit(data, kmeans_labels)
-ids_cacher = _ids_pre.ids_cacher
-print("IDS cacher ready.")
+ids_cache = _ids_pre.get_cache()
+print("IDS cache ready.")
 
 ids_params = {
     (r,): {
         'n_select': r,
         'lambdas': ids_lambdas,
-        'bin_df': bin_df,
-        'ids_cacher': ids_cacher,
+        'cache': ids_cache,
     } for r in n_rules_list
 }
 ids_mod = DecisionSetMod(

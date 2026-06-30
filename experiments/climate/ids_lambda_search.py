@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 from intercluster import *
 from intercluster.decision_sets import *
+from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer, IDSCoordinateAscent
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -43,91 +44,61 @@ y_flat = flatten_labels(kmeans_labels)
 n_select = 6
 
 ####################################################################################################
-# Load CAR rules and bin_df
-
-from pyids.data_structures.ids_rule import IDSRule
-from pyids.data_structures.ids_ruleset import IDSRuleSet
-from pyids.data_structures.ids_cacher import IDSCacher
-from pyids.algorithms.ids import IDS as IDS_pyids
-from pyids.algorithms.ids_objective_function import IDSObjectiveFunction, ObjectiveFunctionParameters
-from pyids.model_selection.coordinate_ascent import CoordinateAscent
-from pyarc.qcba.data_structures import QuantitativeDataFrame
+# Load pre-mined CAR rules
 
 class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
-bin_df_raw = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
 
 ####################################################################################################
-# Build pyids data structures (mirrors IDS.select() in src/intercluster/decision_sets/ids.py)
+# Pre-compute IDSCoverageCache (the expensive O(N²) step, done once)
+#
+# We construct the full decision set (one Decision per rule × cluster label),
+# then build the cache using Rule.evaluate(data) directly — no bin_df needed.
 
-cars = decision_set_to_cars(data, kmeans_labels, class_association_rules)
-cars = [car for car in cars if car.confidence > 0 and car.support > 0]
-cars = [car for car in cars if int(car.consequent[1]) != -1]
-
-if not cars:
-    raise RuntimeError("No valid class association rules found after filtering.")
-
-ids_rules = list(map(IDSRule, cars))
-ids_ruleset = IDSRuleSet(ids_rules)
-
-bin_df = bin_df_raw.assign(**{'class': y_flat})
-bin_df['class'] = bin_df['class'].astype(str)
-quant_df = QuantitativeDataFrame(bin_df)
-
-####################################################################################################
-# Compute IDS cacher (expensive O(N²) step, done once)
-
-print(f"Computing IDS cacher for {len(ids_ruleset.ruleset)} rules...")
+print(f"Building coverage cache for {len(class_association_rules)} rules...")
 t0 = time.time()
-ids_cacher = IDSCacher()
-ids_cacher.calculate_overlap(ids_ruleset, quant_df)
-print(f"Cacher ready in {time.time() - t0:.1f}s")
+
+# Temporarily construct an IDS with n_select=None to trigger cache building
+_pre = IDS(
+    rules=class_association_rules,
+    n_select=None,
+    lambdas=[1.0] * 7,  # placeholder lambdas (cache build doesn't depend on them)
+)
+_pre.fit(data, kmeans_labels)
+ids_cache = _pre.get_cache()
+
+print(f"Cache ready: {len(ids_cache.decisions)} valid decisions in {time.time() - t0:.1f}s")
 
 ####################################################################################################
-# Coordinate ascent using the IDS internal objective as the scoring function.
+# Coordinate ascent using the IDS objective as the scoring function.
 #
 # For a candidate lambda array λ:
-#   1. Fit IDS using λ → select solution set S*(λ)
-#   2. Evaluate S*(λ) with the IDS objective function under λ
+#   1. Run SLS with λ → selected solution S*(λ)
+#   2. Evaluate S*(λ) with the IDS objective under λ
 #
 # This finds lambdas that are self-consistent: the selected rule set maximally
-# satisfies the IDS objective criteria (compactness, coverage, low overlap) under
-# the same weights used to select it. The ternary search is well-defined because
-# the objective is not monotone in any single lambda — increasing one lambda shifts
-# emphasis toward that criterion at the expense of others, creating a peak.
+# satisfies the IDS objective under the same weights used to select it.
 
-def fmax(lambda_dict):
-    lambdas = list(lambda_dict.values())
-
-    ids = IDS_pyids(n_select=n_select, algorithm="DLS")
-    ids.ids_ruleset = ids_ruleset
-    ids.cacher = ids_cacher
-    ids.fit(quant_df, lambda_array=lambdas)
-
-    solution = IDSRuleSet(ids.clf.rules)
-
-    params = ObjectiveFunctionParameters()
-    params.params["all_rules"] = ids_ruleset
-    params.params["len_all_rules"] = len(ids_ruleset.ruleset)
-    params.params["quant_dataframe"] = quant_df
-    params.params["lambda_array"] = lambdas
-    obj_fn = IDSObjectiveFunction(params, cacher=ids_cacher)
-
-    return obj_fn.evaluate(solution)
+D = len(ids_cache.decisions)
+N = ids_cache.N
 
 
-# Search range: (0, 1) covers the heuristic lambda magnitudes. The extension
-# mechanism in CoordinateAscent will expand the upper bound automatically if the
-# optimum is near the boundary.
-search_space = {f'l{i}': (0.0, 1.0) for i in range(7)}
+def fmax(lambdas):
+    obj = IDSObjective(lambdas, ids_cache, N=N, M=D)
+    optimizer = SLSOptimizer(obj, list(range(D)))
+    selected = optimizer.optimize(n_select=n_select)
+    return obj.evaluate(set(selected))
+
+
+search_space = [(0.0, 1.0)] * 7
 
 print("Starting coordinate ascent...")
-print(f"  7 lambdas × {10} iterations, ternary search precision=0.001")
+print(f"  7 lambdas × 10 iterations, ternary search precision=0.001")
 t1 = time.time()
 
-coord_asc = CoordinateAscent(
+coord_asc = IDSCoordinateAscent(
     func=fmax,
-    func_args_ranges=search_space,
-    ternary_search_precision=0.001,
+    ranges=search_space,
+    precision=0.001,
     max_iterations=10,
 )
 best_lambdas = coord_asc.fit()
@@ -136,7 +107,7 @@ print(f"Coordinate ascent finished in {time.time() - t1:.1f}s")
 print(f"Best lambdas: {best_lambdas}")
 
 ####################################################################################################
-# Save
+# Save as a JSON list of 7 floats
 
 out_path = 'data/experiments/climate/rules/ids_lambdas.json'
 with open(out_path, 'w') as f:
