@@ -218,6 +218,7 @@ ids_params = {
         'n_select': r,
         'lambdas': ids_lambdas,
         'cache': ids_cache,
+        'optimizer': 'random_greedy',
     } for r in n_rules_list
 }
 ids_mod = DecisionSetMod(

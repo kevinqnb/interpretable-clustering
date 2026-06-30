@@ -305,7 +305,7 @@ if os.path.exists(_ids_cache_path):
     print(f"IDS cache loaded ({len(ids_full_cache.decisions)} decisions).")
 else:
     print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
-    _ids_full = IDS(rules=pre_filter_ensemble, n_select=n_select, lambdas=ids_lambdas)
+    _ids_full = IDS(rules=pre_filter_ensemble, n_select=n_select, lambdas=ids_lambdas, optimizer='random_greedy')
     _ids_full.fit(data, kmeans_labels)
     ids_full_cache = _ids_full.get_cache()
     print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
@@ -390,6 +390,7 @@ for conf in confidence_values:
             n_select=n_select,
             lambdas=ids_lambdas,
             cache=ids_sub_cache,
+            optimizer='random_greedy',
         )
         _ids.fit(data, kmeans_labels)
         pool_dep['IDS'] = _dset_info(_ids, data, n_labels)

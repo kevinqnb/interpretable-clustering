@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from intercluster import *
 from intercluster.decision_sets import *
-from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer, IDSCoordinateAscent
+from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer, RandomGreedyOptimizer, IDSCoordinateAscent
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -96,7 +96,7 @@ N = ids_cache.N
 
 def fmax(lambdas):
     obj = IDSObjective(lambdas, ids_cache, N=N, M=D)
-    optimizer = SLSOptimizer(obj, list(range(D)))
+    optimizer = RandomGreedyOptimizer(obj, list(range(D)))
     selected = optimizer.optimize(n_select=n_select)
     return obj.evaluate(set(selected))
 

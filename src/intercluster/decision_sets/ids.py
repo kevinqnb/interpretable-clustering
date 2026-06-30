@@ -252,6 +252,57 @@ class SLSOptimizer:
 ####################################################################################################
 
 
+class RandomGreedyOptimizer:
+    """
+    Randomized greedy for non-monotone submodular maximization (Buchbinder et al. 2014).
+
+    At each of k rounds: compute marginal gains for all unchosen elements, collect the
+    top-k candidates (by gain), then add one chosen uniformly at random.  Provides a
+    1/e approximation ratio for non-monotone submodular functions with a cardinality
+    constraint.
+
+    Args:
+        objective:   IDSObjective instance.
+        all_indices: List of integer indices into objective.cache.decisions.
+    """
+
+    def __init__(self, objective: IDSObjective, all_indices: List[int]):
+        self.objective = objective
+        self.all_indices = list(all_indices)
+        self.n = len(all_indices)
+
+    def optimize(self, n_select: int = None) -> List[int]:
+        """
+        Run randomized greedy and return selected indices.
+
+        Args:
+            n_select: Cardinality budget k. Defaults to len(all_indices).
+
+        Returns:
+            List of selected indices into objective.cache.decisions.
+        """
+        if self.n == 0:
+            return []
+        k = min(n_select, self.n) if n_select is not None else self.n
+        remaining = list(self.all_indices)
+        S: set = set()
+        current_val = self.objective.evaluate(S)
+        for _ in range(k):
+            if not remaining:
+                break
+            gains = [(self.objective.evaluate(S | {u}) - current_val, u) for u in remaining]
+            gains.sort(key=lambda x: -x[0])
+            top_k = [u for _, u in gains[:k]]
+            u_star = top_k[np.random.randint(len(top_k))]
+            S.add(u_star)
+            remaining.remove(u_star)
+            current_val = self.objective.evaluate(S)
+        return list(S)
+
+
+####################################################################################################
+
+
 class IDSCoordinateAscent:
     """
     Coordinate ascent with ternary search for IDS lambda optimization.
@@ -358,6 +409,7 @@ class IDS(DecisionSet):
         ternary_search_precision: float = 0.001,
         max_iterations: int = 10,
         cache: IDSCoverageCache = None,
+        optimizer: str = 'sls',
     ):
         super().__init__(rules=rules, rule_labels=rule_labels)
 
@@ -381,6 +433,15 @@ class IDS(DecisionSet):
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
         self.cache = cache
+
+        if optimizer not in ('sls', 'random_greedy'):
+            raise ValueError(f"optimizer must be 'sls' or 'random_greedy', got {optimizer!r}.")
+        self.optimizer = optimizer
+
+    def _make_optimizer(self, obj: IDSObjective, indices: List[int]):
+        if self.optimizer == 'random_greedy':
+            return RandomGreedyOptimizer(obj, indices)
+        return SLSOptimizer(obj, indices)
 
     def select(self, X: NDArray, y: List[Set[int]]) -> set:
         y_flat = flatten_labels(y)
@@ -415,7 +476,7 @@ class IDS(DecisionSet):
         if lambdas is None:
             def fmax(lam):
                 obj = IDSObjective(lam, sub_cache, N, M)
-                opt = SLSOptimizer(obj, list(range(D)))
+                opt = self._make_optimizer(obj, list(range(D)))
                 selected = opt.optimize(n_select=self.n_select)
                 return obj.evaluate(set(selected))
 
@@ -429,7 +490,7 @@ class IDS(DecisionSet):
             self.lambdas = lambdas
 
         obj = IDSObjective(lambdas, sub_cache, N, M)
-        optimizer = SLSOptimizer(obj, list(range(D)))
+        optimizer = self._make_optimizer(obj, list(range(D)))
         selected_indices = optimizer.optimize(n_select=self.n_select)
 
         return {sub_cache.decisions[i] for i in selected_indices}
