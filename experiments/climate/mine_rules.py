@@ -152,9 +152,12 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
 
-ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
+pre_filter_ensemble = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
+print("Total pre-filter ensemble rules:", len(pre_filter_ensemble))
+save_rules(pre_filter_ensemble, rules_directory + 'pre_filter_ensemble_rules.pkl')
+
 ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
+    pre_filter_ensemble, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))

@@ -45,6 +45,8 @@ class CN2(DecisionSet):
         beam_width: int = 10,
         min_covered_examples: int = 1,
         max_rule_conditions: int = 5,
+        rules=None,
+        rule_labels=None,
     ):
         super().__init__(rules=[])
 

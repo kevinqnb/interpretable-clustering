@@ -107,6 +107,8 @@ outfile_ref = '_rule_length'
 
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
+class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
+bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -159,66 +161,76 @@ shallow_tree_mod = DecisionTreeMod(
     name = 'Shallow-Tree'
 )
 
-'''
+# WRA:
+wra_params = {(r,): {'n_select': r} for r in n_rules_list}
+wra_mod = DecisionSetMod(
+    model=WRABaseline,
+    rules=ensemble_rules,
+    name='WRA'
+)
+
+wra_weighted_params = {(r,): {'n_select': r, 'weights': weights} for r in n_rules_list}
+wra_weighted_mod = DecisionSetMod(
+    model=WRABaseline,
+    rules=ensemble_rules,
+    name='WRA-weighted'
+)
+
+
+# CBA:
+cba_params = {(r,): {'n_select': r} for r in n_rules_list}
+cba_mod = DecisionSetMod(
+    model=CBA,
+    rules=ensemble_rules,
+    name='CBA'
+)
+
+
+# CN2:
+cn2_params = {(r,): {'n_select': r} for r in n_rules_list}
+cn2_mod = DecisionSetMod(
+    model=CN2,
+    rules=None,
+    name='CN2'
+)
+
+
 # IDS:
 max_rule_len = max(len(r) for r in class_association_rules)
 ids_lambdas = [
     1 / len(class_association_rules),
     1 / (max_rule_len * len(class_association_rules)),
-    1 / (n * (len(class_association_rules) **2)),
-    1 / (n * (len(class_association_rules) **2)),
+    1 / (n * (len(class_association_rules) ** 2)),
+    1 / (n * (len(class_association_rules) ** 2)),
     1 / fixed_parameters['n_clusters'],
     1 / (n * len(class_association_rules)),
     1 / n,
 ]
 
-
-# Fit parameters with coordinate ascent:
-max_rule_len = max(len(r) for r in class_association_rules)
-lambda_search_dict = {
-    'l1': (0, ids_lambdas[0]),
-    'l2': (0, ids_lambdas[1]),
-    'l3': (0, ids_lambdas[2]),
-    'l4': (0, ids_lambdas[3]),
-    'l5': (0, ids_lambdas[4]),
-    'l6': (0, ids_lambdas[5]),
-    'l7': (0, ids_lambdas[6]),
-}
-ternary_search_precision = 0.5 * (1 / (n * len(class_association_rules)**2))
-max_iterations = 10
-
-
-# Run an initial fitting to prepare the IDS cache:
-ids_set = IDS(
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    n_select = None,
-    bin_df = class_association_rule_miner.bin_df,
-    lambdas = ids_lambdas,
-    #lambda_search_dict = lambda_search_dict,
-    #ternary_search_precision = ternary_search_precision,
-    #max_iterations = max_iterations,
+print("Pre-computing IDS cacher...")
+_ids_pre = IDS(
+    rules=class_association_rules,
+    n_select=None,
+    bin_df=bin_df,
+    lambdas=ids_lambdas,
 )
-ids_set.fit(data, kmeans_labels)
-ids_cacher = ids_set.ids_cacher
-ids_lambdas = ids_set.lambdas
-
+_ids_pre.fit(data, kmeans_labels)
+ids_cacher = _ids_pre.ids_cacher
+print("IDS cacher ready.")
 
 ids_params = {
-    (i,) : {
-        'n_select' : i,
-        'lambdas' : ids_lambdas,
-        'bin_df' : class_association_rule_miner.bin_df,
-        #'ids_cacher' : ids_cacher,
-    } for i in n_rules_list
+    (r,): {
+        'n_select': r,
+        'lambdas': ids_lambdas,
+        'bin_df': bin_df,
+        'ids_cacher': ids_cacher,
+    } for r in n_rules_list
 }
 ids_mod = DecisionSetMod(
-    model = IDS,
-    rules = class_association_rules,
-    rule_labels = class_association_rule_labels,
-    name = f"IDS"
+    model=IDS,
+    rules=class_association_rules,
+    name='IDS'
 )
-'''
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
@@ -298,8 +310,12 @@ module_list = [
     (exp_tree_mod, exp_tree_params),
     (exkmc_mod, exkmc_params),
     (shallow_tree_mod, shallow_tree_params),
-    #(ids_mod, ids_params),
-] + dscluster_module_list #+ ids_module_list
+    (wra_mod, wra_params),
+    (wra_weighted_mod, wra_weighted_params),
+    (cba_mod, cba_params),
+    (cn2_mod, cn2_params),
+    (ids_mod, ids_params),
+] + dscluster_module_list
 
 measurement_fns = [
     TotalCoverage(),
