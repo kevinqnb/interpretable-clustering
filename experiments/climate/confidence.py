@@ -88,8 +88,8 @@ class_association_rules = load_rules('data/experiments/climate/rules/class_assoc
 car_rule_set = set(class_association_rules)
 bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
 
-with open('data/experiments/climate/rules/ids_lambdas.json') as f:
-    ids_lambdas = json.load(f)
+#with open('data/experiments/climate/rules/ids_lambdas.json') as f:
+#    ids_lambdas = json.load(f)
 
 outfile = 'data/experiments/climate/confidence/'
 os.makedirs(outfile, exist_ok=True)
@@ -364,13 +364,14 @@ for conf in confidence_values:
     # IDS — cacher recomputed each iteration from the filtered CAR pool;
     # lambdas are fixed (fitted via coordinate ascent on the full pool).
     # ----------------------------------------------------------------
+    '''
     if filtered_car_rules:
         _ids = IDS(rules=filtered_car_rules, n_select=n_select, bin_df=bin_df, lambdas=ids_lambdas)
         _ids.fit(data, kmeans_labels)
         pool_dep['IDS'] = _dset_info(_ids, data, n_labels)
     else:
         pool_dep['IDS'] = _empty_info()
-
+    '''
     # ----------------------------------------------------------------
     # Aggregate all algorithm info for evaluation
     # ----------------------------------------------------------------
