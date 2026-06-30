@@ -196,16 +196,8 @@ cn2_mod = DecisionSetMod(
 
 
 # IDS:
-max_rule_len = max(len(r) for r in class_association_rules)
-ids_lambdas = [
-    1 / len(class_association_rules),
-    1 / (max_rule_len * len(class_association_rules)),
-    1 / (n * (len(class_association_rules) ** 2)),
-    1 / (n * (len(class_association_rules) ** 2)),
-    1 / fixed_parameters['n_clusters'],
-    1 / (n * len(class_association_rules)),
-    1 / n,
-]
+with open('data/experiments/climate/rules/ids_lambdas.json') as f:
+    ids_lambdas = json.load(f)
 
 print("Pre-computing IDS cacher...")
 _ids_pre = IDS(

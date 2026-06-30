@@ -81,12 +81,15 @@ with open("data/experiments/climate/alphas/selected_alphas_rule_length.json") as
     selected_alpha_dict = json.load(f)
 
 ####################################################################################################
-# Load rule pools
+# Load rule pools and IDS lambdas
 
 pre_filter_ensemble = load_rules('data/experiments/climate/rules/pre_filter_ensemble_rules.pkl')
 class_association_rules = load_rules('data/experiments/climate/rules/class_association_rules.pkl')
 car_rule_set = set(class_association_rules)
 bin_df = pd.read_csv('data/experiments/climate/rules/bin_df.csv')
+
+with open('data/experiments/climate/rules/ids_lambdas.json') as f:
+    ids_lambdas = json.load(f)
 
 outfile = 'data/experiments/climate/confidence/'
 os.makedirs(outfile, exist_ok=True)
@@ -358,21 +361,11 @@ for conf in confidence_values:
         pool_dep['CBA'] = _empty_info()
 
     # ----------------------------------------------------------------
-    # IDS — cacher recomputed each iteration from the filtered CAR pool
+    # IDS — cacher recomputed each iteration from the filtered CAR pool;
+    # lambdas are fixed (fitted via coordinate ascent on the full pool).
     # ----------------------------------------------------------------
     if filtered_car_rules:
-        max_car_len = max(len(r) for r in filtered_car_rules)
-        n_car = len(filtered_car_rules)
-        ids_lambdas_c = [
-            1 / n_car,
-            1 / (max_car_len * n_car),
-            1 / (n * n_car ** 2),
-            1 / (n * n_car ** 2),
-            1 / n_select,
-            1 / (n * n_car),
-            1 / n,
-        ]
-        _ids = IDS(rules=filtered_car_rules, n_select=n_select, bin_df=bin_df, lambdas=ids_lambdas_c)
+        _ids = IDS(rules=filtered_car_rules, n_select=n_select, bin_df=bin_df, lambdas=ids_lambdas)
         _ids.fit(data, kmeans_labels)
         pool_dep['IDS'] = _dset_info(_ids, data, n_labels)
     else:
