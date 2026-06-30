@@ -50,9 +50,13 @@ n_select = 6
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
 print(f"Ensemble rule set size: {len(ensemble_rules)}")
 
+with open('data/experiments/climate/rules/ensemble_labels.pkl', 'rb') as f:
+    ensemble_labels = pickle.load(f)
+
 # TODO: remove subset for full run — using 100 rules for testing only
 _test_idx = np.random.choice(len(ensemble_rules), size=100, replace=False)
-ids_rules = [ensemble_rules[i] for i in _test_idx]
+ids_rules  = [ensemble_rules[i] for i in _test_idx]
+ids_labels = [ensemble_labels[i] for i in _test_idx]
 print(f"[TEST] Using random subset of {len(ids_rules)} rules")
 
 ####################################################################################################
@@ -67,6 +71,7 @@ t0 = time.time()
 # Temporarily construct an IDS with n_select=None to trigger cache building
 _pre = IDS(
     rules=ids_rules,
+    rule_labels=ids_labels,
     n_select=None,
     lambdas=[1.0] * 7,  # placeholder lambdas (cache build doesn't depend on them)
 )

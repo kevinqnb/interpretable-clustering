@@ -109,6 +109,9 @@ outfile_ref = '_rule_length'
 
 ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
 
+with open('data/experiments/climate/rules/ensemble_labels.pkl', 'rb') as f:
+    ensemble_labels = pickle.load(f)
+
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
 }
@@ -165,6 +168,7 @@ wra_params = {(r,): {'n_select': r} for r in n_rules_list}
 wra_mod = DecisionSetMod(
     model=WRABaseline,
     rules=ensemble_rules,
+    rule_labels=ensemble_labels,
     name='WRA'
 )
 
@@ -172,6 +176,7 @@ wra_weighted_params = {(r,): {'n_select': r, 'weights': weights} for r in n_rule
 wra_weighted_mod = DecisionSetMod(
     model=WRABaseline,
     rules=ensemble_rules,
+    rule_labels=ensemble_labels,
     name='WRA-weighted'
 )
 
@@ -181,6 +186,7 @@ cba_params = {(r,): {'n_select': r} for r in n_rules_list}
 cba_mod = DecisionSetMod(
     model=CBA,
     rules=ensemble_rules,
+    rule_labels=ensemble_labels,
     name='CBA'
 )
 
@@ -224,6 +230,7 @@ ids_params = {
 ids_mod = DecisionSetMod(
     model=IDS,
     rules=ensemble_rules,
+    rule_labels=ensemble_labels,
     name='IDS'
 )
 

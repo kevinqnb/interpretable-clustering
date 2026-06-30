@@ -40,10 +40,11 @@ class WRABaseline(DecisionSet):
             n_select (int): Maximum number of rules to select.
             weights (NDArray, optional): Per-point weights for probability estimates.
                 Defaults to None (uniform weights).
-            rule_labels (List[Set[int]], optional): Must be None for WRABaseline.
+            rule_labels (List[Set[int]], optional): Per-rule cluster label assignments.
+                If provided, each rule is paired with its assigned label only (instead
+                of all unique labels in y). Defaults to None.
         """
-        assert rule_labels is None, 'rule_labels must be None for WRABaseline.'
-        super().__init__(rules=rules, rule_labels=None)
+        super().__init__(rules=rules, rule_labels=rule_labels)
 
         assert isinstance(n_select, int) and n_select > 0, \
             'n_select must be a positive integer.'

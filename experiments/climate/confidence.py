@@ -86,6 +86,12 @@ with open("data/experiments/climate/alphas/selected_alphas_rule_length.json") as
 
 pre_filter_ensemble = load_rules('data/experiments/climate/rules/pre_filter_ensemble_rules.pkl')
 
+with open('data/experiments/climate/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
+    pre_filter_labels = pickle.load(f)
+
+# Dict for O(1) label lookup when filtering rules by confidence level
+_pre_filter_label_map = {r: lbl for r, lbl in zip(pre_filter_ensemble, pre_filter_labels)}
+
 with open('data/experiments/climate/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
@@ -305,7 +311,7 @@ if os.path.exists(_ids_cache_path):
     print(f"IDS cache loaded ({len(ids_full_cache.decisions)} decisions).")
 else:
     print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
-    _ids_full = IDS(rules=pre_filter_ensemble, n_select=n_select, lambdas=ids_lambdas, optimizer='random_greedy')
+    _ids_full = IDS(rules=pre_filter_ensemble, rule_labels=pre_filter_labels, n_select=n_select, lambdas=ids_lambdas, optimizer='random_greedy')
     _ids_full.fit(data, kmeans_labels)
     ids_full_cache = _ids_full.get_cache()
     print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
@@ -324,6 +330,7 @@ for conf in confidence_values:
 
     filtered_rules = filter_rules(pre_filter_ensemble, data, kmeans_labels, confidence=conf)
     has_rules = len(filtered_rules) > 0
+    filtered_labels = [_pre_filter_label_map[r] for r in filtered_rules]
 
     print(f"  {len(filtered_rules)} ensemble rules")
 
@@ -358,15 +365,15 @@ for conf in confidence_values:
     pool_dep = {}
 
     if has_rules:
-        _wra = WRABaseline(rules=filtered_rules, n_select=n_select)
+        _wra = WRABaseline(rules=filtered_rules, n_select=n_select, rule_labels=filtered_labels)
         _wra.fit(data, kmeans_labels)
         pool_dep['WRA'] = _dset_info(_wra, data, n_labels)
 
-        _wra_w = WRABaseline(rules=filtered_rules, n_select=n_select, weights=weights)
+        _wra_w = WRABaseline(rules=filtered_rules, n_select=n_select, weights=weights, rule_labels=filtered_labels)
         _wra_w.fit(data, kmeans_labels)
         pool_dep['WRA-weighted'] = _dset_info(_wra_w, data, n_labels)
 
-        _cba = CBA(rules=filtered_rules, n_select=n_select)
+        _cba = CBA(rules=filtered_rules, n_select=n_select, rule_labels=filtered_labels)
         _cba.fit(data, kmeans_labels)
         pool_dep['CBA'] = _dset_info(_cba, data, n_labels)
     else:
@@ -387,6 +394,7 @@ for conf in confidence_values:
         ids_sub_cache = ids_full_cache.subset(filtered_indices)
         _ids = IDS(
             rules=filtered_rules,
+            rule_labels=filtered_labels,
             n_select=n_select,
             lambdas=ids_lambdas,
             cache=ids_sub_cache,
