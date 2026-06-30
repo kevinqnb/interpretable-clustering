@@ -13,6 +13,10 @@ from .decision_tree import (
     ObliqueTree,
 )
 
+from .density_filter_tree import (
+    DensityFilterTree,
+)
+
 from .explanation_tree import (
     ExplanationTree
 )

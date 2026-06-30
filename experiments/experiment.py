@@ -160,6 +160,7 @@ class Experiment:
             # Record measurements:
             for p in param_tuple:
                 module_result_dict[module.name]['lambda'][p] = module.lambda_val if hasattr(module, 'lambda_val') else None
+                print("Module " + module.name + " lambda: " + str(module_result_dict[module.name]['lambda'][p]))
                 module_result_dict[module.name]['max-rule-length'][p] = module.max_rule_length
                 module_result_dict[module.name]['sum-rule-length'][p] = module.sum_rule_length
                 module_result_dict[module.name]['weighted-avg-length'][p] = module.weighted_average_rule_length
