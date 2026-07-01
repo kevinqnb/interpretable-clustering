@@ -52,11 +52,41 @@ class IDSCoverageCache:
 
         self.antecedent_masks = antecedent
         self.correct_masks = correct
-        ant_int = antecedent.astype(np.int32)
-        self.overlap_matrix = ant_int @ ant_int.T
+        ant_f32 = antecedent.astype(np.float32)
+        self.overlap_matrix = np.rint(ant_f32 @ ant_f32.T).astype(np.int32)
 
         labels = np.array([d.label for d in decisions])
         self.same_class_matrix = (labels[:, None] == labels[None, :])
+
+    @classmethod
+    def from_rules(
+        cls,
+        rules: List[Rule],
+        rule_labels: List[Set[int]],
+        X: NDArray,
+        y: List[Set[int]],
+    ) -> 'IDSCoverageCache':
+        """
+        Build a cache directly from a rule pool, without running any optimizer.
+
+        Args:
+            rules:       Candidate rule pool.
+            rule_labels: Per-rule cluster labels (each a single-element set).
+            X:           (N, d) data matrix.
+            y:           Cluster label assignment (List[Set[int]]).
+
+        Returns:
+            A fully populated IDSCoverageCache.
+        """
+        y_flat = flatten_labels(y)
+        decisions = [
+            Decision(r, next(iter(lbl)))
+            for r, lbl in zip(rules, rule_labels)
+            if next(iter(lbl)) != -1
+        ]
+        cache = cls()
+        cache.compute(decisions, X, y_flat)
+        return cache
 
     def subset(self, indices) -> 'IDSCoverageCache':
         """
