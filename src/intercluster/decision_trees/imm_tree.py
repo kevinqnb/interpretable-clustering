@@ -282,19 +282,21 @@ class ImmTree(Tree):
         norm : int = 2,
         max_leaf_nodes : int = None,
         max_depth : int = None,
-        min_points_leaf : int = 1
+        min_points_leaf : int = 1,
+        random_state = None
     ):
         self.centers = centers
         splitter = ImmSplitter(
             centers = centers,
             norm = norm,
             min_points_leaf = min_points_leaf
-        )  
+        )
         super().__init__(
             splitter = splitter,
             max_leaf_nodes = max_leaf_nodes,
-            max_depth = max_depth, 
-            min_points_leaf = min_points_leaf
+            max_depth = max_depth,
+            min_points_leaf = min_points_leaf,
+            random_state = random_state
         )
         self.is_separated = np.zeros(len(centers), dtype = bool)
         
@@ -371,14 +373,14 @@ class ImmTree(Tree):
             indices = node.indices,
             centroid_indices = node.centroid_indices
         )
-        random_tiebreaker = np.random.rand()
+        random_tiebreaker = self._rng.random()
         leaf_obj = (-1*gain, random_tiebreaker, node, condition)
         heapq.heappush(self.heap, leaf_obj)
         self.leaf_count += 1
         if node.depth > self.depth:
             self.depth = node.depth
-            
-            
+
+
     def branch(
         self,
         node : Node,
@@ -386,14 +388,14 @@ class ImmTree(Tree):
     ):
         """
         Splits a leaf node into two new leaf nodes.
-        
+
         Args:
             node (Node): Leaf node to add to the heap.
-            
-            split_info (Tuple[np.ndarray, np.ndarray, float]): 
+
+            split_info (Tuple[np.ndarray, np.ndarray, float]):
                 Precomputed information for the split.
         """
-        
+
         (   left_indices,
             right_indices,
             left_centroid_indices,

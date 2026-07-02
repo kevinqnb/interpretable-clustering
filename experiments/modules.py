@@ -460,3 +460,42 @@ class DecisionSetMod(Module):
 
 
 ####################################################################################################
+
+
+def aggregate_trials(trial_results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """
+    Aggregates a list of per-trial result dictionaries (all sharing the same keys,
+    e.g. one dict of measurement values per random seed) into per-key summary
+    statistics.
+
+    Used for modules whose fitted solution has inherent randomness (e.g. IDS,
+    ExplanationTree, DecisionTree, ShallowTree), where a single fit is not
+    representative and results should instead be reported across several
+    random trials.
+
+    Args:
+        trial_results (List[Dict[str, Any]]): Length n_trials list of result
+            dictionaries, each mapping metric name to a scalar value.
+
+    Returns:
+        aggregated (Dict[str, Dict[str, Any]]): Dictionary mapping each metric name
+            to {'mean': float, 'std': float, 'values': List[Any]} computed across
+            trials. Non-numeric or NaN entries are passed through in 'values' and
+            excluded from the mean/std computation.
+    """
+    if not trial_results:
+        return {}
+
+    aggregated = {}
+    for key in trial_results[0].keys():
+        values = [t[key] for t in trial_results]
+        numeric_values = [v for v in values if v is not None and not (isinstance(v, float) and np.isnan(v))]
+        aggregated[key] = {
+            'mean': float(np.mean(numeric_values)) if numeric_values else np.nan,
+            'std': float(np.std(numeric_values)) if numeric_values else np.nan,
+            'values': values,
+        }
+    return aggregated
+
+
+####################################################################################################

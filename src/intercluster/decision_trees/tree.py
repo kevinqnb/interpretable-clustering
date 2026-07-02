@@ -32,38 +32,44 @@ class Tree():
         max_leaf_nodes : int = None,
         max_depth : int = None,
         min_points_leaf : int = 1,
-        selector : Callable = None
+        selector : Callable = None,
+        random_state = None
     ):
         """
         Args:
             splitter (Callable): Function/Object which determines how to split leaf nodes.
-            
-            base_tree (Node, optional): Root node of a baseline tree to start from. 
+
+            base_tree (Node, optional): Root node of a baseline tree to start from.
                 Defaults to None, in which case the tree is grown from root.
-            
-            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes. 
+
+            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes.
                 Defaults to None.
-                
-            max_depth (int, optional): Optional constraint for maximum depth. 
+
+            max_depth (int, optional): Optional constraint for maximum depth.
                 Defaults to None.
-                
-            min_points_leaf (int, optional): Optional constraint for the minimum number of points. 
+
+            min_points_leaf (int, optional): Optional constraint for the minimum number of points.
                 within a single leaf. Defaults to 1.
 
-            selector (Callable, optional): Function/Object used to select branches of the tree. 
+            selector (Callable, optional): Function/Object used to select branches of the tree.
                 Defaults to None, in which case no pruning is performed.
-            
-        Attributes:            
+
+            random_state (int | np.random.Generator, optional): Seed or Generator controlling
+                the random tie-breaker used to order equal-gain leaves in the growth heap.
+                Passing an explicit value makes tree growth reproducible independent of
+                global NumPy state. Defaults to None (a fresh, unseeded Generator).
+
+        Attributes:
             root (Node): Root node of the tree.
-        
+
             heap (heapq list): Maintains the heap structure of the tree.
-            
+
             leaf_count (int): Number of leaves in the tree.
-            
+
             node_count (int): Number of nodes in the tree.
-                
+
             depth (int): The maximum depth of the tree.
-                
+
         """
         self.splitter = splitter
         self.base_tree = copy.deepcopy(base_tree)
@@ -71,13 +77,15 @@ class Tree():
         self.max_depth = max_depth
         self.min_points_leaf = min_points_leaf
         self.selector = selector
+        self.random_state = random_state
+        self._rng = np.random.default_rng(random_state)
 
         self.root = None
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
         self.depth = 0
-        
+
 
     def fit(
         self,
@@ -179,7 +187,7 @@ class Tree():
             node (Node): Leaf node to add to the heap.
         """
         gain, condition = self.splitter.split(indices = node.indices)
-        random_tiebreaker = np.random.rand()
+        random_tiebreaker = self._rng.random()
         leaf_obj = (-1*gain, random_tiebreaker, node, condition)
         heapq.heappush(self.heap, leaf_obj)
         self.leaf_count += 1

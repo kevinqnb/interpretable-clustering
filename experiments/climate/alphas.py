@@ -36,10 +36,15 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = 12
 
-# REMINDER: The seed should only be initialized here. It should NOT 
-# within the parameters of any sub-function or class (except for select 
-# baseline experiments like KMeans), since these will 
-# reset the seed each time they are given one. 
+# REMINDER: The seed should only be initialized here. It should NOT
+# within the parameters of any sub-function or class (except for select
+# baseline experiments like KMeans), since these will
+# reset the seed each time they are given one.
+# This script only fits PEC (fully deterministic given fixed inputs -- distorted/
+# lazy greedy have no randomness), so a single run under this seed is sufficient;
+# no trial repetition is needed here. See experiments/README.md ("Reproducibility")
+# for the modules that do require multi-trial evaluation (IDS, ExplanationTree,
+# DecisionTree, ShallowTree, handled in max_rules.py/confidence.py).
 seed = 342
 
 def _memoryview_safe(x):

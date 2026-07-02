@@ -4,7 +4,12 @@ import pytest
 from intercluster.rules import LinearCondition
 from intercluster import Rule, Decision, flatten_labels
 from intercluster.decision_sets import IDS
-from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer
+from intercluster.decision_sets.ids import (
+    IDSCoverageCache,
+    IDSObjective,
+    SLSOptimizer,
+    RandomGreedyOptimizer,
+)
 
 
 LAMBDAS = [1.0] * 7
@@ -135,6 +140,97 @@ def test_cache_reuse_gives_same_pool(two_cluster_data):
     model.fit(X, y)
     selected = {d.rule for d in model.decision_set}
     assert selected.issubset({left_rule(), right_rule()})
+
+
+####################################################################################################
+# Reproducibility tests
+####################################################################################################
+
+
+def many_tied_rules(n_rules=6):
+    """
+    `n_rules` rules that all cover the exact same points with the exact same
+    label, so their marginal gains are identical -- this forces
+    RandomGreedyOptimizer's tie-break (`top_k[rng.integers(...)]`) to actually
+    matter, rather than trivially being reproducible regardless of seeding.
+    """
+    return [left_rule() for _ in range(n_rules)]
+
+
+def tied_but_distinguishable_data_and_rules(n_rules=6):
+    """
+    A 2-column dataset (column 1 is a constant dummy feature) plus `n_rules`
+    Rule objects that are structurally distinct (each adds a differently-
+    thresholded, always-true condition on the dummy feature) but functionally
+    tied -- they cover the exact same points with the exact same label. Unlike
+    `many_tied_rules` (which reuses one Rule object, so selections are
+    indistinguishable by identity), this lets a reproducibility test confirm
+    *which* tied rule was picked, not just that some rule was picked.
+    """
+    n = 20
+    X = np.zeros((n, 2))
+    X[:10, 0] = -1.0
+    X[10:, 0] = 1.0
+    y = [{0}] * 10 + [{1}] * 10
+    rules = [
+        Rule([make_condition(0, 0.0, -1), make_condition(1, 100.0 + i, -1)])
+        for i in range(n_rules)
+    ]
+    return X, y, rules
+
+
+def test_random_greedy_optimizer_reproducible_with_same_seed(two_cluster_data):
+    """Same random_state -> identical selection, even when candidates are tied."""
+    X, y = two_cluster_data
+    y_flat = flatten_labels(y)
+    decisions = [Decision(r, 0) for r in many_tied_rules()]
+    cache = IDSCoverageCache()
+    cache.compute(decisions, X, y_flat)
+    obj = IDSObjective(LAMBDAS, cache, N=cache.N, M=len(decisions))
+
+    opt1 = RandomGreedyOptimizer(obj, list(range(len(decisions))), random_state=7)
+    opt2 = RandomGreedyOptimizer(obj, list(range(len(decisions))), random_state=7)
+    assert opt1.optimize(n_select=3) == opt2.optimize(n_select=3)
+
+
+def test_random_greedy_optimizer_unseeded_is_still_random(two_cluster_data):
+    """Sanity check: without a fixed seed, tie-breaking among identical
+    candidates is not forced into always picking the same indices (i.e. the RNG
+    is actually wired up to influence the tie-break, not dead code). Uses
+    n_select > 1 so each round's top_k has multiple tied candidates to choose
+    among -- with n_select=1, top_k always has exactly one element and the
+    pick is trivially deterministic regardless of the RNG."""
+    X, y = two_cluster_data
+    y_flat = flatten_labels(y)
+    decisions = [Decision(r, 0) for r in many_tied_rules(n_rules=8)]
+    cache = IDSCoverageCache()
+    cache.compute(decisions, X, y_flat)
+    obj = IDSObjective(LAMBDAS, cache, N=cache.N, M=len(decisions))
+
+    results = set()
+    for _ in range(15):
+        opt = RandomGreedyOptimizer(obj, list(range(len(decisions))))
+        results.add(tuple(sorted(opt.optimize(n_select=4))))
+    assert len(results) > 1, "expected tie-break to vary across unseeded runs"
+
+
+def test_ids_reproducible_with_same_random_state():
+    """IDS with optimizer='random_greedy' and a fixed random_state gives an
+    identical decision_set across repeated fits, even when candidate rules are
+    tied (same coverage/label) but distinguishable by identity."""
+    X, y, rules = tied_but_distinguishable_data_and_rules()
+    labels = [{0}] * len(rules)
+
+    model1 = IDS(rules=rules, rule_labels=labels, lambdas=COVERAGE_LAMBDAS,
+                 n_select=3, optimizer='random_greedy', random_state=11)
+    model1.fit(X, y)
+
+    model2 = IDS(rules=rules, rule_labels=labels, lambdas=COVERAGE_LAMBDAS,
+                 n_select=3, optimizer='random_greedy', random_state=11)
+    model2.fit(X, y)
+
+    assert {d.rule for d in model1.decision_set} == {d.rule for d in model2.decision_set}
+    assert len(model1.decision_set) == len(model2.decision_set)
 
 
 ####################################################################################################

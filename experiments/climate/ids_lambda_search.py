@@ -27,6 +27,10 @@ from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOp
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
+# REMINDER: The seed should only be initialized here. RandomGreedyOptimizer and
+# IDSCoordinateAscent are given this seed explicitly below (random_state=seed)
+# rather than relying on this global np.random.seed call, so this lambda search
+# is reproducible independent of global NumPy state.
 seed = 342
 
 ####################################################################################################
@@ -84,10 +88,16 @@ print(f"Cache saved to {cache_path}")
 D = len(ids_cache.decisions)
 N = ids_cache.N
 
+# A single shared Generator (rather than re-seeding with the raw `seed` int on
+# every call) so successive fmax() calls during the search draw from a
+# continuing, still fully reproducible, random stream instead of repeating the
+# exact same draws each time.
+_rng = np.random.default_rng(seed)
+
 
 def fmax(lambdas):
     obj = IDSObjective(lambdas, ids_cache, N=N, M=D)
-    optimizer = RandomGreedyOptimizer(obj, list(range(D)))
+    optimizer = RandomGreedyOptimizer(obj, list(range(D)), random_state=_rng)
     selected = optimizer.optimize(n_select=n_select)
     return obj.evaluate(set(selected))
 
@@ -104,6 +114,7 @@ coord_asc = IDSCoordinateAscent(
     precision=0.01,
     max_iterations=5,
     tol=1e-3,
+    random_state=_rng,
 )
 best_lambdas = coord_asc.fit()
 

@@ -28,28 +28,45 @@ class ExplanationTree(Tree):
     """
     def __init__(
         self,
-        num_clusters : int, 
+        num_clusters : int,
         min_points_leaf : int = 1,
+        random_state = None,
     ):
         """
         Args:
             num_clusters (int): The total number of observed clusters.
-            
+
             cpu_count (int, optional): Number of processors to use. Defaults to 1.
-            
-        Attributes:            
+
+            random_state (int | np.random.Generator, optional): Seed or Generator
+                controlling the random tie-breaker used to order equal-gain leaves
+                in the growth heap. Defaults to None.
+
+                CAVEAT: this does NOT give full reproducibility on its own.
+                `ExplanationSplitter`'s compiled Cython backend (`split_cy` and
+                `get_split_outliers_cy` in
+                decision_trees/splitters/cython/explanation.pyx) has its own
+                tie-breaks (`np.random.randint`/`np.random.uniform`) that read
+                the *global* NumPy RNG state directly and are not parameterized
+                by this `random_state` at all. For byte-for-byte reproducible
+                fits, also call `np.random.seed(...)` immediately before
+                `fit()` in addition to passing `random_state` here (this is
+                what experiments/climate/max_rules.py and confidence.py do for
+                their per-trial fits).
+
+        Attributes:
             root (Node): Root node of the tree.
-        
+
             heap (heapq list): Maintains the heap structure of the tree.
-            
+
             leaf_count (int): Number of leaves in the tree.
-            
+
             node_count (int): Number of nodes in the tree.
-                
+
             depth (int): The maximum depth of the tree.
 
             outliers (Set[int]): Set of outlier data points to remove.
-                
+
         """
         self.num_clusters = num_clusters
         splitter = ExplanationSplitter(
@@ -61,7 +78,8 @@ class ExplanationTree(Tree):
             base_tree = None,
             max_leaf_nodes = num_clusters,
             max_depth = None,
-            min_points_leaf = min_points_leaf
+            min_points_leaf = min_points_leaf,
+            random_state = random_state
         )
 
         self.outliers = set()

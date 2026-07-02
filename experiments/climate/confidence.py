@@ -32,7 +32,20 @@ from intercluster.measurements import *
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
+# REMINDER: The seed should only be initialized here. Classes with their own
+# internal randomness (IDS, ExplanationTree, DecisionTree, ShallowTree) accept an
+# explicit random_state / kmeans_random_state instead of relying on this global
+# seed -- see `trial_seeds` below, which derives one seed per trial so those
+# modules can be refit across multiple trials and reported as mean/std rather
+# than a single, arbitrarily-seeded point estimate.
 seed = 342
+
+# Number of independent random-seed trials used to evaluate stochastic modules
+# (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
+# CN2, WRA, CBA) are fit once. `trial_seeds` is derived deterministically from
+# `seed` so re-running this script reproduces the exact same set of trials.
+n_trials = 10
+trial_seeds = [seed + i for i in range(n_trials)]
 
 def _memoryview_safe(x):
     if not x.flags.writeable:
@@ -60,6 +73,8 @@ fixed_parameters = {
     'car_min_confidence': 0.85,
     'car_max_rule_length': 3,
     'seed': seed,
+    'n_trials': n_trials,
+    'trial_seeds': trial_seeds,
     'confidence_values': list(np.round(np.arange(0.0, 1.0, 0.05), 2).tolist()),
 }
 
@@ -252,38 +267,21 @@ measurement_fns = [
 ]
 
 ####################################################################################################
-# Pool-independent algorithms — run once, standard measurements precomputed
+# Pool-independent algorithms — run once (or, for stochastic models, once per
+# trial seed), standard measurements precomputed. These don't depend on the rule
+# pool, so they're unaffected by the confidence-threshold sweep below.
 
 print("Fitting pool-independent algorithms...")
-
-_dt = DecisionTree(max_leaf_nodes=n_select, random_state=seed)
-_dt.fit(data, kmeans_labels)
-dt_decisions = tree_to_decisions(_dt)
-
-_exp_tree = ExplanationTree(num_clusters=n_labels)
-_exp_tree.fit(data, kmeans_labels)
-exp_tree_decisions = tree_to_decisions(_exp_tree)
 
 _exkmc = ExkmcTree(k=n_labels, kmeans=kmeans_base.clustering, max_leaf_nodes=n_select)
 _exkmc.fit(data, kmeans_labels)
 exkmc_decisions = tree_to_decisions(_exkmc)
 
-_shallow = ShallowTree(
-    n_clusters=n_labels,
-    depth_factor=fixed_parameters['shallow_tree_depth_factor'],
-    kmeans_random_state=seed,
-)
-_shallow.fit(data, kmeans_labels)
-shallow_decisions = tree_to_decisions(_shallow)
-
 _cn2 = CN2(n_select=n_select)
 _cn2.fit(data, kmeans_labels)
 
 pool_indep = {
-    'Decision-Tree': _tree_info(_dt, dt_decisions, data, n_labels),
-    'Exp-Tree': _tree_info(_exp_tree, exp_tree_decisions, data, n_labels),
     'ExKMC': _tree_info(_exkmc, exkmc_decisions, data, n_labels),
-    'Shallow-Tree': _tree_info(_shallow, shallow_decisions, data, n_labels),
     'CN2': _dset_info(_cn2, data, n_labels),
 }
 
@@ -293,6 +291,71 @@ pool_indep_measurements = {
         info['data_to_rule'], info['rule_to_cluster'], info['data_to_cluster'], measurement_fns
     )
     for name, info in pool_indep.items()
+}
+
+# Decision-Tree, Exp-Tree, and Shallow-Tree each have a fitted solution that
+# depends on randomness (sklearn tie-breaking, heap tie-breaking, and internal
+# KMeans re-initialization, respectively). Rather than record one arbitrarily
+# seeded fit, each is refit once per seed in `trial_seeds`. Standard measurements
+# are aggregated into {'mean','std','values'} via `aggregate_trials`; the
+# per-trial decision sets are kept so the PEC-objective score (computed inside the
+# confidence sweep below, since it depends on that level's PEC lambda) can also be
+# aggregated across trials.
+
+def _fit_pool_indep_trials(model_cls, base_params, seed_key):
+    """
+    NOTE: sets the global NumPy seed immediately before each trial's fit, in
+    addition to passing the trial seed as `seed_key`. Some dependencies (e.g.
+    ExplanationTree's compiled Cython splitter -- see explanation_tree.py's
+    `random_state` docstring caveat) read the global RNG state directly and
+    aren't fully parameterized by a passed-in random_state alone. This runs
+    single-process, so setting the global seed here is safe and sufficient.
+    """
+    trial_infos = []
+    trial_measurements = []
+    for trial_seed in trial_seeds:
+        np.random.seed(trial_seed)
+        model = model_cls(**(base_params | {seed_key: trial_seed}))
+        model.fit(data, kmeans_labels)
+        decisions = tree_to_decisions(model)
+        info = _tree_info(model, decisions, data, n_labels)
+        trial_infos.append(info)
+        trial_measurements.append(
+            {
+                'n-rules': info['n-rules'],
+                'max-rule-length': info['max-rule-length'],
+                'sum-rule-length': info['sum-rule-length'],
+                'weighted-avg-length': info['weighted-avg-length'],
+            } | measure_algo(
+                info['data_to_rule'], info['rule_to_cluster'], info['data_to_cluster'], measurement_fns
+            )
+        )
+    return trial_infos, aggregate_trials(trial_measurements)
+
+dt_trial_infos, dt_agg_measurements = _fit_pool_indep_trials(
+    DecisionTree, {'max_leaf_nodes': n_select}, 'random_state'
+)
+exp_tree_trial_infos, exp_tree_agg_measurements = _fit_pool_indep_trials(
+    ExplanationTree, {'num_clusters': n_labels}, 'random_state'
+)
+shallow_trial_infos, shallow_agg_measurements = _fit_pool_indep_trials(
+    ShallowTree,
+    {'n_clusters': n_labels, 'depth_factor': fixed_parameters['shallow_tree_depth_factor']},
+    'kmeans_random_state',
+)
+
+# Per-algo list of per-trial decision sets, used for objective scoring in the
+# confidence sweep below. Deterministic pool-indep/pool-dep algos are absent here
+# and take the single-decisions path instead.
+stochastic_trial_infos = {
+    'Decision-Tree': dt_trial_infos,
+    'Exp-Tree': exp_tree_trial_infos,
+    'Shallow-Tree': shallow_trial_infos,
+}
+stochastic_pool_indep_measurements = {
+    'Decision-Tree': dt_agg_measurements,
+    'Exp-Tree': exp_tree_agg_measurements,
+    'Shallow-Tree': shallow_agg_measurements,
 }
 
 # KMeans baseline measurements (fixed)
@@ -311,7 +374,10 @@ if os.path.exists(_ids_cache_path):
     print(f"IDS cache loaded ({len(ids_full_cache.decisions)} decisions).")
 else:
     print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
-    _ids_full = IDS(rules=pre_filter_ensemble, rule_labels=pre_filter_labels, n_select=n_select, lambdas=ids_lambdas, optimizer='random_greedy')
+    _ids_full = IDS(
+        rules=pre_filter_ensemble, rule_labels=pre_filter_labels, n_select=n_select,
+        lambdas=ids_lambdas, optimizer='random_greedy', random_state=seed,
+    )
     _ids_full.fit(data, kmeans_labels)
     ids_full_cache = _ids_full.get_cache()
     print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
@@ -383,8 +449,12 @@ for conf in confidence_values:
 
     # ----------------------------------------------------------------
     # IDS — subset the full cache to filtered ensemble rules each iteration;
-    # lambdas are fixed (fitted via coordinate ascent on the full pool).
+    # lambdas are fixed (fitted via coordinate ascent on the full pool). IDS's
+    # selection step (randomized-greedy / SLS) has inherent randomness, so it is
+    # refit once per seed in `trial_seeds` at every confidence level and the
+    # results aggregated, rather than recording one arbitrarily-seeded fit.
     # ----------------------------------------------------------------
+    ids_trial_infos = []
     if filtered_rules:
         filtered_rule_set = set(filtered_rules)
         filtered_indices = [
@@ -392,18 +462,39 @@ for conf in confidence_values:
             if d.rule in filtered_rule_set
         ]
         ids_sub_cache = ids_full_cache.subset(filtered_indices)
-        _ids = IDS(
-            rules=filtered_rules,
-            rule_labels=filtered_labels,
-            n_select=n_select,
-            lambdas=ids_lambdas,
-            cache=ids_sub_cache,
-            optimizer='random_greedy',
-        )
-        _ids.fit(data, kmeans_labels)
-        pool_dep['IDS'] = _dset_info(_ids, data, n_labels)
+        ids_trial_measurements = []
+        for trial_seed in trial_seeds:
+            _ids = IDS(
+                rules=filtered_rules,
+                rule_labels=filtered_labels,
+                n_select=n_select,
+                lambdas=ids_lambdas,
+                cache=ids_sub_cache,
+                optimizer='random_greedy',
+                random_state=trial_seed,
+            )
+            _ids.fit(data, kmeans_labels)
+            info = _dset_info(_ids, data, n_labels)
+            ids_trial_infos.append(info)
+            ids_trial_measurements.append(
+                {
+                    'n-rules': info['n-rules'],
+                    'max-rule-length': info['max-rule-length'],
+                    'sum-rule-length': info['sum-rule-length'],
+                    'weighted-avg-length': info['weighted-avg-length'],
+                } | measure_algo(
+                    info['data_to_rule'], info['rule_to_cluster'], info['data_to_cluster'], measurement_fns
+                )
+            )
+        ids_agg_measurements = aggregate_trials(ids_trial_measurements)
     else:
-        pool_dep['IDS'] = _empty_info()
+        ids_agg_measurements = aggregate_trials([
+            {
+                'n-rules': 0, 'max-rule-length': np.nan, 'sum-rule-length': np.nan,
+                'weighted-avg-length': np.nan,
+            } | measure_algo(None, None, None, measurement_fns)
+        ])
+
     # ----------------------------------------------------------------
     # Aggregate all algorithm info for evaluation
     # ----------------------------------------------------------------
@@ -467,6 +558,65 @@ for conf in confidence_values:
                     cluster_cost_method=obj_cfg.get('cluster_cost_method', 'kmeans'),
                     weights=obj_cfg.get('weights'),
                 )
+
+        conf_result[algo_name] = algo_result
+
+    # ----------------------------------------------------------------
+    # Stochastic algorithms (Decision-Tree, Exp-Tree, Shallow-Tree, IDS):
+    # standard measurements were already aggregated across trials above (either
+    # once, for the pool-independent trees, or per confidence level, for IDS).
+    # The PEC-objective score is computed per trial (since it depends on this
+    # confidence level's PEC lambda) and aggregated the same way.
+    # ----------------------------------------------------------------
+    stochastic_agg_measurements = {
+        'Decision-Tree': stochastic_pool_indep_measurements['Decision-Tree'],
+        'Exp-Tree': stochastic_pool_indep_measurements['Exp-Tree'],
+        'Shallow-Tree': stochastic_pool_indep_measurements['Shallow-Tree'],
+        'IDS': ids_agg_measurements,
+    }
+    stochastic_infos_for_objective = {
+        'Decision-Tree': stochastic_trial_infos['Decision-Tree'],
+        'Exp-Tree': stochastic_trial_infos['Exp-Tree'],
+        'Shallow-Tree': stochastic_trial_infos['Shallow-Tree'],
+        'IDS': ids_trial_infos,
+    }
+
+    for algo_name, agg_measurements in stochastic_agg_measurements.items():
+        algo_result = dict(agg_measurements)
+        trial_infos_list = stochastic_infos_for_objective[algo_name]
+
+        algo_result['objective'] = {}
+        for obj_name, obj_cfg in objective_config.items():
+            lambda_c = pec_lambdas[obj_name]
+            alpha = selected_alpha_dict[f'dscluster; {obj_name}; ensemble']
+            trial_scores = []
+            if not np.isnan(lambda_c):
+                for info in trial_infos_list:
+                    decisions = info['decisions']
+                    if not decisions:
+                        continue
+                    trial_scores.append(
+                        score_decision_set(
+                            decisions,
+                            data,
+                            kmeans_labels,
+                            n_select=n_select,
+                            objective_type=obj_cfg['objective_type'],
+                            alpha_val=alpha,
+                            lambda_val=lambda_c,
+                            cluster_centers=obj_cfg.get('cluster_centers'),
+                            cluster_cost_method=obj_cfg.get('cluster_cost_method', 'kmeans'),
+                            weights=obj_cfg.get('weights'),
+                        )
+                    )
+            if trial_scores:
+                algo_result['objective'][obj_name] = {
+                    'mean': float(np.mean(trial_scores)),
+                    'std': float(np.std(trial_scores)),
+                    'values': trial_scores,
+                }
+            else:
+                algo_result['objective'][obj_name] = np.nan
 
         conf_result[algo_name] = algo_result
 

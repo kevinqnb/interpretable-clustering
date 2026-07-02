@@ -35,10 +35,17 @@ from intercluster.rules import save_rules
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. It should NOT 
-# within the parameters of any sub-function or class (except for select 
-# baseline experiments like KMeans), since these will 
-# reset the seed each time they are given one. 
+# REMINDER: The seed should only be initialized here. It should NOT
+# within the parameters of any sub-function or class (except for select
+# baseline experiments like KMeans), since these will
+# reset the seed each time they are given one.
+# Rule mining here (TreeMiner/RandomForestMiner/ClassAssociationRuleMiner) is a
+# one-time, cached step -- like alphas.py's alpha selection -- so it is run once
+# under this single seed rather than repeated across trials. See
+# experiments/README.md ("Reproducibility") for which downstream models (IDS,
+# ExplanationTree, DecisionTree, ShallowTree) are instead re-fit across multiple
+# trial seeds in max_rules.py/confidence.py, since their fitted solution has
+# inherent randomness.
 seed = 342
 
 ####################################################################################################

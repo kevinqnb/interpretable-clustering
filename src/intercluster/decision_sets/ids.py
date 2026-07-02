@@ -190,17 +190,27 @@ class SLSOptimizer:
     Args:
         objective:   IDSObjective instance.
         all_indices: List of integer indices into objective.cache.decisions.
+        random_state: Seed or np.random.Generator controlling all sampling in this
+            optimizer. Passing an explicit value makes optimize() reproducible
+            independent of global NumPy state (important under joblib worker
+            processes, which do not inherit the caller's global RNG state).
     """
 
-    def __init__(self, objective: IDSObjective, all_indices: List[int]):
+    def __init__(
+        self,
+        objective: IDSObjective,
+        all_indices: List[int],
+        random_state=None,
+    ):
         self.objective = objective
         self.all_indices = list(all_indices)
         self.n = len(all_indices)
+        self._rng = np.random.default_rng(random_state)
 
     def _sample_random_set(self, S: set, delta: float) -> set:
         p_in = (delta + 1) / 2     # inclusion prob for elements in S
         p_out = (1 - delta) / 2    # inclusion prob for elements not in S
-        u = np.random.random(self.n)
+        u = self._rng.random(self.n)
         result = set()
         for k, i in enumerate(self.all_indices):
             p = p_in if i in S else p_out
@@ -211,7 +221,7 @@ class SLSOptimizer:
     def _estimate_opt(self, n_trials: int = 5) -> float:
         best = 0.0
         for _ in range(n_trials):
-            u = np.random.random(self.n)
+            u = self._rng.random(self.n)
             subset = {i for i, ui in zip(self.all_indices, u) if ui < 0.5}
             val = self.objective.evaluate(subset)
             best = max(best, val)
@@ -294,12 +304,22 @@ class RandomGreedyOptimizer:
     Args:
         objective:   IDSObjective instance.
         all_indices: List of integer indices into objective.cache.decisions.
+        random_state: Seed or np.random.Generator controlling the tie-breaking
+            random draw at each round. Passing an explicit value makes optimize()
+            reproducible independent of global NumPy state (important under joblib
+            worker processes, which do not inherit the caller's global RNG state).
     """
 
-    def __init__(self, objective: IDSObjective, all_indices: List[int]):
+    def __init__(
+        self,
+        objective: IDSObjective,
+        all_indices: List[int],
+        random_state=None,
+    ):
         self.objective = objective
         self.all_indices = list(all_indices)
         self.n = len(all_indices)
+        self._rng = np.random.default_rng(random_state)
 
     def optimize(self, n_select: int = None) -> List[int]:
         """
@@ -323,7 +343,7 @@ class RandomGreedyOptimizer:
             gains = [(self.objective.evaluate(S | {u}) - current_val, u) for u in remaining]
             gains.sort(key=lambda x: -x[0])
             top_k = [u for _, u in gains[:k]]
-            u_star = top_k[np.random.randint(len(top_k))]
+            u_star = top_k[self._rng.integers(len(top_k))]
             S.add(u_star)
             remaining.remove(u_star)
             current_val = self.objective.evaluate(S)
@@ -346,6 +366,9 @@ class IDSCoordinateAscent:
         ranges:         List of 7 (lo, hi) tuples defining the search space.
         precision:      Ternary search stops when interval width < precision.
         max_iterations: Number of full coordinate-sweep rounds.
+        random_state:   Seed or np.random.Generator controlling the random starting
+            point in lambda-space. Passing an explicit value makes fit() reproducible
+            independent of global NumPy state.
     """
 
     def __init__(
@@ -355,12 +378,14 @@ class IDSCoordinateAscent:
         precision: float = 0.001,
         max_iterations: int = 10,
         tol: float = 0.0,
+        random_state=None,
     ):
         self.func = func
         self.ranges = list(ranges)
         self.precision = precision
         self.max_iterations = max_iterations
         self.tol = tol
+        self._rng = np.random.default_rng(random_state)
 
     @staticmethod
     def _ternary_search(func_1d, lo: float, hi: float, precision: float) -> float:
@@ -375,7 +400,7 @@ class IDSCoordinateAscent:
 
     def fit(self) -> List[float]:
         """Run coordinate ascent. Returns list of 7 lambda values."""
-        lambdas = [lo + np.random.random() * (hi - lo) for lo, hi in self.ranges]
+        lambdas = [lo + self._rng.random() * (hi - lo) for lo, hi in self.ranges]
         best_val = self.func(lambdas)
         best_lambdas = list(lambdas)
         for _ in range(self.max_iterations):
@@ -427,6 +452,13 @@ class IDS(DecisionSet):
         max_iterations:            Max coordinate-ascent rounds.
         cache:                     Pre-built IDSCoverageCache. Pass this to skip
                                    recomputation when reusing across experiments.
+        random_state:              Seed or np.random.Generator controlling all
+                                   randomness used during selection (SLS/random-greedy
+                                   sampling and, if lambdas is None, the coordinate-ascent
+                                   lambda search). Passing an explicit value makes
+                                   select()/fit() reproducible independent of global
+                                   NumPy state -- required for correctness under
+                                   joblib worker processes.
     """
 
     def __init__(
@@ -440,8 +472,11 @@ class IDS(DecisionSet):
         max_iterations: int = 10,
         cache: IDSCoverageCache = None,
         optimizer: str = 'sls',
+        random_state=None,
     ):
         super().__init__(rules=rules, rule_labels=rule_labels)
+        self.random_state = random_state
+        self._rng = np.random.default_rng(random_state)
 
         if n_select is not None:
             assert isinstance(n_select, int) and n_select > 0, \
@@ -470,8 +505,8 @@ class IDS(DecisionSet):
 
     def _make_optimizer(self, obj: IDSObjective, indices: List[int]):
         if self.optimizer == 'random_greedy':
-            return RandomGreedyOptimizer(obj, indices)
-        return SLSOptimizer(obj, indices)
+            return RandomGreedyOptimizer(obj, indices, random_state=self._rng)
+        return SLSOptimizer(obj, indices, random_state=self._rng)
 
     def select(self, X: NDArray, y: List[Set[int]]) -> set:
         y_flat = flatten_labels(y)
@@ -515,6 +550,7 @@ class IDS(DecisionSet):
                 self._lambda_ranges,
                 precision=self.ternary_search_precision,
                 max_iterations=self.max_iterations,
+                random_state=self._rng,
             )
             lambdas = coord_asc.fit()
             self.lambdas = lambdas
