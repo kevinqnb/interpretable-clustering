@@ -93,14 +93,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/fashion/alphas/selected_alphas_rule_length.json") as f:
+with open("data/experiments/fashion/alphas/selected_alphas_resub.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/fashion/rules/'
 
 outfile = 'data/experiments/fashion/max_rules/'
-outfile_ref = '_rule_length_exkmc'
+outfile_ref = '_resub_exkmc'
 
 ####################################################################################################
 # Load pre-mined rules:

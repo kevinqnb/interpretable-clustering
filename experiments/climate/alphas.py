@@ -75,9 +75,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.85,
+    'car_min_confidence': 0.75,
     'car_max_rule_length': 3, # (really means 6 by pyfim convention)
-    'filter_confidence': 0.85,
+    'filter_confidence': 0.75,
     'seed': seed
 }
 
@@ -98,7 +98,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/alphas/'
-outfile_ref = '_rule_length'
+outfile_ref = '_resub'
 
 ####################################################################################################
 # Load pre-mined rules:

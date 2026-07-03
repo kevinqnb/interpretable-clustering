@@ -36,10 +36,16 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = 12
 
-# REMINDER: The seed should only be initialized here. It should NOT 
-# within the parameters of any sub-function or class (except for select 
-# baseline experiments like KMeans), since these will 
-# reset the seed each time they are given one. 
+# REMINDER: The seed should only be initialized here. It should NOT
+# within the parameters of any sub-function or class (except for select
+# baseline experiments like KMeans), since these will
+# reset the seed each time they are given one.
+# alphas.py (alpha selection) is a one-time, cached hyperparameter-selection
+# step rather than a model under evaluation, so it is run once under this
+# single seed rather than repeated across trials -- see experiments/README.md
+# ("Reproducibility") for which downstream models (IDS, ExplanationTree,
+# DecisionTree, ShallowTree) are instead re-fit across multiple trial seeds in
+# max_rules.py/confidence.py.
 seed = 342
 
 def _memoryview_safe(x):
@@ -70,9 +76,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.5,
+    'car_min_confidence': 0.75,
     'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': 0.65,
+    'filter_confidence': 0.75,
     'seed': seed
 }
 
@@ -93,7 +99,7 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
 outfile = 'data/experiments/mnist/alphas/'
-outfile_ref = '_rule_length'
+outfile_ref = '_resub'
 
 ####################################################################################################
 # Load pre-mined rules:

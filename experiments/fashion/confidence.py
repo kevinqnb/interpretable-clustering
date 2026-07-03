@@ -57,21 +57,21 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Data + clustering
 
-data, data_labels, feature_labels, scaler = load_preprocessed_climate('data/climate')
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 data = _memoryview_safe(data)
 n, d = data.shape
 
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 6,
-    'n_select': 6,
+    'n_clusters': 10,
+    'n_select': 10,
     'shallow_tree_depth_factor': 0.03,
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
     'car_min_confidence': 0.75,
-    'car_max_rule_length': 3,
+    'car_max_rule_length': 2,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -93,26 +93,26 @@ fixed_parameters['weights'] = weights.tolist()
 ####################################################################################################
 # Load alpha values (fixed from alphas.py selection)
 
-with open("data/experiments/climate/alphas/selected_alphas_resub.json") as f:
+with open("data/experiments/fashion/alphas/selected_alphas_resub.json") as f:
     selected_alpha_dict = json.load(f)
 
 ####################################################################################################
 # Load rule pools and IDS lambdas
 
-pre_filter_ensemble = load_rules('data/experiments/climate/rules/pre_filter_ensemble_rules.pkl')
+pre_filter_ensemble = load_rules('data/experiments/fashion/rules/pre_filter_ensemble_rules.pkl')
 
-with open('data/experiments/climate/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
+with open('data/experiments/fashion/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
     pre_filter_labels = pickle.load(f)
 
 # Dict for O(1) label lookup when filtering rules by confidence level
 _pre_filter_label_map = {r: lbl for r, lbl in zip(pre_filter_ensemble, pre_filter_labels)}
 
-with open('data/experiments/climate/rules/ids_lambdas.json') as f:
+with open('data/experiments/fashion/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-outfile = 'data/experiments/climate/confidence/'
+outfile = 'data/experiments/fashion/confidence/'
 os.makedirs(outfile, exist_ok=True)
 
 ####################################################################################################
@@ -366,7 +366,7 @@ print("Pool-independent algorithms ready.")
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
 
-_ids_cache_path = 'data/experiments/climate/rules/ids_coverage_cache.pkl'
+_ids_cache_path = 'data/experiments/fashion/rules/ids_coverage_cache.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:

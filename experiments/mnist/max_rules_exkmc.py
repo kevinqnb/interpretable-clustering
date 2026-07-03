@@ -73,9 +73,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.65,
+    'car_min_confidence': 0.75,
     'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': 0.65,
+    'filter_confidence': 0.75,
     'seed': seed
 }
 
@@ -93,14 +93,14 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/mnist/alphas/selected_alphas_rule_length.json") as f:
+with open("data/experiments/mnist/alphas/selected_alphas_resub.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
 decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
 outfile = 'data/experiments/mnist/max_rules/'
-outfile_ref = '_rule_length_exkmc'
+outfile_ref = '_resub_exkmc'
 
 ####################################################################################################
 # Load pre-mined rules:

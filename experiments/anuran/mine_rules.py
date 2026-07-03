@@ -21,6 +21,7 @@ from experiments.modules import *
 ####################################################################################################
 
 import os
+import pickle
 import numpy as np
 import pandas as pd
 from intercluster import *
@@ -34,10 +35,17 @@ from intercluster.rules import save_rules
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. It should NOT 
-# within the parameters of any sub-function or class (except for select 
-# baseline experiments like KMeans), since these will 
-# reset the seed each time they are given one. 
+# REMINDER: The seed should only be initialized here. It should NOT
+# within the parameters of any sub-function or class (except for select
+# baseline experiments like KMeans), since these will
+# reset the seed each time they are given one.
+# Rule mining here (TreeMiner/RandomForestMiner/ClassAssociationRuleMiner) is a
+# one-time, cached step -- like alphas.py's alpha selection -- so it is run once
+# under this single seed rather than repeated across trials. See
+# experiments/README.md ("Reproducibility") for which downstream models (IDS,
+# ExplanationTree, DecisionTree, ShallowTree) are instead re-fit across multiple
+# trial seeds in max_rules.py/confidence.py, since their fitted solution has
+# inherent randomness.
 seed = 342
 
 ####################################################################################################
@@ -46,8 +54,8 @@ data, data_labels, feature_labels, scaler = load_preprocessed_anuran("data/anura
 n,d = data.shape
 
 fixed_parameters = {
-    'n': n,
-    'd': d,
+    'n' : n,
+    'd' : d,
     'n_clusters': 5,
     'n_select': 5,
     'max_rules': 11,
@@ -55,9 +63,9 @@ fixed_parameters = {
     'n_forest': 100,
     'forest_max_depth': 6,
     'car_min_support': 0.025,
-    'car_min_confidence': 0.85,
+    'car_min_confidence': 0.75,
     'car_max_rule_length': 3, # (really means 6 by pyfim convention)
-    'filter_confidence': 0.85,
+    'filter_confidence': 0.75,
     'seed': seed
 }
 
@@ -152,14 +160,46 @@ class_association_rules, class_association_rule_labels = class_association_rule_
 print("Mined CAR rules:", len(class_association_rules))
 save_rules(class_association_rules, rules_directory + 'class_association_rules.pkl')
 
-ensemble_rules = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
+pre_filter_ensemble = decision_tree_rules + shallow_rules + forest_rules + class_association_rules
+print("Total pre-filter ensemble rules:", len(pre_filter_ensemble))
+save_rules(pre_filter_ensemble, rules_directory + 'pre_filter_ensemble_rules.pkl')
+
 ensemble_rules = filter_rules(
-    ensemble_rules, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
+    pre_filter_ensemble, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
 )
 
 print("Total ensemble rules after filtering:", len(ensemble_rules))
 save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
 
+####################################################################################################
+# Compute and save majority-class rule labels for both rule pools.
+#
+# Each rule is assigned the cluster label that appears most often among the
+# data points it covers.  The format is List[Set[int]] to match the
+# DecisionSet.rule_labels convention.
+
+def _majority_labels(rules, X, y_flat, n_clusters):
+    labels = []
+    for rule in rules:
+        mask = rule.evaluate(X)
+        if mask.sum() == 0:
+            labels.append({0})
+        else:
+            labels.append({int(np.bincount(y_flat[mask], minlength=n_clusters).argmax())})
+    return labels
+
+y_flat = flatten_labels(kmeans_labels)
+n_clusters = fixed_parameters['n_clusters']
+
+pre_filter_labels = _majority_labels(pre_filter_ensemble, data, y_flat, n_clusters)
+with open(rules_directory + 'pre_filter_ensemble_labels.pkl', 'wb') as f:
+    pickle.dump(pre_filter_labels, f)
+print(f"Pre-filter ensemble labels saved ({len(pre_filter_labels)} rules).")
+
+ensemble_labels = _majority_labels(ensemble_rules, data, y_flat, n_clusters)
+with open(rules_directory + 'ensemble_labels.pkl', 'wb') as f:
+    pickle.dump(ensemble_labels, f)
+print(f"Ensemble labels saved ({len(ensemble_labels)} rules).")
 
 ####################################################################################################
 # Objectives for Decision Set Clustering:
