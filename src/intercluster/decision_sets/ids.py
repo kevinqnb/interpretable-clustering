@@ -24,14 +24,19 @@ class IDSCoverageCache:
         self.decisions: List[Decision] = None
         self.antecedent_masks: NDArray = None   # (D, N) bool
         self.correct_masks: NDArray = None      # (D, N) bool
-        self.overlap_matrix: NDArray = None     # (D, D) int32
-        self.same_class_matrix: NDArray = None  # (D, D) bool
+        self.labels: NDArray = None             # (D,) int
         self.N: int = None
         self.L_max: int = None
 
     def compute(self, decisions: List[Decision], X: NDArray, y_flat: NDArray) -> None:
         """
         Compute coverage statistics for the given decisions on dataset (X, y_flat).
+
+        Note: pairwise overlap/same-class comparisons between decisions are *not*
+        precomputed here as dense (D, D) matrices -- for large decision pools (D in
+        the tens/hundreds of thousands) that scales quadratically and can require
+        tens to hundreds of GiB. Instead, IDSObjective.evaluate() computes the small
+        (|S|, |S|) submatrix it needs on demand from antecedent_masks/labels.
 
         Args:
             decisions: Ordered list of Decision objects.
@@ -52,11 +57,7 @@ class IDSCoverageCache:
 
         self.antecedent_masks = antecedent
         self.correct_masks = correct
-        ant_f32 = antecedent.astype(np.float32)
-        self.overlap_matrix = np.rint(ant_f32 @ ant_f32.T).astype(np.int32)
-
-        labels = np.array([d.label for d in decisions])
-        self.same_class_matrix = (labels[:, None] == labels[None, :])
+        self.labels = np.array([d.label for d in decisions])
 
     @classmethod
     def from_rules(
@@ -90,20 +91,23 @@ class IDSCoverageCache:
 
     def subset(self, indices) -> 'IDSCoverageCache':
         """
-        Return a new cache restricted to the given decision indices.
+        Return a cache restricted to the given decision indices.
 
         Slices all precomputed arrays — useful for confidence-sweep experiments
-        where only a subset of the full rule pool is active at each iteration.
+        where only a subset of the full rule pool is active at each iteration. If
+        `indices` covers the entire decision pool in order, the cache itself is
+        returned unchanged rather than copying its arrays.
         """
         idx = np.asarray(indices)
+        if len(idx) == len(self.decisions) and np.array_equal(idx, np.arange(len(self.decisions))):
+            return self
         cache = IDSCoverageCache()
         cache.decisions = [self.decisions[i] for i in idx]
         cache.N = self.N
         cache.L_max = max(len(d.rule) for d in cache.decisions) if cache.decisions else 0
         cache.antecedent_masks = self.antecedent_masks[idx]
         cache.correct_masks = self.correct_masks[idx]
-        cache.overlap_matrix = self.overlap_matrix[np.ix_(idx, idx)]
-        cache.same_class_matrix = self.same_class_matrix[np.ix_(idx, idx)]
+        cache.labels = self.labels[idx]
         return cache
 
 
@@ -160,8 +164,10 @@ class IDSObjective:
                 0,
             ]
         else:
-            sub_overlap = self.cache.overlap_matrix[np.ix_(S, S)]
-            sub_same = self.cache.same_class_matrix[np.ix_(S, S)]
+            sub_ant = self.cache.antecedent_masks[S].astype(np.float32)
+            sub_overlap = np.rint(sub_ant @ sub_ant.T).astype(np.int32)
+            sub_labels = self.cache.labels[S]
+            sub_same = sub_labels[:, None] == sub_labels[None, :]
             intra = int(np.triu(sub_overlap * sub_same, k=1).sum())
             inter = int(np.triu(sub_overlap * (~sub_same), k=1).sum())
             correct_union = np.logical_or.reduce(self.cache.correct_masks[S])
