@@ -70,7 +70,7 @@ ids_cache = IDSCoverageCache.from_rules(ids_rules, ids_labels, data, kmeans_labe
 
 print(f"Cache ready: {len(ids_cache.decisions)} valid decisions in {time.time() - t0:.1f}s")
 
-cache_path = 'data/experiments/mnist/rules/ids_coverage_cache.pkl'
+cache_path = 'data/experiments/mnist/rules/ids_coverage_cache_ensemble.pkl'
 with open(cache_path, 'wb') as f:
     pickle.dump(ids_cache, f)
 print(f"Cache saved to {cache_path}")

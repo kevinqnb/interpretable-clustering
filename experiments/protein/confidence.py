@@ -366,7 +366,7 @@ print("Pool-independent algorithms ready.")
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
 
-_ids_cache_path = 'data/experiments/protein/rules/ids_coverage_cache.pkl'
+_ids_cache_path = 'data/experiments/protein/rules/ids_coverage_cache_prefilter.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
@@ -380,6 +380,9 @@ else:
     )
     _ids_full.fit(data, kmeans_labels)
     ids_full_cache = _ids_full.get_cache()
+    os.makedirs(os.path.dirname(_ids_cache_path), exist_ok=True)
+    with open(_ids_cache_path, 'wb') as f:
+        pickle.dump(ids_full_cache, f)
     print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
 
 ####################################################################################################
