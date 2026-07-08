@@ -23,7 +23,6 @@ from experiments.modules import *
 import os
 import json
 import math
-import pickle
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
@@ -38,28 +37,22 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 12
+experiment_cpu_count = 1
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
 # baseline experiments like KMeans), since these will
 # reset the seed each time they are given one.
-# Classes with their own internal randomness (IDS, DecisionTree, ShallowTree)
-# accept an explicit random_state / kmeans_random_state instead of relying on
-# this global seed -- see `trial_seeds` below, which derives one seed per trial
-# so those modules can be refit across multiple trials and their results
-# reported as mean/std rather than a single, arbitrarily-seeded point estimate.
-# Note: Exp-Tree and ExKMC are each fit in their own separate script
-# (`lambda_exp.py`, `lambda_exkmc.py`; see `lambda_combine.py`), mirroring
-# max_rules.py's split (see experiments/README.md), even though here each is
-# only fit once (per trial, for Exp-Tree) regardless of the lambda sweep.
+# ExplanationTree accepts an explicit random_state instead of relying on this
+# global seed -- see `trial_seeds` below, which derives one seed per trial so
+# Exp-Tree can be refit across multiple trials and its results reported as
+# mean/std rather than a single, arbitrarily-seeded point estimate.
 seed = 342
 
-# Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
-# CN2, CBA, WRA) are fit once, since repeating them would just reproduce the same
-# result. `trial_seeds` is derived deterministically from `seed` so that re-running
-# this script reproduces the exact same set of trials.
+# Number of independent random-seed trials used to evaluate Exp-Tree (matches
+# `lambda.py`'s Decision-Tree/Shallow-Tree/IDS trial count). `trial_seeds` is
+# derived deterministically from `seed` so re-running this script reproduces the
+# exact same set of trials.
 n_trials = 10
 trial_seeds = [seed + i for i in range(n_trials)]
 
@@ -99,9 +92,9 @@ fixed_parameters = {
     'trial_seeds': trial_seeds,
 }
 
-# Unlike max_rules.py (which sweeps the rule budget n_select over n_rules_list),
-# this experiment fixes the rule budget at fixed_parameters['n_select'] -- the same
-# budget alphas.py used to tune alpha -- and instead sweeps PEC's lambda hyperparameter.
+# Unlike max_rules_exp.py (whose n_rules_list is a trivial fixed range), this
+# script needs the same lambda grid as lambda.py to know which values to
+# broadcast Exp-Tree's result across -- see "Lambda grids" below.
 n_select = fixed_parameters['n_select']
 
 np.random.seed(fixed_parameters['seed'])
@@ -123,131 +116,22 @@ fixed_parameters['alpha'] = selected_alpha_dict
 decision_info_dict_directory = 'data/experiments/mnist/rules/'
 
 outfile = 'data/experiments/mnist/lambda/'
-outfile_ref = '_resub_dscluster'
+outfile_ref = '_resub_exp'
 
 ####################################################################################################
 # Load pre-mined rules:
 
 ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
 
-with open('data/experiments/mnist/rules/ensemble_labels.pkl', 'rb') as f:
-    ensemble_labels = pickle.load(f)
-
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
 }
 
 ####################################################################################################
-# Comparison Modules:
-#
-# NOTE on reproducibility: Decision-Tree, Shallow-Tree, and IDS all have inherent
-# randomness in their fitted solution (sklearn tree tie-breaking, internal KMeans
-# re-initialization, and randomized-greedy/SLS selection respectively). Rather
-# than fit each once under the single global `seed`, these three are refit
-# across `trial_seeds` further below (see "Stochastic module trials") and their
-# results are recorded as mean/std/values instead of a single point estimate.
-# PEC, ExKMC, WRA, CBA, and CN2 have no internal randomness given fixed inputs.
-# Exp-Tree and ExKMC are handled in the separate `lambda_exp.py`/
-# `lambda_exkmc.py` scripts (see `lambda_combine.py`).
-#
-# NOTE on this experiment vs. max_rules.py: none of the comparison models below take
-# a lambda parameter, and their selected rules don't change as PEC's lambda changes.
-# So -- unlike max_rules.py, which refits each comparison model once per rule budget r
-# -- every comparison model here is fit exactly ONCE, at the fixed `n_select` budget,
-# and its result is simply broadcast across every lambda value in the sweep.
-
-# Decision Tree
-decision_tree_shared_params = {'max_leaf_nodes': n_select}
-decision_tree_mod = DecisionTreeMod(
-    model = DecisionTree,
-    name = 'Decision-Tree'
-)
-
-
-# Shallow Tree
-# (ShallowTree's structure is controlled by depth_factor, not by a rule-count/
-# max_leaf_nodes parameter, so its single fit's result is recorded under every
-# lambda label.)
-shallow_tree_shared_params = {
-    'n_clusters' : fixed_parameters['n_clusters'],
-    'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-# WRA:
-wra_shared_params = {'n_select': n_select}
-wra_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA'
-)
-
-wra_weighted_shared_params = {'n_select': n_select, 'weights': weights}
-wra_weighted_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA-weighted'
-)
-
-
-# CBA:
-cba_shared_params = {'n_select': n_select}
-cba_mod = DecisionSetMod(
-    model=CBA,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='CBA'
-)
-
-
-# CN2:
-cn2_shared_params = {'n_select': n_select}
-cn2_mod = DecisionSetMod(
-    model=CN2,
-    rules=None,
-    name='CN2'
-)
-
-
-# IDS:
-with open('data/experiments/mnist/rules/ids_lambdas.json') as f:
-    ids_lambdas = json.load(f)
-if isinstance(ids_lambdas, dict):
-    ids_lambdas = list(ids_lambdas.values())
-
-_ids_cache_path = 'data/experiments/mnist/rules/ids_coverage_cache.pkl'
-if os.path.exists(_ids_cache_path):
-    print("Loading pre-built IDS cache...")
-    with open(_ids_cache_path, 'rb') as f:
-        ids_cache = pickle.load(f)
-    print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
-else:
-    print("Pre-computing IDS cache...")
-    _ids_pre = IDS(rules=ensemble_rules, n_select=None, lambdas=ids_lambdas, random_state=seed)
-    _ids_pre.fit(data, kmeans_labels)
-    ids_cache = _ids_pre.get_cache()
-    print("IDS cache ready.")
-
-ids_shared_params = {
-    'n_select': n_select,
-    'lambdas': ids_lambdas,
-    'cache': ids_cache,
-    'optimizer': 'random_greedy',
-}
-ids_mod = DecisionSetMod(
-    model=IDS,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='IDS'
-)
-
-####################################################################################################
 # Objectives for Decision Set Clustering:
+#
+# Needed only to reproduce the same lambda* / lambda grid as lambda.py (see
+# below) -- this script does not fit PEC itself.
 
 objective_dict = {
     'coverage-mistake': {
@@ -304,15 +188,13 @@ objective_dict = {
 ####################################################################################################
 # Lambda grids:
 #
-# For each objective, PEC's automatic lambda selection (lambda_val=None) gives the
-# minimum lambda* for which the distorted-greedy approximation guarantee holds (see
-# `Objective.compute_lambdas`/`set_lambda` in
-# intercluster/decision_sets/objectives/objectives.py). We probe this once per
-# objective with a throwaway PEC fit (cheap: it reuses the precomputed coverage/cost
-# caches, exactly like the many alpha_val fits in alphas.py), then sweep lambda over
-# [0, 2 * lambda*], with lambda* itself guaranteed to be an exact grid point (built as
-# two linspaces meeting there) since distorted-greedy only starts being valid at
-# that point.
+# Reproduces exactly the same lambda* / lambda grid computation as lambda.py (see
+# that script's comment for the full rationale) -- this is the only reason
+# `objective_dict`/alpha values/rules are loaded here at all: Exp-Tree's result
+# doesn't depend on lambda, but it still needs to know every lambda value that
+# `lambda.py`'s PEC modules will be evaluated at, so its single per-trial fit can
+# be broadcast under the same set of keys (`all_lambda_values`) once results are
+# merged by `lambda_combine.py`.
 
 n_lambda_points = 25  # matches alphas.py's n_compare convention
 half = n_lambda_points // 2 + 1
@@ -348,73 +230,38 @@ fixed_parameters['lambda_star'] = lambda_star_dict
 fixed_parameters['lambda_grid'] = lambda_grid_dict
 fixed_parameters['n_lambda_points'] = n_lambda_points
 
-# Union of every objective's lambda grid -- used to broadcast each comparison
-# model's single fit (which doesn't depend on lambda or the objective at all)
-# across every lambda value any objective's plot might need to look up.
+# Union of every objective's lambda grid -- used to broadcast Exp-Tree's single
+# per-trial fit across every lambda value any objective's plot might need to
+# look up (matches lambda.py's `all_lambda_values`).
 all_lambda_values = tuple(
     sorted(set().union(*(set(g) for g in lambda_grid_dict.values())))
 )
 
 ####################################################################################################
-# Decision Set Clustering Modules:
+# Comparison Modules:
 #
-# Two modules per objective: 'lazy-greedy' is valid (and recorded) across the full
-# [0, 2 * lambda*] grid, while 'distorted-greedy' is only valid -- and thus only
-# fit/recorded -- for lambda >= lambda*.
+# Exp-Tree has a fitted solution that depends on randomness (heap tie-breaking,
+# and -- per explanation_tree.py's `random_state` docstring caveat -- its
+# compiled Cython splitter's own tie-breaks, which read the global NumPy RNG
+# state directly). Rather than fit once under the single global `seed`, it is
+# refit across `trial_seeds` below (see "Stochastic module trial") and its
+# results are recorded as mean/std/values instead of a single point estimate.
+# (ExplanationTree's leaf count is fixed at num_clusters, independent of both
+# the rule budget and lambda, so a single fit's result is recorded under every
+# lambda label.)
 
-dscluster_module_list = []
-for obj_name, obj_params in objective_dict.items():
-    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        alpha_val = fixed_parameters['alpha'][module_name]
-        base_params = {'n_select': n_select, 'alpha_val': alpha_val} | obj_params
-
-        lambda_star = lambda_star_dict[module_name]
-        lambda_grid = lambda_grid_dict[module_name]
-
-        lazy_params = {
-            (l,): base_params | {'lambda_val': l, 'selection_algorithm': 'lazy-greedy'}
-            for l in lambda_grid
-        }
-        lazy_mod = DecisionSetMod(
-            model = PEC,
-            rules = rules,
-            name = f'{module_name}; lazy-greedy'
-        )
-        dscluster_module_list.append((lazy_mod, lazy_params))
-
-        distorted_params = {
-            (l,): base_params | {'lambda_val': l, 'selection_algorithm': 'distorted-greedy'}
-            for l in lambda_grid if l >= lambda_star
-        }
-        distorted_mod = DecisionSetMod(
-            model = PEC,
-            rules = rules,
-            name = f'{module_name}; distorted-greedy'
-        )
-        dscluster_module_list.append((distorted_mod, distorted_params))
+exp_tree_shared_params = {'num_clusters' : fixed_parameters['n_clusters']}
+exp_tree_mod = DecisionTreeMod(
+    model = ExplanationTree,
+    name = 'Exp-Tree'
+)
 
 
 ####################################################################################################
 
 
 baseline = kmeans_base
-# Decision-Tree, Shallow-Tree, and IDS are handled separately below via
-# `fit_stochastic_shared` (see "Stochastic module trials"), since they need to be
-# refit per trial seed rather than dispatched once through `Experiment`'s
-# joblib-parallel `run()` (whose worker processes do not inherit this script's
-# seeded global NumPy state, which would make single-fit results irreproducible
-# for exactly these randomized modules). Each is fit once per trial seed here
-# (not once per lambda value) and its per-trial result is broadcast across
-# `all_lambda_values`, exactly like the deterministic comparison modules below.
-# Exp-Tree and ExKMC are handled in the separate `lambda_exp.py`/
-# `lambda_exkmc.py` scripts.
-module_list = [
-    (wra_mod, {all_lambda_values: wra_shared_params}),
-    (wra_weighted_mod, {all_lambda_values: wra_weighted_shared_params}),
-    (cba_mod, {all_lambda_values: cba_shared_params}),
-    (cn2_mod, {all_lambda_values: cn2_shared_params}),
-] + dscluster_module_list
+module_list = []
 
 measurement_fns = [
     TotalCoverage(),
@@ -450,31 +297,23 @@ start = time.time()
 exp_results = exp.run()
 
 ####################################################################################################
-# Stochastic module trials
+# Stochastic module trial
 #
-# Decision-Tree, Shallow-Tree, and IDS each have a fitted solution that depends on
-# randomness. Rather than record one arbitrarily-seeded fit, each is refit once per
-# seed in `trial_seeds` and the results across trials are aggregated into
-# {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
-# This runs single-process (not through `Experiment`'s joblib dispatch) specifically
-# so each trial's explicit seed is what controls its randomness.
-#
-# None of these three vary with lambda (only PEC does), so -- unlike max_rules.py,
-# where Decision-Tree and IDS varied with the rule budget r -- all three are handled
-# with `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
-# result is broadcast across every value in `all_lambda_values`. Exp-Tree is
-# refit and broadcast the same way, but in the separate `lambda_exp.py` script.
+# Exp-Tree's fitted solution depends on randomness. Rather than record one
+# arbitrarily-seeded fit, it is refit once per seed in `trial_seeds` and the
+# results across trials are aggregated into {'mean', 'std', 'values'} via
+# `aggregate_trials` (see experiments/modules.py). This mirrors the treatment
+# of Decision-Tree/Shallow-Tree/IDS in `lambda.py`.
 
 def _seed_and_fit(mod, params, trial_seed):
     """
     Fits `mod` for one trial. Sets the trial's explicit seed both as a fitting
-    parameter (for classes that thread it through properly, e.g. IDS,
-    DecisionTree, ShallowTree) AND as the global NumPy seed immediately before
-    fit() -- some dependencies still read the global RNG state directly and
-    aren't fully parameterized by a passed-in random_state alone. This call
-    runs single-process, so setting the global seed here is safe and
-    sufficient for reproducibility (unlike doing so at the top of the script,
-    which does not survive joblib worker dispatch).
+    parameter AND as the global NumPy seed immediately before fit() -- some
+    dependencies (e.g. ExplanationTree's compiled Cython splitter, see
+    explanation_tree.py's `random_state` docstring caveat) still read the
+    global RNG state directly and aren't fully parameterized by a passed-in
+    random_state alone. This call runs single-process, so setting the global
+    seed here is safe and sufficient for reproducibility.
     """
     np.random.seed(trial_seed)
     mod.update_fitting_params(params)
@@ -499,7 +338,7 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     Refits `mod` once per trial seed -- for modules whose output does not vary
     with the swept lambda value -- and broadcasts the trial-aggregated result
     across every value in `r_values` (matching the pre-existing convention for
-    these modules in max_rules.py).
+    this module in `lambda.py`).
     """
     result = (
         {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
@@ -516,20 +355,12 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     return result
 
 
-print(f"Fitting stochastic modules across {n_trials} trials each...")
-exp_results['modules']['Decision-Tree'] = fit_stochastic_shared(
-    decision_tree_mod, decision_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
+print(f"Fitting Exp-Tree across {n_trials} trials...")
+exp_results['modules']['Exp-Tree'] = fit_stochastic_shared(
+    exp_tree_mod, exp_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
-exp_results['modules']['Shallow-Tree'] = fit_stochastic_shared(
-    shallow_tree_mod, shallow_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='kmeans_random_state'
-)
-exp_results['modules']['IDS'] = fit_stochastic_shared(
-    ids_mod, ids_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='random_state'
-)
-print("Stochastic modules done.")
+print("Exp-Tree trials done.")
 
 exp.save_results(outfile, outfile_ref)
 end = time.time()
