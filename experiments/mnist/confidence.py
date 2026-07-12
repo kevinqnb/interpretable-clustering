@@ -12,6 +12,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from data.preprocessing import *
 from experiments.modules import *
+from experiments.profiling import stamp, stamp_reset
+stamp_reset()
 
 ####################################################################################################
 
@@ -58,6 +60,7 @@ def _memoryview_safe(x):
 # Data + clustering
 
 data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+stamp("data loaded")
 data = _memoryview_safe(data)
 n, d = data.shape
 
@@ -362,6 +365,7 @@ stochastic_pool_indep_measurements = {
 baseline_measurements = measure_algo(None, None, kmeans_assignment, measurement_fns)
 
 print("Pool-independent algorithms ready.")
+stamp("pool-independent algos (ExKMC/CN2/trees x trials)")
 
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
@@ -372,6 +376,7 @@ if os.path.exists(_ids_cache_path):
     with open(_ids_cache_path, 'rb') as f:
         ids_full_cache = pickle.load(f)
     print(f"IDS cache loaded ({len(ids_full_cache.decisions)} decisions).")
+    stamp("IDS full-cache loaded from disk")
 else:
     print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
     _ids_full = IDS(
@@ -384,6 +389,7 @@ else:
     with open(_ids_cache_path, 'wb') as f:
         pickle.dump(ids_full_cache, f)
     print(f"IDS cache ready: {len(ids_full_cache.decisions)} decisions.")
+    stamp("IDS full-cache BUILT")
 
 ####################################################################################################
 # Main confidence sweep
@@ -392,12 +398,31 @@ confidence_values = np.round(np.arange(0.0, 1.0, 0.05), 2)
 
 result = {'fixed-parameters': fixed_parameters}
 
+# Precompute each pre-filter rule's majority-class fraction ONCE. It does not depend
+# on the confidence threshold, so calling filter_rules() inside the sweep below would
+# re-evaluate every rule against all N points at each of the 20 levels -- 20x redundant
+# O(R*N) work. A rule is kept at threshold `conf` iff it covers >=1 point and its
+# majority-class fraction is >= conf, exactly matching filter_rules(..., support=0.0).
+_y_flat = flatten_labels(kmeans_labels)
+_rule_confidence = []
+for _rule in pre_filter_ensemble:
+    _idx = satisfies_rule(data, _rule)
+    if len(_idx) == 0:
+        _rule_confidence.append(None)
+    else:
+        _labs, _counts = np.unique(_y_flat[_idx], return_counts=True)
+        _rule_confidence.append(_counts.max() / len(_idx))
+
+stamp("starting confidence sweep (per-level times below)")
 for conf in confidence_values:
     conf_key = float(conf)
     t0 = time.time()
     print(f"\n[confidence={conf_key:.2f}] filtering rules...")
 
-    filtered_rules = filter_rules(pre_filter_ensemble, data, kmeans_labels, confidence=conf)
+    filtered_rules = [
+        r for r, c in zip(pre_filter_ensemble, _rule_confidence)
+        if c is not None and c >= conf
+    ]
     has_rules = len(filtered_rules) > 0
     filtered_labels = [_pre_filter_label_map[r] for r in filtered_rules]
 
@@ -646,5 +671,6 @@ with open(fname, 'w') as f:
     json.dump(result, f, indent=4, cls=NumpyEncoder)
 
 print(f"\nResults saved to {fname}")
+stamp("confidence sweep complete + saved")
 
 ####################################################################################################

@@ -25,6 +25,38 @@ import gzip
 
 ####################################################################################################
 
+# Process-level cache of decompressed precomputed bundles, keyed by (resolved path,
+# size, mtime_ns). The experiment harness re-instantiates a fresh Objective (via PEC)
+# for every parameter value in a sweep -- dozens of times in max_rules.py, hundreds in
+# lambda.py -- and each instantiation would otherwise gunzip + unpickle the same
+# multi-MB info-dict from disk again. The bundle's large arrays (rule_coverage,
+# cluster_membership, data_to_center_distances) are never mutated after load, so they
+# are safely shared by reference across fits; only the small decision_info_dict is
+# copied per load (its per-decision 'cost' field is rewritten in place whenever alpha
+# changes -- see initialize_decision_set -- so it must not be aliased between fits).
+_PRECOMPUTED_BLOB_CACHE: dict[tuple, dict] = {}
+
+
+def _load_precomputed_blob(path: Union[str, Path]) -> dict:
+    """Load a precomputed bundle, memoizing the decompressed blob by (path, size, mtime)."""
+    p = Path(path)
+    st = p.stat()
+    key = (str(p.resolve()), st.st_size, st.st_mtime_ns)
+    blob = _PRECOMPUTED_BLOB_CACHE.get(key)
+    if blob is None:
+        with p.open('rb') as raw:
+            head = raw.read(2)
+        opener = gzip.open if head == b"\x1f\x8b" else Path.open
+        with opener(p, 'rb') as f:
+            blob = pickle.load(f)
+        if not isinstance(blob, dict):
+            raise TypeError('Loaded object is not a dict; expected precomputed bundle.')
+        _PRECOMPUTED_BLOB_CACHE[key] = blob
+    return blob
+
+
+####################################################################################################
+
 
 class Objective:
     """
@@ -108,6 +140,12 @@ class Objective:
         self.decision_info_dict: dict[Decision, dict[str, Any]] | None = None
         self.data_to_center_distances: NDArray | None = None
 
+        # Lazily-built (256, B) table for weighted popcount over packed bit rows,
+        # so marginal_reward never has to unpack a full n_samples-length array
+        # (see _masked_weight_sum). Rebuilt per objective instance (i.e. per fit).
+        self._weight_byte_table: NDArray | None = None
+        self._byte_idx: NDArray | None = None
+
         if precomputed_path is not None:
             self.load_precomputed(precomputed_path)
             self.precomputed = True
@@ -170,6 +208,39 @@ class Objective:
 
         # Unpacked bool matrix
         return np.flatnonzero(self.rule_coverage_packed[rule_idx])
+
+
+    def _build_weight_byte_table(self) -> None:
+        """
+        Precompute a (256, B) table where table[v, p] is the sum of self.weights over
+        the data points whose bit is set in byte value v at byte-position p of a packed
+        coverage row. This makes a weighted popcount of a packed row a single length-B
+        gather + sum, avoiding the per-call np.unpackbits to a full n_samples array.
+
+        The bit ordering matches np.unpackbits (MSB first within each byte), so
+        table-based sums are bit-for-bit identical to
+        `np.sum(self.weights[np.unpackbits(row)[:n_samples]])`.
+        """
+        B = self.rule_coverage_packed.shape[1]
+        wpad = np.zeros(B * 8, dtype=np.float64)
+        wpad[: self.n_samples] = self.weights  # trailing pad bits contribute 0
+        wgrid = wpad.reshape(B, 8)  # position j within byte p -> global index 8p + j
+        # bit_matrix[v, j] == 1 iff bit j (MSB-first) is set in byte value v.
+        bit_matrix = np.unpackbits(np.arange(256, dtype=np.uint8)[:, None], axis=1).astype(np.float64)
+        self._weight_byte_table = bit_matrix @ wgrid.T  # (256, B)
+        self._byte_idx = np.arange(B)
+
+
+    def _masked_weight_sum(self, packed_row: NDArray) -> float:
+        """
+        Sum of self.weights over the set bits of a single packed coverage row
+        (shape (1, B) uint8). Equivalent to, but faster than,
+        `float(np.sum(self.weights[np.unpackbits(packed_row)[0][:n_samples].astype(bool)]))`.
+        """
+        if self._weight_byte_table is None:
+            self._build_weight_byte_table()
+        row = packed_row.reshape(-1)
+        return float(self._weight_byte_table[row, self._byte_idx].sum())
 
 
     def get_coverage_labels(self, decision: Decision):
@@ -646,31 +717,29 @@ class Objective:
 
 
     def load_precomputed(self, path: Union[str, Path]) -> None:
-        """Load previously saved precomputed arrays and decision_info_dict."""
-        p = Path(path)
+        """Load previously saved precomputed arrays and decision_info_dict.
 
-        def _open_for_read(pp: Path):
-            with pp.open('rb') as raw:
-                head = raw.read(2)
-            if head == b"\x1f\x8b":
-                return gzip.open(pp, 'rb')
-            return pp.open('rb')
-
-        with _open_for_read(p) as f:
-            blob = pickle.load(f)
-
-        if not isinstance(blob, dict):
-            raise TypeError('Loaded object is not a dict; expected precomputed bundle.')
+        The decompressed bundle is memoized process-wide (see _load_precomputed_blob),
+        so repeated fits over the same precomputed file avoid re-reading it from disk.
+        """
+        blob = _load_precomputed_blob(path)
 
         self.n_samples = int(blob['n_samples'])
         self.n_labels = int(blob['n_labels'])
         self.pack_bits = bool(blob['pack_bits'])
 
+        # Large arrays are read-only after load -> share by reference (no copy).
         self.rule_coverage_packed = blob['rule_coverage']
         self.cluster_membership_packed = blob['cluster_membership']
         self.rule_to_decision_dict = blob.get('rule_to_decision_dict')
-        self.decision_info_dict = blob.get('decision_info_dict')
         self.data_to_center_distances = blob.get('data_to_center_distances')
+
+        # decision_info_dict's per-decision 'cost' is rewritten in place per alpha, so
+        # give each objective instance its own copy to avoid cross-fit aliasing.
+        cached_info = blob.get('decision_info_dict')
+        self.decision_info_dict = (
+            {d: dict(info) for d, info in cached_info.items()} if cached_info is not None else None
+        )
 
         #self.decision_set_initialized = self.decision_info_dict is not None and self.rule_coverage_packed is not None
 

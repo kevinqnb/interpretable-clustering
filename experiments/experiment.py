@@ -59,6 +59,7 @@ class Experiment:
         fixed_parameters : dict[str, any] = {},
         cpu_count : int = 1,
         verbose : bool = False,
+        profile : bool = False,
     ):
         self.data = data
         self.baseline = baseline
@@ -67,6 +68,10 @@ class Experiment:
         self.fixed_parameters = fixed_parameters
         self.cpu_count = cpu_count
         self.verbose = verbose
+        # When True, run_module records a fit-vs-measurement time breakdown
+        # (per measurement fn) and attaches it to the returned dict under
+        # '_profile' so it survives loky worker dispatch. Off by default.
+        self.profile = profile
         self.result_dict = {'fixed-parameters': fixed_parameters}
 
 
@@ -147,31 +152,58 @@ class Experiment:
                 }
         }
 
+        # Per-module timing accumulators (only populated when self.profile).
+        prof = {'fit': [0.0, 0]} | {f'meas:{fn.name}': [0.0, 0] for fn in self.measurement_fns}
+
         for param_tuple, fitting_params in param_dict.items():
             # Fit module with given parameters:
             module.update_fitting_params(fitting_params)
-            (
-                data_to_rule_assignment,
-                rule_to_cluster_assignment,
-                data_to_cluster_assignment
-            ) = module.fit(self.data, self.baseline.labels)
+            if self.profile:
+                _t = time.perf_counter()
+                (
+                    data_to_rule_assignment,
+                    rule_to_cluster_assignment,
+                    data_to_cluster_assignment
+                ) = module.fit(self.data, self.baseline.labels)
+                prof['fit'][0] += time.perf_counter() - _t
+                prof['fit'][1] += 1
+            else:
+                (
+                    data_to_rule_assignment,
+                    rule_to_cluster_assignment,
+                    data_to_cluster_assignment
+                ) = module.fit(self.data, self.baseline.labels)
 
-            
+
             # Record measurements:
             for p in param_tuple:
                 module_result_dict[module.name]['lambda'][p] = module.lambda_val if hasattr(module, 'lambda_val') else None
                 module_result_dict[module.name]['max-rule-length'][p] = module.max_rule_length
                 module_result_dict[module.name]['sum-rule-length'][p] = module.sum_rule_length
                 module_result_dict[module.name]['weighted-avg-length'][p] = module.weighted_average_rule_length
-                
+
                 for fn in self.measurement_fns:
-                    module_result_dict[module.name][fn.name][p] = (
-                        fn(
+                    if self.profile:
+                        _t = time.perf_counter()
+                        val = fn(
                             data_to_rule_assignment,
                             rule_to_cluster_assignment,
                             data_to_cluster_assignment
                         )
-                    )
+                        prof[f'meas:{fn.name}'][0] += time.perf_counter() - _t
+                        prof[f'meas:{fn.name}'][1] += 1
+                        module_result_dict[module.name][fn.name][p] = val
+                    else:
+                        module_result_dict[module.name][fn.name][p] = (
+                            fn(
+                                data_to_rule_assignment,
+                                rule_to_cluster_assignment,
+                                data_to_cluster_assignment
+                            )
+                        )
+
+        if self.profile:
+            module_result_dict['_profile'] = {module.name: prof}
 
         if self.verbose:
             end = time.time()
@@ -205,8 +237,16 @@ class Experiment:
         module_results_dict = {
             'modules': {}
         }
+        # Collected per-module fit/measurement timings (when profiling).
+        self.profile_results = {}
         for i, mod_dict in enumerate(module_results):
+            prof = mod_dict.pop('_profile', None)
+            if prof:
+                self.profile_results.update(prof)
             module_results_dict['modules'] = module_results_dict['modules'] | mod_dict
+
+        if self.profile and self.profile_results:
+            self._report_profile()
 
         # Combine results into single result dictionary:
         self.result_dict = self.result_dict | baseline_dict | module_results_dict
@@ -214,6 +254,41 @@ class Experiment:
         return self.result_dict
     
     
+    def _report_profile(self):
+        """Prints a ranked fit-vs-measurement breakdown across all modules."""
+        # Roll up across modules into global buckets, and also keep per-module fit totals.
+        global_buckets = {}
+        per_module_fit = {}
+        for mod_name, prof in self.profile_results.items():
+            for bucket, (secs, n) in prof.items():
+                g = global_buckets.setdefault(bucket, [0.0, 0])
+                g[0] += secs
+                g[1] += n
+                if bucket == 'fit':
+                    per_module_fit[mod_name] = [secs, n]
+
+        def _print_table(title, rows):
+            if not rows:
+                return
+            rows = sorted(rows.items(), key=lambda kv: kv[1][0], reverse=True)
+            total = sum(secs for _, (secs, _) in rows)
+            width = max(len(name) for name, _ in rows)
+            print()
+            print("=" * (width + 34))
+            print(f"{title} (total tracked: {total:.2f}s)")
+            print("=" * (width + 34))
+            print(f"{'bucket'.ljust(width)}   {'seconds':>10}  {'calls':>7}  {'s/call':>9}")
+            print("-" * (width + 34))
+            for name, (secs, n) in rows:
+                per = secs / n if n else 0.0
+                print(f"{name.ljust(width)}   {secs:>10.3f}  {n:>7d}  {per:>9.4f}")
+            print("=" * (width + 34))
+            print()
+
+        _print_table("EXPERIMENT PROFILE: fit vs measurements (all modules)", global_buckets)
+        _print_table("EXPERIMENT PROFILE: total fit time per module", per_module_fit)
+
+
     def save_results(self, path, identifier = ''):
         """
         Saves the results of the experiment as a JSON file.

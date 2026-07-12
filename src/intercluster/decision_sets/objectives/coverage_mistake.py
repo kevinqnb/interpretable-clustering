@@ -170,8 +170,7 @@ class CoverageMistakeObjective(Objective):
             cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
             r_cluster_bits = np.bitwise_and(rule_bits, cluster_bits)
             new_bits = np.bitwise_and(r_cluster_bits, np.bitwise_not(total_cluster_coverage[lbl:lbl + 1]))
-            new_mask = np.unpackbits(new_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
-            return float(np.sum(self.weights[new_mask]))
+            return self._masked_weight_sum(new_bits)
 
         r_cluster_mask = self.rule_coverage_packed[ridx] & self.cluster_membership_packed[lbl]
         new_mask = r_cluster_mask & ~total_cluster_coverage[lbl]
@@ -317,8 +316,7 @@ class TotalCoverageMistakeObjective(Objective):
         if self.pack_bits:
             rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
             new_bits = np.bitwise_and(rule_bits, np.bitwise_not(total_coverage))
-            new_mask = np.unpackbits(new_bits, axis=-1)[0][: self.n_samples].astype(np.bool_, copy=False)
-            return float(np.sum(self.weights[new_mask]))
+            return self._masked_weight_sum(new_bits)
 
         new_mask = self.rule_coverage_packed[ridx] & ~total_coverage
         return float(np.sum(self.weights[new_mask]))

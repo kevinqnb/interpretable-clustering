@@ -17,6 +17,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
+from experiments.profiling import stamp, stamp_reset
+stamp_reset()
 
 ####################################################################################################
 
@@ -74,6 +76,7 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_yeast()
+stamp("data loaded")
 data = _memoryview_safe(data)
 n,d = data.shape
 
@@ -106,6 +109,7 @@ np.random.seed(fixed_parameters['seed'])
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
+stamp("kmeans clustering")
 
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
@@ -243,12 +247,14 @@ if os.path.exists(_ids_cache_path):
     with open(_ids_cache_path, 'rb') as f:
         ids_cache = pickle.load(f)
     print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
+    stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
     _ids_pre = IDS(rules=ensemble_rules, n_select=None, lambdas=ids_lambdas, random_state=seed)
     _ids_pre.fit(data, kmeans_labels)
     ids_cache = _ids_pre.get_cache()
     print("IDS cache ready.")
+    stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_shared_params = {
     'n_select': n_select,
@@ -355,6 +361,7 @@ for obj_name, obj_params in objective_dict.items():
         lambda_grid_dict[module_name] = lambda_grid.tolist()
 
 fixed_parameters['lambda_star'] = lambda_star_dict
+stamp("lambda* probe fits")
 fixed_parameters['lambda_grid'] = lambda_grid_dict
 fixed_parameters['n_lambda_points'] = n_lambda_points
 
@@ -456,7 +463,9 @@ exp = Experiment(
 
 import time
 start = time.time()
+stamp("setup complete -> starting exp.run")
 exp_results = exp.run()
+stamp("exp.run: all PEC + comparison module fits")
 
 ####################################################################################################
 # Stochastic module trials
@@ -543,8 +552,10 @@ exp_results['modules']['IDS'] = fit_stochastic_shared(
     seed_key='random_state'
 )
 print("Stochastic modules done.")
+stamp("stochastic trials (trees + IDS x n_trials)")
 
 exp.save_results(outfile, outfile_ref)
+stamp("results saved")
 end = time.time()
 print("Experiment time:", end - start)
 
