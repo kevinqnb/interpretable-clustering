@@ -279,32 +279,32 @@ objective_dict = {
             decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
         )
     },
-    'coverage-mistake-weighted': {
-        'objective_type': 'coverage-mistake',
-        'weights': weights,
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
-        )
-    },
-    'coverage-cost-weighted': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'weights': weights,
-        'cluster_cost_method': 'kmeans',
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
-        )
-    },
-    'coverage-pairwise-distance-weighted': {
-        'objective_type': 'coverage-pairwise-distance',
-        'weights': weights,
-        'selection_algorithm': 'distorted-greedy',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
-        )
-    },
+    # 'coverage-mistake-weighted': {
+    #     'objective_type': 'coverage-mistake',
+    #     'weights': weights,
+    #     'selection_algorithm': 'distorted-greedy',
+    #     'precomputed_path': os.path.join(
+    #         decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
+    #     )
+    # },
+    # 'coverage-cost-weighted': {
+    #     'objective_type': 'coverage-cost',
+    #     'cluster_centers': kmeans_base.centers,
+    #     'weights': weights,
+    #     'cluster_cost_method': 'kmeans',
+    #     'selection_algorithm': 'distorted-greedy',
+    #     'precomputed_path': os.path.join(
+    #         decision_info_dict_directory, 'cost_info_dict.pkl.gz'
+    #     )
+    # },
+    # 'coverage-pairwise-distance-weighted': {
+    #     'objective_type': 'coverage-pairwise-distance',
+    #     'weights': weights,
+    #     'selection_algorithm': 'distorted-greedy',
+    #     'precomputed_path': os.path.join(
+    #         decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
+    #     )
+    # },
 }
 
 ####################################################################################################
