@@ -140,6 +140,11 @@ class Objective:
         self.decision_info_dict: dict[Decision, dict[str, Any]] | None = None
         self.data_to_center_distances: NDArray | None = None
 
+        # Number of decisions admitted by the selection algorithm's initial positivity gate,
+        # g(e | {}) - c * lambda * h(e) > 0, with c = 1 for distorted-greedy and c = 2 for
+        # lazy-greedy. Set during select(); NaN until then.
+        self.n_available_decisions: float = np.nan
+
         # Lazily-built (256, B) table for weighted popcount over packed bit rows,
         # so marginal_reward never has to unpack a full n_samples-length array
         # (see _masked_weight_sum). Rebuilt per objective instance (i.e. per fit).
@@ -536,6 +541,13 @@ class Objective:
                     best_decision = decision
                     best_decision_score = score
 
+            if i == 0:
+                # The coverage accumulators are still empty on the first pass, so the scan above
+                # evaluated g(e | {}) for every decision in the pool and discarded exactly those
+                # failing g(e | {}) - lambda * h(e) > 0. Whatever is left is what this algorithm
+                # ever gets to choose from -- discards are permanent.
+                self.n_available_decisions = len(self.decision_info_dict) - len(discarded_decisions)
+
             if best_decision_score > 0 and best_decision is not None:
                 selected_decisions.add(best_decision)
 
@@ -605,6 +617,11 @@ class Objective:
             if score > 0:
                 heap.append((-score, counter, decision))
                 counter += 1
+
+        # The heap is seeded from empty coverage accumulators, so it holds exactly the decisions
+        # passing g(e | {}) - 2 * lambda * h(e) > 0. A decision left out here is never inserted
+        # later, so this is the full candidate pool for the run.
+        self.n_available_decisions = len(heap)
 
         heapq.heapify(heap)
         if not heap:

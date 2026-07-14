@@ -67,7 +67,7 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Data + clustering
 
-data, data_labels, feature_labels, scaler = load_preprocessed_yeast()
+data, data_labels, feature_labels, scaler = load_preprocessed_ansio()
 stamp("data loaded")
 data = _memoryview_safe(data)
 n, d = data.shape
@@ -75,14 +75,14 @@ n, d = data.shape
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 9,
-    'n_select': 9,
+    'n_clusters': 5,
+    'n_select': 5,
     'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
+    'n_forest': 10,
+    'forest_max_depth': 4,
     'car_min_support': 0.025,
     'car_min_confidence': 0.75,
-    'car_max_rule_length': 3,
+    'car_max_rule_length': 2,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -104,26 +104,26 @@ fixed_parameters['weights'] = weights.tolist()
 ####################################################################################################
 # Load alpha values (fixed from alphas.py selection)
 
-with open("data/experiments/yeast/alphas/selected_alphas_resub.json") as f:
+with open("data/experiments/aniso/alphas/selected_alphas_resub.json") as f:
     selected_alpha_dict = json.load(f)
 
 ####################################################################################################
 # Load rule pools and IDS lambdas
 
-pre_filter_ensemble = load_rules('data/experiments/yeast/rules/pre_filter_ensemble_rules.pkl')
+pre_filter_ensemble = load_rules('data/experiments/aniso/rules/pre_filter_ensemble_rules.pkl')
 
-with open('data/experiments/yeast/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
+with open('data/experiments/aniso/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
     pre_filter_labels = pickle.load(f)
 
 # Dict for O(1) label lookup when filtering rules by confidence level
 _pre_filter_label_map = {r: lbl for r, lbl in zip(pre_filter_ensemble, pre_filter_labels)}
 
-with open('data/experiments/yeast/rules/ids_lambdas.json') as f:
+with open('data/experiments/aniso/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-outfile = 'data/experiments/yeast/confidence/'
+outfile = 'data/experiments/aniso/confidence/'
 os.makedirs(outfile, exist_ok=True)
 
 ####################################################################################################
@@ -393,7 +393,7 @@ stamp("pool-independent algos (ExKMC/CN2/trees x trials)")
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
 
-_ids_cache_path = 'data/experiments/yeast/rules/ids_coverage_cache_prefilter.pkl'
+_ids_cache_path = 'data/experiments/aniso/rules/ids_coverage_cache_prefilter.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:

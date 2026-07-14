@@ -24,10 +24,12 @@ import time
 import pickle
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
+from intercluster.decision_sets.ids import IDSCoverageCache
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.measurements import *
@@ -48,6 +50,12 @@ seed = 342
 # `seed` so re-running this script reproduces the exact same set of trials.
 n_trials = 10
 trial_seeds = [seed + i for i in range(n_trials)]
+
+# Confidence levels are evaluated concurrently (see run_confidence_level below). Each worker
+# builds its own IDS sub-cache -- ids_full_cache.subset() copies the selected rows, which is
+# close to the whole cache at conf=0.0 -- so peak memory scales with this number. Lower it if
+# RSS becomes a problem on the larger rule pools.
+confidence_cpu_count = 12
 
 def _memoryview_safe(x):
     if not x.flags.writeable:
@@ -122,6 +130,15 @@ os.makedirs(outfile, exist_ok=True)
 # Objective configuration
 # No precomputed_paths: the rule pool changes at each confidence level, so everything
 # must be computed from scratch each iteration.
+#
+# The point-to-center distance matrix is the one exception: it depends only on the data and the
+# kmeans centers, neither of which changes with the rule pool, so it is computed once here and
+# handed to every cost-based objective. Otherwise each of the many objectives built per confidence
+# level (one per PEC fit, plus one per score_decision_set call) would rebuild the same (n x k)
+# matrix from scratch.
+data_to_center_distances = compute_data_to_center_distances(
+    data, kmeans_base.centers, 'kmeans'
+)
 
 objective_config = {
     'coverage-mistake': {
@@ -131,6 +148,7 @@ objective_config = {
         'objective_type': 'coverage-cost',
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
+        'data_to_center_distances': data_to_center_distances,
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
@@ -144,6 +162,7 @@ objective_config = {
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
         'weights': weights,
+        'data_to_center_distances': data_to_center_distances,
     },
     'coverage-pairwise-distance-weighted': {
         'objective_type': 'coverage-pairwise-distance',
@@ -155,7 +174,8 @@ objective_config = {
 # Helpers
 
 def _make_objective(objective_type, n_select, alpha_val, lambda_val=None,
-                    cluster_centers=None, cluster_cost_method='kmeans', weights=None):
+                    cluster_centers=None, cluster_cost_method='kmeans', weights=None,
+                    data_to_center_distances=None):
     """Instantiate the right Objective subclass without precomputed data."""
     common = dict(n_select=n_select, alpha_val=alpha_val, lambda_val=lambda_val, weights=weights)
     if objective_type == 'coverage-mistake':
@@ -164,6 +184,7 @@ def _make_objective(objective_type, n_select, alpha_val, lambda_val=None,
         return CoverageCostObjective(
             cluster_centers=cluster_centers,
             cluster_cost_method=cluster_cost_method,
+            data_to_center_distances=data_to_center_distances,
             **common,
         )
     elif objective_type == 'coverage-pairwise-distance':
@@ -173,7 +194,8 @@ def _make_objective(objective_type, n_select, alpha_val, lambda_val=None,
 
 
 def score_decision_set(decisions, X, y, n_select, objective_type, alpha_val, lambda_val,
-                       cluster_centers=None, cluster_cost_method='kmeans', weights=None):
+                       cluster_centers=None, cluster_cost_method='kmeans', weights=None,
+                       data_to_center_distances=None):
     """
     Evaluate the PEC objective on a fixed decision set using a forced lambda.
     n_select must match the budget used when lambda was computed (for cost normalization).
@@ -190,6 +212,7 @@ def score_decision_set(decisions, X, y, n_select, objective_type, alpha_val, lam
         cluster_centers=cluster_centers,
         cluster_cost_method=cluster_cost_method,
         weights=weights,
+        data_to_center_distances=data_to_center_distances,
     )
     obj.initialize_data(X, y)
     obj.initialize_decision_set(dset)
@@ -379,12 +402,13 @@ if os.path.exists(_ids_cache_path):
     stamp("IDS full-cache loaded from disk")
 else:
     print("Pre-computing IDS coverage cache on full pre-filter ensemble...")
-    _ids_full = IDS(
-        rules=pre_filter_ensemble, rule_labels=pre_filter_labels, n_select=n_select,
-        lambdas=ids_lambdas, optimizer='random_greedy', random_state=seed,
+    # Same construction as ids_lambda_search.py and max_rules.py/lambda.py: from_rules keys
+    # decisions to rule order and keeps one per rule, and runs no optimizer. (Routing through
+    # IDS.fit() instead would build the decision set as a set -- hash order, duplicates collapsed
+    # -- and pay for a selection pass that is immediately discarded.)
+    ids_full_cache = IDSCoverageCache.from_rules(
+        pre_filter_ensemble, pre_filter_labels, data, kmeans_labels
     )
-    _ids_full.fit(data, kmeans_labels)
-    ids_full_cache = _ids_full.get_cache()
     os.makedirs(os.path.dirname(_ids_cache_path), exist_ok=True)
     with open(_ids_cache_path, 'wb') as f:
         pickle.dump(ids_full_cache, f)
@@ -398,27 +422,79 @@ confidence_values = np.round(np.arange(0.0, 1.0, 0.05), 2)
 
 result = {'fixed-parameters': fixed_parameters}
 
-stamp("starting confidence sweep (per-level times below)")
-for conf in confidence_values:
+# Precompute each pre-filter rule's majority-class fraction ONCE. It does not depend
+# on the confidence threshold, so calling filter_rules() inside the sweep below would
+# re-evaluate every rule against all N points at each level -- redundant O(R*N) work, and
+# it would be repeated in every worker once the sweep runs in parallel. A rule is kept at
+# threshold `conf` iff it covers >=1 point and its majority-class fraction is >= conf,
+# exactly matching filter_rules(..., support=0.0).
+_y_flat = flatten_labels(kmeans_labels)
+_rule_confidence = []
+for _rule in pre_filter_ensemble:
+    _idx = satisfies_rule(data, _rule)
+    if len(_idx) == 0:
+        _rule_confidence.append(None)
+    else:
+        _labs, _counts = np.unique(_y_flat[_idx], return_counts=True)
+        _rule_confidence.append(_counts.max() / len(_idx))
+
+def run_confidence_level(
+    conf,
+    data,
+    kmeans_labels,
+    weights,
+    n_select,
+    n_labels,
+    trial_seeds,
+    ids_lambdas,
+    ids_full_cache,
+    pre_filter_ensemble,
+    rule_confidence,
+    pre_filter_label_map,
+    objective_config,
+    selected_alpha_dict,
+    measurement_fns,
+    pool_indep,
+    pool_indep_measurements,
+    baseline_measurements,
+    stochastic_trial_infos,
+    stochastic_pool_indep_measurements,
+):
+    """
+    Evaluates one confidence level and returns (conf_key, conf_result).
+
+    Levels are independent -- each one only reads the shared state above and writes its own
+    result -- so they are dispatched across processes by the Parallel call below. Everything
+    stochastic in here (the IDS trials) is seeded explicitly via random_state=trial_seed and
+    reads no global RNG, which is what makes that safe: worker processes do not inherit the
+    parent's seeded global NumPy state. The pool-independent tree trials do rely on the global
+    seed, which is exactly why they are fit above, in the parent, rather than in here.
+
+    Shared state is passed as explicit arguments rather than read from module globals so that the
+    large arrays reliably go through joblib's memmap reducer (which also de-duplicates them by
+    identity across tasks) instead of being pickled per task.
+    """
     conf_key = float(conf)
     t0 = time.time()
-    print(f"\n[confidence={conf_key:.2f}] filtering rules...")
 
-    filtered_rules = filter_rules(pre_filter_ensemble, data, kmeans_labels, confidence=conf)
+    filtered_rules = [
+        r for r, c in zip(pre_filter_ensemble, rule_confidence)
+        if c is not None and c >= conf
+    ]
     has_rules = len(filtered_rules) > 0
-    filtered_labels = [_pre_filter_label_map[r] for r in filtered_rules]
-
-    print(f"  {len(filtered_rules)} ensemble rules")
+    filtered_labels = [pre_filter_label_map[r] for r in filtered_rules]
 
     conf_result = {
-        'n_filtered_rules': len(filtered_rules),
+        'confidence_n_rules': len(filtered_rules),
         'lambda': {},
+        'lambda_n_rules': {},
     }
 
     # ----------------------------------------------------------------
     # PEC — one fit per objective type; captures the lambda used
     # ----------------------------------------------------------------
     pec_lambdas = {}
+    pec_n_available = {}
     pec_info = {}
 
     for obj_name, obj_cfg in objective_config.items():
@@ -428,12 +504,18 @@ for conf in confidence_values:
             pec = PEC(rules=filtered_rules, n_select=n_select, alpha_val=alpha, **obj_cfg)
             pec.fit(data, kmeans_labels)
             pec_lambdas[obj_name] = pec.objective.lambda_val
+            # The confidence threshold is only the first filter on the pool. lambda* imposes a
+            # second one: distorted greedy permanently discards every decision failing
+            # g(e | {}) - lambda* h(e) > 0, so this is what PEC actually had to choose from.
+            pec_n_available[obj_name] = pec.n_available_decisions
             pec_info[pec_name] = _dset_info(pec, data, n_labels)
         else:
             pec_lambdas[obj_name] = np.nan
+            pec_n_available[obj_name] = np.nan
             pec_info[pec_name] = _empty_info()
 
     conf_result['lambda'] = pec_lambdas
+    conf_result['lambda_n_rules'] = pec_n_available
 
     # ----------------------------------------------------------------
     # WRA, WRA-weighted, CBA (pool-dependent)
@@ -567,6 +649,7 @@ for conf in confidence_values:
                     cluster_centers=obj_cfg.get('cluster_centers'),
                     cluster_cost_method=obj_cfg.get('cluster_cost_method', 'kmeans'),
                     weights=obj_cfg.get('weights'),
+                    data_to_center_distances=obj_cfg.get('data_to_center_distances'),
                 )
 
         conf_result[algo_name] = algo_result
@@ -617,6 +700,7 @@ for conf in confidence_values:
                             cluster_centers=obj_cfg.get('cluster_centers'),
                             cluster_cost_method=obj_cfg.get('cluster_cost_method', 'kmeans'),
                             weights=obj_cfg.get('weights'),
+                            data_to_center_distances=obj_cfg.get('data_to_center_distances'),
                         )
                     )
             if trial_scores:
@@ -630,8 +714,44 @@ for conf in confidence_values:
 
         conf_result[algo_name] = algo_result
 
+    print(
+        f"  [confidence={conf_key:.2f}] {len(filtered_rules)} ensemble rules, "
+        f"done in {time.time() - t0:.1f}s"
+    )
+    return conf_key, conf_result
+
+
+stamp("starting confidence sweep (parallel)")
+
+level_results = Parallel(n_jobs=confidence_cpu_count, backend='loky')(
+    delayed(run_confidence_level)(
+        conf,
+        data,
+        kmeans_labels,
+        weights,
+        n_select,
+        n_labels,
+        trial_seeds,
+        ids_lambdas,
+        ids_full_cache,
+        pre_filter_ensemble,
+        _rule_confidence,
+        _pre_filter_label_map,
+        objective_config,
+        selected_alpha_dict,
+        measurement_fns,
+        pool_indep,
+        pool_indep_measurements,
+        baseline_measurements,
+        stochastic_trial_infos,
+        stochastic_pool_indep_measurements,
+    )
+    for conf in confidence_values
+)
+
+# Parallel preserves submission order, so levels land in confidence_values order.
+for conf_key, conf_result in level_results:
     result[conf_key] = conf_result
-    print(f"  confidence={conf_key:.2f} done in {time.time() - t0:.1f}s")
 
 ####################################################################################################
 # Save results

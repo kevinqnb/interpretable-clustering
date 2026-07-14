@@ -32,6 +32,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
+from intercluster.decision_sets.ids import IDSCoverageCache
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.measurements import *
@@ -216,7 +217,7 @@ with open('data/experiments/mnist/rules/ids_lambdas.json') as f:
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = 'data/experiments/mnist/rules/ids_coverage_cache.pkl'
+_ids_cache_path = 'data/experiments/mnist/rules/ids_coverage_cache_ensemble.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
@@ -225,10 +226,19 @@ if os.path.exists(_ids_cache_path):
     stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
-    _ids_pre = IDS(rules=ensemble_rules, n_select=None, lambdas=ids_lambdas, random_state=seed)
-    _ids_pre.fit(data, kmeans_labels)
-    ids_cache = _ids_pre.get_cache()
-    print("IDS cache ready.")
+    # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
+    # ensemble rules and their labels -- so this fallback reproduces the cached file rather than a
+    # different one. Two things make that worth being careful about: from_rules keys decisions to
+    # rule order and keeps one per rule, whereas routing through IDS.fit()/set_labels builds a set
+    # (hash order, and duplicate decisions silently collapse), and the IDS optimizer indexes into
+    # that ordering. from_rules also runs no optimizer, unlike fit(), which would run a full
+    # selection pass over the whole pool purely as a side effect and then discard it.
+    ids_cache = IDSCoverageCache.from_rules(
+        ensemble_rules, ensemble_labels, data, kmeans_labels
+    )
+    with open(_ids_cache_path, 'wb') as f:
+        pickle.dump(ids_cache, f)
+    print(f"IDS cache ready: {len(ids_cache.decisions)} decisions.")
     stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_params_by_r = {
@@ -303,14 +313,50 @@ objective_dict = {
 
 ####################################################################################################
 # Decision Set Clustering Modules:
+#
+# lambda* is probed ONCE per objective and then passed to every fit of that objective.
+#
+# With lambda_val left as None, each PEC fit calls Objective.compute_lambdas(), which evaluates
+# reward() once per decision -- and since these modules pass rule_labels=None, the decision pool is
+# every (rule, cluster) pair, so that is |rules| * k reward evaluations on every fit. Repeated
+# across each rule budget r, it dominates this script.
+#
+# lambda* does not depend on n_select: it is derived from each decision's reward and cost, and
+# n_select enters the objective only through the (1 - 1/n_select) factor inside
+# distorted_greedy_select. This experiment holds alpha fixed per objective (alpha *does* affect
+# lambda*, via cost) and varies only r, so a single probe is valid for the whole sweep.
+#
+# compute_lambda_star() runs the same code fit() would, minus the selection pass, and with the
+# precomputed_path caches above it is essentially just the one compute_lambdas() call we intend
+# to pay exactly once.
+
+lambda_star_dict = {}
 
 dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
     for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
         module_name = f'dscluster; {obj_name}; {rule_miner_name}'
         alpha_val = fixed_parameters['alpha'][module_name]
+
+        probe = PEC(
+            rules = rules,
+            **({'n_select' : fixed_parameters['n_select'], 'alpha_val' : alpha_val} | obj_params |
+               {'lambda_val' : None, 'selection_algorithm' : 'distorted-greedy'})
+        )
+        lambda_star = probe.compute_lambda_star(data, kmeans_labels)
+
+        # Degenerate case: with no valid lambda, set_lambda falls back to lambda 0 AND switches
+        # the objective to lazy-greedy. Reusing the probed value would silently drop that switch,
+        # so leave those objectives on the original per-fit path.
+        if probe.objective.selection_algorithm != 'distorted-greedy':
+            lambda_params = {}
+            lambda_star_dict[module_name] = None
+        else:
+            lambda_params = {'lambda_val' : lambda_star}
+            lambda_star_dict[module_name] = float(lambda_star)
+
         dsclust_params = {
-            (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params
+            (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params | lambda_params
             for i,r in enumerate(n_rules_list)
         }
         dsclust_mod = DecisionSetMod(
@@ -319,6 +365,9 @@ for obj_name, obj_params in objective_dict.items():
             name = module_name
         )
         dscluster_module_list.append((dsclust_mod, dsclust_params))
+
+fixed_parameters['lambda_star'] = lambda_star_dict
+stamp("lambda* probe (once per objective)")
 
 
 ####################################################################################################
@@ -405,6 +454,7 @@ def _module_trial_result(mod, assignments, measurement_fns):
     data_to_rule, rule_to_cluster, data_to_cluster = assignments
     return {
         'lambda': mod.lambda_val if hasattr(mod, 'lambda_val') else None,
+        'lambda_n_rules': getattr(mod, 'n_available_decisions', np.nan),
         'max-rule-length': mod.max_rule_length,
         'sum-rule-length': mod.sum_rule_length,
         'weighted-avg-length': mod.weighted_average_rule_length,
@@ -421,7 +471,8 @@ def fit_stochastic_varying(mod, params_by_r, trial_seeds, measurement_fns, seed_
     results across trials for each r.
     """
     result = (
-        {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     for r, base_params in params_by_r.items():
@@ -441,7 +492,8 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     across every r label (matching the pre-existing convention for these modules).
     """
     result = (
-        {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     trial_dicts = []

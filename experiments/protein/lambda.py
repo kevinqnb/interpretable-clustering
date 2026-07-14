@@ -32,6 +32,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from intercluster import *
 from intercluster.decision_trees import *
 from intercluster.decision_sets import *
+from intercluster.decision_sets.ids import IDSCoverageCache
 from intercluster.decision_sets.objectives import *
 from intercluster.decision_sets.mining import *
 from intercluster.measurements import *
@@ -241,7 +242,7 @@ with open('data/experiments/protein/rules/ids_lambdas.json') as f:
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = 'data/experiments/protein/rules/ids_coverage_cache.pkl'
+_ids_cache_path = 'data/experiments/protein/rules/ids_coverage_cache_ensemble.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
@@ -250,10 +251,19 @@ if os.path.exists(_ids_cache_path):
     stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
-    _ids_pre = IDS(rules=ensemble_rules, n_select=None, lambdas=ids_lambdas, random_state=seed)
-    _ids_pre.fit(data, kmeans_labels)
-    ids_cache = _ids_pre.get_cache()
-    print("IDS cache ready.")
+    # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
+    # ensemble rules and their labels -- so this fallback reproduces the cached file rather than a
+    # different one. Two things make that worth being careful about: from_rules keys decisions to
+    # rule order and keeps one per rule, whereas routing through IDS.fit()/set_labels builds a set
+    # (hash order, and duplicate decisions silently collapse), and the IDS optimizer indexes into
+    # that ordering. from_rules also runs no optimizer, unlike fit(), which would run a full
+    # selection pass over the whole pool purely as a side effect and then discard it.
+    ids_cache = IDSCoverageCache.from_rules(
+        ensemble_rules, ensemble_labels, data, kmeans_labels
+    )
+    with open(_ids_cache_path, 'wb') as f:
+        pickle.dump(ids_cache, f)
+    print(f"IDS cache ready: {len(ids_cache.decisions)} decisions.")
     stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_shared_params = {
@@ -350,8 +360,9 @@ for obj_name, obj_params in objective_dict.items():
         # uses 'distorted-greedy' regardless of what obj_params contains.
         probe_params = base_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
         probe = PEC(rules = rules, **probe_params)
-        probe.fit(data, kmeans_labels)
-        lambda_star = probe.lambda_val
+        # compute_lambda_star does everything fit() would, minus the selection pass -- whose result
+        # this probe discarded anyway. Same lambda*, one less full PEC fit per objective.
+        lambda_star = probe.compute_lambda_star(data, kmeans_labels)
 
         lower = np.linspace(0.0, lambda_star, half)
         upper = np.linspace(lambda_star, 2 * lambda_star, half)
@@ -503,6 +514,7 @@ def _module_trial_result(mod, assignments, measurement_fns):
     data_to_rule, rule_to_cluster, data_to_cluster = assignments
     return {
         'lambda': mod.lambda_val if hasattr(mod, 'lambda_val') else None,
+        'lambda_n_rules': getattr(mod, 'n_available_decisions', np.nan),
         'max-rule-length': mod.max_rule_length,
         'sum-rule-length': mod.sum_rule_length,
         'weighted-avg-length': mod.weighted_average_rule_length,
@@ -520,7 +532,8 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     these modules in max_rules.py).
     """
     result = (
-        {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     trial_dicts = []

@@ -261,6 +261,7 @@ class DecisionTreeMod(Module):
         self.max_rule_length = np.nan
         self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
+        self.n_available_decisions = np.nan
         self.tree = None
 
     
@@ -383,6 +384,7 @@ class DecisionSetMod(Module):
         self.sum_rule_length = np.nan
         self.weighted_average_rule_length = np.nan
         self.lambda_val = np.nan
+        self.n_available_decisions = np.nan
         self.dset = None
 
 
@@ -424,6 +426,7 @@ class DecisionSetMod(Module):
 
         self.dset.fit(X, y)
         self.lambda_val = self.dset.lambda_val if hasattr(self.dset, 'lambda_val') else np.nan
+        self.n_available_decisions = getattr(self.dset, 'n_available_decisions', np.nan)
         dset_labels = self.dset.predict(X)
         n_unique = len(unique_labels(y))
 

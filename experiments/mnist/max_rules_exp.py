@@ -211,6 +211,7 @@ def _module_trial_result(mod, assignments, measurement_fns):
     data_to_rule, rule_to_cluster, data_to_cluster = assignments
     return {
         'lambda': mod.lambda_val if hasattr(mod, 'lambda_val') else None,
+        'lambda_n_rules': getattr(mod, 'n_available_decisions', np.nan),
         'max-rule-length': mod.max_rule_length,
         'sum-rule-length': mod.sum_rule_length,
         'weighted-avg-length': mod.weighted_average_rule_length,
@@ -227,7 +228,8 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     across every r label (matching the pre-existing convention for this module).
     """
     result = (
-        {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     trial_dicts = []

@@ -216,8 +216,9 @@ for obj_name, obj_params in objective_dict.items():
         # contains.
         probe_params = base_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
         probe = PEC(rules = rules, **probe_params)
-        probe.fit(data, kmeans_labels)
-        lambda_star = probe.lambda_val
+        # compute_lambda_star does everything fit() would, minus the selection pass -- whose result
+        # this probe discarded anyway. Same lambda*, one less full PEC fit per objective.
+        lambda_star = probe.compute_lambda_star(data, kmeans_labels)
 
         lower = np.linspace(0.0, lambda_star, half)
         upper = np.linspace(lambda_star, 2 * lambda_star, half)
@@ -324,6 +325,7 @@ def _module_trial_result(mod, assignments, measurement_fns):
     data_to_rule, rule_to_cluster, data_to_cluster = assignments
     return {
         'lambda': mod.lambda_val if hasattr(mod, 'lambda_val') else None,
+        'lambda_n_rules': getattr(mod, 'n_available_decisions', np.nan),
         'max-rule-length': mod.max_rule_length,
         'sum-rule-length': mod.sum_rule_length,
         'weighted-avg-length': mod.weighted_average_rule_length,
@@ -341,7 +343,8 @@ def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement
     this module in `lambda.py`).
     """
     result = (
-        {'lambda': {}, 'max-rule-length': {}, 'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     trial_dicts = []

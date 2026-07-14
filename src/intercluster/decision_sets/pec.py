@@ -37,6 +37,7 @@ class PEC(DecisionSet):
         precomputed_path: Union[str, Path] = None,
         output_path: Union[str, Path] = None,
         pack_bits: bool = True,
+        data_to_center_distances : NDArray = None,
         rule_labels : List[Set[int]] = None, # DUMMY ARGUMENT TO MATCH PARENT CLASS, must be None
     ):
         """
@@ -59,6 +60,10 @@ class PEC(DecisionSet):
                 rather than from the rules provided.
             output_path (str, optional): Path to save output data. Defaults to None.
             pack_bits (bool, optional): Whether to pack bits for rule coverage matrix. Defaults to True.
+            data_to_center_distances (NDArray, optional): Precomputed (n x k) point-to-center
+                distance matrix, forwarded to the cost-based objectives so they do not rebuild
+                it on every fit. Only used when objective_type is a cost objective.
+                Defaults to None. See objectives.compute_data_to_center_distances.
             rule_labels (List[Set[int]], optional): Labels for each rule. Must be None for DSCluster.
         """
         assert rule_labels is None, 'rule_labels must be None for DSCluster.'
@@ -107,6 +112,14 @@ class PEC(DecisionSet):
         assert isinstance(pack_bits, bool), 'pack_bits must be a boolean.'
         self.pack_bits = pack_bits
 
+        assert data_to_center_distances is None or isinstance(data_to_center_distances, np.ndarray), \
+            'data_to_center_distances must be a numpy array.'
+        self.data_to_center_distances = data_to_center_distances
+
+        # Number of decisions admitted by the selection algorithm's initial positivity gate.
+        # Populated from the objective by select(); NaN until fit() runs.
+        self.n_available_decisions = np.nan
+
         self.objective_type = objective_type
         self.initialize_objective()
         
@@ -148,7 +161,8 @@ class PEC(DecisionSet):
                 selection_algorithm = self.selection_algorithm,
                 precomputed_path = self.precomputed_path,
                 output_path = self.output_path,
-                pack_bits = self.pack_bits
+                pack_bits = self.pack_bits,
+                data_to_center_distances = self.data_to_center_distances
             )
         elif self.objective_type == "total-coverage-cost":
             self.objective = TotalCoverageCostObjective(
@@ -161,7 +175,8 @@ class PEC(DecisionSet):
                 selection_algorithm = self.selection_algorithm,
                 precomputed_path = self.precomputed_path,
                 output_path = self.output_path,
-                pack_bits = self.pack_bits
+                pack_bits = self.pack_bits,
+                data_to_center_distances = self.data_to_center_distances
             )
         elif self.objective_type == "coverage-pairwise-distance":
             self.objective = CoveragePairwiseDistanceObjective(
@@ -203,13 +218,46 @@ class PEC(DecisionSet):
         """
         if self.decision_set is None:
             raise ValueError('Decision set has not been initialized yet.')
-        
+
         self.objective.initialize_data(X, y)
         self.objective.initialize_decision_set(self.decision_set)
         self.objective.set_lambda(self.lambda_val)
         self.lambda_val = self.objective.lambda_val
         selected_decision_set = self.objective.select()
+        # Read after select(), which is what sets it -- and which may have run lazy-greedy even
+        # under selection_algorithm='distorted-greedy', since set_lambda falls back to it when no
+        # valid lambda exists. The count then reflects whichever algorithm actually ran.
+        self.n_available_decisions = self.objective.n_available_decisions
         return selected_decision_set
+
+
+    def compute_lambda_star(
+            self,
+            X : NDArray,
+            y : List[Set[int]] = None
+        ) -> float:
+        """
+        Computes lambda* -- the minimum lambda for which the distorted-greedy approximation
+        guarantee holds -- without running the selection step.
+
+        This mirrors what fit() does up to (but not including) `objective.select()`, so the value
+        is exactly the lambda a `lambda_val=None` fit would have chosen. Callers sweeping a
+        parameter that lambda* does not depend on can compute it once here and then pass it as
+        `lambda_val`, instead of having every fit recompute it. Note lambda* *does* depend on
+        alpha_val (via each decision's cost), so a sweep over alpha cannot reuse a single value.
+
+        Args:
+            X (np.ndarray): Input dataset.
+            y (List[Set[int]], optional): Target labels. Defaults to None.
+
+        Returns:
+            lambda_star (float): The automatically selected lambda value.
+        """
+        y = self.set_labels(X, y)
+        self.objective.initialize_data(X, y)
+        self.objective.initialize_decision_set(self.decision_set)
+        self.objective.set_lambda(None)
+        return self.objective.lambda_val
 
 
 ####################################################################################################

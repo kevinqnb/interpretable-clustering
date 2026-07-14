@@ -41,7 +41,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 1
+experiment_cpu_count = 12
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
@@ -76,7 +76,7 @@ def _memoryview_safe(x):
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
+data, data_labels, feature_labels, scaler = load_preprocessed_ansio()
 stamp("data loaded")
 data = _memoryview_safe(data)
 n,d = data.shape
@@ -88,11 +88,11 @@ fixed_parameters = {
     'n_select': 5,
     'max_rules': 11,
     'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
+    'n_forest': 10,
+    'forest_max_depth': 4,
     'car_min_support': 0.025,
     'car_min_confidence': 0.75,
-    'car_max_rule_length': 3, # (really means 6 by pyfim convention)
+    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
     'filter_confidence': 0.75,
     'seed': seed,
     'n_trials': n_trials,
@@ -114,22 +114,22 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open("data/experiments/anuran/alphas/selected_alphas_resub.json") as f:
+with open("data/experiments/aniso/alphas/selected_alphas_resub.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
-decision_info_dict_directory = 'data/experiments/anuran/rules/'
+decision_info_dict_directory = 'data/experiments/aniso/rules/'
 
-outfile = 'data/experiments/anuran/max_rules/'
+outfile = 'data/experiments/aniso/max_rules/'
 outfile_ref = '_resub'
 
 ####################################################################################################
 # Load pre-mined rules:
 
 
-ensemble_rules = load_rules('data/experiments/anuran/rules/ensemble_rules.pkl')
+ensemble_rules = load_rules('data/experiments/aniso/rules/ensemble_rules.pkl')
 
-with open('data/experiments/anuran/rules/ensemble_labels.pkl', 'rb') as f:
+with open('data/experiments/aniso/rules/ensemble_labels.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 rule_miner_dict = {
@@ -233,12 +233,12 @@ cn2_mod = DecisionSetMod(
 
 
 # IDS:
-with open('data/experiments/anuran/rules/ids_lambdas.json') as f:
+with open('data/experiments/aniso/rules/ids_lambdas.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = 'data/experiments/anuran/rules/ids_coverage_cache_ensemble.pkl'
+_ids_cache_path = 'data/experiments/aniso/rules/ids_coverage_cache_ensemble.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:

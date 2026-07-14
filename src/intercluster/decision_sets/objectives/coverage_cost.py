@@ -16,6 +16,47 @@ from typing import Any, Union
 ####################################################################################################
 
 
+def compute_data_to_center_distances(
+    X : NDArray,
+    cluster_centers : NDArray,
+    cluster_cost_method : str = "kmeans",
+) -> NDArray:
+    """
+    Computes the (n x k) matrix of distances from every data point to every cluster center.
+
+    This is the single most expensive thing the cost-based objectives do at initialization, and
+    it depends only on X and the cluster centers -- not on the rule pool, alpha, lambda, or
+    n_select. Callers that build many objectives over a fixed dataset and clustering (the
+    experiment scripts) should compute it once and hand it to the objective via
+    `data_to_center_distances`, rather than paying for it on every construction.
+
+    Args:
+        X (NDArray): (n x d) Data array.
+        cluster_centers (NDArray): (k x d) Array of cluster centers.
+        cluster_cost_method (str): "kmeans" (squared euclidean) or "kmedians" (manhattan).
+
+    Returns:
+        data_to_center_distances (NDArray): (n x k) array where entry (i,j) is the distance
+            from point i to center j.
+    """
+    if cluster_cost_method not in ["kmeans", "kmedians"]:
+        raise ValueError(
+            f"Method {cluster_cost_method} not supported. "
+            "Supported cluster_cost_methods are 'kmeans' and 'kmedians'."
+        )
+
+    distances = np.zeros((X.shape[0], cluster_centers.shape[0]))
+    for i in range(cluster_centers.shape[0]):
+        if cluster_cost_method == "kmeans":
+            distances[:, i] = np.sum((X - cluster_centers[i])**2, axis=1)
+        else:  # kmedians
+            distances[:, i] = np.sum(np.abs(X - cluster_centers[i]), axis=1)
+    return distances
+
+
+####################################################################################################
+
+
 class CoverageCostObjective(Objective):
     """
     Objective that selects rules based on a coverage and cluster cost objective.
@@ -28,7 +69,7 @@ class CoverageCostObjective(Objective):
             Larger values penalize longer rules more heavily. Defaults to 1.0.
         cluster_centers (NDArray): (k x d) array where each row i is the given 
                 representative for cluster i.
-        cluster_cost_method (str): The cluster_cost_method used to compute cluster costs. 
+        cluster_cost_method (str): The cluster_cost_method used to compute cluster costs.
             Currently only "kmeans" or "kmedians" are supported.
         weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
         selection_algorithm (str): The selection algorithm to use. Options are
@@ -36,6 +77,11 @@ class CoverageCostObjective(Objective):
         precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
         output_path (Union[str, Path]): Path to save output data. Defaults to None.
         pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
+        data_to_center_distances (NDArray): Optional precomputed (n x k) point-to-center distance
+            matrix (see `compute_data_to_center_distances`). It depends only on X and the cluster
+            centers, so callers that build many objectives over a fixed dataset and clustering can
+            compute it once and pass it here instead of having every construction rebuild it.
+            Defaults to None, in which case initialize_data computes it.
     """
     def __init__(
             self,
@@ -49,6 +95,7 @@ class CoverageCostObjective(Objective):
             precomputed_path: Union[str, Path] = None,
             output_path: Union[str, Path] = None,
             pack_bits: bool = True,
+            data_to_center_distances : NDArray = None,
         ):
         super().__init__(
             n_select = n_select,
@@ -67,9 +114,18 @@ class CoverageCostObjective(Objective):
             raise ValueError(f"Method {cluster_cost_method} not supported. Supported cluster_cost_methods are 'kmeans' and 'kmedians'.")
         self.cluster_cost_method = cluster_cost_method
 
+        # An explicitly supplied matrix wins over one loaded from a precomputed bundle (which
+        # super().__init__ may already have set); both skip the recomputation below.
+        if data_to_center_distances is not None:
+            assert isinstance(data_to_center_distances, np.ndarray), \
+                'data_to_center_distances must be a numpy array.'
+            assert data_to_center_distances.shape[1] == self.cluster_centers.shape[0], \
+                'data_to_center_distances must have one column per cluster center.'
+            self.data_to_center_distances = data_to_center_distances
+
 
     def initialize_data(
-        self, 
+        self,
         X : NDArray,
         y : list[set[int]],
     ):
@@ -81,7 +137,7 @@ class CoverageCostObjective(Objective):
         assert len(y) == X.shape[0], 'y must have the same number of elements as X has rows.'
         assert all(isinstance(label_set, set) for label_set in y), \
             'Each element of y must be a set of labels.'
-        
+
         if self.weights is None:
             self.weights = np.ones(X.shape[0], dtype = float)
         else:
@@ -91,14 +147,14 @@ class CoverageCostObjective(Objective):
         self.X = X
         self.y = y
         self.n_samples = X.shape[0]
-            
+
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
 
         if self.precomputed:
             self.data_initialized = True
             return
-        
+
         cluster_membership = labels_to_assignment(
             y, n_labels = self.n_labels
         ).T
@@ -106,13 +162,15 @@ class CoverageCostObjective(Objective):
             cluster_membership
         ) if self.pack_bits else cluster_membership
 
-        # Compute n x k distance matrix between data points and cluster centers.
-        self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
-        for i in range(self.cluster_centers.shape[0]):
-            if self.cluster_cost_method == "kmeans":
-                self.data_to_center_distances[:, i] = np.sum((self.X - self.cluster_centers[i])**2, axis=1)
-            else:  # self.cluster_cost_cluster_cost_method == "kmedians"
-                self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
+        # Compute n x k distance matrix between data points and cluster centers, unless one was
+        # supplied at construction (it is constant for a fixed X and set of centers).
+        if self.data_to_center_distances is None:
+            self.data_to_center_distances = compute_data_to_center_distances(
+                self.X, self.cluster_centers, self.cluster_cost_method
+            )
+        else:
+            assert self.data_to_center_distances.shape[0] == self.X.shape[0], \
+                'data_to_center_distances must have one row per sample in X.'
 
         self.data_initialized = True
 
@@ -231,6 +289,11 @@ class TotalCoverageCostObjective(Objective):
         precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
         output_path (Union[str, Path]): Path to save output data. Defaults to None.
         pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
+        data_to_center_distances (NDArray): Optional precomputed (n x k) point-to-center distance
+            matrix (see `compute_data_to_center_distances`). It depends only on X and the cluster
+            centers, so callers that build many objectives over a fixed dataset and clustering can
+            compute it once and pass it here instead of having every construction rebuild it.
+            Defaults to None, in which case initialize_data computes it.
     """
     def __init__(
             self,
@@ -243,7 +306,8 @@ class TotalCoverageCostObjective(Objective):
             selection_algorithm : str = "distorted-greedy",
             precomputed_path : Union[str, Path] = None,
             output_path : Union[str, Path] = None,
-            pack_bits : bool = True
+            pack_bits : bool = True,
+            data_to_center_distances : NDArray = None,
         ):
         super().__init__(
             n_select = n_select,
@@ -262,9 +326,18 @@ class TotalCoverageCostObjective(Objective):
             raise ValueError(f"Method {cluster_cost_method} not supported. Supported cluster_cost_methods are 'kmeans' and 'kmedians'.")
         self.cluster_cost_method = cluster_cost_method
 
+        # An explicitly supplied matrix wins over one loaded from a precomputed bundle (which
+        # super().__init__ may already have set); both skip the recomputation below.
+        if data_to_center_distances is not None:
+            assert isinstance(data_to_center_distances, np.ndarray), \
+                'data_to_center_distances must be a numpy array.'
+            assert data_to_center_distances.shape[1] == self.cluster_centers.shape[0], \
+                'data_to_center_distances must have one column per cluster center.'
+            self.data_to_center_distances = data_to_center_distances
+
 
     def initialize_data(
-        self, 
+        self,
         X : NDArray,
         y : list[set[int]],
     ):
@@ -276,24 +349,24 @@ class TotalCoverageCostObjective(Objective):
         assert len(y) == X.shape[0], 'y must have the same number of elements as X has rows.'
         assert all(isinstance(label_set, set) for label_set in y), \
             'Each element of y must be a set of labels.'
-        
+
         if self.weights is None:
             self.weights = np.ones(X.shape[0], dtype = float)
         else:
             assert len(self.weights) == X.shape[0], \
                 'weights must have the same length as the number of samples in X.'
-            
+
         self.X = X
         self.y = y
         self.n_samples = X.shape[0]
 
         self.label_set = unique_labels(y)
         self.n_labels = len(self.label_set)
-        
+
         if self.precomputed:
             self.data_initialized = True
             return
-        
+
         cluster_membership = labels_to_assignment(
             y, n_labels = self.n_labels
         ).T
@@ -301,13 +374,15 @@ class TotalCoverageCostObjective(Objective):
             cluster_membership
         ) if self.pack_bits else cluster_membership
 
-        # Compute n x k distance matrix between data points and cluster centers.
-        self.data_to_center_distances = np.zeros((self.X.shape[0], self.cluster_centers.shape[0]))
-        for i in range(self.cluster_centers.shape[0]):
-            if self.cluster_cost_method == "kmeans":
-                self.data_to_center_distances[:, i] = np.sum((self.X - self.cluster_centers[i])**2, axis=1)
-            else:  # self.cluster_cost_cluster_cost_method == "kmedians"
-                self.data_to_center_distances[:, i] = np.sum(np.abs(self.X - self.cluster_centers[i]), axis=1)
+        # Compute n x k distance matrix between data points and cluster centers, unless one was
+        # supplied at construction (it is constant for a fixed X and set of centers).
+        if self.data_to_center_distances is None:
+            self.data_to_center_distances = compute_data_to_center_distances(
+                self.X, self.cluster_centers, self.cluster_cost_method
+            )
+        else:
+            assert self.data_to_center_distances.shape[0] == self.X.shape[0], \
+                'data_to_center_distances must have one row per sample in X.'
 
         self.data_initialized = True
 

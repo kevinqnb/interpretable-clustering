@@ -9,6 +9,7 @@ from .coverage_mistake import (
 from .coverage_cost import (
     CoverageCostObjective,
     TotalCoverageCostObjective,
+    compute_data_to_center_distances,
 )
 from .coverage_pairwise_distance import (
     CoveragePairwiseDistanceObjective,
@@ -23,4 +24,5 @@ __all__ = [
     'TotalCoverageCostObjective',
     'CoveragePairwiseDistanceObjective',
     'TotalCoveragePairwiseDistanceObjective',
+    'compute_data_to_center_distances',
 ]

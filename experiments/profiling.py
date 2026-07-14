@@ -4,7 +4,7 @@ Lightweight, opt-in profiling helpers for the experiment scripts.
 Design goals:
 - Zero overhead and zero behavior change when profiling is disabled (the default).
 - Survives joblib/loky worker dispatch: per-module timings are returned inside the
-  result dict (see Experiment.run_module) rather than relying on shared process state.
+  result dict (see experiment._run_fit) rather than relying on shared process state.
 - Human-readable end-of-run report so we can rank stages by wall-clock.
 
 Typical use in a script:

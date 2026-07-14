@@ -418,7 +418,13 @@ class ClusteringCost(MeasurementFunction):
         if data_to_cluster_assignment is None:
             return np.nan
         n,k = data_to_cluster_assignment.shape
-        
+
+        # Number of clusters each point belongs to. Points may be assigned to several, and the
+        # `average` branch below divides each point's distance by this count. It does not depend
+        # on j, so it is computed once here rather than re-summing the point's row for every
+        # cluster it appears in.
+        points_per_point = data_to_cluster_assignment.sum(axis = 1)
+
         cost = 0.0
         for j in range(k):
             cluster_points_idx = np.where(data_to_cluster_assignment[:,j])[0]
@@ -433,10 +439,7 @@ class ClusteringCost(MeasurementFunction):
                 dists = np.linalg.norm(cluster_points - center, ord = 1, axis = 1)
 
             if self.average:
-                avg_dists = np.array(
-                    [dists[i] / np.sum(data_to_cluster_assignment[c, :]) for i,c in enumerate(cluster_points_idx)]
-                )
-                cost += np.sum(avg_dists)
+                cost += np.sum(dists / points_per_point[cluster_points_idx])
             else:
                 cost += np.sum(dists)
 

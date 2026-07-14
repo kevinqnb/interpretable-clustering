@@ -458,6 +458,14 @@ class IDS(DecisionSet):
         max_iterations:            Max coordinate-ascent rounds.
         cache:                     Pre-built IDSCoverageCache. Pass this to skip
                                    recomputation when reusing across experiments.
+                                   Build one with IDSCoverageCache.from_rules(), which
+                                   needs no optimizer run; going through fit() just to
+                                   populate a cache pays for a selection pass that is
+                                   then discarded.
+        optimizer:                 'random_greedy' (default) or 'sls'. Every experiment
+                                   script asks for 'random_greedy' explicitly; the default
+                                   matches so that a caller who omits it does not silently
+                                   fall into SLS, which is markedly more expensive.
         random_state:              Seed or np.random.Generator controlling all
                                    randomness used during selection (SLS/random-greedy
                                    sampling and, if lambdas is None, the coordinate-ascent
@@ -477,7 +485,7 @@ class IDS(DecisionSet):
         ternary_search_precision: float = 0.001,
         max_iterations: int = 10,
         cache: IDSCoverageCache = None,
-        optimizer: str = 'sls',
+        optimizer: str = 'random_greedy',
         random_state=None,
     ):
         super().__init__(rules=rules, rule_labels=rule_labels)
