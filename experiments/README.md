@@ -7,24 +7,29 @@ The first step is creating an ensemble of rules to use for `PEC`. For each data 
 
 Note that for larger datasets, the algorithm which creates the discretized version of the dataset (called `bin_df`) for input to apriori may take a long time to run (~24 hours). It's best to cache this for future use, and we do so by saving to `data/experiments/{dataset}/rules/bin_df.csv`. 
 
-Likewise, rather than recomputing the coverage and cost 
-scores for our mined rules, we pre-compute and cache these 
-values using pickled dictionaries saved to the same rules directory (`cost_info_dict.pkl.gz` --$k$-Means cost, `mistake_info_dict.pkl.gz` -- mistakes cost, `pairwise_info_dict.pkl.gz` -- pairwise distance cost)
+`mine_rules.py` filters the mined pool of rules by a confidence threshold (the fraction of a rule's covered points that share its majority cluster label), and takes `--confidence-thresholds`, a list of thresholds to sweep, defaulting to `[0.25, 0.5, 0.75]`. Each threshold gets its own tagged, saved rule pool and cache files, distinguished by a `_conf_{tag}` suffix where e.g. `0.5` maps to tag `50` (see `conf_tag` in `experiments/cli_utils.py`):
+- `ensemble_rules_conf_{tag}.pkl` -- the filtered rule pool, a pickled list of rule objects.
+- `ensemble_labels_conf_{tag}.pkl` -- each rule's majority-cluster label.
+- `cost_info_dict_conf_{tag}.pkl.gz` -- $k$-Means cost, `mistake_info_dict_conf_{tag}.pkl.gz` -- mistakes cost, `pairwise_distance_info_dict_conf_{tag}.pkl.gz` -- pairwise distance cost. These are cached, pickled dictionaries keyed to the exact rule pool used to build them, so a different confidence threshold's (differently-sized) pool needs its own cache -- they are not interchangeable across thresholds.
 
-Most importantly the mined set of ensemble rules is also saved to this directory as a pickled list of rule objects: `ensemble_rules.pkl`. 
+The unfiltered pool mined before any confidence filtering is saved once, untagged, as `pre_filter_ensemble_rules.pkl` (and `pre_filter_ensemble_labels.pkl`) -- this is what `confidence.py` (step 4 below) reads.
 
 For more information about saving / loading rules, see `intercluster/rules.py` or `intercluster/decision_sets/objectives/objective.py` (which caches coverage and cost values).
 
 #### 2. Choosing $\alpha$:
-After creating a set of rules for `PEC`, we perform a hyperparameter search fo $\alpha$. This takes as input the cached rule information from the previous step, which is loaded at the beginning of each `alphas.py` file. Results are 
-then saved to the `data/experiments/{dataset}/alphas/` directory according to the `outfile` variable.
+After creating a set of rules for `PEC`, we perform a hyperparameter search fo $\alpha$. This takes as input the cached rule information from the previous step, which is loaded at the beginning of each `alphas.py` file. Every script downstream of `mine_rules.py` in every dataset (`alphas.py`, `select_alphas.py`, `ids_lambda_search.py`, `max_rules.py`/`max_rules_exkmc.py`/`max_rules_exp.py`/`max_rules_combine.py`, `lambda.py`/`lambda_exkmc.py`/`lambda_exp.py`/`lambda_combine.py`) takes a `--confidence` flag selecting which tagged rule pool to load, and tags its own output files the same way (via the `outfile_ref` suffix, e.g. `exp_resub_conf_50.json`, or -- for the mnist/fashion `*_combine.py` scripts -- the tagged `main_ref`/`combine_refs`/`out_ref` they merge) so results from different thresholds don't overwrite each other. Scripts that dispatch fits through `Experiment`'s `joblib.Parallel` (`alphas.py`, `max_rules.py`, `max_rules_exkmc.py`, `max_rules_exp.py`, `lambda.py`, `lambda_exkmc.py`, `lambda_exp.py`) also take a `--cpu-count` override, each defaulting to that script's original hardcoded value. Results are then saved to the `data/experiments/{dataset}/alphas/` directory according to the `outfile` variable.
 
-After running `alphas.py`, we plot the results and select values based upon an elbow heurisitic in `examples/experiments.ipynb`. These may then be saved and used for the next step.
+After running `alphas.py`, alpha selection by the elbow method can be done either interactively in `examples/experiments.ipynb` (the `select_alphas` cell) or, in every dataset, by running `select_alphas.py --confidence <value>` -- the two implement the identical selection logic, so either can produce the `selected_alphas_resub_conf_{tag}.json` file the next step expects; `select_alphas.py` exists so a full confidence sweep can be scripted end to end without a manual notebook pass.
+
+#### Confidence sweep runner:
+Every dataset has its own `experiments/{dataset}/run_confidence_sweep.sh`, which drives the full pipeline once per confidence threshold, running independent stages concurrently (`alphas.py`/`ids_lambda_search.py` don't depend on each other; neither do `max_rules.py`/`lambda.py`) while waiting on real dependencies (`select_alphas.py` needs `alphas.py`'s output; `max_rules.py`/`lambda.py` need both `select_alphas.py`'s and `ids_lambda_search.py`'s output). CPU counts passed to concurrent stages are split so the total stays within each script's original default:
+- `aniso`/`anuran`/`climate`/`protein`/`yeast`: `mine_rules -> [alphas || ids_lambda_search] -> select_alphas -> [max_rules || lambda]`.
+- `mnist`/`fashion`: same shape, but stage 3 is `[ (max_rules -> max_rules_exkmc -> max_rules_exp -> max_rules_combine) || (lambda -> lambda_exkmc -> lambda_exp -> lambda_combine) ]` -- each parenthesized chain runs as one background pipeline (so the `*_combine.py` merge always happens after all three of its inputs exist), and the two chains run concurrently with each other.
 
 #### 3. Varying Maximum Rules
 We evaluate our algorithms across settings where the maximum number of allowed rules is varied by running `max_rules.py`. This takes as input both the mined rules from step 1 and the alpha parameters selected in step 2. Results are then saved to `data/experiments/'dataset'/max_rules/` directory according to the `outfile` variable. These may then be loaded to plot results in `examples/experiments.ipynb`. 
 
-NOTE: That for the `mnist` and `fashion` datasets we split computation across different files, since some algorithms took much longer to run. In these cases, one would run `max_rules.py`, `max_rules_exkmc.py`, and `max_rules_exp.py` in any order, and then comine with `max_rules_combine.py`.
+NOTE: That for the `mnist` and `fashion` datasets we split computation across different files, since some algorithms took much longer to run. In these cases, one would run `max_rules.py`, `max_rules_exkmc.py`, and `max_rules_exp.py` (each with the same `--confidence` value) in any order, and then combine with `max_rules_combine.py --confidence <value>`.
 
 #### 4. Varying the minimum confidence threshold
 `confidence.py` sweeps the minimum-confidence threshold used to filter mined tree rules (0.0 to 1.0 in steps of 0.05), refitting all algorithms at each threshold to see how rule quality/filtering affects results. It takes as input the mined rules from step 1 and the alpha values selected in step 2, and saves results to `data/experiments/{dataset}/confidence/exp_confidence.json`. Unlike `max_rules.py`, the rule pool changes at every threshold, so pool-dependent algorithms (PEC, WRA, CBA, IDS) are refit from scratch each iteration rather than relying on precomputed coverage/cost caches.
@@ -57,7 +62,7 @@ For the climate experiments, `max_rules.py` and `confidence.py` derive a fixed l
 `mine_rules.py` (rule mining) and `alphas.py` ($\alpha$ selection) are one-time, cached hyperparameter-selection steps rather than models under evaluation, so they are run once under the master seed rather than repeated across trials -- the same treatment as `ids_lambda_search.py`'s IDS-lambda coordinate ascent.
 
 ## Selected parameters:
-For reference we outline the parameters used in each of our experiments. 
+For reference we outline the parameters used in each of our experiments. Note that `mine_rules.py` now takes `--confidence-thresholds` (a list, default `[0.25, 0.5, 0.75]`) rather than the single `filter_confidence` scalar shown below -- the per-dataset `filter_confidence` values in this section document the single threshold used in prior published results, before confidence became a swept parameter.
 ```
 {
     'n': dataset size,

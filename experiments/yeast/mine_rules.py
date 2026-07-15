@@ -17,10 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
+from experiments.cli_utils import conf_tag
 
 ####################################################################################################
 
 import os
+import argparse
 import pickle
 import numpy as np
 import pandas as pd
@@ -61,6 +63,18 @@ def _memoryview_safe(x):
     return x
 
 ####################################################################################################
+# Parse confidence thresholds to filter the mined ensemble at. Each threshold
+# gets its own tagged, saved rule pool (see conf_tag) so downstream scripts
+# can each be pointed at a specific threshold via their own --confidence flag.
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--confidence-thresholds', type=float, nargs='+', default=[0.25, 0.5, 0.75]
+)
+args = parser.parse_args()
+confidence_thresholds = args.confidence_thresholds
+
+####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_yeast()
 data = _memoryview_safe(data)
@@ -78,7 +92,7 @@ fixed_parameters = {
     'car_min_support': 0.025,
     'car_min_confidence': 0.75,
     'car_max_rule_length': 3, # (really means 6 by pyfim convention)
-    'filter_confidence': 0.75,
+    'confidence_thresholds': confidence_thresholds,
     'seed': seed
 }
 
@@ -177,15 +191,8 @@ pre_filter_ensemble = decision_tree_rules + shallow_rules + forest_rules + class
 print("Total pre-filter ensemble rules:", len(pre_filter_ensemble))
 save_rules(pre_filter_ensemble, rules_directory + 'pre_filter_ensemble_rules.pkl')
 
-ensemble_rules = filter_rules(
-    pre_filter_ensemble, data, kmeans_labels, confidence = fixed_parameters['filter_confidence']
-)
-
-print("Total ensemble rules after filtering:", len(ensemble_rules))
-save_rules(ensemble_rules, rules_directory + 'ensemble_rules.pkl')
-
 ####################################################################################################
-# Compute and save majority-class rule labels for both rule pools.
+# Compute and save majority-class rule labels for the pre-filter pool.
 #
 # Each rule is assigned the cluster label that appears most often among the
 # data points it covers.  The format is List[Set[int]] to match the
@@ -209,48 +216,58 @@ with open(rules_directory + 'pre_filter_ensemble_labels.pkl', 'wb') as f:
     pickle.dump(pre_filter_labels, f)
 print(f"Pre-filter ensemble labels saved ({len(pre_filter_labels)} rules).")
 
-ensemble_labels = _majority_labels(ensemble_rules, data, y_flat, n_clusters)
-with open(rules_directory + 'ensemble_labels.pkl', 'wb') as f:
-    pickle.dump(ensemble_labels, f)
-print(f"Ensemble labels saved ({len(ensemble_labels)} rules).")
-
 ####################################################################################################
-# Objectives for Decision Set Clustering:
+# Filter the pre-filter pool at each confidence threshold and save a tagged
+# rule pool + labels + per-objective decision-info cache for each. The cached
+# rule_coverage/decision_info arrays PEC persists are positional to the exact
+# rule pool passed to it, so each threshold's (differently-sized) filtered
+# pool needs its own cache -- these can't be shared across thresholds.
 
-objective_dict = {
-    'coverage-mistake': {
-        'objective_type': 'coverage-mistake',
-        'n_select': fixed_parameters['n_clusters'],
-        'alpha_val': 0.0,
-        'lambda_val': 0.0,
-        'output_path': rules_directory + "mistake_info_dict.pkl.gz"
-    },
-    'coverage-cost': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'n_select': fixed_parameters['n_clusters'],
-        'alpha_val': 0.0,
-        'lambda_val': 0.0,
-        'output_path': rules_directory + "cost_info_dict.pkl.gz"
-    },
-    'coverage-pairwise-distance': {
-        'objective_type': 'coverage-pairwise-distance',
-        'n_select': fixed_parameters['n_clusters'],
-        'alpha_val': 0.0,
-        'lambda_val': 0.0,
-        'output_path': rules_directory + "pairwise_distance_info_dict.pkl.gz"
-    },
-}
+for confidence in confidence_thresholds:
+    tag = conf_tag(confidence)
+    print(f"\n=== confidence threshold {confidence} (tag={tag}) ===")
 
-
-####################################################################################################
-# Save decision info dict for ensemble rules:
-
-for objective_type in objective_dict.keys():
-    print("Processing objective:", objective_type)
-    dsclust = PEC(
-        rules = ensemble_rules,
-        **objective_dict[objective_type]
+    ensemble_rules = filter_rules(
+        pre_filter_ensemble, data, kmeans_labels, confidence = confidence
     )
-    dsclust.fit(data, kmeans_labels)
+    print("Total ensemble rules after filtering:", len(ensemble_rules))
+    save_rules(ensemble_rules, rules_directory + f'ensemble_rules_conf_{tag}.pkl')
+
+    ensemble_labels = _majority_labels(ensemble_rules, data, y_flat, n_clusters)
+    with open(rules_directory + f'ensemble_labels_conf_{tag}.pkl', 'wb') as f:
+        pickle.dump(ensemble_labels, f)
+    print(f"Ensemble labels saved ({len(ensemble_labels)} rules).")
+
+    objective_dict = {
+        'coverage-mistake': {
+            'objective_type': 'coverage-mistake',
+            'n_select': fixed_parameters['n_clusters'],
+            'alpha_val': 0.0,
+            'lambda_val': 0.0,
+            'output_path': rules_directory + f"mistake_info_dict_conf_{tag}.pkl.gz"
+        },
+        'coverage-cost': {
+            'objective_type': 'coverage-cost',
+            'cluster_centers': kmeans_base.centers,
+            'cluster_cost_method': 'kmeans',
+            'n_select': fixed_parameters['n_clusters'],
+            'alpha_val': 0.0,
+            'lambda_val': 0.0,
+            'output_path': rules_directory + f"cost_info_dict_conf_{tag}.pkl.gz"
+        },
+        'coverage-pairwise-distance': {
+            'objective_type': 'coverage-pairwise-distance',
+            'n_select': fixed_parameters['n_clusters'],
+            'alpha_val': 0.0,
+            'lambda_val': 0.0,
+            'output_path': rules_directory + f"pairwise_distance_info_dict_conf_{tag}.pkl.gz"
+        },
+    }
+
+    for objective_type in objective_dict.keys():
+        print("Processing objective:", objective_type)
+        dsclust = PEC(
+            rules = ensemble_rules,
+            **objective_dict[objective_type]
+        )
+        dsclust.fit(data, kmeans_labels)

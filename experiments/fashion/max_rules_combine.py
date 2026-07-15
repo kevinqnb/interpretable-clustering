@@ -1,9 +1,23 @@
 import json
+import sys
+from pathlib import Path
+
+_HERE = Path(__file__).resolve()
+PROJECT_ROOT = next((p for p in _HERE.parents if (p / "data").is_dir()), None)
+if PROJECT_ROOT is None:
+    raise ModuleNotFoundError("Could not locate repository root.")
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from experiments.cli_utils import conf_tag, parse_experiment_args
+
+
+args = parse_experiment_args(confidence_default=0.75)
+tag = conf_tag(args.confidence)
 
 max_rules_dir = "data/experiments/fashion/max_rules/"
-main_ref = "_resub_dscluster"
-combine_refs = ["_resub_exkmc", "_resub_exp"]
-out_ref = "_resub"
+main_ref = f"_resub_dscluster_conf_{tag}"
+combine_refs = [f"_resub_exkmc_conf_{tag}", f"_resub_exp_conf_{tag}"]
+out_ref = f"_resub_conf_{tag}"
 
 # Load main experiment dict
 fname = max_rules_dir + "exp" + main_ref + ".json"

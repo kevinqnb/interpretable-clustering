@@ -17,6 +17,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
+from experiments.cli_utils import conf_tag, parse_experiment_args
 
 ####################################################################################################
 
@@ -34,7 +35,10 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-experiment_cpu_count = 12
+args = parse_experiment_args(confidence_default=0.75, cpu_count_default=12)
+confidence_threshold = args.confidence
+tag = conf_tag(confidence_threshold)
+experiment_cpu_count = args.cpu_count
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
@@ -77,7 +81,7 @@ fixed_parameters = {
     'car_min_support': 0.025,
     'car_min_confidence': 0.75,
     'car_max_rule_length': 3, # (really means 6 by pyfim convention)
-    'filter_confidence': 0.75,
+    'filter_confidence': confidence_threshold,
     'seed': seed
 }
 
@@ -98,12 +102,12 @@ fixed_parameters['weights'] = weights.tolist()
 decision_info_dict_directory = 'data/experiments/climate/rules/'
 
 outfile = 'data/experiments/climate/alphas/'
-outfile_ref = '_resub'
+outfile_ref = f'_resub_conf_{tag}'
 
 ####################################################################################################
 # Load pre-mined rules:
 
-ensemble_rules = load_rules('data/experiments/climate/rules/ensemble_rules.pkl')
+ensemble_rules = load_rules(f'data/experiments/climate/rules/ensemble_rules_conf_{tag}.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -118,7 +122,7 @@ objective_dict = {
         'objective_type': 'coverage-mistake',
         'n_select': fixed_parameters['n_select'],
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -127,14 +131,14 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'n_select': fixed_parameters['n_select'],
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
@@ -142,7 +146,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'mistake_info_dict.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
@@ -152,7 +156,7 @@ objective_dict = {
         'weights': weights,
         'cluster_cost_method': 'kmeans',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'cost_info_dict.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
@@ -160,7 +164,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'weights': weights,
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, 'pairwise_distance_info_dict.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
         )
     },
 }

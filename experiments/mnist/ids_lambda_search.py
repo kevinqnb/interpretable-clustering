@@ -12,6 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from data.preprocessing import *
 from experiments.modules import *
+from experiments.cli_utils import conf_tag, parse_experiment_args
 
 ####################################################################################################
 
@@ -26,6 +27,9 @@ from intercluster.decision_sets import *
 from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer, RandomGreedyOptimizer, IDSCoordinateAscent
 
 os.environ["OMP_NUM_THREADS"] = "1"
+
+args = parse_experiment_args(confidence_default=0.75)
+tag = conf_tag(args.confidence)
 
 # REMINDER: The seed should only be initialized here. RandomGreedyOptimizer and
 # IDSCoordinateAscent are given this seed explicitly below (random_state=seed)
@@ -51,10 +55,10 @@ n_select = 10
 ####################################################################################################
 # Load pre-mined ensemble rules
 
-ensemble_rules = load_rules('data/experiments/mnist/rules/ensemble_rules.pkl')
+ensemble_rules = load_rules(f'data/experiments/mnist/rules/ensemble_rules_conf_{tag}.pkl')
 print(f"Ensemble rule set size: {len(ensemble_rules)}")
 
-with open('data/experiments/mnist/rules/ensemble_labels.pkl', 'rb') as f:
+with open(f'data/experiments/mnist/rules/ensemble_labels_conf_{tag}.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 ids_rules  = ensemble_rules
@@ -70,7 +74,7 @@ ids_cache = IDSCoverageCache.from_rules(ids_rules, ids_labels, data, kmeans_labe
 
 print(f"Cache ready: {len(ids_cache.decisions)} valid decisions in {time.time() - t0:.1f}s")
 
-cache_path = 'data/experiments/mnist/rules/ids_coverage_cache_ensemble.pkl'
+cache_path = f'data/experiments/mnist/rules/ids_coverage_cache_ensemble_conf_{tag}.pkl'
 with open(cache_path, 'wb') as f:
     pickle.dump(ids_cache, f)
 print(f"Cache saved to {cache_path}")
@@ -124,7 +128,7 @@ print(f"Best lambdas: {best_lambdas}")
 ####################################################################################################
 # Save as a JSON list of 7 floats
 
-out_path = 'data/experiments/mnist/rules/ids_lambdas.json'
+out_path = f'data/experiments/mnist/rules/ids_lambdas_conf_{tag}.json'
 with open(out_path, 'w') as f:
     json.dump(best_lambdas, f, indent=4)
 

@@ -84,8 +84,8 @@ def select_alphas(alpha_experiment_dict, outfile=None):
 args = parse_experiment_args(confidence_default=0.75)
 tag = conf_tag(args.confidence)
 
-infile = f'data/experiments/aniso/alphas/exp_resub_conf_{tag}.json'
-outfile = f'data/experiments/aniso/alphas/selected_alphas_resub_conf_{tag}.json'
+infile = f'data/experiments/fashion/alphas/exp_resub_conf_{tag}.json'
+outfile = f'data/experiments/fashion/alphas/selected_alphas_resub_conf_{tag}.json'
 
 with open(infile) as f:
     alpha_experiment_dict = json.load(f)
