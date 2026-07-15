@@ -55,7 +55,7 @@ trial_seeds = [seed + i for i in range(n_trials)]
 # builds its own IDS sub-cache -- ids_full_cache.subset() copies the selected rows, which is
 # close to the whole cache at conf=0.0 -- so peak memory scales with this number. Lower it if
 # RSS becomes a problem on the larger rule pools.
-confidence_cpu_count = 12
+confidence_cpu_count = 6
 
 def _memoryview_safe(x):
     if not x.flags.writeable:

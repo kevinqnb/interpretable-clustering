@@ -42,7 +42,7 @@ seed = 342
 # orderings of the rule ensemble to bootstrap timing statistics over. If the mined ensemble
 # has fewer than n_step rules, this collapses to a single "full pool" step -- left as the
 # requested starting point; tune n_step once the ensemble size here is known.
-n_step = 200
+n_step = 1000
 n_trials = 10
 timing_seed = seed
 
