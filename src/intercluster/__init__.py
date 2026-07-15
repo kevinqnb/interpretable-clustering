@@ -44,6 +44,11 @@ from .measurements import (
 
 from .node import Node
 
+from .kinetic_heap import (
+    KineticNode,
+    KineticHeap,
+)
+
 from .utils import (
     tiebreak,
     divide_with_zeros,

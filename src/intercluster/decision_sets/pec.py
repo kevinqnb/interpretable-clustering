@@ -54,7 +54,9 @@ class PEC(DecisionSet):
                 Options are "coverage-mistake", "total-coverage-mistake", "coverage-cost", and 
                 "total-coverage-cost". Defaults to "coverage-cost".
             cluster_cost_method (str, optional): Method to use for clustering costs. Defaults to "kmeans".
-            selection_algorithm (str, optional): Algorithm to use for selection. Defaults to "distorted-greedy".
+            selection_algorithm (str, optional): Algorithm to use for selection. Options are
+                "distorted-greedy", "lazy-greedy", and "heap-distorted-greedy". Defaults to
+                "distorted-greedy".
             precomputed_path (str, optional): Path to precomputed data for the decision set. 
                 Defaults to None. If this is given, a decision set will be initialized from it, 
                 rather than from the rules provided.
@@ -97,8 +99,9 @@ class PEC(DecisionSet):
             'cluster_cost_method must be either "kmeans" or "kmedians".'
         self.cluster_cost_method = cluster_cost_method
 
-        assert selection_algorithm in ['distorted-greedy', 'lazy-greedy'], \
-            'selection_algorithm must be either "distorted-greedy" or "lazy-greedy".'
+        assert selection_algorithm in ['distorted-greedy', 'lazy-greedy', 'heap-distorted-greedy'], \
+            'selection_algorithm must be one of "distorted-greedy", "lazy-greedy", or ' \
+            '"heap-distorted-greedy".'
         self.selection_algorithm = selection_algorithm
 
         assert precomputed_path is None or isinstance(precomputed_path, (str, Path)), \

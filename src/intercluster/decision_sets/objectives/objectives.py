@@ -4,7 +4,8 @@ import numpy as np
 from numpy.typing import NDArray
 from intercluster import (
     Decision,
-    simplified_rule_length
+    simplified_rule_length,
+    KineticHeap,
 )
 from intercluster.utils import (
     labels_to_assignment,
@@ -71,7 +72,8 @@ class Objective:
         cluster_centers (NDArray): (k x d) Array of cluster centers for computing coverage.
         weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
         selection_algorithm (str): The selection algorithm to use. Options are
-            'distorted-greedy' and 'lazy-greedy'. Defaults to 'distorted-greedy'.
+            'distorted-greedy', 'lazy-greedy', and 'heap-distorted-greedy'. Defaults to
+            'distorted-greedy'.
         precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
         output_path (Union[str, Path]): Path to save output data. Defaults to None.
         pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
@@ -114,8 +116,9 @@ class Objective:
             assert len(weights.shape) == 1, 'weights must be a 1D array.'
         self.weights = weights
 
-        assert selection_algorithm in ['distorted-greedy', 'lazy-greedy'], \
-            'selection_algorithm must be either "distorted-greedy" or "lazy-greedy".'
+        assert selection_algorithm in ['distorted-greedy', 'lazy-greedy', 'heap-distorted-greedy'], \
+            'selection_algorithm must be one of "distorted-greedy", "lazy-greedy", or ' \
+            '"heap-distorted-greedy".'
         self.selection_algorithm = selection_algorithm
 
         self.pack_bits = pack_bits
@@ -681,6 +684,113 @@ class Objective:
         return selected_decisions
 
 
+    def heap_distorted_greedy_select(
+        self,
+    ) -> set[Decision]:
+        """
+        Selects a subset of rules using the same distorted greedy algorithm as
+        `distorted_greedy_select`, accelerated with a kinetic max-heap (`KineticHeap`) so that a
+        decision's marginal gain is only recomputed when it reaches the top of the heap, rather
+        than rescanned on every outer iteration. Produces the same objective value as
+        `distorted_greedy_select`; see that method for the algorithm reference (Harshaw et al.,
+        ICML 2019).
+
+        NOTE: A decision popped with a non-positive *distorted* score (`t_i * g - lambda * h`) is
+        not necessarily permanently worthless: t_i is nondecreasing but starts below 1, so a
+        decision can fail the distorted check at an early (small t_i) iteration while its
+        *undistorted* score (`g - lambda * h`) -- the quantity `distorted_greedy_select` itself
+        uses to permanently discard a decision -- is still positive, and it can legitimately be
+        selected once t_i grows closer to 1. Such a decision is reinserted rather than dropped;
+        only a decision whose undistorted score has actually reached <= 0 is discarded for good.
+
+        Returns:
+            decision_set (Set[Decision]): The selected set of decisions.
+        """
+        if not (self.data_initialized and self.decision_set_initialized):
+            raise ValueError('Data and decisions must be initialized before selection.')
+
+        if self.pack_bits:
+            covered_total = np.zeros((1, self.rule_coverage_packed.shape[1]), dtype=np.uint8)
+            covered_by_cluster = np.zeros((self.n_labels, self.cluster_membership_packed.shape[1]), dtype=np.uint8)
+        else:
+            covered_total = np.zeros((self.n_samples,), dtype=np.bool_)
+            covered_by_cluster = np.zeros((self.n_labels, self.n_samples), dtype=np.bool_)
+
+        selected_decisions: set[Decision] = set()
+
+        # Build the heap from empty coverage accumulators: every decision's initial key uses its
+        # g(e | {}) as coefficient and its (distortion-independent) -lambda*h(e) as constant.
+        # Every decision is inserted unfiltered -- discards happen lazily in the pop loop below.
+        heap = KineticHeap()
+        n_available = 0
+        for decision, decision_info in self.decision_info_dict.items():
+            g0 = self.marginal_reward(decision_info, covered_total, covered_by_cluster)
+            h0 = decision_info['cost']
+            heap.insert(decision, a=g0, b=-self.lambda_val * h0)
+
+            # Undistorted (c=1) gate, mirroring distorted_greedy_select's i==0 diagnostic --
+            # not lazy_greedy_select's c=2 gate.
+            if g0 - self.lambda_val * h0 > 0:
+                n_available += 1
+        self.n_available_decisions = n_available
+
+        heap_exhausted = False
+        for i in range(self.n_select):
+            t_i = (1 - 1 / self.n_select) ** (self.n_select - (i + 1))
+
+            while True:
+                e = heap.delete_max(t_i)
+                if e is None:
+                    heap_exhausted = True
+                    break
+
+                info = self.decision_info_dict[e]
+                g = self.marginal_reward(info, covered_total, covered_by_cluster)
+                h = info['cost']
+                v_hat = t_i * g - self.lambda_val * h
+
+                peeked = heap.peek_max()
+                v_prime = -np.inf if peeked is None else peeked[1]
+
+                if v_hat >= v_prime:
+                    if v_hat > 0:
+                        selected_decisions.add(e)
+
+                        ridx = int(info['coverage_idx'])
+                        lbl = int(info['label'])
+
+                        if self.pack_bits:
+                            rule_bits = self.rule_coverage_packed[ridx:ridx + 1]
+                            cluster_bits = self.cluster_membership_packed[lbl:lbl + 1]
+                            new_cluster_bits = np.bitwise_and(rule_bits, cluster_bits)
+                            covered_by_cluster[lbl:lbl + 1] = np.bitwise_or(covered_by_cluster[lbl:lbl + 1], new_cluster_bits)
+                            covered_total = np.bitwise_or(covered_total, rule_bits)
+                        else:
+                            rule_mask = self.rule_coverage_packed[ridx]
+                            cluster_mask = self.cluster_membership_packed[lbl]
+                            covered_by_cluster[lbl] |= (rule_mask & cluster_mask)
+                            covered_total |= rule_mask
+                    elif g - self.lambda_val * h > 0:
+                        # Not good enough at this t_i, but not permanently dead either (see the
+                        # NOTE above) -- keep it live for a later, larger t_i.
+                        heap.insert(e, a=g, b=-self.lambda_val * h)
+                    # else: undistorted score <= 0 -- permanently discard (matches
+                    # distorted_greedy_select's own discard criterion).
+                    break
+                else:
+                    heap.insert(e, a=g, b=-self.lambda_val * h)
+                    # loop again at the same t_i
+
+            if heap_exhausted:
+                break
+
+        selected_info = {d: dict(self.decision_info_dict[d]) for d in selected_decisions}
+        self.reward_value = self.reward(selected_info)
+        self.cost_value = self.cost(selected_info)
+        self.objective_value = self.compute_objective(selected_info)
+        return selected_decisions
+
+
     def select(
         self,
     ) -> set[Decision]:
@@ -688,7 +798,7 @@ class Objective:
         Selects a subset rules using the specified selection algorithm.
 
         Args:
-            
+
         Returns:
             decision_set (Set[Decision]): The selected set of decisions.
         """
@@ -696,6 +806,8 @@ class Objective:
             return self.distorted_greedy_select()
         elif self.selection_algorithm == 'lazy-greedy':
             return self.lazy_greedy_select()
+        elif self.selection_algorithm == 'heap-distorted-greedy':
+            return self.heap_distorted_greedy_select()
         else:
             raise ValueError(
                 f'Unknown selection algorithm: {self.selection_algorithm}'
