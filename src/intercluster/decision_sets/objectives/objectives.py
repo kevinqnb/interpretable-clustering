@@ -640,7 +640,12 @@ class Objective:
             if heap_best_decision in disqualified:
                 continue
 
-            second_best_score = -heap[0][0] if heap else 0.0
+            # No other candidates remain once this pop empties the heap, so this decision's
+            # own (recomputed) score is trivially the best available -- resolve it immediately
+            # (select if positive, else discard) rather than falling back to 0.0, which made a
+            # negative-scoring lone candidate fail `score >= second_best_score` forever and get
+            # reinserted in an infinite loop instead of ever reaching the discard branch below.
+            second_best_score = -heap[0][0] if heap else float('-inf')
 
             info = self.decision_info_dict[heap_best_decision]
             g = self.marginal_reward(info, covered_total, covered_by_cluster)
