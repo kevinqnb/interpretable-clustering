@@ -7,17 +7,40 @@
 #
 # The pipeline runs as two per-confidence loops with a grid barrier between them, rather than one
 # loop doing everything for a confidence before moving on. That split is forced by the shared
-# lambda grid: it is anchored on every confidence's lambda*, and lambda* depends on that
-# confidence's selected alpha -- so no grid can be built until select_alphas has run for ALL
-# thresholds. See experiments/lambda_grid.py for why the grid is shared at all (short version:
-# lambda* shrinks as confidence rises, so per-confidence grids ended at different lambdas and the
-# high-confidence curves ran off the end of cross-confidence plots).
+# lambda grid: it is anchored on EVERY confidence's lambda*, so no grid can be built until the
+# alpha stage has run. See experiments/lambda_grid.py for why the grid is shared at all (short
+# version: lambda* shrinks as confidence rises, so per-confidence grids ended at different lambdas
+# and the high-confidence curves ran off the end of cross-confidence plots).
+#
+# COMMON ALPHA (see ALPHA_CONFIDENCE below): stages 2 and 3 fit PEC against a single alpha shared
+# by every threshold, rather than each threshold's own elbow-selected alpha.
 #
 # Run from anywhere; paths below are relative to the repo root.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# Must be ascending -- ALPHA_CONFIDENCE indexes this array positionally.
 CONFIDENCE_THRESHOLDS=(0.25 0.5 0.75)
+
+# The one threshold whose selected alphas every downstream fit uses.
+#
+# WHY: alpha is a parameter OF PEC's objective (reward - lambda*(cost + alpha*sum_rule_length)),
+# not just of its solution. select_alphas.py picks it per confidence by elbow, and it genuinely
+# moved -- on aniso's coverage-cost objective it was 284.58 at confidence 0.25/0.50 but 94.86 at
+# 0.75. That made each confidence's plot score its models under a DIFFERENT objective function, so
+# even models with nothing to do with the rule pool (ExKMC, CN2, Decision-Tree) drew different
+# curves per confidence, purely from the alpha reweighting -- their fits are bit-identical across
+# thresholds. Pinning one alpha makes the objective, and therefore the y-axis, mean the same thing
+# in every subplot: the pool-independent baselines collapse to a single line, and PEC's curves stay
+# comparable, still differing only through the rule pool the confidence filter actually changes.
+#
+# This is a REFIT, not a plotting change: PEC's selection depends on alpha, so scoring a
+# per-confidence-alpha fit under a common alpha would be inconsistent. Hence the flag threads into
+# the fits themselves.
+#
+# The middle-most threshold, taking the lower of the two on an even-length list: (n-1)/2 truncates.
+ALPHA_CONFIDENCE=${CONFIDENCE_THRESHOLDS[$(((${#CONFIDENCE_THRESHOLDS[@]} - 1) / 2))]}
+echo "=== common alpha source: confidence=${ALPHA_CONFIDENCE} ==="
 
 uv run python experiments/aniso/mine_rules.py \
     --confidence-thresholds "${CONFIDENCE_THRESHOLDS[@]}"
@@ -39,10 +62,13 @@ for CONF in "${CONFIDENCE_THRESHOLDS[@]}"; do
 done
 
 # Stage 2 (barrier): probe lambda* for every threshold and write the one shared lambda grid that
-# every per-confidence lambda.py run below reads. Needs every selected_alphas file from stage 1.
+# every per-confidence lambda.py run below reads. Needs stage 1's selected_alphas for
+# ALPHA_CONFIDENCE (every threshold is probed against that one alpha); the per-threshold rule pools
+# it also reads come from mine_rules. lambda* still varies by threshold, via the pool.
 echo "=== shared lambda grid (all thresholds) ==="
 uv run python experiments/aniso/lambda.py --emit-grid \
-    --confidence-thresholds "${CONFIDENCE_THRESHOLDS[@]}"
+    --confidence-thresholds "${CONFIDENCE_THRESHOLDS[@]}" \
+    --alpha-confidence "$ALPHA_CONFIDENCE"
 
 # Stage 3: per confidence, max_rules.py and lambda.py don't depend on each other, but
 # both depend on stage 1 (select_alphas, and ids_lambda_search's cache); lambda.py also
@@ -50,9 +76,11 @@ uv run python experiments/aniso/lambda.py --emit-grid \
 for CONF in "${CONFIDENCE_THRESHOLDS[@]}"; do
     echo "=== sweeps: confidence=${CONF} ==="
 
-    uv run python experiments/aniso/max_rules.py --confidence "$CONF" --cpu-count 3 &
+    uv run python experiments/aniso/max_rules.py --confidence "$CONF" --cpu-count 3 \
+        --alpha-confidence "$ALPHA_CONFIDENCE" &
     MAX_RULES_PID=$!
-    uv run python experiments/aniso/lambda.py --confidence "$CONF" --cpu-count 3 &
+    uv run python experiments/aniso/lambda.py --confidence "$CONF" --cpu-count 3 \
+        --alpha-confidence "$ALPHA_CONFIDENCE" &
     LAMBDA_PID=$!
     wait "$MAX_RULES_PID"
     wait "$LAMBDA_PID"

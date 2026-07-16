@@ -6,8 +6,13 @@
 # PEC's lambda* -- the smallest lambda for which the distorted-greedy approximation guarantee
 # holds -- is (essentially) a max over coverage/cost ratios across the mined rule pool, so it is
 # monotone non-increasing in the filter confidence: raising the threshold removes rules, which can
-# only remove candidates for that max. Concretely, on aniso's coverage-cost objective lambda* is
-# 0.329 at confidence 0.25 and 0.50 but only 0.116 at 0.75.
+# only remove candidates for that max. Concretely, on aniso's coverage-cost objective (at its
+# sweep's common alpha) lambda* is 0.329 at confidence 0.25 and 0.50 but only 0.051 at 0.75.
+#
+# lambda* depends on alpha as well as on the pool -- alpha enters the cost term -- so these values
+# move if the alpha a run fits against changes. That is why the --emit-grid probe and the sweep it
+# feeds must source alpha identically (see experiments/aniso/lambda.py): the grid's lambda* anchor
+# is only a valid distorted-greedy cutoff for a PEC fit with the same alpha it was probed under.
 #
 # When each confidence's lambda sweep builds its own grid over [0, 2 * lambda*], those grids do not
 # line up: the 0.75 sweep stops at 0.231 while the 0.25 sweep runs to 0.659, so the high-confidence

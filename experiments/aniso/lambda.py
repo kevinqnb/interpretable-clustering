@@ -18,7 +18,7 @@ from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
 from experiments.profiling import stamp, stamp_reset
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.cli_utils import alpha_tag_for, conf_tag, parse_experiment_args
 from experiments.lambda_grid import build_shared_grids, load_lambda_grids, save_lambda_grids
 stamp_reset()
 
@@ -43,9 +43,16 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6, grid_flags=True)
+args = parse_experiment_args(
+    confidence_default=0.75, cpu_count_default=6, grid_flags=True, alpha_flag=True
+)
 confidence_threshold = args.confidence
 tag = conf_tag(confidence_threshold)
+# Which threshold's selected alphas to fit against. --alpha-confidence lets the whole sweep
+# share ONE alpha (see run_confidence_sweep.sh); without it this is just `tag`, i.e. each
+# confidence uses its own. Only alpha is shared -- the rule pool, the precomputed
+# coverage/cost caches, and lambda* all stay keyed to this run's own `tag`.
+alpha_tag = alpha_tag_for(args)
 experiment_cpu_count = args.cpu_count
 
 # REMINDER: The seed should only be initialized here. It should NOT
@@ -121,10 +128,14 @@ stamp("kmeans clustering")
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-# Alpha values for objectives:
-with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{tag}.json") as f:
+# Alpha values for objectives (from alpha_tag, which may not be this run's own tag):
+with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{alpha_tag}.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
+# Provenance: downstream readers reconstruct the objective as
+# reward - lambda*(cost + alpha*sum_rule_length) using fixed_parameters['alpha'], so recording
+# which threshold that alpha came from is what makes a saved result self-describing.
+fixed_parameters['alpha_confidence'] = float(alpha_tag) / 100
 
 decision_info_dict_directory = 'data/experiments/aniso/rules/'
 
@@ -188,15 +199,15 @@ objective_dict = objective_dict_for_tag(tag)
 # PEC's lambda* -- the minimum lambda for which the distorted-greedy guarantee holds -- shrinks as
 # the filter confidence rises (it is a max over coverage/cost ratios across the rule pool, and a
 # stricter filter can only remove candidates for that max). Sweeping each confidence over its own
-# [0, 2 * lambda*] therefore gave the confidences non-overlapping x-axes: aniso's coverage-cost
-# lambda* is 0.329 at confidence 0.25/0.50 but 0.116 at 0.75, so the 0.75 sweep stopped at 0.231
-# while the others ran to 0.659.
+# [0, 2 * lambda*] therefore gave the confidences non-overlapping x-axes: under this sweep's common
+# alpha, aniso's coverage-cost lambda* is 0.329 at confidence 0.25/0.50 but 0.051 at 0.75, so the
+# 0.75 sweep would stop at 0.103 while the others ran to 0.659.
 #
 # Instead, ONE grid per objective is shared across every confidence: it spans
 # [0, 2 * max_c lambda*_c] and contains every confidence's lambda*_c as an exact grid point. It is
-# built once by the --emit-grid barrier stage (which needs every threshold's selected alphas on
-# disk, since lambda* depends on alpha) and read back by each per-confidence run, so all runs key
-# their results off bit-identical lambda floats and line up when plotted together.
+# built once by the --emit-grid barrier stage (which needs the alpha_tag threshold's selected
+# alphas on disk, since lambda* depends on alpha) and read back by each per-confidence run, so all
+# runs key their results off bit-identical lambda floats and line up when plotted together.
 #
 # Each run still fits distorted-greedy only for lambda >= its OWN lambda*, which stays a clean cut
 # because that anchor is on the grid. See experiments/lambda_grid.py.
@@ -210,18 +221,23 @@ n_lambda_points = 25
 lambda_grid_path = os.path.join(outfile, 'lambda_grid_resub.json')
 
 if args.emit_grid:
+    # Every threshold is probed with `selected_alpha_dict` -- the alpha_tag alphas loaded above,
+    # NOT each threshold's own. This must stay in lockstep with the main run's alpha_val: the
+    # main run reads lambda* back out of this grid and cuts distorted-greedy at `l >= lambda*`,
+    # and that anchor only means anything if the PEC it fits uses the alpha lambda* was computed
+    # from. Rules and the precomputed caches stay per-threshold (they are pool-dependent, not
+    # alpha-dependent), so lambda* still varies with confidence -- which is the whole reason the
+    # grid is anchored on all of them.
     lambda_star_by_module = {}
     for c in args.confidence_thresholds:
         c_tag = conf_tag(c)
         c_rules = load_rules(f'data/experiments/aniso/rules/ensemble_rules_conf_{c_tag}.pkl')
-        with open(f'data/experiments/aniso/alphas/selected_alphas_resub_conf_{c_tag}.json') as f:
-            c_alphas = json.load(f)
 
         for obj_name, obj_params in objective_dict_for_tag(c_tag).items():
             module_name = f'dscluster; {obj_name}; ensemble'
             probe_params = {
                 'n_select': n_select,
-                'alpha_val': c_alphas[module_name],
+                'alpha_val': selected_alpha_dict[module_name],
             } | obj_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
             probe = PEC(rules=c_rules, **probe_params)
             # compute_lambda_star does everything fit() would, minus the selection pass.

@@ -18,7 +18,7 @@ from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
 from experiments.profiling import stamp, stamp_reset
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.cli_utils import alpha_tag_for, conf_tag, parse_experiment_args
 stamp_reset()
 
 ####################################################################################################
@@ -42,9 +42,12 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6)
+args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6, alpha_flag=True)
 confidence_threshold = args.confidence
 tag = conf_tag(confidence_threshold)
+# See lambda.py: --alpha-confidence points every confidence in a sweep at one common alpha.
+# Kept in step with lambda.py so the two sweeps describe the same PEC.
+alpha_tag = alpha_tag_for(args)
 experiment_cpu_count = args.cpu_count
 
 # REMINDER: The seed should only be initialized here. It should NOT
@@ -117,10 +120,11 @@ stamp("kmeans clustering")
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-# Alpha values for objectives:
-with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{tag}.json") as f:
+# Alpha values for objectives (from alpha_tag, which may not be this run's own tag):
+with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{alpha_tag}.json") as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
+fixed_parameters['alpha_confidence'] = float(alpha_tag) / 100
 
 decision_info_dict_directory = 'data/experiments/aniso/rules/'
 
