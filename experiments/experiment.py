@@ -360,6 +360,7 @@ class Experiment:
                     return obj.tolist()
                 return super().default(obj)
             
+        os.makedirs(path, exist_ok=True)
         fname = os.path.join(path, 'exp' + str(identifier) + '.json')
         with open(fname, 'w') as f:
             json.dump(self.result_dict, f, indent=4, cls=NumpyEncoder)
