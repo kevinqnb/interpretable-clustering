@@ -16,16 +16,35 @@ def conf_tag(confidence: float) -> str:
     return str(int(round(confidence * 100)))
 
 
-def parse_experiment_args(confidence_default: float, cpu_count_default: int = None):
+def parse_experiment_args(
+    confidence_default: float,
+    cpu_count_default: int = None,
+    grid_flags: bool = False,
+):
     """Standard CLI for a per-dataset experiment script.
 
     Every script exposes --confidence. Scripts that dispatch fits through
     Experiment's joblib.Parallel also pass cpu_count_default, which adds
     --cpu-count so a bash runner can reduce it when running two such scripts
     concurrently (see experiments/aniso/run_confidence_sweep.sh).
+
+    grid_flags adds the two flags lambda.py needs to share one lambda grid across
+    the whole sweep (see experiments/lambda_grid.py):
+      --emit-grid              probe lambda* for every threshold, write the shared
+                               grid, and exit without running the sweep. This is the
+                               barrier stage: it needs every threshold's selected
+                               alphas on disk, since lambda* depends on alpha.
+      --confidence-thresholds  the thresholds to probe under --emit-grid (matching
+                               mine_rules.py's flag). Ignored by a normal run, which
+                               just reads the grid and uses --confidence.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--confidence', type=float, default=confidence_default)
     if cpu_count_default is not None:
         parser.add_argument('--cpu-count', type=int, default=cpu_count_default)
+    if grid_flags:
+        parser.add_argument('--emit-grid', action='store_true')
+        parser.add_argument(
+            '--confidence-thresholds', type=float, nargs='+', default=[0.25, 0.5, 0.75]
+        )
     return parser.parse_args()

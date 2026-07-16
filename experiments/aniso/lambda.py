@@ -19,6 +19,7 @@ from experiments.experiment import Experiment
 from experiments.modules import *
 from experiments.profiling import stamp, stamp_reset
 from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.lambda_grid import build_shared_grids, load_lambda_grids, save_lambda_grids
 stamp_reset()
 
 ####################################################################################################
@@ -42,7 +43,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6)
+args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6, grid_flags=True)
 confidence_threshold = args.confidence
 tag = conf_tag(confidence_threshold)
 experiment_cpu_count = args.cpu_count
@@ -142,6 +143,112 @@ with open(f'data/experiments/aniso/rules/ensemble_labels_conf_{tag}.pkl', 'rb') 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
 }
+
+####################################################################################################
+# Objectives for Decision Set Clustering:
+#
+# Built per confidence tag (rather than once for this run's tag) because --emit-grid probes
+# lambda* for every threshold in the sweep, and each threshold has its own precomputed
+# coverage/cost caches. Only the precomputed_path varies with the tag.
+
+
+def objective_dict_for_tag(t):
+    return {
+        'coverage-mistake': {
+            'objective_type': 'coverage-mistake',
+            'precomputed_path': os.path.join(
+                decision_info_dict_directory, f'mistake_info_dict_conf_{t}.pkl.gz'
+            )
+        },
+        'coverage-cost': {
+            'objective_type': 'coverage-cost',
+            'cluster_centers': kmeans_base.centers,
+            'cluster_cost_method': 'kmeans',
+            'precomputed_path': os.path.join(
+                decision_info_dict_directory, f'cost_info_dict_conf_{t}.pkl.gz'
+            )
+        },
+        'coverage-pairwise-distance': {
+            'objective_type': 'coverage-pairwise-distance',
+            'precomputed_path': os.path.join(
+                decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{t}.pkl.gz'
+            )
+        },
+        # The '-weighted' variants (coverage-mistake-weighted, coverage-cost-weighted,
+        # coverage-pairwise-distance-weighted) are intentionally left out of this sweep; they
+        # differ only by passing 'weights': weights alongside the same objective_type.
+    }
+
+
+objective_dict = objective_dict_for_tag(tag)
+
+####################################################################################################
+# Lambda grid:
+#
+# PEC's lambda* -- the minimum lambda for which the distorted-greedy guarantee holds -- shrinks as
+# the filter confidence rises (it is a max over coverage/cost ratios across the rule pool, and a
+# stricter filter can only remove candidates for that max). Sweeping each confidence over its own
+# [0, 2 * lambda*] therefore gave the confidences non-overlapping x-axes: aniso's coverage-cost
+# lambda* is 0.329 at confidence 0.25/0.50 but 0.116 at 0.75, so the 0.75 sweep stopped at 0.231
+# while the others ran to 0.659.
+#
+# Instead, ONE grid per objective is shared across every confidence: it spans
+# [0, 2 * max_c lambda*_c] and contains every confidence's lambda*_c as an exact grid point. It is
+# built once by the --emit-grid barrier stage (which needs every threshold's selected alphas on
+# disk, since lambda* depends on alpha) and read back by each per-confidence run, so all runs key
+# their results off bit-identical lambda floats and line up when plotted together.
+#
+# Each run still fits distorted-greedy only for lambda >= its OWN lambda*, which stays a clean cut
+# because that anchor is on the grid. See experiments/lambda_grid.py.
+
+# Matches alphas.py's n_compare convention (25). Kept high because the shared grid spans
+# [0, 2 * max_c lambda*_c] rather than a single confidence's [0, 2 * lambda*]: at a fixed point
+# count, the wider span thins out resolution exactly around the smaller lambda*_c values. The
+# other datasets' lambda.py still use 10 -- aniso is the small/fast one (~10s per run), so it can
+# afford the denser sweep.
+n_lambda_points = 25
+lambda_grid_path = os.path.join(outfile, 'lambda_grid_resub.json')
+
+if args.emit_grid:
+    lambda_star_by_module = {}
+    for c in args.confidence_thresholds:
+        c_tag = conf_tag(c)
+        c_rules = load_rules(f'data/experiments/aniso/rules/ensemble_rules_conf_{c_tag}.pkl')
+        with open(f'data/experiments/aniso/alphas/selected_alphas_resub_conf_{c_tag}.json') as f:
+            c_alphas = json.load(f)
+
+        for obj_name, obj_params in objective_dict_for_tag(c_tag).items():
+            module_name = f'dscluster; {obj_name}; ensemble'
+            probe_params = {
+                'n_select': n_select,
+                'alpha_val': c_alphas[module_name],
+            } | obj_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
+            probe = PEC(rules=c_rules, **probe_params)
+            # compute_lambda_star does everything fit() would, minus the selection pass.
+            lambda_star = float(probe.compute_lambda_star(data, kmeans_labels))
+            lambda_star_by_module.setdefault(module_name, {})[c_tag] = lambda_star
+            print(f"  lambda* [conf={c}] {module_name}: {lambda_star}")
+
+    grids = build_shared_grids(lambda_star_by_module, n_lambda_points)
+    save_lambda_grids(lambda_grid_path, grids, n_lambda_points, args.confidence_thresholds)
+    stamp("lambda* probe fits (all thresholds)")
+    print(f"\nShared lambda grid written to {lambda_grid_path}")
+    sys.exit(0)
+
+lambda_grid_dict, lambda_star_dict, lambda_star_by_conf_dict = load_lambda_grids(
+    lambda_grid_path, tag
+)
+fixed_parameters['lambda_star'] = lambda_star_dict
+fixed_parameters['lambda_star_by_conf'] = lambda_star_by_conf_dict
+fixed_parameters['lambda_grid'] = lambda_grid_dict
+fixed_parameters['n_lambda_points'] = n_lambda_points
+
+# Union of every objective's lambda grid -- used to broadcast each comparison
+# model's single fit (which doesn't depend on lambda or the objective at all)
+# across every lambda value any objective's plot might need to look up.
+all_lambda_values = tuple(
+    sorted(set().union(*(set(g) for g in lambda_grid_dict.values())))
+)
 
 ####################################################################################################
 # Comparison Modules:
@@ -284,115 +391,18 @@ ids_mod = DecisionSetMod(
 )
 
 ####################################################################################################
-# Objectives for Decision Set Clustering:
-
-objective_dict = {
-    'coverage-mistake': {
-        'objective_type': 'coverage-mistake',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
-        )
-    },
-    'coverage-cost': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
-        )
-    },
-    'coverage-pairwise-distance': {
-        'objective_type': 'coverage-pairwise-distance',
-        'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
-        )
-    },
-    # 'coverage-mistake-weighted': {
-    #     'objective_type': 'coverage-mistake',
-    #     'weights': weights,
-    #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
-    #     )
-    # },
-    # 'coverage-cost-weighted': {
-    #     'objective_type': 'coverage-cost',
-    #     'cluster_centers': kmeans_base.centers,
-    #     'weights': weights,
-    #     'cluster_cost_method': 'kmeans',
-    #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
-    #     )
-    # },
-    # 'coverage-pairwise-distance-weighted': {
-    #     'objective_type': 'coverage-pairwise-distance',
-    #     'weights': weights,
-    #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
-    #     )
-    # },
-}
-
-####################################################################################################
-# Lambda grids:
-#
-# For each objective, PEC's automatic lambda selection (lambda_val=None) gives the
-# minimum lambda* for which the distorted-greedy approximation guarantee holds (see
-# `Objective.compute_lambdas`/`set_lambda` in
-# intercluster/decision_sets/objectives/objectives.py). We probe this once per
-# objective with a throwaway PEC fit (cheap: it reuses the precomputed coverage/cost
-# caches, exactly like the many alpha_val fits in alphas.py), then sweep lambda over
-# [0, 2 * lambda*], with lambda* itself guaranteed to be an exact grid point (built as
-# two linspaces meeting there) since distorted-greedy only starts being valid at
-# that point.
-
-n_lambda_points = 10  # matches alphas.py's n_compare convention
-half = n_lambda_points // 2 + 1
-
-lambda_star_dict = {}
-lambda_grid_dict = {}
-
-for obj_name, obj_params in objective_dict.items():
-    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
-        module_name = f'dscluster; {obj_name}; {rule_miner_name}'
-        alpha_val = fixed_parameters['alpha'][module_name]
-        base_params = {'n_select': n_select, 'alpha_val': alpha_val} | obj_params
-
-        # NOTE: obj_params may itself already carry a 'selection_algorithm' key
-        # (e.g. mnist/fashion's objective_dict sets 'distorted-greedy' explicitly).
-        # Merging the override last (rather than spreading both as separate kwargs)
-        # avoids a duplicate-keyword collision and guarantees this probe always
-        # uses 'distorted-greedy' regardless of what obj_params contains.
-        probe_params = base_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
-        probe = PEC(rules = rules, **probe_params)
-        # compute_lambda_star does everything fit() would, minus the selection pass -- whose result
-        # this probe discarded anyway. Same lambda*, one less full PEC fit per objective.
-        lambda_star = probe.compute_lambda_star(data, kmeans_labels)
-
-        lower = np.linspace(0.0, lambda_star, half)
-        upper = np.linspace(lambda_star, 2 * lambda_star, half)
-        lambda_grid = np.concatenate([lower, upper[1:]])
-
-        lambda_star_dict[module_name] = float(lambda_star)
-        lambda_grid_dict[module_name] = lambda_grid.tolist()
-
-fixed_parameters['lambda_star'] = lambda_star_dict
-stamp("lambda* probe fits")
-fixed_parameters['lambda_grid'] = lambda_grid_dict
-fixed_parameters['n_lambda_points'] = n_lambda_points
-
-# Union of every objective's lambda grid -- used to broadcast each comparison
-# model's single fit (which doesn't depend on lambda or the objective at all)
-# across every lambda value any objective's plot might need to look up.
-all_lambda_values = tuple(
-    sorted(set().union(*(set(g) for g in lambda_grid_dict.values())))
-)
-
-####################################################################################################
 # Decision Set Clustering Modules:
 #
-# Two modules per objective: 'lazy-greedy' is valid (and recorded) across the full
-# [0, 2 * lambda*] grid, while 'distorted-greedy' is only valid -- and thus only
-# fit/recorded -- for lambda >= lambda*.
+# Two modules per objective: 'lazy-greedy' is valid (and recorded) across the full shared grid,
+# while 'distorted-greedy' is only valid -- and thus only fit/recorded -- for lambda >= this
+# confidence's own lambda*. Since the shared grid spans [0, 2 * max_c lambda*_c], a confidence
+# whose lambda* is below the max gets MORE distorted-greedy points than it did under its own
+# [0, 2 * lambda*] grid, and its high-lambda tail may go degenerate (the objective g - lambda*h
+# turns cost-dominated, so selections empty out). That is the intended cost of a common x-axis.
+#
+# lambda_star here is the exact anchor the grid was built from (read from the grid JSON, not
+# re-probed), so the `l >= lambda_star` cut lands on a real grid point rather than missing it by
+# a last-ULP mismatch.
 
 dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
