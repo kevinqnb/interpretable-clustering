@@ -1,6 +1,16 @@
 import numpy as np
-from intercluster.rules import LinearCondition, Node
-from intercluster.rules.utils import *
+from intercluster.rules import LinearCondition
+from intercluster import Node, Rule
+from intercluster.utils import (
+    traverse,
+    collect_nodes,
+    collect_leaves,
+    get_decision_paths,
+    get_decision_paths_with_labels,
+    get_depth,
+    satisfies_path,
+    satisfies_rule,
+)
 
 ####################################################################################################
 # Custom Tree:
@@ -241,7 +251,7 @@ def test_satisfies_conditions():
         [3,4]
     ])
     
-    assert np.array_equal(satisfies_conditions(X, cond_list), np.array([1]))
+    assert np.array_equal(satisfies_rule(X, Rule(cond_list)), np.array([1]))
     
     
     

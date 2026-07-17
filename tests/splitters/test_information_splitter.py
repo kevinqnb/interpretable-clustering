@@ -1,25 +1,26 @@
 import numpy as np
-from intercluster.rules.splitters import (
+from intercluster.decision_trees.splitters import (
     ImmSplitter,
     InformationGainSplitter,
     SimpleSplitter,
 )
-from intercluster.utils import entropy
+from intercluster.measurement_utils import entropy
+from intercluster.utils import labels_format
 
 
 def test_information_split(simple_dataset):
     S = InformationGainSplitter()
     y = np.array([0, 0, 0, 1])
-    S.fit(X = simple_dataset, y = y)
-    
+    S.fit(X = simple_dataset, y = labels_format(y))
+
     samples = 1000
     split_features = np.zeros(samples)
     split_thresholds = np.zeros(samples)
     for i in range(samples):
-        gain, split_info = S.split(np.arange(len(simple_dataset)))
+        gain, condition = S.split(np.arange(len(simple_dataset)))
         assert gain == entropy(y)
-        split_features[i] = split_info[0][0]
-        split_thresholds[i] = split_info[2]
+        split_features[i] = condition.features[0]
+        split_thresholds[i] = condition.threshold
            
     unique_features, counts_features = np.unique(split_features, return_counts=True)
     unique_thresholds, counts_thresholds = np.unique(split_thresholds, return_counts=True)

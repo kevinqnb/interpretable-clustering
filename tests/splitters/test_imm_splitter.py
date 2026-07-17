@@ -1,5 +1,5 @@
 import numpy as np
-from intercluster.rules.splitters import (
+from intercluster.decision_trees.splitters import (
     ImmSplitter,
     InformationGainSplitter,
     SimpleSplitter
@@ -20,12 +20,12 @@ def test_imm_split(centroid_dataset):
     split_thresholds = np.zeros(samples)
     
     for i in range(samples):
-        split_score, split_info = S.split(
+        split_score, condition = S.split(
             indices = np.arange(len(centroid_dataset)),
             centroid_indices = np.array([0, 1])
         )
-        split_features[i] = split_info[0][0]
-        split_thresholds[i] = split_info[2]
+        split_features[i] = condition.features[0]
+        split_thresholds[i] = condition.threshold
         
     unique_features, counts_features = np.unique(split_features, return_counts=True)
     unique_thresholds, counts_thresholds = np.unique(split_thresholds, return_counts=True)

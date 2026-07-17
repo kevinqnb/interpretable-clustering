@@ -44,8 +44,14 @@ class FrequentItemsetMiner(RuleMiner):
         max_length : int = None,
         bin_df = None,
         binning_method : str = "uniform",
-        bin_params : dict = {'n_bins': 5}
+        bin_params : dict = None
     ):
+        # NOTE: bin_params can't default to a literal {'n_bins': 5} in the signature --
+        # a mutable default is evaluated once at import time and shared (and mutable in
+        # place) across every instance that doesn't pass its own bin_params explicitly.
+        if bin_params is None:
+            bin_params = {'n_bins': 5}
+
         if not isinstance(min_support, float) or min_support < 0 or min_support > 1:
             raise ValueError("min_support must be a floating point number in [0, 1].")
         self.min_support = min_support

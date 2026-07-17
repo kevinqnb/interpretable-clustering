@@ -95,8 +95,8 @@ def test_display():
         direction = 1
     )
 
-    assert cond1.display() == "2\u00b7" + "x0 +\n" + "x1\n" + "\u2264 2"
-    assert cond2.display() == "3\u00b7" + "x1 +\n" + "4\u00b7" + "x2\n" + "\u003E 6"
+    assert cond1.display() == r"2$\cdot$$x_0$ $+$" + "\n" + r"$x_1$" + "\n" + r"$\leq$ 2"
+    assert cond2.display() == r"3$\cdot$$x_1$ $+$" + "\n" + r"4$\cdot$$x_2$" + "\n" + r"$>$ 6"
 
     # Test with standard scaling
     cond3 = LinearCondition(
@@ -111,8 +111,8 @@ def test_display():
         threshold = -1,
         direction = -1
     )
-    assert cond3.display(scaler=standard_scaler) == "x0 " + "\u003E 7.0"
-    assert cond4.display(scaler=standard_scaler) == "x0 " + "\u2264 1.0"
+    assert cond3.display(scaler=standard_scaler) == r"$x_0$" + "\n" + r"$>$ 7.0"
+    assert cond4.display(scaler=standard_scaler) == r"$x_0$" + "\n" + r"$\leq$ 1.0"
 
     # Test with MinMax Scaling
     cond5 = LinearCondition(
@@ -127,8 +127,8 @@ def test_display():
         threshold = 0,
         direction = -1
     )
-    assert cond5.display(scaler=minmax_scaler) == "x1 " + "\u003E 5.0"
-    assert cond6.display(scaler=minmax_scaler) == "x1 " + "\u2264 3.0"
+    assert cond5.display(scaler=minmax_scaler) == r"$x_1$" + "\n" + r"$>$ 5.0"
+    assert cond6.display(scaler=minmax_scaler) == r"$x_1$" + "\n" + r"$\leq$ 3.0"
 
     # Test with scaling and feature labels
     cond7 = LinearCondition(
@@ -147,12 +147,12 @@ def test_display():
     assert cond7.display(
         scaler=standard_scaler,
         feature_labels=feature_labels
-    ) == "two +\n" + "0.5\u00b7" + "three\n" + "\u2264 4.0"
+    ) == r"two $+$" + "\n" + r"0.5$\cdot$three" + "\n" + r"$\leq$ 4.0"
 
     assert cond8.display(
         scaler=minmax_scaler,
         feature_labels=feature_labels
-    ) == "0.5\u00b7" + "two +\n" + "0.25\u00b7" + "three\n" + "\u2264 2.0"
+    ) == r"0.5$\cdot$two $+$" + "\n" + r"0.25$\cdot$three" + "\n" + r"$\leq$ 2.0"
 
 
 

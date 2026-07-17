@@ -1,41 +1,31 @@
 import numpy as np
-from intercluster.rules.splitters import (
-    ImmSplitter,
-    InformationGainSplitter,
-    SimpleSplitter,
-)
+from intercluster.decision_trees.splitters import SimpleSplitter
+from intercluster.utils import labels_format
 
 
-def test_with_simple_dataset(simple_dataset):
+# NOTE: SimpleSplitter/DummySplitter are pure test stand-ins (see dummy.py's docstring) and
+# aren't used anywhere in src/ or experiments/. Their custom cost() override is only ever
+# exercised via cost()/gain() called directly -- split() (inherited from AxisAlignedSplitter)
+# always routes through the shared entropy-based Cython path regardless of subclass, so it
+# doesn't exercise SimpleSplitter's own cost function at all. That's already covered by
+# test_information_splitter.py; here we test the part that's actually unique to SimpleSplitter.
+
+
+def test_simple_splitter_cost_is_max(simple_dataset):
     splitter = SimpleSplitter()
-    splitter.fit(X = simple_dataset, y = np.zeros(4))
-    gain, split_info = splitter.split(np.arange(len(simple_dataset)))
-    split_features = split_info[0]
-    split_weights = split_info[1]
-    split_threshold = split_info[2]
-    assert gain == 7 - 9
-    assert split_features == [0]
-    assert split_weights == [1]
-    assert split_threshold == 1
-    
-    
-def test_with_simple_tiebreak(simple_tiebreak_dataset):
+    splitter.fit(X = simple_dataset, y = labels_format(np.zeros(len(simple_dataset))))
+    assert splitter.cost(np.arange(len(simple_dataset))) == np.max(simple_dataset)
+    assert splitter.cost(np.array([0, 1])) == np.max(simple_dataset[[0, 1]])
+
+
+def test_simple_splitter_gain_uses_custom_cost(simple_dataset):
     splitter = SimpleSplitter()
-    splitter.fit(X = simple_tiebreak_dataset, y = np.zeros(4, dtype = np.int32))
-    
-    samples = 1000
-    split_features = np.zeros(samples)
-    split_thresholds = np.zeros(samples)
-    for i in range(samples):
-        gain, split_info = splitter.split(np.arange(len(simple_tiebreak_dataset)))
-        assert gain == 7 - 9
-        split_features[i] = split_info[0][0]
-        split_thresholds[i] = split_info[2]
-        
-    unique_features, counts_features = np.unique(split_features, return_counts=True)
-    unique_thresholds, counts_thresholds = np.unique(split_thresholds, return_counts=True)
-    
-    assert np.array_equal(unique_features, [0, 1])
-    assert np.array_equal(unique_thresholds, [1, 2])
-    assert np.allclose(counts_features[0]/samples, 0.5, atol = 0.05, rtol = 0)
-    assert np.allclose(counts_features[1]/samples, 0.5, atol = 0.05, rtol = 0)
+    splitter.fit(X = simple_dataset, y = labels_format(np.zeros(len(simple_dataset))))
+    left_indices = np.array([0, 1])
+    right_indices = np.array([2, 3])
+    parent_cost = splitter.cost(np.arange(len(simple_dataset)))
+    expected_gain = parent_cost - (
+        splitter.cost(left_indices) + splitter.cost(right_indices)
+    )
+    assert splitter.gain(left_indices, right_indices) == expected_gain
+    assert expected_gain == 7 - (np.max(simple_dataset[left_indices]) + np.max(simple_dataset[right_indices]))

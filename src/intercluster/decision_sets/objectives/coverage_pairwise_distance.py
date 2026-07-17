@@ -293,6 +293,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
             output_path = output_path,
             pack_bits = pack_bits,
         )
+        self.cluster_sizes = None
 
 
     def reward(
@@ -303,7 +304,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         Computes the reward from the selected decisions.
 
         Args:
-            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping 
+            selected_decisions_info (dict[Decision, dict[str, any]]): A dictionary mapping
                 each selected decision to its information (points, coverage, length, label).
         Returns:
             reward (float): The reward from the selected decisions.
@@ -358,8 +359,12 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
                 self.cluster_sizes = np.sum(self.cluster_membership_packed, axis=1).astype(np.int64, copy=False)
 
         # Precompute per-sample weight = size of the cluster it was originally assigned to.
-        # `self.y` is a list of singleton sets: [{i}, {j}, ...]
-        y_labels = np.fromiter((next(iter(s)) for s in self.y), dtype=np.int64, count=self.n_samples)
+        # `self.y` is a list of singleton sets: [{i}, {j}, ...]. An empty set (unlabeled point)
+        # is treated as label 0, mirroring the guard in CoveragePairwiseDistanceObjective.cost()
+        # -- `next(iter(s))` alone would raise StopIteration on an empty set.
+        y_labels = np.fromiter(
+            (next(iter(s)) if len(s) > 0 else 0 for s in self.y), dtype=np.int64, count=self.n_samples
+        )
         weight_by_sample = self.cluster_sizes[y_labels] - 1
 
         total_pairwise = 0
@@ -415,7 +420,7 @@ class TotalCoveragePairwiseDistanceObjective(Objective):
         Args:
             decision_info (dict): A dictionary containing information about the decision being considered.
             cluster_coverage (dict[int, set[int]]): A dictionary mapping each cluster
-                label to the set of data points already covered by selected decisions.        
+                label to the set of data points already covered by selected decisions.
         Returns:
             coverage (float): The coverage of the selected decisions.
         """

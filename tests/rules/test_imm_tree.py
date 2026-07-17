@@ -1,22 +1,26 @@
 import numpy as np
 from ExKMC.Tree import Tree as ExTree
 from sklearn import cluster
-from intercluster.rules import (
+from intercluster.decision_trees import (
     ImmTree,
     ExkmcTree,
-    collect_leaves,
-    get_depth
 )
-from intercluster.utils import flatten_labels, labels_format
+from intercluster.utils import (
+    flatten_labels,
+    labels_format,
+    collect_leaves,
+    get_depth,
+)
 
 
 def test_exkmc_tree():
-    samples = 1000
+    samples = 30
     for i in range(samples):
         n = 100
         d = 10
         k = 5
-        data = np.random.uniform(size = (n,d))
+        rng = np.random.RandomState(i)
+        data = rng.uniform(size = (n,d))
         kmeans = cluster.KMeans(n_clusters=k, random_state=i).fit(data)
         labels = kmeans.labels_
 

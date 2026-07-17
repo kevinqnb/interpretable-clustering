@@ -69,11 +69,17 @@ cpdef double gain_cy(
     cdef double gain_val
     cdef int total_indices = len(left_indices) + len(right_indices)
     
-    # This calculates the relative reduction in impurity, based on the 
+    # This calculates the relative reduction in impurity, based on the
     # definitions used by SKLearn's decision tree model.
-    left_cost = len(left_indices)/total_indices * cost_cy(left_indices, y)
-    right_cost = len(right_indices)/total_indices * cost_cy(right_indices, y)
-    gain_val = total_indices/n * (parent_cost - (left_cost + right_cost))
+    # NOTE: total_indices/n and the len(...)/total_indices ratios below must use
+    # floating-point division -- total_indices/n/left/right are all C ints, and
+    # Cython compiles `/` between two C ints as truncating integer division, which
+    # silently zeroed out these weights (and thus the whole gain computation) for
+    # any split where the numerator was smaller than the denominator (i.e. always,
+    # below the root). Casting to double forces true division.
+    left_cost = (<double>len(left_indices))/total_indices * cost_cy(left_indices, y)
+    right_cost = (<double>len(right_indices))/total_indices * cost_cy(right_indices, y)
+    gain_val = (<double>total_indices)/n * (parent_cost - (left_cost + right_cost))
     return gain_val
 
 
