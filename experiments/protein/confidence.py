@@ -13,6 +13,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.modules import *
 from experiments.profiling import stamp, stamp_reset
+from experiments.protein.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, SHALLOW_TREE_DEPTH_FACTOR, N_FOREST,
+    FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE, CAR_MAX_RULE_LENGTH,
+    N_TRIALS, TRIAL_SEEDS, CPU_COUNT, OUTFILE_REF, RULES_DIR, ALPHAS_DIR, CONFIDENCE_DIR,
+)
 stamp_reset()
 
 ####################################################################################################
@@ -37,25 +42,25 @@ from intercluster.measurements import *
 os.environ["OMP_NUM_THREADS"] = "1"
 
 # REMINDER: The seed should only be initialized here. Classes with their own
-# internal randomness (IDS, ExplanationTree, DecisionTree, ShallowTree) accept an
-# explicit random_state / kmeans_random_state instead of relying on this global
-# seed -- see `trial_seeds` below, which derives one seed per trial so those
-# modules can be refit across multiple trials and reported as mean/std rather
-# than a single, arbitrarily-seeded point estimate.
-seed = 342
+# internal randomness (IDS, DecisionTree) accept an explicit random_state
+# instead of relying on this global seed -- see `trial_seeds` below, which
+# derives one seed per trial so those modules can be refit across multiple
+# trials and reported as mean/std rather than a single, arbitrarily-seeded
+# point estimate.
+seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
-# CN2, WRA, CBA) are fit once. `trial_seeds` is derived deterministically from
-# `seed` so re-running this script reproduces the exact same set of trials.
-n_trials = 10
-trial_seeds = [seed + i for i in range(n_trials)]
+# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA) are fit
+# once. `trial_seeds` is derived deterministically from `seed` so re-running
+# this script reproduces the exact same set of trials.
+n_trials = N_TRIALS
+trial_seeds = TRIAL_SEEDS
 
 # Confidence levels are evaluated concurrently (see run_confidence_level below). Each worker
 # builds its own IDS sub-cache -- ids_full_cache.subset() copies the selected rows, which is
 # close to the whole cache at conf=0.0 -- so peak memory scales with this number. Lower it if
 # RSS becomes a problem on the larger rule pools.
-confidence_cpu_count = 12
+confidence_cpu_count = CPU_COUNT
 
 def _memoryview_safe(x):
     if not x.flags.writeable:
@@ -75,14 +80,14 @@ n, d = data.shape
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 6,
-    'n_select': 6,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 3,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -104,26 +109,26 @@ fixed_parameters['weights'] = weights.tolist()
 ####################################################################################################
 # Load alpha values (fixed from alphas.py selection)
 
-with open("data/experiments/protein/alphas/selected_alphas_resub.json") as f:
+with open(ALPHAS_DIR + f'selected_alphas{OUTFILE_REF}.json') as f:
     selected_alpha_dict = json.load(f)
 
 ####################################################################################################
 # Load rule pools and IDS lambdas
 
-pre_filter_ensemble = load_rules('data/experiments/protein/rules/pre_filter_ensemble_rules.pkl')
+pre_filter_ensemble = load_rules(RULES_DIR + 'pre_filter_ensemble_rules.pkl')
 
-with open('data/experiments/protein/rules/pre_filter_ensemble_labels.pkl', 'rb') as f:
+with open(RULES_DIR + 'pre_filter_ensemble_labels.pkl', 'rb') as f:
     pre_filter_labels = pickle.load(f)
 
 # Dict for O(1) label lookup when filtering rules by confidence level
 _pre_filter_label_map = {r: lbl for r, lbl in zip(pre_filter_ensemble, pre_filter_labels)}
 
-with open('data/experiments/protein/rules/ids_lambdas.json') as f:
+with open(RULES_DIR + f'ids_lambdas{OUTFILE_REF}.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-outfile = 'data/experiments/protein/confidence/'
+outfile = CONFIDENCE_DIR
 os.makedirs(outfile, exist_ok=True)
 
 ####################################################################################################
@@ -140,6 +145,13 @@ data_to_center_distances = compute_data_to_center_distances(
     data, kmeans_base.centers, 'kmeans'
 )
 
+# Only the 3 unweighted objectives -- examples/experiments.ipynb's confidence-sweep
+# plots (confidence_line_dict, confidence_lambda_dict, confidence_component_dict) all
+# loop `objective_names`, which never includes a `-weighted` entry. The weighted
+# objectives' alpha values are still selected in alphas.py (needed by max_rules.py's
+# Uncertainty section), but nothing here reads a per-confidence-level weighted PEC
+# fit or a weighted objective score, so refitting/scoring them at every one of the
+# 20 confidence levels below would be pure waste.
 objective_config = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
@@ -152,21 +164,6 @@ objective_config = {
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
-    },
-    'coverage-mistake-weighted': {
-        'objective_type': 'coverage-mistake',
-        'weights': weights,
-    },
-    'coverage-cost-weighted': {
-        'objective_type': 'coverage-cost',
-        'cluster_centers': kmeans_base.centers,
-        'cluster_cost_method': 'kmeans',
-        'weights': weights,
-        'data_to_center_distances': data_to_center_distances,
-    },
-    'coverage-pairwise-distance-weighted': {
-        'objective_type': 'coverage-pairwise-distance',
-        'weights': weights,
     },
 }
 
@@ -319,14 +316,18 @@ pool_indep_measurements = {
     for name, info in pool_indep.items()
 }
 
-# Decision-Tree, Exp-Tree, and Shallow-Tree each have a fitted solution that
-# depends on randomness (sklearn tie-breaking, heap tie-breaking, and internal
-# KMeans re-initialization, respectively). Rather than record one arbitrarily
-# seeded fit, each is refit once per seed in `trial_seeds`. Standard measurements
-# are aggregated into {'mean','std','values'} via `aggregate_trials`; the
-# per-trial decision sets are kept so the PEC-objective score (computed inside the
-# confidence sweep below, since it depends on that level's PEC lambda) can also be
-# aggregated across trials.
+# Decision-Tree has a fitted solution that depends on randomness (sklearn tie-
+# breaking). Rather than record one arbitrarily seeded fit, it is refit once per
+# seed in `trial_seeds`. Standard measurements are aggregated into
+# {'mean','std','values'} via `aggregate_trials`; the per-trial decision sets are
+# kept so the PEC-objective score (computed inside the confidence sweep below,
+# since it depends on that level's PEC lambda) can also be aggregated across
+# trials.
+#
+# NOTE: Exp-Tree and Shallow-Tree used to be fit here the same way, but neither
+# is in `comparison_modules` in examples/experiments.ipynb's confidence-sweep
+# plots -- they were being refit (with the attendant per-trial objective scoring
+# across all confidence levels below) for no consumer. Dropped.
 
 def _fit_pool_indep_trials(model_cls, base_params, seed_key):
     """
@@ -361,27 +362,15 @@ def _fit_pool_indep_trials(model_cls, base_params, seed_key):
 dt_trial_infos, dt_agg_measurements = _fit_pool_indep_trials(
     DecisionTree, {'max_leaf_nodes': n_select}, 'random_state'
 )
-exp_tree_trial_infos, exp_tree_agg_measurements = _fit_pool_indep_trials(
-    ExplanationTree, {'num_clusters': n_labels}, 'random_state'
-)
-shallow_trial_infos, shallow_agg_measurements = _fit_pool_indep_trials(
-    ShallowTree,
-    {'n_clusters': n_labels, 'depth_factor': fixed_parameters['shallow_tree_depth_factor']},
-    'kmeans_random_state',
-)
 
 # Per-algo list of per-trial decision sets, used for objective scoring in the
 # confidence sweep below. Deterministic pool-indep/pool-dep algos are absent here
 # and take the single-decisions path instead.
 stochastic_trial_infos = {
     'Decision-Tree': dt_trial_infos,
-    'Exp-Tree': exp_tree_trial_infos,
-    'Shallow-Tree': shallow_trial_infos,
 }
 stochastic_pool_indep_measurements = {
     'Decision-Tree': dt_agg_measurements,
-    'Exp-Tree': exp_tree_agg_measurements,
-    'Shallow-Tree': shallow_agg_measurements,
 }
 
 # KMeans baseline measurements (fixed)
@@ -393,7 +382,7 @@ stamp("pool-independent algos (ExKMC/CN2/trees x trials)")
 ####################################################################################################
 # IDS full-pool cache — built once on all CAR rules, then subset per confidence level
 
-_ids_cache_path = 'data/experiments/protein/rules/ids_coverage_cache_prefilter.pkl'
+_ids_cache_path = RULES_DIR + 'ids_coverage_cache_prefilter.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
@@ -518,25 +507,19 @@ def run_confidence_level(
     conf_result['lambda_n_rules'] = pec_n_available
 
     # ----------------------------------------------------------------
-    # WRA, WRA-weighted, CBA (pool-dependent)
+    # CBA (pool-dependent)
+    #
+    # NOTE: WRA and WRA-weighted used to be fit here too, but neither is in
+    # `comparison_modules` in examples/experiments.ipynb's confidence-sweep plots.
+    # Dropped (along with their per-objective score_decision_set calls below).
     # ----------------------------------------------------------------
     pool_dep = {}
 
     if has_rules:
-        _wra = WRABaseline(rules=filtered_rules, n_select=n_select, rule_labels=filtered_labels)
-        _wra.fit(data, kmeans_labels)
-        pool_dep['WRA'] = _dset_info(_wra, data, n_labels)
-
-        _wra_w = WRABaseline(rules=filtered_rules, n_select=n_select, weights=weights, rule_labels=filtered_labels)
-        _wra_w.fit(data, kmeans_labels)
-        pool_dep['WRA-weighted'] = _dset_info(_wra_w, data, n_labels)
-
         _cba = CBA(rules=filtered_rules, n_select=n_select, rule_labels=filtered_labels)
         _cba.fit(data, kmeans_labels)
         pool_dep['CBA'] = _dset_info(_cba, data, n_labels)
     else:
-        pool_dep['WRA'] = _empty_info()
-        pool_dep['WRA-weighted'] = _empty_info()
         pool_dep['CBA'] = _empty_info()
 
     # ----------------------------------------------------------------
@@ -629,7 +612,7 @@ def run_confidence_level(
                 )
             )
 
-        # PEC objective score for each of the 6 objective types
+        # PEC objective score for each of the (3) objective types in objective_config
         algo_result['objective'] = {}
         for obj_name, obj_cfg in objective_config.items():
             lambda_c = pec_lambdas[obj_name]
@@ -655,22 +638,18 @@ def run_confidence_level(
         conf_result[algo_name] = algo_result
 
     # ----------------------------------------------------------------
-    # Stochastic algorithms (Decision-Tree, Exp-Tree, Shallow-Tree, IDS):
-    # standard measurements were already aggregated across trials above (either
-    # once, for the pool-independent trees, or per confidence level, for IDS).
-    # The PEC-objective score is computed per trial (since it depends on this
-    # confidence level's PEC lambda) and aggregated the same way.
+    # Stochastic algorithms (Decision-Tree, IDS): standard measurements were
+    # already aggregated across trials above (either once, for the
+    # pool-independent tree, or per confidence level, for IDS). The PEC-objective
+    # score is computed per trial (since it depends on this confidence level's
+    # PEC lambda) and aggregated the same way.
     # ----------------------------------------------------------------
     stochastic_agg_measurements = {
         'Decision-Tree': stochastic_pool_indep_measurements['Decision-Tree'],
-        'Exp-Tree': stochastic_pool_indep_measurements['Exp-Tree'],
-        'Shallow-Tree': stochastic_pool_indep_measurements['Shallow-Tree'],
         'IDS': ids_agg_measurements,
     }
     stochastic_infos_for_objective = {
         'Decision-Tree': stochastic_trial_infos['Decision-Tree'],
-        'Exp-Tree': stochastic_trial_infos['Exp-Tree'],
-        'Shallow-Tree': stochastic_trial_infos['Shallow-Tree'],
         'IDS': ids_trial_infos,
     }
 
@@ -768,7 +747,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return super().default(obj)
 
-fname = os.path.join(outfile, 'exp_confidence.json')
+fname = os.path.join(outfile, f'exp_confidence{OUTFILE_REF}.json')
 with open(fname, 'w') as f:
     json.dump(result, f, indent=4, cls=NumpyEncoder)
 

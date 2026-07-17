@@ -17,9 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.profiling import stamp, stamp_reset
-from experiments.cli_utils import conf_tag, parse_experiment_args
-stamp_reset()
+from experiments.anuran.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
+    N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
+    CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, N_TRIALS, TRIAL_SEEDS, CPU_COUNT,
+    OUTFILE_REF, RULES_DIR, ALPHAS_DIR, LAMBDA_DIR,
+)
 
 ####################################################################################################
 
@@ -42,29 +45,26 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=1)
-confidence_threshold = args.confidence
-tag = conf_tag(confidence_threshold)
-experiment_cpu_count = args.cpu_count
+experiment_cpu_count = CPU_COUNT
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
 # baseline experiments like KMeans), since these will
 # reset the seed each time they are given one.
-# Classes with their own internal randomness (IDS, ExplanationTree, DecisionTree,
-# ShallowTree) accept an explicit random_state / kmeans_random_state instead of
-# relying on this global seed -- see `trial_seeds` below, which derives one seed
-# per trial so those modules can be refit across multiple trials and their results
-# reported as mean/std rather than a single, arbitrarily-seeded point estimate.
-seed = 342
+# Classes with their own internal randomness (IDS, DecisionTree) accept an
+# explicit random_state instead of relying on this global seed -- see
+# `trial_seeds` below, which derives one seed per trial so those modules can be
+# refit across multiple trials and their results reported as mean/std rather
+# than a single, arbitrarily-seeded point estimate.
+seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
-# CN2, CBA, WRA) are fit once, since repeating them would just reproduce the same
-# result. `trial_seeds` is derived deterministically from `seed` so that re-running
-# this script reproduces the exact same set of trials.
-n_trials = 10
-trial_seeds = [seed + i for i in range(n_trials)]
+# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA, WRA) are fit
+# once, since repeating them would just reproduce the same result. `trial_seeds`
+# is derived deterministically from `seed` so that re-running this script
+# reproduces the exact same set of trials.
+n_trials = N_TRIALS
+trial_seeds = TRIAL_SEEDS
 
 def _memoryview_safe(x):
     """
@@ -81,23 +81,22 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_anuran('data/anuran')
-stamp("data loaded")
 data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 5,
-    'n_select': 5,
-    'max_rules': 11,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 3, # (really means 6 by pyfim convention)
-    'filter_confidence': confidence_threshold,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'max_rules': MAX_RULES,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 6 by pyfim convention)
+    'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -114,29 +113,28 @@ np.random.seed(fixed_parameters['seed'])
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
-stamp("kmeans clustering")
 
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open(f"data/experiments/anuran/alphas/selected_alphas_resub_conf_{tag}.json") as f:
+with open(ALPHAS_DIR + 'selected_alphas' + OUTFILE_REF + '.json') as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
-decision_info_dict_directory = 'data/experiments/anuran/rules/'
+decision_info_dict_directory = RULES_DIR
 
-outfile = 'data/experiments/anuran/lambda/'
-outfile_ref = f'_resub_conf_{tag}'
+outfile = LAMBDA_DIR
+outfile_ref = OUTFILE_REF
 
 ####################################################################################################
 # Load pre-mined rules:
 
 
-ensemble_rules = load_rules(f'data/experiments/anuran/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 
-with open(f'data/experiments/anuran/rules/ensemble_labels_conf_{tag}.pkl', 'rb') as f:
+with open(RULES_DIR + f'ensemble_labels{OUTFILE_REF}.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 rule_miner_dict = {
@@ -146,11 +144,10 @@ rule_miner_dict = {
 ####################################################################################################
 # Comparison Modules:
 #
-# NOTE on reproducibility: Decision-Tree, Exp-Tree, Shallow-Tree, and IDS all have
-# inherent randomness in their fitted solution (sklearn tree tie-breaking, heap
-# tie-breaking, internal KMeans re-initialization, and randomized-greedy/SLS
+# NOTE on reproducibility: Decision-Tree and IDS both have inherent randomness in
+# their fitted solution (sklearn tree tie-breaking and randomized-greedy/SLS
 # selection respectively). Rather than fit each once under the single global
-# `seed`, these four are refit across `trial_seeds` further below (see
+# `seed`, these two are refit across `trial_seeds` further below (see
 # "Stochastic module trials") and their results are recorded as mean/std/values
 # instead of a single point estimate.
 #
@@ -159,22 +156,16 @@ rule_miner_dict = {
 # So -- unlike max_rules.py, which refits each comparison model once per rule budget r
 # -- every comparison model here is fit exactly ONCE, at the fixed `n_select` budget,
 # and its result is simply broadcast across every lambda value in the sweep.
+#
+# NOTE: Exp-Tree, Shallow-Tree, WRA, and WRA-weighted used to be fit here too, but
+# none appears in examples/experiments.ipynb's `comparison_modules` for the
+# Bicriteria/3D-scatter section this experiment feeds. Dropped.
 
 # Decision Tree
 decision_tree_shared_params = {'max_leaf_nodes': n_select}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
-)
-
-
-# Explanation Tree
-# (ExplanationTree's leaf count is fixed at num_clusters, independent of any rule
-# budget, so its single fit's result is recorded under every lambda label.)
-exp_tree_shared_params = {'num_clusters' : fixed_parameters['n_clusters']}
-exp_tree_mod = DecisionTreeMod(
-    model = ExplanationTree,
-    name = 'Exp-Tree'
 )
 
 
@@ -187,37 +178,6 @@ exkmc_shared_params = {
 exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
     name = 'ExKMC'
-)
-
-
-# Shallow Tree
-# (ShallowTree's structure is controlled by depth_factor, not by a rule-count/
-# max_leaf_nodes parameter, so its single fit's result is recorded under every
-# lambda label.)
-shallow_tree_shared_params = {
-    'n_clusters' : fixed_parameters['n_clusters'],
-    'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-# WRA:
-wra_shared_params = {'n_select': n_select}
-wra_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA'
-)
-
-wra_weighted_shared_params = {'n_select': n_select, 'weights': weights}
-wra_weighted_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA-weighted'
 )
 
 
@@ -241,18 +201,17 @@ cn2_mod = DecisionSetMod(
 
 
 # IDS:
-with open(f'data/experiments/anuran/rules/ids_lambdas_conf_{tag}.json') as f:
+with open(RULES_DIR + f'ids_lambdas{OUTFILE_REF}.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = f'data/experiments/anuran/rules/ids_coverage_cache_ensemble_conf_{tag}.pkl'
+_ids_cache_path = RULES_DIR + f'ids_coverage_cache_ensemble{OUTFILE_REF}.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
         ids_cache = pickle.load(f)
     print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
-    stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
     # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
@@ -268,7 +227,6 @@ else:
     with open(_ids_cache_path, 'wb') as f:
         pickle.dump(ids_cache, f)
     print(f"IDS cache ready: {len(ids_cache.decisions)} decisions.")
-    stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_shared_params = {
     'n_select': n_select,
@@ -290,7 +248,7 @@ objective_dict = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -298,20 +256,20 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     # 'coverage-mistake-weighted': {
     #     'objective_type': 'coverage-mistake',
     #     'weights': weights,
     #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+    #         decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
     #     )
     # },
     # 'coverage-cost-weighted': {
@@ -320,14 +278,14 @@ objective_dict = {
     #     'weights': weights,
     #     'cluster_cost_method': 'kmeans',
     #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+    #         decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
     #     )
     # },
     # 'coverage-pairwise-distance-weighted': {
     #     'objective_type': 'coverage-pairwise-distance',
     #     'weights': weights,
     #     'precomputed_path': os.path.join(
-    #         decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+    #         decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
     #     )
     # },
 }
@@ -376,7 +334,6 @@ for obj_name, obj_params in objective_dict.items():
         lambda_grid_dict[module_name] = lambda_grid.tolist()
 
 fixed_parameters['lambda_star'] = lambda_star_dict
-stamp("lambda* probe fits")
 fixed_parameters['lambda_grid'] = lambda_grid_dict
 fixed_parameters['n_lambda_points'] = n_lambda_points
 
@@ -431,18 +388,16 @@ for obj_name, obj_params in objective_dict.items():
 
 
 baseline = kmeans_base
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS are handled separately below via
-# `fit_stochastic_shared` (see "Stochastic module trials"), since they need to be
-# refit per trial seed rather than dispatched once through `Experiment`'s
-# joblib-parallel `run()` (whose worker processes do not inherit this script's
-# seeded global NumPy state, which would make single-fit results irreproducible
-# for exactly these randomized modules). Each is fit once per trial seed here
-# (not once per lambda value) and its per-trial result is broadcast across
+# Decision-Tree and IDS are handled separately below via `fit_stochastic_shared`
+# (see "Stochastic module trials"), since they need to be refit per trial seed
+# rather than dispatched once through `Experiment`'s joblib-parallel `run()`
+# (whose worker processes do not inherit this script's seeded global NumPy
+# state, which would make single-fit results irreproducible for exactly these
+# randomized modules). Each is fit once per trial seed here (not once per
+# lambda value) and its per-trial result is broadcast across
 # `all_lambda_values`, exactly like the deterministic comparison modules below.
 module_list = [
     (exkmc_mod, {all_lambda_values: exkmc_shared_params}),
-    (wra_mod, {all_lambda_values: wra_shared_params}),
-    (wra_weighted_mod, {all_lambda_values: wra_weighted_shared_params}),
     (cba_mod, {all_lambda_values: cba_shared_params}),
     (cn2_mod, {all_lambda_values: cn2_shared_params}),
 ] + dscluster_module_list
@@ -478,24 +433,25 @@ exp = Experiment(
 
 import time
 start = time.time()
-stamp("setup complete -> starting exp.run")
 exp_results = exp.run()
-stamp("exp.run: all PEC + comparison module fits")
 
 ####################################################################################################
 # Stochastic module trials
 #
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS each have a fitted solution that
-# depends on randomness. Rather than record one arbitrarily-seeded fit, each is
-# refit once per seed in `trial_seeds` and the results across trials are aggregated
-# into {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
+# Decision-Tree and IDS each have a fitted solution that depends on randomness.
+# Rather than record one arbitrarily-seeded fit, each is refit once per seed in
+# `trial_seeds` and the results across trials are aggregated into
+# {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
 # This runs single-process (not through `Experiment`'s joblib dispatch) specifically
 # so each trial's explicit seed is what controls its randomness.
 #
-# None of these four vary with lambda (only PEC does), so -- unlike max_rules.py,
-# where Decision-Tree and IDS varied with the rule budget r -- all four are handled
-# with `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
+# Neither varies with lambda (only PEC does), so -- unlike max_rules.py, where
+# Decision-Tree and IDS varied with the rule budget r -- both are handled with
+# `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
 # result is broadcast across every value in `all_lambda_values`.
+#
+# NOTE: Exp-Tree and Shallow-Tree used to be fit here too, but neither appears in
+# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """
@@ -556,23 +512,13 @@ exp_results['modules']['Decision-Tree'] = fit_stochastic_shared(
     decision_tree_mod, decision_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
-exp_results['modules']['Exp-Tree'] = fit_stochastic_shared(
-    exp_tree_mod, exp_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='random_state'
-)
-exp_results['modules']['Shallow-Tree'] = fit_stochastic_shared(
-    shallow_tree_mod, shallow_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='kmeans_random_state'
-)
 exp_results['modules']['IDS'] = fit_stochastic_shared(
     ids_mod, ids_shared_params, all_lambda_values, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
 print("Stochastic modules done.")
-stamp("stochastic trials (trees + IDS x n_trials)")
 
 exp.save_results(outfile, outfile_ref)
-stamp("results saved")
 end = time.time()
 print("Experiment time:", end - start)
 

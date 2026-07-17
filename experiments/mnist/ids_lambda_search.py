@@ -12,7 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from data.preprocessing import *
 from experiments.modules import *
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.mnist.config import SEED, N_CLUSTERS, N_SELECT_DEFAULT, OUTFILE_REF, RULES_DIR
 
 ####################################################################################################
 
@@ -28,14 +28,11 @@ from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOp
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75)
-tag = conf_tag(args.confidence)
-
 # REMINDER: The seed should only be initialized here. RandomGreedyOptimizer and
 # IDSCoordinateAscent are given this seed explicitly below (random_state=seed)
 # rather than relying on this global np.random.seed call, so this lambda search
 # is reproducible independent of global NumPy state.
-seed = 342
+seed = SEED
 
 ####################################################################################################
 # Data + clustering
@@ -45,20 +42,20 @@ n, d = data.shape
 
 np.random.seed(seed)
 
-kmeans_base = KMeansBase(n_clusters=10, random_seed=seed)
+kmeans_base = KMeansBase(n_clusters=N_CLUSTERS, random_seed=seed)
 kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 y_flat = flatten_labels(kmeans_labels)
 
-n_select = 10
+n_select = N_SELECT_DEFAULT
 
 ####################################################################################################
 # Load pre-mined ensemble rules
 
-ensemble_rules = load_rules(f'data/experiments/mnist/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 print(f"Ensemble rule set size: {len(ensemble_rules)}")
 
-with open(f'data/experiments/mnist/rules/ensemble_labels_conf_{tag}.pkl', 'rb') as f:
+with open(RULES_DIR + f'ensemble_labels{OUTFILE_REF}.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 ids_rules  = ensemble_rules
@@ -74,7 +71,7 @@ ids_cache = IDSCoverageCache.from_rules(ids_rules, ids_labels, data, kmeans_labe
 
 print(f"Cache ready: {len(ids_cache.decisions)} valid decisions in {time.time() - t0:.1f}s")
 
-cache_path = f'data/experiments/mnist/rules/ids_coverage_cache_ensemble_conf_{tag}.pkl'
+cache_path = RULES_DIR + f'ids_coverage_cache_ensemble{OUTFILE_REF}.pkl'
 with open(cache_path, 'wb') as f:
     pickle.dump(ids_cache, f)
 print(f"Cache saved to {cache_path}")
@@ -128,7 +125,7 @@ print(f"Best lambdas: {best_lambdas}")
 ####################################################################################################
 # Save as a JSON list of 7 floats
 
-out_path = f'data/experiments/mnist/rules/ids_lambdas_conf_{tag}.json'
+out_path = RULES_DIR + f'ids_lambdas{OUTFILE_REF}.json'
 with open(out_path, 'w') as f:
     json.dump(best_lambdas, f, indent=4)
 

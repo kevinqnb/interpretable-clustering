@@ -14,13 +14,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Selects one alpha per objective from the alphas.py sweep, by the elbow method.
 #
 # Mirrors the `select_alphas` function in examples/experiments.ipynb exactly, so this can run
-# standalone as part of a scripted confidence sweep instead of requiring a manual notebook pass.
-# Reads alphas/exp_resub_conf_{tag}.json, writes alphas/selected_alphas_resub_conf_{tag}.json.
+# standalone as part of the scripted pipeline instead of requiring a manual notebook pass.
+# Reads alphas/exp{OUTFILE_REF}.json, writes alphas/selected_alphas{OUTFILE_REF}.json.
 
 import json
 import numpy as np
 from intercluster.utils import compute_elbow
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.fashion.config import ALPHAS_DIR, OUTFILE_REF
 
 # Which measurement plays the role of `reward` and `cost` for each objective type.
 objective_cost_reward_dict = {
@@ -81,11 +81,8 @@ def select_alphas(alpha_experiment_dict, outfile=None):
 
 ####################################################################################################
 
-args = parse_experiment_args(confidence_default=0.75)
-tag = conf_tag(args.confidence)
-
-infile = f'data/experiments/fashion/alphas/exp_resub_conf_{tag}.json'
-outfile = f'data/experiments/fashion/alphas/selected_alphas_resub_conf_{tag}.json'
+infile = ALPHAS_DIR + 'exp' + OUTFILE_REF + '.json'
+outfile = ALPHAS_DIR + 'selected_alphas' + OUTFILE_REF + '.json'
 
 with open(infile) as f:
     alpha_experiment_dict = json.load(f)

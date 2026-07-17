@@ -18,6 +18,7 @@ from data.preprocessing import *
 from experiments.modules import *
 from experiments.timing import run_timing_sweep
 from experiments.profiling import stamp, stamp_reset
+from experiments.aniso.config import SEED, N_CLUSTERS, N_SELECT_DEFAULT, OUTFILE_REF, RULES_DIR, ALPHAS_DIR
 stamp_reset()
 
 ####################################################################################################
@@ -36,7 +37,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # randomness of their own -- the only randomness in this script is which rules land
 # in each step's subset, which is controlled by `timing_seed` below via
 # `run_timing_sweep`'s per-trial `np.random.default_rng(timing_seed + trial)`.
-seed = 342
+seed = SEED
 
 # Number of rules added to the pool at each step, and number of independent random
 # orderings of the rule ensemble to bootstrap timing statistics over. aniso's ensemble
@@ -47,8 +48,8 @@ n_trials = 10
 timing_seed = seed
 
 fixed_parameters = {
-    'n_clusters': 5,
-    'n_select': 5,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
     'seed': seed,
     'n_step': n_step,
     'n_trials': n_trials,
@@ -66,14 +67,14 @@ kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
 stamp("data loaded + baseline kmeans")
 
-rules_directory = 'data/experiments/aniso/rules/'
-alphas_path = 'data/experiments/aniso/alphas/selected_alphas_resub.json'
-outfile = 'data/experiments/aniso/timing/exp_timing.json'
+rules_directory = RULES_DIR
+alphas_path = ALPHAS_DIR + f'selected_alphas{OUTFILE_REF}.json'
+outfile = f'data/experiments/aniso/timing/exp_timing{OUTFILE_REF}.json'
 
 ####################################################################################################
 # Load pre-mined rules + selected alpha (both produced by mine_rules.py / alphas.py):
 
-ensemble_rules = load_rules(os.path.join(rules_directory, 'ensemble_rules.pkl'))
+ensemble_rules = load_rules(os.path.join(rules_directory, f'ensemble_rules{OUTFILE_REF}.pkl'))
 stamp(f"loaded {len(ensemble_rules)} mined rules")
 
 with open(alphas_path) as f:

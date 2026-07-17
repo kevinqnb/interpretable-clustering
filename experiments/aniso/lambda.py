@@ -17,10 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.profiling import stamp, stamp_reset
-from experiments.cli_utils import alpha_tag_for, conf_tag, parse_experiment_args
-from experiments.lambda_grid import build_shared_grids, load_lambda_grids, save_lambda_grids
-stamp_reset()
+from experiments.aniso.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
+    N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
+    CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, N_TRIALS, TRIAL_SEEDS, CPU_COUNT,
+    OUTFILE_REF, RULES_DIR, ALPHAS_DIR, LAMBDA_DIR,
+)
 
 ####################################################################################################
 
@@ -43,17 +45,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(
-    confidence_default=0.75, cpu_count_default=6, grid_flags=True, alpha_flag=True
-)
-confidence_threshold = args.confidence
-tag = conf_tag(confidence_threshold)
-# Which threshold's selected alphas to fit against. --alpha-confidence lets the whole sweep
-# share ONE alpha (see run_confidence_sweep.sh); without it this is just `tag`, i.e. each
-# confidence uses its own. Only alpha is shared -- the rule pool, the precomputed
-# coverage/cost caches, and lambda* all stay keyed to this run's own `tag`.
-alpha_tag = alpha_tag_for(args)
-experiment_cpu_count = args.cpu_count
+experiment_cpu_count = CPU_COUNT
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
@@ -64,15 +56,15 @@ experiment_cpu_count = args.cpu_count
 # relying on this global seed -- see `trial_seeds` below, which derives one seed
 # per trial so those modules can be refit across multiple trials and their results
 # reported as mean/std rather than a single, arbitrarily-seeded point estimate.
-seed = 342
+seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
 # (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
 # CN2, CBA, WRA) are fit once, since repeating them would just reproduce the same
 # result. `trial_seeds` is derived deterministically from `seed` so that re-running
 # this script reproduces the exact same set of trials.
-n_trials = 10
-trial_seeds = [seed + i for i in range(n_trials)]
+n_trials = N_TRIALS
+trial_seeds = TRIAL_SEEDS
 
 def _memoryview_safe(x):
     """
@@ -89,23 +81,22 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_ansio()
-stamp("data loaded")
 data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 5,
-    'n_select': 5,
-    'max_rules': 11,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 10,
-    'forest_max_depth': 4,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': confidence_threshold,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'max_rules': MAX_RULES,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -122,33 +113,28 @@ np.random.seed(fixed_parameters['seed'])
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
-stamp("kmeans clustering")
 
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-# Alpha values for objectives (from alpha_tag, which may not be this run's own tag):
-with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{alpha_tag}.json") as f:
+# Alpha values for objectives:
+with open(ALPHAS_DIR + 'selected_alphas' + OUTFILE_REF + '.json') as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
-# Provenance: downstream readers reconstruct the objective as
-# reward - lambda*(cost + alpha*sum_rule_length) using fixed_parameters['alpha'], so recording
-# which threshold that alpha came from is what makes a saved result self-describing.
-fixed_parameters['alpha_confidence'] = float(alpha_tag) / 100
 
-decision_info_dict_directory = 'data/experiments/aniso/rules/'
+decision_info_dict_directory = RULES_DIR
 
-outfile = 'data/experiments/aniso/lambda/'
-outfile_ref = f'_resub_conf_{tag}'
+outfile = LAMBDA_DIR
+outfile_ref = OUTFILE_REF
 
 ####################################################################################################
 # Load pre-mined rules:
 
 
-ensemble_rules = load_rules(f'data/experiments/aniso/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 
-with open(f'data/experiments/aniso/rules/ensemble_labels_conf_{tag}.pkl', 'rb') as f:
+with open(RULES_DIR + f'ensemble_labels{OUTFILE_REF}.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 rule_miner_dict = {
@@ -156,124 +142,12 @@ rule_miner_dict = {
 }
 
 ####################################################################################################
-# Objectives for Decision Set Clustering:
-#
-# Built per confidence tag (rather than once for this run's tag) because --emit-grid probes
-# lambda* for every threshold in the sweep, and each threshold has its own precomputed
-# coverage/cost caches. Only the precomputed_path varies with the tag.
-
-
-def objective_dict_for_tag(t):
-    return {
-        'coverage-mistake': {
-            'objective_type': 'coverage-mistake',
-            'precomputed_path': os.path.join(
-                decision_info_dict_directory, f'mistake_info_dict_conf_{t}.pkl.gz'
-            )
-        },
-        'coverage-cost': {
-            'objective_type': 'coverage-cost',
-            'cluster_centers': kmeans_base.centers,
-            'cluster_cost_method': 'kmeans',
-            'precomputed_path': os.path.join(
-                decision_info_dict_directory, f'cost_info_dict_conf_{t}.pkl.gz'
-            )
-        },
-        'coverage-pairwise-distance': {
-            'objective_type': 'coverage-pairwise-distance',
-            'precomputed_path': os.path.join(
-                decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{t}.pkl.gz'
-            )
-        },
-        # The '-weighted' variants (coverage-mistake-weighted, coverage-cost-weighted,
-        # coverage-pairwise-distance-weighted) are intentionally left out of this sweep; they
-        # differ only by passing 'weights': weights alongside the same objective_type.
-    }
-
-
-objective_dict = objective_dict_for_tag(tag)
-
-####################################################################################################
-# Lambda grid:
-#
-# PEC's lambda* -- the minimum lambda for which the distorted-greedy guarantee holds -- shrinks as
-# the filter confidence rises (it is a max over coverage/cost ratios across the rule pool, and a
-# stricter filter can only remove candidates for that max). Sweeping each confidence over its own
-# [0, 2 * lambda*] therefore gave the confidences non-overlapping x-axes: under this sweep's common
-# alpha, aniso's coverage-cost lambda* is 0.329 at confidence 0.25/0.50 but 0.051 at 0.75, so the
-# 0.75 sweep would stop at 0.103 while the others ran to 0.659.
-#
-# Instead, ONE grid per objective is shared across every confidence: it spans
-# [0, 2 * max_c lambda*_c] and contains every confidence's lambda*_c as an exact grid point. It is
-# built once by the --emit-grid barrier stage (which needs the alpha_tag threshold's selected
-# alphas on disk, since lambda* depends on alpha) and read back by each per-confidence run, so all
-# runs key their results off bit-identical lambda floats and line up when plotted together.
-#
-# Each run still fits distorted-greedy only for lambda >= its OWN lambda*, which stays a clean cut
-# because that anchor is on the grid. See experiments/lambda_grid.py.
-
-# Matches alphas.py's n_compare convention (25). Kept high because the shared grid spans
-# [0, 2 * max_c lambda*_c] rather than a single confidence's [0, 2 * lambda*]: at a fixed point
-# count, the wider span thins out resolution exactly around the smaller lambda*_c values. The
-# other datasets' lambda.py still use 10 -- aniso is the small/fast one (~10s per run), so it can
-# afford the denser sweep.
-n_lambda_points = 25
-lambda_grid_path = os.path.join(outfile, 'lambda_grid_resub.json')
-
-if args.emit_grid:
-    # Every threshold is probed with `selected_alpha_dict` -- the alpha_tag alphas loaded above,
-    # NOT each threshold's own. This must stay in lockstep with the main run's alpha_val: the
-    # main run reads lambda* back out of this grid and cuts distorted-greedy at `l >= lambda*`,
-    # and that anchor only means anything if the PEC it fits uses the alpha lambda* was computed
-    # from. Rules and the precomputed caches stay per-threshold (they are pool-dependent, not
-    # alpha-dependent), so lambda* still varies with confidence -- which is the whole reason the
-    # grid is anchored on all of them.
-    lambda_star_by_module = {}
-    for c in args.confidence_thresholds:
-        c_tag = conf_tag(c)
-        c_rules = load_rules(f'data/experiments/aniso/rules/ensemble_rules_conf_{c_tag}.pkl')
-
-        for obj_name, obj_params in objective_dict_for_tag(c_tag).items():
-            module_name = f'dscluster; {obj_name}; ensemble'
-            probe_params = {
-                'n_select': n_select,
-                'alpha_val': selected_alpha_dict[module_name],
-            } | obj_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
-            probe = PEC(rules=c_rules, **probe_params)
-            # compute_lambda_star does everything fit() would, minus the selection pass.
-            lambda_star = float(probe.compute_lambda_star(data, kmeans_labels))
-            lambda_star_by_module.setdefault(module_name, {})[c_tag] = lambda_star
-            print(f"  lambda* [conf={c}] {module_name}: {lambda_star}")
-
-    grids = build_shared_grids(lambda_star_by_module, n_lambda_points)
-    save_lambda_grids(lambda_grid_path, grids, n_lambda_points, args.confidence_thresholds)
-    stamp("lambda* probe fits (all thresholds)")
-    print(f"\nShared lambda grid written to {lambda_grid_path}")
-    sys.exit(0)
-
-lambda_grid_dict, lambda_star_dict, lambda_star_by_conf_dict = load_lambda_grids(
-    lambda_grid_path, tag
-)
-fixed_parameters['lambda_star'] = lambda_star_dict
-fixed_parameters['lambda_star_by_conf'] = lambda_star_by_conf_dict
-fixed_parameters['lambda_grid'] = lambda_grid_dict
-fixed_parameters['n_lambda_points'] = n_lambda_points
-
-# Union of every objective's lambda grid -- used to broadcast each comparison
-# model's single fit (which doesn't depend on lambda or the objective at all)
-# across every lambda value any objective's plot might need to look up.
-all_lambda_values = tuple(
-    sorted(set().union(*(set(g) for g in lambda_grid_dict.values())))
-)
-
-####################################################################################################
 # Comparison Modules:
 #
-# NOTE on reproducibility: Decision-Tree, Exp-Tree, Shallow-Tree, and IDS all have
-# inherent randomness in their fitted solution (sklearn tree tie-breaking, heap
-# tie-breaking, internal KMeans re-initialization, and randomized-greedy/SLS
+# NOTE on reproducibility: Decision-Tree and IDS both have inherent randomness in
+# their fitted solution (sklearn tree tie-breaking and randomized-greedy/SLS
 # selection respectively). Rather than fit each once under the single global
-# `seed`, these four are refit across `trial_seeds` further below (see
+# `seed`, these two are refit across `trial_seeds` further below (see
 # "Stochastic module trials") and their results are recorded as mean/std/values
 # instead of a single point estimate.
 #
@@ -282,22 +156,16 @@ all_lambda_values = tuple(
 # So -- unlike max_rules.py, which refits each comparison model once per rule budget r
 # -- every comparison model here is fit exactly ONCE, at the fixed `n_select` budget,
 # and its result is simply broadcast across every lambda value in the sweep.
+#
+# NOTE: Exp-Tree, Shallow-Tree, WRA, and WRA-weighted used to be fit here too, but
+# none appears in examples/experiments.ipynb's `comparison_modules` for the
+# Bicriteria/3D-scatter section this experiment feeds. Dropped.
 
 # Decision Tree
 decision_tree_shared_params = {'max_leaf_nodes': n_select}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
-)
-
-
-# Explanation Tree
-# (ExplanationTree's leaf count is fixed at num_clusters, independent of any rule
-# budget, so its single fit's result is recorded under every lambda label.)
-exp_tree_shared_params = {'num_clusters' : fixed_parameters['n_clusters']}
-exp_tree_mod = DecisionTreeMod(
-    model = ExplanationTree,
-    name = 'Exp-Tree'
 )
 
 
@@ -310,37 +178,6 @@ exkmc_shared_params = {
 exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
     name = 'ExKMC'
-)
-
-
-# Shallow Tree
-# (ShallowTree's structure is controlled by depth_factor, not by a rule-count/
-# max_leaf_nodes parameter, so its single fit's result is recorded under every
-# lambda label.)
-shallow_tree_shared_params = {
-    'n_clusters' : fixed_parameters['n_clusters'],
-    'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
-# WRA:
-wra_shared_params = {'n_select': n_select}
-wra_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA'
-)
-
-wra_weighted_shared_params = {'n_select': n_select, 'weights': weights}
-wra_weighted_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA-weighted'
 )
 
 
@@ -364,18 +201,17 @@ cn2_mod = DecisionSetMod(
 
 
 # IDS:
-with open(f'data/experiments/aniso/rules/ids_lambdas_conf_{tag}.json') as f:
+with open(RULES_DIR + f'ids_lambdas{OUTFILE_REF}.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = f'data/experiments/aniso/rules/ids_coverage_cache_ensemble_conf_{tag}.pkl'
+_ids_cache_path = RULES_DIR + f'ids_coverage_cache_ensemble{OUTFILE_REF}.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
         ids_cache = pickle.load(f)
     print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
-    stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
     # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
@@ -391,7 +227,6 @@ else:
     with open(_ids_cache_path, 'wb') as f:
         pickle.dump(ids_cache, f)
     print(f"IDS cache ready: {len(ids_cache.decisions)} decisions.")
-    stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_shared_params = {
     'n_select': n_select,
@@ -407,18 +242,94 @@ ids_mod = DecisionSetMod(
 )
 
 ####################################################################################################
+# Objectives for Decision Set Clustering:
+
+objective_dict = {
+    'coverage-mistake': {
+        'objective_type': 'coverage-mistake',
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
+        )
+    },
+    'coverage-cost': {
+        'objective_type': 'coverage-cost',
+        'cluster_centers': kmeans_base.centers,
+        'cluster_cost_method': 'kmeans',
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
+        )
+    },
+    'coverage-pairwise-distance': {
+        'objective_type': 'coverage-pairwise-distance',
+        'precomputed_path': os.path.join(
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
+        )
+    },
+}
+
+####################################################################################################
+# Lambda grid:
+#
+# For each objective, PEC's automatic lambda selection (lambda_val=None) gives the
+# minimum lambda* for which the distorted-greedy approximation guarantee holds (see
+# `Objective.compute_lambdas`/`set_lambda` in
+# intercluster/decision_sets/objectives/objectives.py). We probe this once per
+# objective with a throwaway PEC fit (cheap: it reuses the precomputed coverage/cost
+# caches, exactly like the many alpha_val fits in alphas.py), then sweep lambda over
+# [0, 2 * lambda*], with lambda* itself an exact grid point.
+#
+# n_lambda_points = 10, split asymmetrically as 5 points on [0, lambda*] and 6 points
+# on [lambda*, 2*lambda*] sharing the lambda* boundary point -- 5 + 6 - 1 = 10 distinct
+# values total, with lambda* landing exactly at index 4. (A naive np.linspace(0, 2*
+# lambda*, 10) would NOT hit lambda* exactly: 10 points split into 9 equal gaps, and
+# lambda* -- the midpoint of the range -- would fall at a non-integer index 4.5.)
+
+n_lambda_points = 10
+lower_n, upper_n = 5, 6
+
+lambda_star_dict = {}
+lambda_grid_dict = {}
+
+for obj_name, obj_params in objective_dict.items():
+    for rule_miner_name, (rule_miner, rules, rule_labels) in rule_miner_dict.items():
+        module_name = f'dscluster; {obj_name}; {rule_miner_name}'
+        alpha_val = fixed_parameters['alpha'][module_name]
+        base_params = {'n_select': n_select, 'alpha_val': alpha_val} | obj_params
+
+        # NOTE: obj_params may itself already carry a 'selection_algorithm' key.
+        # Merging the override last (rather than spreading both as separate kwargs)
+        # avoids a duplicate-keyword collision and guarantees this probe always
+        # uses 'distorted-greedy' regardless of what obj_params contains.
+        probe_params = base_params | {'lambda_val': None, 'selection_algorithm': 'distorted-greedy'}
+        probe = PEC(rules = rules, **probe_params)
+        # compute_lambda_star does everything fit() would, minus the selection pass -- whose result
+        # this probe discarded anyway. Same lambda*, one less full PEC fit per objective.
+        lambda_star = probe.compute_lambda_star(data, kmeans_labels)
+
+        lower = np.linspace(0.0, lambda_star, lower_n)
+        upper = np.linspace(lambda_star, 2 * lambda_star, upper_n)
+        lambda_grid = np.concatenate([lower, upper[1:]])
+
+        lambda_star_dict[module_name] = float(lambda_star)
+        lambda_grid_dict[module_name] = lambda_grid.tolist()
+
+fixed_parameters['lambda_star'] = lambda_star_dict
+fixed_parameters['lambda_grid'] = lambda_grid_dict
+fixed_parameters['n_lambda_points'] = n_lambda_points
+
+# Union of every objective's lambda grid -- used to broadcast each comparison
+# model's single fit (which doesn't depend on lambda or the objective at all)
+# across every lambda value any objective's plot might need to look up.
+all_lambda_values = tuple(
+    sorted(set().union(*(set(g) for g in lambda_grid_dict.values())))
+)
+
+####################################################################################################
 # Decision Set Clustering Modules:
 #
-# Two modules per objective: 'lazy-greedy' is valid (and recorded) across the full shared grid,
-# while 'distorted-greedy' is only valid -- and thus only fit/recorded -- for lambda >= this
-# confidence's own lambda*. Since the shared grid spans [0, 2 * max_c lambda*_c], a confidence
-# whose lambda* is below the max gets MORE distorted-greedy points than it did under its own
-# [0, 2 * lambda*] grid, and its high-lambda tail may go degenerate (the objective g - lambda*h
-# turns cost-dominated, so selections empty out). That is the intended cost of a common x-axis.
-#
-# lambda_star here is the exact anchor the grid was built from (read from the grid JSON, not
-# re-probed), so the `l >= lambda_star` cut lands on a real grid point rather than missing it by
-# a last-ULP mismatch.
+# Two modules per objective: 'lazy-greedy' is valid (and recorded) across the full
+# [0, 2 * lambda*] grid, while 'distorted-greedy' is only valid -- and thus only
+# fit/recorded -- for lambda >= lambda*.
 
 dscluster_module_list = []
 for obj_name, obj_params in objective_dict.items():
@@ -457,18 +368,16 @@ for obj_name, obj_params in objective_dict.items():
 
 
 baseline = kmeans_base
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS are handled separately below via
-# `fit_stochastic_shared` (see "Stochastic module trials"), since they need to be
-# refit per trial seed rather than dispatched once through `Experiment`'s
-# joblib-parallel `run()` (whose worker processes do not inherit this script's
-# seeded global NumPy state, which would make single-fit results irreproducible
-# for exactly these randomized modules). Each is fit once per trial seed here
-# (not once per lambda value) and its per-trial result is broadcast across
+# Decision-Tree and IDS are handled separately below via `fit_stochastic_shared`
+# (see "Stochastic module trials"), since they need to be refit per trial seed
+# rather than dispatched once through `Experiment`'s joblib-parallel `run()`
+# (whose worker processes do not inherit this script's seeded global NumPy
+# state, which would make single-fit results irreproducible for exactly these
+# randomized modules). Each is fit once per trial seed here (not once per
+# lambda value) and its per-trial result is broadcast across
 # `all_lambda_values`, exactly like the deterministic comparison modules below.
 module_list = [
     (exkmc_mod, {all_lambda_values: exkmc_shared_params}),
-    (wra_mod, {all_lambda_values: wra_shared_params}),
-    (wra_weighted_mod, {all_lambda_values: wra_weighted_shared_params}),
     (cba_mod, {all_lambda_values: cba_shared_params}),
     (cn2_mod, {all_lambda_values: cn2_shared_params}),
 ] + dscluster_module_list
@@ -504,24 +413,25 @@ exp = Experiment(
 
 import time
 start = time.time()
-stamp("setup complete -> starting exp.run")
 exp_results = exp.run()
-stamp("exp.run: all PEC + comparison module fits")
 
 ####################################################################################################
 # Stochastic module trials
 #
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS each have a fitted solution that
-# depends on randomness. Rather than record one arbitrarily-seeded fit, each is
-# refit once per seed in `trial_seeds` and the results across trials are aggregated
-# into {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
+# Decision-Tree and IDS each have a fitted solution that depends on randomness.
+# Rather than record one arbitrarily-seeded fit, each is refit once per seed in
+# `trial_seeds` and the results across trials are aggregated into
+# {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
 # This runs single-process (not through `Experiment`'s joblib dispatch) specifically
 # so each trial's explicit seed is what controls its randomness.
 #
-# None of these four vary with lambda (only PEC does), so -- unlike max_rules.py,
-# where Decision-Tree and IDS varied with the rule budget r -- all four are handled
-# with `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
+# Neither varies with lambda (only PEC does), so -- unlike max_rules.py, where
+# Decision-Tree and IDS varied with the rule budget r -- both are handled with
+# `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
 # result is broadcast across every value in `all_lambda_values`.
+#
+# NOTE: Exp-Tree and Shallow-Tree used to be fit here too, but neither appears in
+# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """
@@ -582,23 +492,13 @@ exp_results['modules']['Decision-Tree'] = fit_stochastic_shared(
     decision_tree_mod, decision_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
-exp_results['modules']['Exp-Tree'] = fit_stochastic_shared(
-    exp_tree_mod, exp_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='random_state'
-)
-exp_results['modules']['Shallow-Tree'] = fit_stochastic_shared(
-    shallow_tree_mod, shallow_tree_shared_params, all_lambda_values, trial_seeds, measurement_fns,
-    seed_key='kmeans_random_state'
-)
 exp_results['modules']['IDS'] = fit_stochastic_shared(
     ids_mod, ids_shared_params, all_lambda_values, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
 print("Stochastic modules done.")
-stamp("stochastic trials (trees + IDS x n_trials)")
 
 exp.save_results(outfile, outfile_ref)
-stamp("results saved")
 end = time.time()
 print("Experiment time:", end - start)
 

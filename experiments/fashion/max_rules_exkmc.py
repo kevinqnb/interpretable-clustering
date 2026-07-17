@@ -17,7 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.fashion.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
+    N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
+    CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, OUTFILE_REF, RULES_DIR, ALPHAS_DIR,
+    MAX_RULES_DIR,
+)
 
 ####################################################################################################
 
@@ -38,21 +43,22 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=1)
-confidence_threshold = args.confidence
-tag = conf_tag(confidence_threshold)
-experiment_cpu_count = args.cpu_count
+# This script's fit (a single deterministic ExKMC fit per rule budget) is
+# already cheap, so it always requests 1 core regardless of the pipeline's
+# overall CPU budget -- see experiments/README.md's note on why mnist/fashion
+# split max_rules across files.
+experiment_cpu_count = 1
 
-# REMINDER: The seed should only be initialized here. It should NOT 
-# within the parameters of any sub-function or class (except for select 
-# baseline experiments like KMeans), since these will 
-# reset the seed each time they are given one. 
-seed = 342
+# REMINDER: The seed should only be initialized here. It should NOT
+# within the parameters of any sub-function or class (except for select
+# baseline experiments like KMeans), since these will
+# reset the seed each time they are given one.
+seed = SEED
 
 def _memoryview_safe(x):
     """
-    Make array safe to run in a Cython memoryview-based kernel. 
-    As far as I can tell, this sometimes is an issue when data is pickled in 
+    Make array safe to run in a Cython memoryview-based kernel.
+    As far as I can tell, this sometimes is an issue when data is pickled in
     multiprocessing environments.
     """
     if not x.flags.writeable:
@@ -70,16 +76,16 @@ n,d = data.shape
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 10,
-    'n_select': 10,
-    'max_rules': 16,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': confidence_threshold,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'max_rules': MAX_RULES,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed
 }
 
@@ -97,20 +103,20 @@ weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
 # Alpha values for objectives:
-with open(f"data/experiments/fashion/alphas/selected_alphas_resub_conf_{tag}.json") as f:
+with open(ALPHAS_DIR + 'selected_alphas' + OUTFILE_REF + '.json') as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
 
-decision_info_dict_directory = 'data/experiments/fashion/rules/'
+decision_info_dict_directory = RULES_DIR
 
-outfile = 'data/experiments/fashion/max_rules/'
-outfile_ref = f'_resub_exkmc_conf_{tag}'
+outfile = MAX_RULES_DIR
+outfile_ref = '_exkmc' + OUTFILE_REF
 
 ####################################################################################################
 # Load pre-mined rules:
 
 
-ensemble_rules = load_rules(f'data/experiments/fashion/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -131,7 +137,6 @@ exkmc_mod = DecisionTreeMod(
     model = ExkmcTree,
     name = 'ExKMC'
 )
-
 
 ####################################################################################################
 
@@ -168,7 +173,7 @@ exp = Experiment(
     verbose = True
 )
 
-import time 
+import time
 start = time.time()
 exp_results = exp.run()
 exp.save_results(outfile, outfile_ref)
@@ -177,4 +182,3 @@ print("Experiment time:", end - start)
 
 
 ####################################################################################################
-

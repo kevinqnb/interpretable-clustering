@@ -17,9 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.profiling import stamp, stamp_reset
-from experiments.cli_utils import alpha_tag_for, conf_tag, parse_experiment_args
-stamp_reset()
+from experiments.aniso.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
+    N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
+    CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, N_TRIALS, TRIAL_SEEDS, CPU_COUNT,
+    OUTFILE_REF, RULES_DIR, ALPHAS_DIR, MAX_RULES_DIR,
+)
 
 ####################################################################################################
 
@@ -42,32 +45,26 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=6, alpha_flag=True)
-confidence_threshold = args.confidence
-tag = conf_tag(confidence_threshold)
-# See lambda.py: --alpha-confidence points every confidence in a sweep at one common alpha.
-# Kept in step with lambda.py so the two sweeps describe the same PEC.
-alpha_tag = alpha_tag_for(args)
-experiment_cpu_count = args.cpu_count
+experiment_cpu_count = CPU_COUNT
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
 # baseline experiments like KMeans), since these will
 # reset the seed each time they are given one.
-# Classes with their own internal randomness (IDS, ExplanationTree, DecisionTree,
-# ShallowTree) accept an explicit random_state / kmeans_random_state instead of
-# relying on this global seed -- see `trial_seeds` below, which derives one seed
-# per trial so those modules can be refit across multiple trials and their results
-# reported as mean/std rather than a single, arbitrarily-seeded point estimate.
-seed = 342
+# Classes with their own internal randomness (IDS, DecisionTree) accept an
+# explicit random_state instead of relying on this global seed -- see
+# `trial_seeds` below, which derives one seed per trial so those modules can be
+# refit across multiple trials and their results reported as mean/std rather
+# than a single, arbitrarily-seeded point estimate.
+seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Exp-Tree, Decision-Tree, Shallow-Tree). Deterministic modules (PEC, ExKMC,
-# CN2, CBA, WRA) are fit once, since repeating them would just reproduce the same
-# result. `trial_seeds` is derived deterministically from `seed` so that re-running
-# this script reproduces the exact same set of trials.
-n_trials = 10
-trial_seeds = [seed + i for i in range(n_trials)]
+# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA, WRA) are fit
+# once, since repeating them would just reproduce the same result. `trial_seeds`
+# is derived deterministically from `seed` so that re-running this script
+# reproduces the exact same set of trials.
+n_trials = N_TRIALS
+trial_seeds = TRIAL_SEEDS
 
 def _memoryview_safe(x):
     """
@@ -84,23 +81,22 @@ def _memoryview_safe(x):
 ####################################################################################################
 # Read and process data:
 data, data_labels, feature_labels, scaler = load_preprocessed_ansio()
-stamp("data loaded")
 data = _memoryview_safe(data)
 n,d = data.shape
 
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 5,
-    'n_select': 5,
-    'max_rules': 11,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 10,
-    'forest_max_depth': 4,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': confidence_threshold,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'max_rules': MAX_RULES,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed,
     'n_trials': n_trials,
     'trial_seeds': trial_seeds,
@@ -114,30 +110,28 @@ np.random.seed(fixed_parameters['seed'])
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
-stamp("kmeans clustering")
 
 # Weights for uncertainty objectives
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-# Alpha values for objectives (from alpha_tag, which may not be this run's own tag):
-with open(f"data/experiments/aniso/alphas/selected_alphas_resub_conf_{alpha_tag}.json") as f:
+# Alpha values for objectives:
+with open(ALPHAS_DIR + 'selected_alphas' + OUTFILE_REF + '.json') as f:
     selected_alpha_dict = json.load(f)
 fixed_parameters['alpha'] = selected_alpha_dict
-fixed_parameters['alpha_confidence'] = float(alpha_tag) / 100
 
-decision_info_dict_directory = 'data/experiments/aniso/rules/'
+decision_info_dict_directory = RULES_DIR
 
-outfile = 'data/experiments/aniso/max_rules/'
-outfile_ref = f'_resub_conf_{tag}'
+outfile = MAX_RULES_DIR
+outfile_ref = OUTFILE_REF
 
 ####################################################################################################
 # Load pre-mined rules:
 
 
-ensemble_rules = load_rules(f'data/experiments/aniso/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 
-with open(f'data/experiments/aniso/rules/ensemble_labels_conf_{tag}.pkl', 'rb') as f:
+with open(RULES_DIR + f'ensemble_labels{OUTFILE_REF}.pkl', 'rb') as f:
     ensemble_labels = pickle.load(f)
 
 rule_miner_dict = {
@@ -147,32 +141,25 @@ rule_miner_dict = {
 ####################################################################################################
 # Comparison Modules:
 #
-# NOTE on reproducibility: Decision-Tree, Exp-Tree, Shallow-Tree, and IDS all have
-# inherent randomness in their fitted solution (sklearn tree tie-breaking, heap
-# tie-breaking, internal KMeans re-initialization, and randomized-greedy/SLS
+# NOTE on reproducibility: Decision-Tree and IDS both have inherent randomness in
+# their fitted solution (sklearn tree tie-breaking and randomized-greedy/SLS
 # selection respectively). Rather than fit each once under the single global
-# `seed`, these four are refit across `trial_seeds` further below (see
+# `seed`, these two are refit across `trial_seeds` further below (see
 # "Stochastic module trials") and their results are recorded as mean/std/values
 # instead of a single point estimate. Their *_params dicts below therefore omit
 # any seed -- the per-trial seed is injected at fit time. PEC, ExKMC, WRA, CBA,
 # and CN2 have no internal randomness given fixed inputs, so they keep the
 # original single-fit-per-parameter-value treatment via `Experiment`.
+#
+# NOTE: Exp-Tree and Shallow-Tree used to be fit here too (Exp-Tree once,
+# Shallow-Tree once, each broadcast across every rule budget r), but neither
+# appears in examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 # Decision Tree
 decision_tree_params_by_r = {i : {'max_leaf_nodes' : i} for i in n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
-)
-
-
-# Explanation Tree
-# (ExplanationTree's leaf count is fixed at num_clusters, independent of the rule
-# budget r, so -- as before -- a single fit's result is recorded under every r label.)
-exp_tree_shared_params = {'num_clusters' : fixed_parameters['n_clusters']}
-exp_tree_mod = DecisionTreeMod(
-    model = ExplanationTree,
-    name = 'Exp-Tree'
 )
 
 
@@ -189,20 +176,6 @@ exkmc_mod = DecisionTreeMod(
     name = 'ExKMC'
 )
 
-
-# Shallow Tree
-# (ShallowTree's structure is controlled by depth_factor, not by a rule-count/
-# max_leaf_nodes parameter, so -- as before -- a single fit's result is recorded
-# under every r label.)
-shallow_tree_shared_params = {
-    'n_clusters' : fixed_parameters['n_clusters'],
-    'depth_factor' : fixed_parameters['shallow_tree_depth_factor'],
-}
-shallow_tree_mod = DecisionTreeMod(
-    model = ShallowTree,
-    name = 'Shallow-Tree'
-)
-
 # WRA:
 wra_params = {(r,): {'n_select': r} for r in n_rules_list}
 wra_mod = DecisionSetMod(
@@ -212,13 +185,8 @@ wra_mod = DecisionSetMod(
     name='WRA'
 )
 
-wra_weighted_params = {(r,): {'n_select': r, 'weights': weights} for r in n_rules_list}
-wra_weighted_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA-weighted'
-)
+# NOTE: WRA-weighted used to be fit here too (once per rule budget), but it never
+# appears in examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 
 # CBA:
@@ -241,18 +209,17 @@ cn2_mod = DecisionSetMod(
 
 
 # IDS:
-with open(f'data/experiments/aniso/rules/ids_lambdas_conf_{tag}.json') as f:
+with open(RULES_DIR + f'ids_lambdas{OUTFILE_REF}.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
     ids_lambdas = list(ids_lambdas.values())
 
-_ids_cache_path = f'data/experiments/aniso/rules/ids_coverage_cache_ensemble_conf_{tag}.pkl'
+_ids_cache_path = RULES_DIR + f'ids_coverage_cache_ensemble{OUTFILE_REF}.pkl'
 if os.path.exists(_ids_cache_path):
     print("Loading pre-built IDS cache...")
     with open(_ids_cache_path, 'rb') as f:
         ids_cache = pickle.load(f)
     print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
-    stamp("IDS cache loaded from disk")
 else:
     print("Pre-computing IDS cache...")
     # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
@@ -268,7 +235,6 @@ else:
     with open(_ids_cache_path, 'wb') as f:
         pickle.dump(ids_cache, f)
     print(f"IDS cache ready: {len(ids_cache.decisions)} decisions.")
-    stamp("IDS cache BUILT (first-time, no cache file)")
 
 ids_params_by_r = {
     r: {
@@ -292,7 +258,7 @@ objective_dict = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -300,20 +266,20 @@ objective_dict = {
         'cluster_centers': kmeans_base.centers,
         'cluster_cost_method': 'kmeans',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
         'objective_type': 'coverage-pairwise-distance',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
         'objective_type': 'coverage-mistake',
         'weights': weights,
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
@@ -322,14 +288,14 @@ objective_dict = {
         'weights': weights,
         'cluster_cost_method': 'kmeans',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
         'objective_type': 'coverage-pairwise-distance',
         'weights': weights,
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
 }
@@ -378,9 +344,17 @@ for obj_name, obj_params in objective_dict.items():
             lambda_params = {'lambda_val' : lambda_star}
             lambda_star_dict[module_name] = float(lambda_star)
 
+        # Weighted objectives are read by examples/experiments.ipynb's Uncertainty
+        # section only, which looks up a single fixed budget (the smallest r
+        # present, i.e. n_select) rather than sweeping the rule budget the way the
+        # unweighted objectives' Bar Plots / Weighted Average Rule Length sections
+        # do. Fitting them across all of n_rules_list wasted 6 of every 7 PEC fits,
+        # so restrict weighted objectives to just that one budget.
+        r_values = [fixed_parameters['n_select']] if obj_name.endswith('-weighted') else n_rules_list
+
         dsclust_params = {
             (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params | lambda_params
-            for i,r in enumerate(n_rules_list)
+            for r in r_values
         }
         dsclust_mod = DecisionSetMod(
             model = PEC,
@@ -390,23 +364,21 @@ for obj_name, obj_params in objective_dict.items():
         dscluster_module_list.append((dsclust_mod, dsclust_params))
 
 fixed_parameters['lambda_star'] = lambda_star_dict
-stamp("lambda* probe (once per objective)")
 
 
 ####################################################################################################
 
 
 baseline = kmeans_base
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS are handled separately below via
-# `fit_stochastic_varying`/`fit_stochastic_shared` (see "Stochastic module trials"),
-# since they need to be refit per trial seed rather than dispatched once through
-# `Experiment`'s joblib-parallel `run()` (whose worker processes do not inherit this
-# script's seeded global NumPy state, which would make single-fit results
-# irreproducible for exactly these randomized modules).
+# Decision-Tree and IDS are handled separately below via `fit_stochastic_varying`
+# (see "Stochastic module trials"), since they need to be refit per trial seed
+# rather than dispatched once through `Experiment`'s joblib-parallel `run()`
+# (whose worker processes do not inherit this script's seeded global NumPy
+# state, which would make single-fit results irreproducible for exactly these
+# randomized modules).
 module_list = [
     (exkmc_mod, exkmc_params),
     (wra_mod, wra_params),
-    (wra_weighted_mod, wra_weighted_params),
     (cba_mod, cba_params),
     (cn2_mod, cn2_params),
 ] + dscluster_module_list
@@ -442,19 +414,20 @@ exp = Experiment(
 
 import time
 start = time.time()
-stamp("setup complete -> starting exp.run")
 exp_results = exp.run()
-stamp("exp.run: all PEC + comparison module fits")
 
 ####################################################################################################
 # Stochastic module trials
 #
-# Decision-Tree, Exp-Tree, Shallow-Tree, and IDS each have a fitted solution that
-# depends on randomness. Rather than record one arbitrarily-seeded fit, each is
-# refit once per seed in `trial_seeds` and the results across trials are aggregated
-# into {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
+# Decision-Tree and IDS each have a fitted solution that depends on randomness.
+# Rather than record one arbitrarily-seeded fit, each is refit once per seed in
+# `trial_seeds` and the results across trials are aggregated into
+# {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
 # This runs single-process (not through `Experiment`'s joblib dispatch) specifically
 # so each trial's explicit seed is what controls its randomness.
+#
+# NOTE: Exp-Tree and Shallow-Tree used to be fit here too, but neither appears in
+# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """
@@ -508,50 +481,18 @@ def fit_stochastic_varying(mod, params_by_r, trial_seeds, measurement_fns, seed_
     return result
 
 
-def fit_stochastic_shared(mod, shared_params, r_values, trial_seeds, measurement_fns, seed_key='random_state'):
-    """
-    Refits `mod` once per trial seed -- for modules whose output does not vary
-    with the rule-count budget r -- and broadcasts the trial-aggregated result
-    across every r label (matching the pre-existing convention for these modules).
-    """
-    result = (
-        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
-         'sum-rule-length': {}, 'weighted-avg-length': {}} |
-        {fn.name: {} for fn in measurement_fns}
-    )
-    trial_dicts = []
-    for trial_seed in trial_seeds:
-        assignments = _seed_and_fit(mod, dict(shared_params) | {seed_key: trial_seed}, trial_seed)
-        trial_dicts.append(_module_trial_result(mod, assignments, measurement_fns))
-    aggregated = aggregate_trials(trial_dicts)
-    for r in r_values:
-        for key, agg_val in aggregated.items():
-            result[key][r] = agg_val
-    return result
-
-
 print(f"Fitting stochastic modules across {n_trials} trials each...")
 exp_results['modules']['Decision-Tree'] = fit_stochastic_varying(
     decision_tree_mod, decision_tree_params_by_r, trial_seeds, measurement_fns,
     seed_key='random_state'
-)
-exp_results['modules']['Exp-Tree'] = fit_stochastic_shared(
-    exp_tree_mod, exp_tree_shared_params, n_rules_list, trial_seeds, measurement_fns,
-    seed_key='random_state'
-)
-exp_results['modules']['Shallow-Tree'] = fit_stochastic_shared(
-    shallow_tree_mod, shallow_tree_shared_params, n_rules_list, trial_seeds, measurement_fns,
-    seed_key='kmeans_random_state'
 )
 exp_results['modules']['IDS'] = fit_stochastic_varying(
     ids_mod, ids_params_by_r, trial_seeds, measurement_fns,
     seed_key='random_state'
 )
 print("Stochastic modules done.")
-stamp("stochastic trials (trees + IDS x n_trials)")
 
 exp.save_results(outfile, outfile_ref)
-stamp("results saved")
 end = time.time()
 print("Experiment time:", end - start)
 

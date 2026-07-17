@@ -8,16 +8,15 @@ if PROJECT_ROOT is None:
     raise ModuleNotFoundError("Could not locate repository root.")
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.cli_utils import conf_tag, parse_experiment_args
-
-
-args = parse_experiment_args(confidence_default=0.75)
-tag = conf_tag(args.confidence)
+from experiments.mnist.config import OUTFILE_REF
 
 lambda_dir = "data/experiments/mnist/lambda/"
-main_ref = f"_resub_dscluster_conf_{tag}"
-combine_refs = [f"_resub_exp_conf_{tag}", f"_resub_exkmc_conf_{tag}"]
-out_ref = f"_resub_conf_{tag}"
+main_ref = '_dscluster' + OUTFILE_REF
+# lambda_exp.py (Exp-Tree) used to contribute a ref here, but Exp-Tree never
+# appears in examples/experiments.ipynb's `comparison_modules` -- dropped along
+# with lambda_exp.py itself.
+combine_refs = ['_exkmc' + OUTFILE_REF]
+out_ref = OUTFILE_REF
 
 # Load main experiment dict
 fname = lambda_dir + "exp" + main_ref + ".json"

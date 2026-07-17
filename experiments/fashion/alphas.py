@@ -17,7 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.cli_utils import conf_tag, parse_experiment_args
+from experiments.fashion.config import (
+    SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
+    N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
+    CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, CPU_COUNT, OUTFILE_REF,
+    RULES_DIR, ALPHAS_DIR,
+)
 
 ####################################################################################################
 
@@ -35,10 +40,7 @@ from intercluster.measurements import *
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-args = parse_experiment_args(confidence_default=0.75, cpu_count_default=12)
-confidence_threshold = args.confidence
-tag = conf_tag(confidence_threshold)
-experiment_cpu_count = args.cpu_count
+experiment_cpu_count = CPU_COUNT
 
 # REMINDER: The seed should only be initialized here. It should NOT
 # within the parameters of any sub-function or class (except for select
@@ -50,7 +52,7 @@ experiment_cpu_count = args.cpu_count
 # ("Reproducibility") for which downstream models (IDS, ExplanationTree,
 # DecisionTree, ShallowTree) are instead re-fit across multiple trial seeds in
 # max_rules.py/confidence.py.
-seed = 342
+seed = SEED
 
 def _memoryview_safe(x):
     """
@@ -73,16 +75,16 @@ n,d = data.shape
 fixed_parameters = {
     'n': n,
     'd': d,
-    'n_clusters': 10,
-    'n_select': 10,
-    'max_rules': 16,
-    'shallow_tree_depth_factor': 0.03,
-    'n_forest': 100,
-    'forest_max_depth': 6,
-    'car_min_support': 0.025,
-    'car_min_confidence': 0.75,
-    'car_max_rule_length': 2, # (really means 4 by pyfim convention)
-    'filter_confidence': confidence_threshold,
+    'n_clusters': N_CLUSTERS,
+    'n_select': N_SELECT_DEFAULT,
+    'max_rules': MAX_RULES,
+    'shallow_tree_depth_factor': SHALLOW_TREE_DEPTH_FACTOR,
+    'n_forest': N_FOREST,
+    'forest_max_depth': FOREST_MAX_DEPTH,
+    'car_min_support': CAR_MIN_SUPPORT,
+    'car_min_confidence': CAR_MIN_CONFIDENCE,
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed
 }
 
@@ -100,15 +102,15 @@ largest_cluster_size = np.max(np.bincount(flatten_labels(kmeans_labels)))
 weights = distance_ratio_score(data, kmeans_base.centers)
 fixed_parameters['weights'] = weights.tolist()
 
-decision_info_dict_directory = 'data/experiments/fashion/rules/'
+decision_info_dict_directory = RULES_DIR
 
-outfile = 'data/experiments/fashion/alphas/'
-outfile_ref = f'_resub_conf_{tag}'
+outfile = ALPHAS_DIR
+outfile_ref = OUTFILE_REF
 
 ####################################################################################################
 # Load pre-mined rules:
 
-ensemble_rules = load_rules(f'data/experiments/fashion/rules/ensemble_rules_conf_{tag}.pkl')
+ensemble_rules = load_rules(RULES_DIR + f'ensemble_rules{OUTFILE_REF}.pkl')
 
 rule_miner_dict = {
     'ensemble': (None, ensemble_rules, None),
@@ -124,7 +126,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-cost': {
@@ -134,7 +136,7 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-pairwise-distance': {
@@ -142,7 +144,7 @@ objective_dict = {
         'n_select': fixed_parameters['n_select'],
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-mistake-weighted': {
@@ -151,7 +153,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'mistake_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'mistake_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-cost-weighted': {
@@ -162,7 +164,7 @@ objective_dict = {
         'cluster_cost_method': 'kmeans',
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'cost_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'cost_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
     'coverage-pairwise-distance-weighted': {
@@ -171,7 +173,7 @@ objective_dict = {
         'weights': weights,
         'selection_algorithm': 'distorted-greedy',
         'precomputed_path': os.path.join(
-            decision_info_dict_directory, f'pairwise_distance_info_dict_conf_{tag}.pkl.gz'
+            decision_info_dict_directory, f'pairwise_distance_info_dict{OUTFILE_REF}.pkl.gz'
         )
     },
 }
