@@ -67,6 +67,12 @@ class CN2(DecisionSet):
             raise ValueError("max_rule_conditions must be a positive integer.")
         self.max_rule_conditions = max_rule_conditions
 
+        # Populated by induce(): the full, untruncated, non-default rule list
+        # and the label mapping needed to convert it to Decisions. n_select
+        # only affects finalize()'s truncation of these, not induce() itself.
+        self._non_default = None
+        self._unique_labels = None
+
 
     def _build_orange_table(self, X: NDArray, y_flat: NDArray):
         """
@@ -116,9 +122,21 @@ class CN2(DecisionSet):
         )
 
 
-    def fit(self, X: NDArray, y: List[Set[int]] = None):
+    def induce(self, X: NDArray, y: List[Set[int]] = None):
         """
-        Run CN2 unordered rule induction and store the resulting decision set.
+        Runs the CN2 beam search once and caches the full, untruncated,
+        non-default rule list. This is the expensive part of `fit()` --
+        induction does not depend on `n_select` at all, only `finalize()`'s
+        truncation does. Idempotent: a second call on an instance that has
+        already induced is a no-op, so a caller sweeping n_select cheaply
+        against a single induction (see `finalize()`) can call this
+        unconditionally before each `finalize()` without re-triggering the
+        search.
+
+        NOTE: because of that idempotence, a given CN2 instance should only
+        ever be induced against one `(X, y)` pair -- the same "fresh instance
+        per fit" convention already used for every DecisionSet subclass in
+        this codebase.
 
         Args:
             X (NDArray): Input dataset of shape (n, d).
@@ -130,6 +148,9 @@ class CN2(DecisionSet):
             ValueError: If y is None, contains multi-label points, or yields
                 no labeled training examples after outlier filtering.
         """
+        if self._non_default is not None:
+            return
+
         if y is None:
             raise ValueError("CN2 requires cluster labels y.")
 
@@ -158,13 +179,34 @@ class CN2(DecisionSet):
         classifier = learner(table)
 
         # Exclude the default rule (empty selectors, covers everything)
-        non_default = [r for r in classifier.rule_list if r.length > 0]
+        self._non_default = [r for r in classifier.rule_list if r.length > 0]
+        self._unique_labels = unique_labels
 
-        if self.n_select is not None:
-            non_default = non_default[:self.n_select]
+
+    def finalize(self, n_select: int = None):
+        """
+        Truncates the cached induction (see `induce()`) to `n_select` rules
+        and rebuilds `decision_set`/`max_rule_length` -- the only
+        n_select-dependent work. Cheap: no re-induction, just list-slicing
+        and trimming. Must be called after `induce()`.
+
+        Args:
+            n_select (int, optional): Maximum number of rules to retain, as
+                in `__init__`. Defaults to None (keep all induced rules).
+
+        Raises:
+            ValueError: If `induce()` has not been called yet.
+        """
+        if self._non_default is None:
+            raise ValueError("Must call induce() before finalize().")
+
+        self.n_select = n_select
+        non_default = self._non_default
+        if n_select is not None:
+            non_default = non_default[:n_select]
 
         self.decision_set = {
-            self._orange_rule_to_decision(r, unique_labels) for r in non_default
+            self._orange_rule_to_decision(r, self._unique_labels) for r in non_default
         }
 
         self.decision_set = self.trim()
@@ -172,3 +214,24 @@ class CN2(DecisionSet):
             max(len(d.rule) for d in self.decision_set) if self.decision_set else 0
         )
         self.decision_set = list(self.decision_set)
+
+
+    def fit(self, X: NDArray, y: List[Set[int]] = None):
+        """
+        Run CN2 unordered rule induction and store the resulting decision set
+        at `self.n_select`. Equivalent to `induce(X, y)` followed by
+        `finalize(self.n_select)` -- see those methods to sweep n_select
+        cheaply against a single induction.
+
+        Args:
+            X (NDArray): Input dataset of shape (n, d).
+            y (List[Set[int]]): Cluster labels. Each inner set must contain
+                exactly one label — multi-label points are rejected. Points
+                with an empty label set (outliers) are excluded from training.
+
+        Raises:
+            ValueError: If y is None, contains multi-label points, or yields
+                no labeled training examples after outlier filtering.
+        """
+        self.induce(X, y)
+        self.finalize(self.n_select)

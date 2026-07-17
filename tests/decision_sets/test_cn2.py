@@ -193,3 +193,70 @@ def test_all_outliers_raises(blob_data):
     y_all_outliers = [set()] * len(X)
     with pytest.raises(ValueError):
         CN2().fit(X, y_all_outliers)
+
+
+####################################################################################################
+# induce() / finalize() split
+####################################################################################################
+
+
+def _assert_same_result(a: CN2, b: CN2, X):
+    assert set(a.decision_set) == set(b.decision_set)
+    assert a.max_rule_length == b.max_rule_length
+    assert a.get_sum_of_rule_lengths() == b.get_sum_of_rule_lengths()
+    a_wad, b_wad = a.get_weighted_average_rule_length(X), b.get_weighted_average_rule_length(X)
+    if np.isnan(a_wad) or np.isnan(b_wad):
+        assert np.isnan(a_wad) and np.isnan(b_wad)
+    else:
+        assert a_wad == b_wad
+
+
+def test_finalize_before_induce_raises():
+    with pytest.raises(ValueError):
+        CN2().finalize(3)
+
+
+def test_induce_then_finalize_matches_fit(blob_data):
+    X, y = blob_data
+    for cap in [1, 3, 5]:
+        fitted = CN2(n_select=cap)
+        fitted.fit(X, y)
+
+        induced = CN2()
+        induced.induce(X, y)
+        induced.finalize(cap)
+
+        _assert_same_result(fitted, induced, X)
+
+
+def test_finalize_multiple_times_reuses_induction(blob_data):
+    """One induce() call, several finalize() calls -- each must match an
+    independently-fit CN2 at that n_select, with no state leaking between
+    finalize() calls."""
+    X, y = blob_data
+    shared = CN2()
+    shared.induce(X, y)
+
+    for cap in [1, 3, 5, None]:
+        shared.finalize(cap)
+
+        reference = CN2(n_select=cap)
+        reference.fit(X, y)
+
+        _assert_same_result(reference, shared, X)
+
+
+def test_induce_is_idempotent(blob_data):
+    X, y = blob_data
+    model = CN2()
+    model.induce(X, y)
+    first_pass = list(model._non_default)
+
+    # A second induce() call -- even against different data -- must be a
+    # no-op, since a real second search would silently invalidate any
+    # finalize() results already handed out for the first induction.
+    X2 = X[:10]
+    y2 = y[:10]
+    model.induce(X2, y2)
+
+    assert list(model._non_default) == first_pass

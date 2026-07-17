@@ -59,7 +59,7 @@ experiment_cpu_count = CPU_COUNT
 seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA, WRA) are fit
+# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA) are fit
 # once, since repeating them would just reproduce the same result. `trial_seeds`
 # is derived deterministically from `seed` so that re-running this script
 # reproduces the exact same set of trials.
@@ -147,7 +147,7 @@ rule_miner_dict = {
 # `seed`, these two are refit across `trial_seeds` further below (see
 # "Stochastic module trials") and their results are recorded as mean/std/values
 # instead of a single point estimate. Their *_params dicts below therefore omit
-# any seed -- the per-trial seed is injected at fit time. PEC, ExKMC, WRA, CBA,
+# any seed -- the per-trial seed is injected at fit time. PEC, ExKMC, CBA,
 # and CN2 have no internal randomness given fixed inputs, so they keep the
 # original single-fit-per-parameter-value treatment via `Experiment`.
 #
@@ -177,19 +177,6 @@ exkmc_mod = DecisionTreeMod(
 )
 
 
-# WRA:
-wra_params = {(r,): {'n_select': r} for r in n_rules_list}
-wra_mod = DecisionSetMod(
-    model=WRABaseline,
-    rules=ensemble_rules,
-    rule_labels=ensemble_labels,
-    name='WRA'
-)
-
-# NOTE: WRA-weighted used to be fit here too (once per rule budget), but it never
-# appears in examples/experiments.ipynb's `comparison_modules`. Dropped.
-
-
 # CBA:
 cba_params = {(r,): {'n_select': r} for r in n_rules_list}
 cba_mod = DecisionSetMod(
@@ -199,14 +186,6 @@ cba_mod = DecisionSetMod(
     name='CBA'
 )
 
-
-# CN2:
-cn2_params = {(r,): {'n_select': r} for r in n_rules_list}
-cn2_mod = DecisionSetMod(
-    model=CN2,
-    rules=None,
-    name='CN2'
-)
 
 
 # IDS:
@@ -376,12 +355,14 @@ baseline = kmeans_base
 # rather than dispatched once through `Experiment`'s joblib-parallel `run()`
 # (whose worker processes do not inherit this script's seeded global NumPy
 # state, which would make single-fit results irreproducible for exactly these
-# randomized modules).
+# randomized modules). CN2 is also handled separately below, via
+# `fit_cn2_varying` -- its induction doesn't depend on the rule budget r at
+# all, so sweeping it through Experiment's per-(module, param) joblib
+# dispatch the way ExKMC/CBA are swept would rerun the same expensive
+# induction once per r for an identical result each time.
 module_list = [
     (exkmc_mod, exkmc_params),
-    (wra_mod, wra_params),
     (cba_mod, cba_params),
-    (cn2_mod, cn2_params),
 ] + dscluster_module_list
 
 measurement_fns = [
@@ -492,6 +473,52 @@ exp_results['modules']['IDS'] = fit_stochastic_varying(
     seed_key='random_state'
 )
 print("Stochastic modules done.")
+
+####################################################################################################
+# CN2
+#
+# CN2's beam-search induction doesn't depend on n_select -- only the post-hoc
+# truncation to the first n_select rules does (see cn2.py's induce()/
+# finalize() split). Sweeping it through Experiment's per-(module, param)
+# joblib dispatch, the way ExKMC/CBA are swept, would rerun the same
+# induction from scratch once per rule budget in n_rules_list for an
+# otherwise-identical result. CN2 is deterministic (no seed dependence), so
+# it's fit outside `Experiment.run()` here: induce once, then finalize +
+# measure cheaply per budget.
+
+def fit_cn2_varying(n_rules_list, measurement_fns):
+    result = (
+        {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
+         'sum-rule-length': {}, 'weighted-avg-length': {}} |
+        {fn.name: {} for fn in measurement_fns}
+    )
+    cn2 = CN2()
+    cn2.induce(data, kmeans_labels)
+    n_unique = len(unique_labels(kmeans_labels))
+    for r in n_rules_list:
+        cn2.finalize(r)
+        assignments = (
+            cn2.get_data_to_rules_assignment(data),
+            cn2.get_rules_to_clusters_assignment(n_labels=n_unique),
+            labels_to_assignment(cn2.predict(data), n_labels=n_unique),
+        )
+        trial_result = {
+            'lambda': np.nan,
+            'lambda_n_rules': np.nan,
+            'max-rule-length': cn2.max_rule_length,
+            'sum-rule-length': cn2.get_sum_of_rule_lengths(),
+            'weighted-avg-length': cn2.get_weighted_average_rule_length(data),
+        } | {
+            fn.name: fn(*assignments) for fn in measurement_fns
+        }
+        for key, val in trial_result.items():
+            result[key][r] = val
+    return result
+
+
+print("Fitting CN2 (induce once, finalize per rule budget)...")
+exp_results['modules']['CN2'] = fit_cn2_varying(n_rules_list, measurement_fns)
+print("CN2 done.")
 
 exp.save_results(outfile, outfile_ref)
 end = time.time()
