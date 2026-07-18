@@ -22,7 +22,7 @@ N_FOREST = 10
 FOREST_MAX_DEPTH = 4
 
 CAR_MIN_SUPPORT = 0.025
-CAR_MIN_CONFIDENCE = 0.75
+CAR_MIN_CONFIDENCE = 0.5
 CAR_MAX_RULE_LENGTH = 2  # really means 4 by pyfim convention
 
 # Confidence threshold used once, in mine_rules.py, to filter the pre-filter
