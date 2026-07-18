@@ -110,6 +110,15 @@ class ExkmcTree(Tree):
             base_tree = base_tree
         )
 
+        # ExKMC's Cython cut_finder needs a writable memoryview on X. When this fit runs
+        # inside a joblib (loky) worker, X may be a read-only memmap that joblib created
+        # for cross-process dispatch -- copy it here rather than relying on the caller
+        # having done so, since that copy doesn't survive re-memmapping in the worker.
+        if not X.flags.writeable:
+            if not X.flags.owndata:
+                X = X.copy(order='C')
+            X.setflags(write=True)
+
         self.exkmc_tree.fit(X, self.kmeans)
         
         self.root = Node()
