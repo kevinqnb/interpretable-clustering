@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -11,33 +12,88 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from experiments.fashion.config import OUTFILE_REF
 
 max_rules_dir = "data/experiments/fashion/max_rules/"
-main_ref = '_dscluster' + OUTFILE_REF
-# max_rules_exp.py (Exp-Tree) used to contribute a third ref here, but Exp-Tree
-# never appears in examples/experiments.ipynb's `comparison_modules` -- dropped
-# along with max_rules_exp.py itself.
-combine_refs = ['_exkmc' + OUTFILE_REF]
+
+# Every part this combiner knows how to merge, in priority order (first part to contribute a
+# given module/fixed-parameter key wins). Each is optional and independently produced:
+#   - max_rules_{cba,cn2,dtree,ids,pec}.py: the per-model split (see those scripts).
+#   - max_rules_exkmc.py: ExKMC, split out from the start (mnist/fashion take much longer to
+#     fit some algorithms -- see experiments/README.md's step-3 note).
+#   - max_rules.py itself: the original monolithic script (CBA+PEC+Decision-Tree+IDS+CN2 in one
+#     job), kept as a fallback source in case you ran that instead of the per-model split -- it's
+#     listed last so a fresher per-model result always takes priority over a stale monolithic run.
+# This lets you launch each part as its own parallel job and combine whatever has actually
+# finished -- missing parts are skipped with a warning instead of raising, so you can re-run this
+# script as more parts land rather than waiting for every one of them.
+#
+# CAUTION: the monolithic fallback means "missing" per-model parts don't necessarily block the
+# combine the way you might expect -- if an old max_rules.py run's exp_dscluster{OUTFILE_REF}.json
+# is sitting on disk, its (possibly stale) modules silently fill in for any per-model script you
+# haven't (re)run yet. This script prints exactly which modules came from that fallback, every
+# run, so a stale backfill is never silent -- check that list before trusting the combined output.
+MONOLITHIC_PART = 'monolithic (max_rules.py)'
+part_refs = {
+    'cba': '_cba' + OUTFILE_REF,
+    'cn2': '_cn2' + OUTFILE_REF,
+    'dtree': '_dtree' + OUTFILE_REF,
+    'ids': '_ids' + OUTFILE_REF,
+    'pec': '_pec' + OUTFILE_REF,
+    'exkmc': '_exkmc' + OUTFILE_REF,
+    MONOLITHIC_PART: '_dscluster' + OUTFILE_REF,
+}
 out_ref = OUTFILE_REF
 
-# Load main experiment dict
-fname = max_rules_dir + "exp" + main_ref + ".json"
-with open(fname, 'r') as f:
-    main_experiment_dict = json.load(f)
+combined_dict = {'fixed-parameters': {}, 'baseline': None, 'modules': {}}
+module_source = {}  # module name -> part name that supplied it
+loaded_parts = []
+missing_parts = []
 
-# Load combine experiment dicts and merge
-for ref in combine_refs:
-    fname = max_rules_dir + "exp" + ref + ".json"
+for part_name, ref in part_refs.items():
+    fname = os.path.join(max_rules_dir, "exp" + ref + ".json")
+    if not os.path.exists(fname):
+        missing_parts.append(part_name)
+        continue
+
     with open(fname, 'r') as f:
-        combine_experiment_dict = json.load(f)
+        part_dict = json.load(f)
+    loaded_parts.append(part_name)
 
-    # Merge combine_experiment_dict into main_experiment_dict
-    for key in combine_experiment_dict['modules']:
-        if key in main_experiment_dict['modules']:
-            pass
-        else:
-            main_experiment_dict['modules'][key] = combine_experiment_dict['modules'][key]
+    if combined_dict['baseline'] is None:
+        combined_dict['baseline'] = part_dict.get('baseline')
 
+    # Merge modules: union by module name, first part to contribute a given name wins (matches
+    # the original exkmc-merge's semantics).
+    for key, value in part_dict.get('modules', {}).items():
+        if key not in combined_dict['modules']:
+            combined_dict['modules'][key] = value
+            module_source[key] = part_name
+
+    # Merge fixed-parameters the same way, so a key only one part computes (e.g. PEC's
+    # 'lambda_star') still ends up in the combined output as long as that part is present.
+    for key, value in part_dict.get('fixed-parameters', {}).items():
+        combined_dict['fixed-parameters'].setdefault(key, value)
+
+if not loaded_parts:
+    raise FileNotFoundError(
+        f"None of the max_rules part files were found in {max_rules_dir} for ref '{out_ref}' "
+        f"(looked for refs: {list(part_refs.values())}). Run at least one of "
+        f"max_rules_{{cba,cn2,dtree,ids,pec,exkmc}}.py or max_rules.py first."
+    )
+
+print(f"Combined parts: {loaded_parts}")
+if missing_parts:
+    print(f"Skipped (not yet completed): {missing_parts}")
+
+stale_modules = sorted(k for k, v in module_source.items() if v == MONOLITHIC_PART)
+if stale_modules:
+    print(
+        f"WARNING: {len(stale_modules)} module(s) came from the '{MONOLITHIC_PART}' fallback, "
+        f"not a per-model script -- these may be stale if you meant to (re)run them "
+        f"individually: {stale_modules}"
+    )
 
 # Save combined experiment dict
-output_fname = max_rules_dir + "exp" + out_ref + ".json"
+output_fname = os.path.join(max_rules_dir, "exp" + out_ref + ".json")
 with open(output_fname, 'w') as f:
-    json.dump(main_experiment_dict, f, indent=4)
+    json.dump(combined_dict, f, indent=4)
+
+print(f"Saved combined results to {output_fname}")

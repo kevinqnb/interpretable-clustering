@@ -33,7 +33,7 @@ CAR_MAX_RULE_LENGTH = 3  # really means 6 by pyfim convention
 CONFIDENCE_DEFAULT = 0.5
 
 # Stochastic-model trial reproducibility (max_rules.py, lambda.py, confidence.py)
-N_TRIALS = 10
+N_TRIALS = 3
 TRIAL_SEEDS = [SEED + i for i in range(N_TRIALS)]
 
 # Total CPU budget for the pipeline. Defaults to the machine's detected core
