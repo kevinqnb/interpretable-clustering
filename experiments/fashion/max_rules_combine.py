@@ -15,11 +15,14 @@ max_rules_dir = "data/experiments/fashion/max_rules/"
 
 # Every part this combiner knows how to merge, in priority order (first part to contribute a
 # given module/fixed-parameter key wins). Each is optional and independently produced:
-#   - max_rules_{cba,cn2,dtree,ids,pec}.py: the per-model split (see those scripts).
+#   - max_rules_{cba,cn2,dtree,ids,pec,pec_lazy}.py: the per-model split (see those scripts).
+#     pec_lazy contributes PEC's lazy-greedy modules (named '...; lazy-greedy'), which never
+#     collide with pec's distorted-greedy-named modules, so both can be present at once.
 #   - max_rules_exkmc.py: ExKMC, split out from the start (mnist/fashion take much longer to
 #     fit some algorithms -- see experiments/README.md's step-3 note).
 #   - max_rules.py itself: the original monolithic script (CBA+PEC+Decision-Tree+IDS+CN2 in one
-#     job), kept as a fallback source in case you ran that instead of the per-model split -- it's
+#     job, now including PEC's lazy-greedy modules too -- see its dscluster_module_list loop),
+#     kept as a fallback source in case you ran that instead of the per-model split -- it's
 #     listed last so a fresher per-model result always takes priority over a stale monolithic run.
 # This lets you launch each part as its own parallel job and combine whatever has actually
 # finished -- missing parts are skipped with a warning instead of raising, so you can re-run this
@@ -37,6 +40,7 @@ part_refs = {
     'dtree': '_dtree' + OUTFILE_REF,
     'ids': '_ids' + OUTFILE_REF,
     'pec': '_pec' + OUTFILE_REF,
+    'pec_lazy': '_pec_lazy' + OUTFILE_REF,
     'exkmc': '_exkmc' + OUTFILE_REF,
     MONOLITHIC_PART: '_dscluster' + OUTFILE_REF,
 }
@@ -76,7 +80,7 @@ if not loaded_parts:
     raise FileNotFoundError(
         f"None of the max_rules part files were found in {max_rules_dir} for ref '{out_ref}' "
         f"(looked for refs: {list(part_refs.values())}). Run at least one of "
-        f"max_rules_{{cba,cn2,dtree,ids,pec,exkmc}}.py or max_rules.py first."
+        f"max_rules_{{cba,cn2,dtree,ids,pec,pec_lazy,exkmc}}.py or max_rules.py first."
     )
 
 print(f"Combined parts: {loaded_parts}")

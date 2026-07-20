@@ -342,6 +342,25 @@ for obj_name, obj_params in objective_dict.items():
         )
         dscluster_module_list.append((dsclust_mod, dsclust_params))
 
+        # Lazy-greedy counterpart: same objective/alpha/lambda as the distorted-greedy module
+        # above (reusing `lambda_params`, including the degenerate-case empty dict -- so a
+        # degenerate objective's lazy-greedy module lets PEC recompute the same lambda=0
+        # fallback per fit, rather than being handed a stale lambda_star), but with
+        # selection_algorithm='lazy-greedy' instead of 'distorted-greedy'. This is a genuine
+        # second model (lazy-greedy carries no approximation-guarantee threshold on lambda), not
+        # just the degenerate-case fallback.
+        lazy_dsclust_params = {
+            (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params | lambda_params |
+                   {'selection_algorithm' : 'lazy-greedy'}
+            for r in r_values
+        }
+        lazy_dsclust_mod = DecisionSetMod(
+            model = PEC,
+            rules = rules,
+            name = module_name + '; lazy-greedy'
+        )
+        dscluster_module_list.append((lazy_dsclust_mod, lazy_dsclust_params))
+
 fixed_parameters['lambda_star'] = lambda_star_dict
 
 
