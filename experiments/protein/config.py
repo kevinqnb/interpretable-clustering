@@ -23,14 +23,14 @@ FOREST_MAX_DEPTH = 6
 
 CAR_MIN_SUPPORT = 0.025
 CAR_MIN_CONFIDENCE = 0.5
-CAR_MAX_RULE_LENGTH = 3  # really means 6 by pyfim convention
+CAR_MAX_RULE_LENGTH = 2  # really means 4 by pyfim convention
 
 # Confidence threshold used once, in mine_rules.py, to filter the pre-filter
 # ensemble. This is a default, not an invariant -- confidence.py sweeps its own
 # independent range (0.0-0.95) over the pre-filter ensemble and is unaffected by
 # this constant. Changing CONFIDENCE_DEFAULT only takes effect by re-running
 # mine_rules.py (and everything downstream that reads its output).
-CONFIDENCE_DEFAULT = 0.5
+CONFIDENCE_DEFAULT = 0.50
 
 # Stochastic-model trial reproducibility (max_rules.py, lambda.py, confidence.py)
 N_TRIALS = 10

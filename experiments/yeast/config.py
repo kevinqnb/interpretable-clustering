@@ -30,7 +30,7 @@ CAR_MAX_RULE_LENGTH = 3  # really means 6 by pyfim convention
 # independent range (0.0-0.95) over the pre-filter ensemble and is unaffected by
 # this constant. Changing CONFIDENCE_DEFAULT only takes effect by re-running
 # mine_rules.py (and everything downstream that reads its output).
-CONFIDENCE_DEFAULT = 0.5
+CONFIDENCE_DEFAULT = 0.50
 
 # Stochastic-model trial reproducibility (max_rules.py, lambda.py, confidence.py)
 N_TRIALS = 10

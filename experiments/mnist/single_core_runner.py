@@ -95,7 +95,7 @@ def main():
         description="Run every 1-core-useful max_rules/lambda per-model script concurrently."
     )
     parser.add_argument(
-        "--total-cpu-count", type=int, default=None,
+        "--total-cpu-count", type=int, default=8,
         help=(
             "Max scripts to run at once (each pinned to exactly 1 core). Defaults to "
             "experiments/mnist/config.py's TOTAL_CPU_COUNT, which itself defaults to the "

@@ -22,8 +22,8 @@ N_FOREST = 100
 FOREST_MAX_DEPTH = 6
 
 CAR_MIN_SUPPORT = 0.025
-CAR_MIN_CONFIDENCE = 0.5
-CAR_MAX_RULE_LENGTH = 3  # really means 6 by pyfim convention
+CAR_MIN_CONFIDENCE = 0.75
+CAR_MAX_RULE_LENGTH = 2 # really means 6 by pyfim convention
 
 # Confidence threshold used once, in mine_rules.py, to filter the pre-filter
 # ensemble. This is a default, not an invariant -- confidence.py sweeps its own
