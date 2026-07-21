@@ -402,7 +402,7 @@ baseline = kmeans_base
 # ExKMC is handled in the separate `lambda_exkmc.py` script.
 module_list = [
     (cba_mod, {all_lambda_values: cba_shared_params}),
-    (cn2_mod, {all_lambda_values: cn2_shared_params}),
+    #(cn2_mod, {all_lambda_values: cn2_shared_params}),
 ] + dscluster_module_list
 
 measurement_fns = [

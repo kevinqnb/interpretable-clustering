@@ -534,7 +534,7 @@ def fit_cn2_varying(n_rules_list, measurement_fns):
 
 
 print("Fitting CN2 (induce once, finalize per rule budget)...")
-exp_results['modules']['CN2'] = fit_cn2_varying(n_rules_list, measurement_fns)
+#exp_results['modules']['CN2'] = fit_cn2_varying(n_rules_list, measurement_fns)
 print("CN2 done.")
 
 exp.save_results(outfile, outfile_ref)
