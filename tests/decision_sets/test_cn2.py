@@ -146,6 +146,21 @@ def test_n_select_none_produces_more_rules_than_small_cap(blob_data):
     assert len(uncapped.decision_set) >= len(capped.decision_set)
 
 
+def test_small_n_select_covers_multiple_classes(blob_data):
+    """
+    With 3 well-separated classes, a small n_select should still yield rules
+    spanning more than one class. The standard (ordered) CN2 algorithm finds
+    its best rule each iteration over the whole remaining population, so
+    classes naturally interleave in the rule list instead of being grouped
+    (which would starve a small n_select of all but the first class).
+    """
+    X, y = blob_data
+    model = CN2(n_select=3)
+    model.fit(X, y)
+    labels = {d.label for d in model.decision_set}
+    assert len(labels) > 1
+
+
 ####################################################################################################
 # max_rule_conditions
 ####################################################################################################

@@ -5,23 +5,39 @@ from numpy.typing import NDArray
 from intercluster import Rule, Decision, LinearCondition, flatten_labels
 from .decision_set import DecisionSet
 
-from Orange.classification.rules import CN2UnorderedLearner
+from Orange.classification.rules import CN2Learner
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 
 class CN2(DecisionSet):
     """
-    Unordered CN2 rule inducer wrapped as a DecisionSet.
+    Standard (ordered) CN2 rule inducer wrapped as a DecisionSet.
 
-    Implements the CN2 unordered algorithm (Clark & Boswell, 1991) via the
-    orange3 library. Each class is handled by an independent separate-and-conquer
-    loop; rules are scored by Laplace accuracy. The rule list produced by orange3
-    is already in iteration order within each class group: rules for class 0 are
-    listed first (earliest iteration first), then rules for class 1, and so on.
+    Implements the standard CN2 algorithm (Clark & Niblett, 1989) via the
+    orange3 library: a single sequential-covering loop over the whole
+    multiclass population. At each iteration it finds the single best rule
+    (scored by entropy) over all remaining examples regardless of class,
+    assigns it a label by majority vote among the points it covers, then
+    removes those points and repeats. Because each iteration draws from the
+    full remaining population rather than one class at a time, the resulting
+    rule list naturally interleaves classes instead of grouping all of one
+    class's rules before the next.
 
     When n_select is set, the first n_select non-default rules are retained.
-    Because rules are grouped by class, earlier classes are represented first
-    when n_select is smaller than the total number of rules.
+    Since classes interleave rather than group, a small n_select still tends
+    to yield rules spanning multiple classes, rather than exhausting one
+    class before any other appears.
+
+    NOTE: Orange's rule list is technically a *decision list* -- a rule's
+    majority-vote label is only exactly valid relative to the residual
+    population left after earlier rules have "claimed" their covered points.
+    This DecisionSet (like the rest of intercluster) applies every kept rule
+    independently to the full dataset (see DecisionSet.predict()), with no
+    first-match-wins or residual bookkeeping. That mismatch grows with a
+    rule's position in the list, since later rules are fit against an
+    increasingly carved-down residual; it is mild for the earliest rules
+    (fit against near-full class counts), which is the regime a small
+    n_select actually keeps. This is an accepted tradeoff, not a bug.
 
     Orange's ``>=`` operator is mapped to intercluster's strict ``>`` (direction=1).
     For continuous data this distinction is negligible.
@@ -171,7 +187,7 @@ class CN2(DecisionSet):
 
         table, unique_labels = self._build_orange_table(X_train, y_train)
 
-        learner = CN2UnorderedLearner()
+        learner = CN2Learner()
         learner.rule_finder.search_algorithm.beam_width = self.beam_width
         learner.rule_finder.general_validator.max_rule_length = self.max_rule_conditions
         learner.rule_finder.general_validator.min_covered_examples = self.min_covered_examples
@@ -218,7 +234,7 @@ class CN2(DecisionSet):
 
     def fit(self, X: NDArray, y: List[Set[int]] = None):
         """
-        Run CN2 unordered rule induction and store the resulting decision set
+        Run CN2 rule induction and store the resulting decision set
         at `self.n_select`. Equivalent to `induce(X, y)` followed by
         `finalize(self.n_select)` -- see those methods to sweep n_select
         cheaply against a single induction.
