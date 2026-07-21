@@ -72,5 +72,6 @@ ALPHAS_DIR = 'data/experiments/mnist/alphas/'
 MAX_RULES_DIR = 'data/experiments/mnist/max_rules/'
 LAMBDA_DIR = 'data/experiments/mnist/lambda/'
 CONFIDENCE_DIR = 'data/experiments/mnist/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/mnist/input_sensitivity/'
 
 ####################################################################################################

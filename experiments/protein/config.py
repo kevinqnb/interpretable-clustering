@@ -73,5 +73,6 @@ ALPHAS_DIR = 'data/experiments/protein/alphas/'
 MAX_RULES_DIR = 'data/experiments/protein/max_rules/'
 LAMBDA_DIR = 'data/experiments/protein/lambda/'
 CONFIDENCE_DIR = 'data/experiments/protein/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/protein/input_sensitivity/'
 
 ####################################################################################################

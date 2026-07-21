@@ -72,5 +72,6 @@ ALPHAS_DIR = 'data/experiments/fashion/alphas/'
 MAX_RULES_DIR = 'data/experiments/fashion/max_rules/'
 LAMBDA_DIR = 'data/experiments/fashion/lambda/'
 CONFIDENCE_DIR = 'data/experiments/fashion/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/fashion/input_sensitivity/'
 
 ####################################################################################################

@@ -73,5 +73,6 @@ ALPHAS_DIR = 'data/experiments/anuran/alphas/'
 MAX_RULES_DIR = 'data/experiments/anuran/max_rules/'
 LAMBDA_DIR = 'data/experiments/anuran/lambda/'
 CONFIDENCE_DIR = 'data/experiments/anuran/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/anuran/input_sensitivity/'
 
 ####################################################################################################

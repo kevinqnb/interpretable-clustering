@@ -73,5 +73,6 @@ ALPHAS_DIR = 'data/experiments/climate/alphas/'
 MAX_RULES_DIR = 'data/experiments/climate/max_rules/'
 LAMBDA_DIR = 'data/experiments/climate/lambda/'
 CONFIDENCE_DIR = 'data/experiments/climate/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/climate/input_sensitivity/'
 
 ####################################################################################################

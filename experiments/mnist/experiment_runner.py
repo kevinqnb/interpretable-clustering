@@ -14,10 +14,11 @@
 #         experiments/README.md's step-3 note):
 #           max_rules.py -> max_rules_exkmc.py -> max_rules_combine.py
 #           lambda.py    -> lambda_exkmc.py    -> lambda_combine.py
-#      -> confidence.py (once, after the families finish -- it does its own internal
-#                         0.0-0.95 confidence sweep over the pre-filter pool, and only
-#                         needs select_alphas.py's/ids_lambda_search.py's output, not
-#                         max_rules.py's/lambda.py's)
+#      -> [ confidence.py || input_sensitivity.py ] (once, after the families finish -- both
+#                         only need select_alphas.py's/ids_lambda_search.py's output, not
+#                         max_rules.py's/lambda.py's. confidence.py does its own internal
+#                         0.0-0.95 confidence sweep over the pre-filter pool; input_sensitivity.py
+#                         does its own internal 0.0-1.0 CAR-fraction sweep)
 #
 # Each stage is a standalone module-level script (not an importable function), so stages are
 # driven via subprocess rather than direct function calls.
@@ -141,7 +142,7 @@ def main():
         ],
         total_cpu_count,
     )
-    _run_stage(["confidence.py"], total_cpu_count)
+    _run_stage(["confidence.py", "input_sensitivity.py"], total_cpu_count)
 
     print("=== mnist pipeline complete ===")
 

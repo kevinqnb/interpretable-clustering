@@ -73,5 +73,6 @@ ALPHAS_DIR = 'data/experiments/aniso/alphas/'
 MAX_RULES_DIR = 'data/experiments/aniso/max_rules/'
 LAMBDA_DIR = 'data/experiments/aniso/lambda/'
 CONFIDENCE_DIR = 'data/experiments/aniso/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/aniso/input_sensitivity/'
 
 ####################################################################################################

@@ -73,5 +73,6 @@ ALPHAS_DIR = 'data/experiments/yeast/alphas/'
 MAX_RULES_DIR = 'data/experiments/yeast/max_rules/'
 LAMBDA_DIR = 'data/experiments/yeast/lambda/'
 CONFIDENCE_DIR = 'data/experiments/yeast/confidence/'
+INPUT_SENSITIVITY_DIR = 'data/experiments/yeast/input_sensitivity/'
 
 ####################################################################################################
