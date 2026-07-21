@@ -488,6 +488,7 @@ def run_confidence_level(
 
     for obj_name, obj_cfg in objective_config.items():
         pec_name = f'dscluster; {obj_name}; ensemble'
+        lazy_pec_name = f'{pec_name}; lazy-greedy'
         alpha = selected_alpha_dict[pec_name]
         if has_rules:
             pec = PEC(rules=filtered_rules, n_select=n_select, alpha_val=alpha, **obj_cfg)
@@ -498,10 +499,32 @@ def run_confidence_level(
             # g(e | {}) - lambda* h(e) > 0, so this is what PEC actually had to choose from.
             pec_n_available[obj_name] = pec.n_available_decisions
             pec_info[pec_name] = _dset_info(pec, data, n_labels)
+
+            # Lazy-greedy counterpart: same objective/alpha/lambda as the distorted-greedy
+            # PEC above (mirrors max_rules.py's dscluster_module_list loop), but with
+            # selection_algorithm='lazy-greedy'. A genuine second model (lazy-greedy carries
+            # no approximation-guarantee threshold on lambda), not just the degenerate-case
+            # fallback. If the primary fit above already degenerated (no valid lambda*, so
+            # set_lambda switched it to lazy-greedy with lambda=0), reusing that lambda_val
+            # would just be lambda_val=0 with no fallback distinction anyway -- but passing
+            # lambda_val=None here instead lets this fit recompute the same fallback itself,
+            # matching max_rules.py's "leave those objectives on the original per-fit path".
+            lazy_lambda_val = (
+                pec.objective.lambda_val
+                if pec.objective.selection_algorithm == 'distorted-greedy'
+                else None
+            )
+            lazy_pec = PEC(
+                rules=filtered_rules, n_select=n_select, alpha_val=alpha,
+                lambda_val=lazy_lambda_val, selection_algorithm='lazy-greedy', **obj_cfg
+            )
+            lazy_pec.fit(data, kmeans_labels)
+            pec_info[lazy_pec_name] = _dset_info(lazy_pec, data, n_labels)
         else:
             pec_lambdas[obj_name] = np.nan
             pec_n_available[obj_name] = np.nan
             pec_info[pec_name] = _empty_info()
+            pec_info[lazy_pec_name] = _empty_info()
 
     conf_result['lambda'] = pec_lambdas
     conf_result['lambda_n_rules'] = pec_n_available
