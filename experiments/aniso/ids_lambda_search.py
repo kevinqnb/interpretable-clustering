@@ -24,14 +24,14 @@ import numpy as np
 import pandas as pd
 from intercluster import *
 from intercluster.decision_sets import *
-from intercluster.decision_sets.ids import IDSCoverageCache, IDSObjective, SLSOptimizer, RandomGreedyOptimizer, IDSCoordinateAscent
+from intercluster.decision_sets.ids import IDSCoverageCache
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. RandomGreedyOptimizer and
-# IDSCoordinateAscent are given this seed explicitly below (random_state=seed)
-# rather than relying on this global np.random.seed call, so this lambda search
-# is reproducible independent of global NumPy state.
+# REMINDER: The seed should only be initialized here. IDS is given this seed
+# explicitly below (random_state=seed) rather than relying on this global
+# np.random.seed call, so this lambda search is reproducible independent of
+# global NumPy state.
 seed = SEED
 
 ####################################################################################################
@@ -77,47 +77,37 @@ with open(cache_path, 'wb') as f:
 print(f"Cache saved to {cache_path}")
 
 ####################################################################################################
-# Coordinate ascent using the IDS objective as the scoring function.
+# Coordinate ascent, scored by held-out AUC.
 #
 # For a candidate lambda array λ:
-#   1. Run SLS with λ → selected solution S*(λ)
-#   2. Evaluate S*(λ) with the IDS objective under λ
+#   1. Run the inner optimizer with λ on a train split → selected solution S*(λ)
+#   2. Score S*(λ) by ROC-AUC of "was the top-confidence firing rule's prediction
+#      correct" on a held-out val split (see IDS.select() in
+#      intercluster/decision_sets/ids.py for the full algorithm).
 #
-# This finds lambdas that are self-consistent: the selected rule set maximally
-# satisfies the IDS objective under the same weights used to select it.
+# Unlike scoring S*(λ) with the same training objective used to select it, this
+# does not reward λ purely for pushing every weight toward its search-space
+# maximum -- see point_subset()/_held_out_auc() in ids.py.
 
-D = len(ids_cache.decisions)
-N = ids_cache.N
-
-# A single shared Generator (rather than re-seeding with the raw `seed` int on
-# every call) so successive fmax() calls during the search draw from a
-# continuing, still fully reproducible, random stream instead of repeating the
-# exact same draws each time.
-_rng = np.random.default_rng(seed)
-
-
-def fmax(lambdas):
-    obj = IDSObjective(lambdas, ids_cache, N=N, M=D)
-    optimizer = RandomGreedyOptimizer(obj, list(range(D)), random_state=_rng)
-    selected = optimizer.optimize(n_select=n_select)
-    return obj.evaluate(set(selected))
-
-
-search_space = [(0.01, 1.0)] * 7
-
-print("Starting coordinate ascent...")
+print("Starting coordinate ascent (held-out AUC)...")
 print(f"  7 lambdas × up to 5 iterations, precision=0.01, tol=1e-3")
 t1 = time.time()
 
-coord_asc = IDSCoordinateAscent(
-    func=fmax,
-    ranges=search_space,
-    precision=0.01,
+ids_model = IDS(
+    rules=ids_rules,
+    rule_labels=ids_labels,
+    n_select=n_select,
+    lambdas=None,
+    lambda_search_dict=[(0.01, 1.0)] * 7,
+    ternary_search_precision=0.01,
     max_iterations=5,
     tol=1e-3,
-    random_state=_rng,
+    cache=ids_cache,
+    optimizer='random_greedy',
+    random_state=seed,
 )
-best_lambdas = coord_asc.fit()
+ids_model.fit(data, kmeans_labels)
+best_lambdas = ids_model.lambdas
 
 print(f"Coordinate ascent finished in {time.time() - t1:.1f}s")
 print(f"Best lambdas: {best_lambdas}")

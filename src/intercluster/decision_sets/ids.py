@@ -1,12 +1,19 @@
 import numpy as np
 from typing import List, Set
 from numpy.typing import NDArray
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
 from intercluster import (
     Rule,
     Decision,
     flatten_labels,
 )
 from .decision_set import DecisionSet
+
+# Fraction of points held out (stratified by cluster label) to score AUC during
+# lambda coordinate ascent -- see IDSCoverageCache.point_subset() and
+# _held_out_auc() below.
+_AUC_VAL_SIZE = 0.2
 
 
 ####################################################################################################
@@ -110,6 +117,26 @@ class IDSCoverageCache:
         cache.labels = self.labels[idx]
         return cache
 
+    def point_subset(self, indices) -> 'IDSCoverageCache':
+        """
+        Return a cache restricted to the given data point indices (columns).
+
+        Unlike subset(), which restricts along decisions, this restricts along N.
+        antecedent_masks/correct_masks are already computed for every point, so this
+        is a cheap column slice of the existing arrays -- no rule is re-evaluated
+        against X. Decision-level fields (decisions, labels, L_max) don't depend on
+        which points are included and carry over unchanged.
+        """
+        idx = np.asarray(indices)
+        cache = IDSCoverageCache()
+        cache.decisions = self.decisions
+        cache.labels = self.labels
+        cache.L_max = self.L_max
+        cache.N = len(idx)
+        cache.antecedent_masks = self.antecedent_masks[:, idx]
+        cache.correct_masks = self.correct_masks[:, idx]
+        return cache
+
 
 ####################################################################################################
 
@@ -181,6 +208,68 @@ class IDSObjective:
                 int(correct_union.sum()),
             ]
         return float(np.dot(self.lambdas, terms))
+
+
+####################################################################################################
+
+
+def _decision_confidences(cache: IDSCoverageCache, indices: List[int]) -> NDArray:
+    """
+    Per-decision confidence (precision), computed only from the given cache's own
+    points -- e.g. a train-only point_subset(), so confidence never sees the points
+    it will later be scored against. Matches CBA's confidence = n_correct / n_covered
+    (cba.py).
+    """
+    covered = cache.antecedent_masks[indices].sum(axis=1).astype(np.float64)
+    correct = cache.correct_masks[indices].sum(axis=1).astype(np.float64)
+    return np.divide(correct, covered, out=np.zeros_like(correct), where=covered > 0)
+
+
+def _held_out_auc(
+    selected_indices: List[int],
+    cache_train: IDSCoverageCache,
+    cache_val: IDSCoverageCache,
+) -> float:
+    """
+    ROC-AUC of "was the top-confidence firing rule's prediction correct" over
+    held-out points, ranked by that rule's train-only confidence.
+
+    For each val point, the highest-confidence decision (among selected decisions
+    whose rule fires on it) determines the prediction; ties are broken by support
+    desc, then rule length asc, matching CBA's precedence (cba.py). correct_masks on
+    the val cache already encodes whether that decision's label matches the point's
+    true cluster, so no separate label-comparison step is needed. Points no selected
+    rule fires on score 0.0 / incorrect.
+    """
+    if not selected_indices:
+        return 0.5
+
+    selected = list(selected_indices)
+    confidence = _decision_confidences(cache_train, selected)
+    support = cache_train.antecedent_masks[selected].sum(axis=1)
+    length = np.array([len(cache_train.decisions[i].rule) for i in selected])
+
+    # Precedence: confidence desc, support desc, length asc (lexsort key = last is primary).
+    order = np.lexsort((length, -support, -confidence))
+    ordered = [selected[k] for k in order]
+    ordered_confidence = confidence[order]
+
+    ant_val = cache_val.antecedent_masks[ordered]      # (|S|, N_val), precedence-ordered
+    correct_val = cache_val.correct_masks[ordered]
+
+    scores = np.zeros(cache_val.N, dtype=np.float64)
+    outcomes = np.zeros(cache_val.N, dtype=np.int32)
+    claimed = np.zeros(cache_val.N, dtype=bool)
+
+    for rank in range(len(ordered)):
+        newly_fired = ant_val[rank] & ~claimed
+        scores[newly_fired] = ordered_confidence[rank]
+        outcomes[newly_fired] = correct_val[rank][newly_fired]
+        claimed |= newly_fired
+
+    if outcomes.max() == outcomes.min():
+        return 0.5
+    return float(roc_auc_score(outcomes, scores))
 
 
 ####################################################################################################
@@ -450,12 +539,18 @@ class IDS(DecisionSet):
         n_select:                  Maximum number of rules to select. If None,
                                    SLS determines the set size automatically.
         lambdas:                   List of 7 lambda weights. If None, coordinate
-                                   ascent is run to find good lambdas.
+                                   ascent is run to find good lambdas, scored by
+                                   held-out AUC on a stratified train/val split of
+                                   the fit data (see point_subset()/_held_out_auc()
+                                   above) rather than the training objective value.
         lambda_search_dict:        Search space for coordinate ascent. Either a
                                    dict (values are (lo, hi) tuples) or a list
                                    of 7 (lo, hi) tuples. Default: [(0,1)] * 7.
         ternary_search_precision:  Stopping precision for ternary search.
         max_iterations:            Max coordinate-ascent rounds.
+        tol:                       Coordinate ascent stops early if a round's
+                                   improvement falls below this value. Defaults to
+                                   0.0 (always runs max_iterations rounds).
         cache:                     Pre-built IDSCoverageCache. Pass this to skip
                                    recomputation when reusing across experiments.
                                    Build one with IDSCoverageCache.from_rules(), which
@@ -484,6 +579,7 @@ class IDS(DecisionSet):
         lambda_search_dict=None,
         ternary_search_precision: float = 0.001,
         max_iterations: int = 10,
+        tol: float = 0.0,
         cache: IDSCoverageCache = None,
         optimizer: str = 'random_greedy',
         random_state=None,
@@ -511,6 +607,7 @@ class IDS(DecisionSet):
 
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
+        self.tol = tol
         self.cache = cache
 
         if optimizer not in ('sls', 'random_greedy'):
@@ -553,17 +650,38 @@ class IDS(DecisionSet):
 
         lambdas = self.lambdas
         if lambdas is None:
+            # Stratified train/val split (by cluster label) so lambda search is scored
+            # by held-out AUC rather than the training-set objective value it was
+            # selected to maximize -- see point_subset()/_held_out_auc() above.
+            split_seed = int(self._rng.integers(0, 2 ** 31 - 1))
+            all_point_idx = np.arange(N)
+            try:
+                train_idx, val_idx = train_test_split(
+                    all_point_idx,
+                    test_size=_AUC_VAL_SIZE,
+                    stratify=y_flat,
+                    random_state=split_seed,
+                )
+            except ValueError:
+                # A cluster has too few points to stratify a held-out split.
+                train_idx, val_idx = train_test_split(
+                    all_point_idx, test_size=_AUC_VAL_SIZE, random_state=split_seed,
+                )
+            cache_train = sub_cache.point_subset(train_idx)
+            cache_val = sub_cache.point_subset(val_idx)
+
             def fmax(lam):
-                obj = IDSObjective(lam, sub_cache, N, M)
+                obj = IDSObjective(lam, cache_train, cache_train.N, M)
                 opt = self._make_optimizer(obj, list(range(D)))
                 selected = opt.optimize(n_select=self.n_select)
-                return obj.evaluate(set(selected))
+                return _held_out_auc(selected, cache_train, cache_val)
 
             coord_asc = IDSCoordinateAscent(
                 fmax,
                 self._lambda_ranges,
                 precision=self.ternary_search_precision,
                 max_iterations=self.max_iterations,
+                tol=self.tol,
                 random_state=self._rng,
             )
             lambdas = coord_asc.fit()
