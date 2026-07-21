@@ -300,12 +300,12 @@ _exkmc = ExkmcTree(k=n_labels, kmeans=kmeans_base.clustering, max_leaf_nodes=n_s
 _exkmc.fit(data, kmeans_labels)
 exkmc_decisions = tree_to_decisions(_exkmc)
 
-_cn2 = CN2(n_select=n_select)
-_cn2.fit(data, kmeans_labels)
+#_cn2 = CN2(n_select=n_select)
+#_cn2.fit(data, kmeans_labels)
 
 pool_indep = {
     'ExKMC': _tree_info(_exkmc, exkmc_decisions, data, n_labels),
-    'CN2': _dset_info(_cn2, data, n_labels),
+    #'CN2': _dset_info(_cn2, data, n_labels),
 }
 
 # Precompute standard measurements (these do not change across confidence levels)
