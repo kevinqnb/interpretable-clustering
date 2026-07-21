@@ -466,19 +466,27 @@ def fit_stochastic_varying(mod, params_by_r, trial_seeds, measurement_fns, seed_
     Refits `mod` once per (rule-count r, trial seed) pair -- for modules whose
     output genuinely varies with the rule-count budget r -- and aggregates
     results across trials for each r.
+
+    `rule-source-counts` (a {source: count} dict, from `DecisionSetMod`) is collected separately
+    from the rest of the per-trial fields rather than run through `aggregate_trials`: that helper
+    computes np.mean/np.std over trial values, which isn't meaningful for a dict-valued metric.
+    It's instead stored per-r as the raw list of per-trial breakdowns.
     """
     result = (
         {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
-         'sum-rule-length': {}, 'weighted-avg-length': {}} |
+         'sum-rule-length': {}, 'weighted-avg-length': {}, 'rule-source-counts': {}} |
         {fn.name: {} for fn in measurement_fns}
     )
     for r, base_params in params_by_r.items():
         trial_dicts = []
+        rule_source_counts_by_trial = []
         for trial_seed in trial_seeds:
             assignments = _seed_and_fit(mod, dict(base_params) | {seed_key: trial_seed}, trial_seed)
             trial_dicts.append(_module_trial_result(mod, assignments, measurement_fns))
+            rule_source_counts_by_trial.append(getattr(mod, 'rule_source_counts', None))
         for key, agg_val in aggregate_trials(trial_dicts).items():
             result[key][r] = agg_val
+        result['rule-source-counts'][r] = {'values': rule_source_counts_by_trial}
     return result
 
 

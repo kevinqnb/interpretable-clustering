@@ -339,6 +339,24 @@ class DecisionTreeMod(Module):
 ####################################################################################################
 
 
+def _rule_source_counts(decision_set) -> Dict[str, int]:
+    """
+    Tallies the selected decisions in `decision_set` by their rule's mining provenance
+    (`Rule.source`, e.g. 'decision_tree' / 'random_forest' / 'car' -- see rules.py). Decisions
+    whose rule has no source tag (e.g. rules mined before provenance tracking was added) are
+    counted under 'unknown'.
+
+    For PEC, `decision_set` may contain multiple decisions per physical rule (one per cluster
+    label it was selected under -- see PEC's `rule_labels=None` handling in decision_set.py), so
+    counts here match `n_rules`/`sum_rule_length`, not necessarily the number of distinct rules.
+    """
+    counts: Dict[str, int] = {}
+    for decision in decision_set:
+        source = getattr(decision.rule, 'source', None) or 'unknown'
+        counts[source] = counts.get(source, 0) + 1
+    return counts
+
+
 class DecisionSetMod(Module):
     """
     Experiment module for a decision tree clustering method.
@@ -385,6 +403,7 @@ class DecisionSetMod(Module):
         self.weighted_average_rule_length = np.nan
         self.lambda_val = np.nan
         self.n_available_decisions = np.nan
+        self.rule_source_counts = {}
         self.dset = None
 
 
@@ -440,6 +459,7 @@ class DecisionSetMod(Module):
         self.max_rule_length = self.dset.max_rule_length
         self.sum_rule_length = self.dset.get_sum_of_rule_lengths()
         self.weighted_average_rule_length = self.dset.get_weighted_average_rule_length(X)
+        self.rule_source_counts = _rule_source_counts(self.dset.decision_set)
 
         return (
             dset_data_to_rule_assignment,

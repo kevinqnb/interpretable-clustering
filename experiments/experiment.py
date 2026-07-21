@@ -84,6 +84,7 @@ def _run_fit(
         'max-rule-length': module.max_rule_length,
         'sum-rule-length': module.sum_rule_length,
         'weighted-avg-length': module.weighted_average_rule_length,
+        'rule-source-counts': getattr(module, 'rule_source_counts', None),
         'measurements': measurements,
         '_profile': prof if profile else None,
     }
@@ -255,7 +256,8 @@ class Experiment:
                 'lambda_n_rules' : {},
                 'max-rule-length' : {},
                 'sum-rule-length' : {},
-                'weighted-avg-length' : {}
+                'weighted-avg-length' : {},
+                'rule-source-counts' : {}
             } |
             {
                 fn.name : {}
@@ -277,6 +279,7 @@ class Experiment:
                 result['max-rule-length'][p] = record['max-rule-length']
                 result['sum-rule-length'][p] = record['sum-rule-length']
                 result['weighted-avg-length'][p] = record['weighted-avg-length']
+                result['rule-source-counts'][p] = record['rule-source-counts']
                 for fn_name, value in record['measurements'].items():
                     result[fn_name][p] = value
 

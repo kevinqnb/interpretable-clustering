@@ -40,12 +40,17 @@ class Condition():
 class Rule():
     """
     Object for a rule, which is a conjunction of conditions.
-    
+
     Args:
         conditions (List[Condition]): List of conditions that make up the rule.
+
+        source (str, optional): Optional provenance tag (e.g. which rule miner produced this
+            rule). Not part of the rule's identity -- excluded from `__hash__`/`__eq__`, which
+            compare on `conditions` only -- so it never affects set/dict membership.
     """
     conditions: List[Condition]
-    
+    source: Optional[str] = None
+
     def __post_init__(self):
         """
         Converts conditions to tuple and caches hash for efficient operations.
@@ -530,7 +535,7 @@ def simplify_rule(
                     seen.add(c)
             conditions = uniq
 
-    return Rule(list(conditions))
+    return Rule(list(conditions), source=rule.source)
 
 
 def simplify_decision(decision: Decision, **kwargs) -> Decision:

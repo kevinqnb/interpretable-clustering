@@ -263,6 +263,20 @@ else:
     save_rules(class_association_rules, class_association_rules_path)
     _save_cache_params(class_association_params_path, class_association_cache_params)
 
+####################################################################################################
+# Tag each rule with the miner that produced it (decision tree / random forest / CAR), so that
+# selection results downstream (PEC/CBA/IDS) can report a provenance breakdown of the rules they
+# selected. `source` is not part of `Rule`'s identity (see `Rule.__hash__`/`__eq__` in rules.py),
+# so this is purely additive metadata -- it does not change rule content, order, or any
+# content-keyed dict/set behavior downstream.
+
+def _tag_source(rules, source):
+    return [Rule(list(r.conditions), source=source) for r in rules]
+
+decision_tree_rules = _tag_source(decision_tree_rules, 'decision_tree')
+forest_rules = _tag_source(forest_rules, 'random_forest')
+class_association_rules = _tag_source(class_association_rules, 'car')
+
 pre_filter_ensemble = decision_tree_rules + forest_rules + class_association_rules
 print("Total pre-filter ensemble rules:", len(pre_filter_ensemble))
 save_rules(pre_filter_ensemble, rules_directory + 'pre_filter_ensemble_rules.pkl')
