@@ -39,8 +39,9 @@ class CN2(DecisionSet):
     (fit against near-full class counts), which is the regime a small
     n_select actually keeps. This is an accepted tradeoff, not a bug.
 
-    Orange's ``>=`` operator is mapped to intercluster's strict ``>`` (direction=1).
-    For continuous data this distinction is negligible.
+    Orange's ``>=`` operator is represented exactly (inclusively) as a negated
+    ``<=`` condition, since LinearCondition has no native inclusive ``>=``
+    direction -- see ``_selector_to_condition``.
 
     Args:
         n_select (int, optional): Maximum number of rules to retain. Takes the
@@ -114,13 +115,24 @@ class CN2(DecisionSet):
 
     @staticmethod
     def _selector_to_condition(selector) -> LinearCondition:
-        """Convert an Orange Selector to a LinearCondition."""
-        direction = -1 if selector.op == '<=' else 1
+        """
+        Convert an Orange Selector to a LinearCondition.
+
+        LinearCondition only has an inclusive `<=` direction (direction=-1);
+        its `direction=1` is strict `>`. Orange's `>=` is inclusive, so
+        rather than approximating it with strict `>`, it's represented as
+        the negated inclusive condition `-x <= -value` (still direction=-1),
+        which is exactly equivalent to `x >= value`.
+        """
+        if selector.op == '<=':
+            weight, threshold = 1.0, float(selector.value)
+        else:
+            weight, threshold = -1.0, -float(selector.value)
         return LinearCondition(
             features=np.array([selector.column]),
-            weights=np.array([1.0]),
-            threshold=float(selector.value),
-            direction=direction,
+            weights=np.array([weight]),
+            threshold=threshold,
+            direction=-1,
         )
 
 
