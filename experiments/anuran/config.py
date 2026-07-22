@@ -30,7 +30,7 @@ CAR_MAX_RULE_LENGTH = 3  # really means 6 by pyfim convention
 # independent range (0.0-0.95) over the pre-filter ensemble and is unaffected by
 # this constant. Changing CONFIDENCE_DEFAULT only takes effect by re-running
 # mine_rules.py (and everything downstream that reads its output).
-CONFIDENCE_DEFAULT = 0.5
+CONFIDENCE_DEFAULT = 0.0
 
 # Stochastic-model trial reproducibility (max_rules.py, lambda.py, confidence.py)
 N_TRIALS = 10
@@ -64,7 +64,7 @@ CPU_COUNT = int(os.environ.get('ANURAN_CPU_COUNT', TOTAL_CPU_COUNT))
 # vary with OUTFILE_REF and stay unsuffixed; retagging them would force an
 # expensive recompute (see mine_rules.py's ~24h bin_df note in
 # experiments/README.md) for no benefit.
-OUTFILE_REF = '_conf_50'
+OUTFILE_REF = '_conf_00'
 
 # Directories (relative to repo root; every script inserts repo root onto
 # sys.path and is expected to run with repo root as cwd).
