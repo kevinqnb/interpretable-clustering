@@ -51,6 +51,16 @@ We evaluate our algorithms across settings where the maximum number of allowed r
 
 NOTE: That for the `mnist` and `fashion` datasets we split computation across different files, since some algorithms took much longer to run. In these cases, one would run `max_rules.py` and `max_rules_exkmc.py` in any order, and then combine with `max_rules_combine.py`.
 
+#### 2b. Alternate IDS lambdas: maximizing the PEC objective instead of held-out AUC
+
+`ids_lambda_search.py`'s coordinate ascent picks IDS's 7 lambda weights by held-out AUC (see "Reproducibility" below). Every dataset also has an `ids_lambda_search_alt.py`, which instead scores each candidate lambda by the value it achieves under `PEC`'s own objective (`IDS_ALT_OBJECTIVE_TYPE` in that dataset's `config.py`, `'coverage-cost'` by default) for that objective's alpha (from `select_alphas.py`'s output) and lambda* (probed the same way `max_rules.py` probes it -- `select_alphas.py` never persists lambda* to disk). This tunes IDS to directly optimize the same objective PEC does, rather than to generalize to held-out points, enabling an apples-to-apples IDS-vs-PEC comparison under one shared objective. It reuses the same `IDSCoverageCache` `ids_lambda_search.py` builds/caches and writes its own lambdas to `ids_lambdas{OUTFILE_REF}_ids_alt.json`, never touching the AUC-based file.
+
+Each dataset also has a `max_rules_ids_alt.py` that consumes those alternate lambdas instead of `ids_lambda_search.py`'s:
+- `aniso`/`anuran`/`climate`/`protein`/`yeast`: a full copy of `max_rules.py`, differing only in which `ids_lambdas*.json` it loads and in its output ref (`OUTFILE_REF + '_ids_alt'`, so it never overwrites `max_rules.py`'s own `exp{OUTFILE_REF}.json`).
+- `mnist`/`fashion`: a copy of the IDS-only `max_rules_ids.py` (same per-model-split rationale as the rest of that pipeline), writing its own part (`'_ids_alt' + OUTFILE_REF`). A companion `max_rules_combine_ids_alt.py` merges that alt-IDS part with the *existing* `cba`/`cn2`/`dtree`/`pec`/`pec_lazy`/`exkmc` parts (unchanged, not refit) into `exp{OUTFILE_REF}_ids_alt.json`.
+
+These alt scripts are not wired into `experiment_runner.py` -- run them by hand after the base pipeline (through `select_alphas.py`) has produced `ensemble_rules{OUTFILE_REF}.pkl`/`selected_alphas{OUTFILE_REF}.json`.
+
 #### 4. Varying the minimum confidence threshold
 `confidence.py` sweeps the minimum-confidence threshold used to filter mined tree rules (0.0 to 1.0 in steps of 0.05), refitting all algorithms at each threshold to see how rule quality/filtering affects results. It takes as input the mined rules from step 1 and the alpha values selected in step 2, and saves results to `data/experiments/{dataset}/confidence/exp_confidence{OUTFILE_REF}.json`. Unlike `max_rules.py`, the rule pool changes at every threshold, so pool-dependent algorithms (PEC, CBA, IDS) are refit from scratch each iteration rather than relying on precomputed coverage/cost caches.
 

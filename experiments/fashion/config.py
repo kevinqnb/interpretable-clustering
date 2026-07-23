@@ -65,6 +65,11 @@ CPU_COUNT = int(os.environ.get('FASHION_CPU_COUNT', TOTAL_CPU_COUNT))
 # experiments/README.md) for no benefit.
 OUTFILE_REF = '_conf_00'
 
+# Objective type that ids_lambda_search_alt.py's coordinate ascent targets when
+# maximizing the PEC objective (rather than held-out AUC) -- see
+# experiments/README.md and ids_lambda_search_alt.py for the full rationale.
+IDS_ALT_OBJECTIVE_TYPE = 'coverage-cost'
+
 # Directories (relative to repo root; every script inserts repo root onto
 # sys.path and is expected to run with repo root as cwd).
 RULES_DIR = 'data/experiments/fashion/rules/'

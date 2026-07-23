@@ -9,6 +9,7 @@ from intercluster import (
     flatten_labels,
 )
 from .decision_set import DecisionSet
+from .objectives import score_decision_set
 
 # Fraction of points held out (stratified by cluster label) to score AUC during
 # lambda coordinate ascent -- see IDSCoverageCache.point_subset() and
@@ -542,10 +543,28 @@ class IDS(DecisionSet):
                                    ascent is run to find good lambdas, scored by
                                    held-out AUC on a stratified train/val split of
                                    the fit data (see point_subset()/_held_out_auc()
-                                   above) rather than the training objective value.
+                                   above) rather than the training objective value --
+                                   unless pec_scoring is given, in which case that
+                                   scoring mode is used instead (see below).
         lambda_search_dict:        Search space for coordinate ascent. Either a
                                    dict (values are (lo, hi) tuples) or a list
                                    of 7 (lo, hi) tuples. Default: [(0,1)] * 7.
+        pec_scoring:               If given (and lambdas is None), coordinate ascent
+                                   scores each candidate lambda by the PEC objective
+                                   value of the solution it selects, instead of
+                                   held-out AUC -- i.e. IDS's lambdas are tuned to
+                                   directly maximize the same objective PEC optimizes,
+                                   for a fixed alpha/lambda* pair, rather than to
+                                   generalize to held-out points. A dict of keyword
+                                   arguments forwarded to
+                                   intercluster.decision_sets.objectives.score_decision_set
+                                   (objective_type, alpha_val, lambda_val, and, for
+                                   cost-based objectives, cluster_centers/
+                                   cluster_cost_method/data_to_center_distances).
+                                   The full fit data is scored directly -- no
+                                   train/val split -- since the goal is to match
+                                   PEC's own (training-set) objective, not to
+                                   estimate generalization.
         ternary_search_precision:  Stopping precision for ternary search.
         max_iterations:            Max coordinate-ascent rounds.
         tol:                       Coordinate ascent stops early if a round's
@@ -577,6 +596,7 @@ class IDS(DecisionSet):
         n_select: int = None,
         lambdas: List[float] = None,
         lambda_search_dict=None,
+        pec_scoring: dict = None,
         ternary_search_precision: float = 0.001,
         max_iterations: int = 10,
         tol: float = 0.0,
@@ -604,6 +624,10 @@ class IDS(DecisionSet):
                 self._lambda_ranges = list(lambda_search_dict)
         else:
             self._lambda_ranges = [(0.0, 1.0)] * 7
+
+        if pec_scoring is not None and not isinstance(pec_scoring, dict):
+            raise ValueError("pec_scoring must be a dict of score_decision_set kwargs.")
+        self.pec_scoring = pec_scoring
 
         self.ternary_search_precision = ternary_search_precision
         self.max_iterations = max_iterations
@@ -650,31 +674,46 @@ class IDS(DecisionSet):
 
         lambdas = self.lambdas
         if lambdas is None:
-            # Stratified train/val split (by cluster label) so lambda search is scored
-            # by held-out AUC rather than the training-set objective value it was
-            # selected to maximize -- see point_subset()/_held_out_auc() above.
-            split_seed = int(self._rng.integers(0, 2 ** 31 - 1))
-            all_point_idx = np.arange(N)
-            try:
-                train_idx, val_idx = train_test_split(
-                    all_point_idx,
-                    test_size=_AUC_VAL_SIZE,
-                    stratify=y_flat,
-                    random_state=split_seed,
-                )
-            except ValueError:
-                # A cluster has too few points to stratify a held-out split.
-                train_idx, val_idx = train_test_split(
-                    all_point_idx, test_size=_AUC_VAL_SIZE, random_state=split_seed,
-                )
-            cache_train = sub_cache.point_subset(train_idx)
-            cache_val = sub_cache.point_subset(val_idx)
+            if self.pec_scoring is not None:
+                # Score each candidate lambda by the PEC objective value of the solution it
+                # selects, on the full fit data -- no train/val split, since the goal is to
+                # match PEC's own (training-set) objective rather than estimate
+                # generalization to held-out points (contrast with the held-out-AUC path
+                # below).
+                def fmax(lam):
+                    obj = IDSObjective(lam, sub_cache, N, M)
+                    opt = self._make_optimizer(obj, list(range(D)))
+                    selected = opt.optimize(n_select=self.n_select)
+                    decisions = {sub_cache.decisions[i] for i in selected}
+                    return score_decision_set(
+                        decisions, X, y, n_select=self.n_select, **self.pec_scoring
+                    )
+            else:
+                # Stratified train/val split (by cluster label) so lambda search is scored
+                # by held-out AUC rather than the training-set objective value it was
+                # selected to maximize -- see point_subset()/_held_out_auc() above.
+                split_seed = int(self._rng.integers(0, 2 ** 31 - 1))
+                all_point_idx = np.arange(N)
+                try:
+                    train_idx, val_idx = train_test_split(
+                        all_point_idx,
+                        test_size=_AUC_VAL_SIZE,
+                        stratify=y_flat,
+                        random_state=split_seed,
+                    )
+                except ValueError:
+                    # A cluster has too few points to stratify a held-out split.
+                    train_idx, val_idx = train_test_split(
+                        all_point_idx, test_size=_AUC_VAL_SIZE, random_state=split_seed,
+                    )
+                cache_train = sub_cache.point_subset(train_idx)
+                cache_val = sub_cache.point_subset(val_idx)
 
-            def fmax(lam):
-                obj = IDSObjective(lam, cache_train, cache_train.N, M)
-                opt = self._make_optimizer(obj, list(range(D)))
-                selected = opt.optimize(n_select=self.n_select)
-                return _held_out_auc(selected, cache_train, cache_val)
+                def fmax(lam):
+                    obj = IDSObjective(lam, cache_train, cache_train.N, M)
+                    opt = self._make_optimizer(obj, list(range(D)))
+                    selected = opt.optimize(n_select=self.n_select)
+                    return _held_out_auc(selected, cache_train, cache_val)
 
             coord_asc = IDSCoordinateAscent(
                 fmax,
