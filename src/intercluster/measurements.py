@@ -365,8 +365,12 @@ class ClusteringCost(MeasurementFunction):
     Measures the cost of the clustering as the sum of distances between
     each point in a cluster, and its assigned center.
 
-    NOTE: The cluster centers are computed as the mean or median 
+    NOTE: The cluster centers are computed as the mean or median
     of all points assigned to the cluster.
+
+    NOTE: 'kmeans' uses squared Euclidean distance (the standard k-means SSE cost, matching
+    CoverageCostObjective's internal cost computation and measurement_utils.kmeans_cost), not
+    plain Euclidean distance. 'kmedians' uses (unsquared) L1 distance.
 
     Args:
         data (np.ndarray): (n x d) Dataset.
@@ -433,7 +437,7 @@ class ClusteringCost(MeasurementFunction):
             cluster_points = self.data[cluster_points_idx, :]
             if self.method == 'kmeans':
                 center = np.mean(cluster_points, axis = 0)
-                dists = np.linalg.norm(cluster_points - center, ord = 2, axis = 1)
+                dists = np.sum((cluster_points - center)**2, axis = 1)
             else:  # kmedians
                 center = np.median(cluster_points, axis = 0)
                 dists = np.linalg.norm(cluster_points - center, ord = 1, axis = 1)
@@ -460,7 +464,11 @@ class RuleClusteringCost(MeasurementFunction):
     Returns the sum over all rules.
 
     NOTE: The cluster centers are fixed and should be provided at initialization.
-    
+
+    NOTE: 'kmeans' uses squared Euclidean distance (the standard k-means SSE cost, matching
+    CoverageCostObjective's internal cost computation and measurement_utils.kmeans_cost), not
+    plain Euclidean distance. 'kmedians' uses (unsquared) L1 distance.
+
     Args:
         data (np.ndarray): (n x d) Dataset.
         cluster_centers (np.ndarray): (k x d) Array of cluster centers.
@@ -535,7 +543,7 @@ class RuleClusteringCost(MeasurementFunction):
             center = cluster_centers[assigned_cluster, :]
 
             if self.method == 'kmeans':
-                dists = np.linalg.norm(rule_points - center, ord = 2, axis = 1)
+                dists = np.sum((rule_points - center)**2, axis = 1)
             else:  # kmedians
                 dists = np.linalg.norm(rule_points - center, ord = 1, axis = 1)
 

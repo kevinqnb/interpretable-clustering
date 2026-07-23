@@ -134,8 +134,6 @@ def main():
     _run_stage(["mine_rules.py"], total_cpu_count)
     _run_stage(["alphas.py", "ids_lambda_search.py"], total_cpu_count)
     _run_stage(["select_alphas.py"], total_cpu_count)
-    #_run_stage(["ids_lambda_search.py"], total_cpu_count)
-    #_run_stage(["max_rules.py", "max_rules_exkmc.py", "max_rules_combine.py"], total_cpu_count)
     _run_concurrent_families(
         [
             ["max_rules.py", "max_rules_exkmc.py", "max_rules_combine.py"],
@@ -144,7 +142,6 @@ def main():
         total_cpu_count,
     )
     _run_stage(["confidence.py"], total_cpu_count)
-    #_run_stage(["input_sensitivity.py"], total_cpu_count)
 
     print("=== mnist pipeline complete ===")
 

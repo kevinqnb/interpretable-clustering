@@ -169,60 +169,10 @@ objective_config = {
 
 ####################################################################################################
 # Helpers
-
-def _make_objective(objective_type, n_select, alpha_val, lambda_val=None,
-                    cluster_centers=None, cluster_cost_method='kmeans', weights=None,
-                    data_to_center_distances=None):
-    """Instantiate the right Objective subclass without precomputed data."""
-    common = dict(n_select=n_select, alpha_val=alpha_val, lambda_val=lambda_val, weights=weights)
-    if objective_type == 'coverage-mistake':
-        return CoverageMistakeObjective(**common)
-    elif objective_type == 'coverage-cost':
-        return CoverageCostObjective(
-            cluster_centers=cluster_centers,
-            cluster_cost_method=cluster_cost_method,
-            data_to_center_distances=data_to_center_distances,
-            **common,
-        )
-    elif objective_type == 'coverage-pairwise-distance':
-        return CoveragePairwiseDistanceObjective(**common)
-    else:
-        raise ValueError(f'Unknown objective type: {objective_type}')
-
-
-def score_decision_set(decisions, X, y, n_select, objective_type, alpha_val, lambda_val,
-                       cluster_centers=None, cluster_cost_method='kmeans', weights=None,
-                       data_to_center_distances=None):
-    """
-    Evaluate the PEC objective on a fixed decision set using a forced lambda.
-    n_select must match the budget used when lambda was computed (for cost normalization).
-    The full decision set is scored as-is (no greedy selection step).
-    """
-    if not decisions:
-        return 0.0
-    dset = set(decisions)
-    obj = _make_objective(
-        objective_type,
-        n_select=n_select,
-        alpha_val=alpha_val,
-        lambda_val=None,  # set explicitly below after initialization
-        cluster_centers=cluster_centers,
-        cluster_cost_method=cluster_cost_method,
-        weights=weights,
-        data_to_center_distances=data_to_center_distances,
-    )
-    obj.initialize_data(X, y)
-    obj.initialize_decision_set(dset)
-    obj.set_lambda(lambda_val)
-    return float(obj.compute_objective(obj.decision_info_dict))
-
-
-def tree_to_decisions(tree):
-    """Extract Decision objects from a fitted tree (one per leaf, in traversal order)."""
-    leaf_rules = collect_leaf_rules(tree.root)
-    leaf_labels = tree.get_leaf_labels()
-    return [Decision(r, next(iter(lbl))) for r, lbl in zip(leaf_rules, leaf_labels)]
-
+#
+# _make_objective, score_decision_set, and tree_to_decisions now live in experiments/modules.py
+# (imported above via `from experiments.modules import *`) -- factored out so max_rules.py's
+# per-rule-budget objective re-scoring can share the identical logic instead of duplicating it.
 
 def _tree_info(tree, decisions, data, n_labels):
     return {

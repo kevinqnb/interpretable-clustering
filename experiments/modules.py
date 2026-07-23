@@ -10,8 +10,9 @@ from intercluster.utils import (
     labels_format,
     labels_to_assignment,
     unique_labels,
+    collect_leaf_rules,
 )
-from intercluster import Rule
+from intercluster import Rule, Decision
 
 
 ####################################################################################################
@@ -336,6 +337,26 @@ class DecisionTreeMod(Module):
         return self.tree.predict(X)
 
 
+    def get_decisions(self) -> List[Decision]:
+        """
+        Returns one Decision per leaf of the fitted tree, for objective-rescoring against a
+        fixed lambda (see `score_decision_set`). None if the tree has not been fit yet.
+        """
+        if self.tree is None:
+            return None
+        return tree_to_decisions(self.tree)
+
+
+####################################################################################################
+
+
+def tree_to_decisions(tree) -> List[Decision]:
+    """Extract one Decision per leaf from a fitted tree (in traversal order)."""
+    leaf_rules = collect_leaf_rules(tree.root)
+    leaf_labels = tree.get_leaf_labels()
+    return [Decision(r, next(iter(lbl))) for r, lbl in zip(leaf_rules, leaf_labels)]
+
+
 ####################################################################################################
 
 
@@ -482,6 +503,16 @@ class DecisionSetMod(Module):
         return self.dset.predict(X)
 
 
+    def get_decisions(self) -> List[Decision]:
+        """
+        Returns the fitted decision set, for objective-rescoring against a fixed lambda
+        (see `score_decision_set`). None if the model has not been fit yet.
+        """
+        if self.dset is None:
+            return None
+        return list(self.dset.decision_set)
+
+
 ####################################################################################################
 
 
@@ -519,6 +550,93 @@ def aggregate_trials(trial_results: List[Dict[str, Any]]) -> Dict[str, Dict[str,
             'values': values,
         }
     return aggregated
+
+
+####################################################################################################
+#
+# Objective re-scoring utilities.
+#
+# `score_decision_set` (scores an arbitrary, already-fitted decision set against a FIXED lambda,
+# as opposed to fitting a PEC objective which searches for its own decisions and lambda*) already
+# lives in intercluster.decision_sets.objectives.scoring and is imported into this module's
+# namespace via the `from intercluster.decision_sets.objectives import *` above -- confidence.py
+# used to shadow it with an identical local redefinition, which has been removed there too.
+# `score_objectives_by_r` below is the new part: it batches `score_decision_set` calls across
+# every (module, r) pair so max_rules.py's per-rule-budget sweep can get a TRUE 'objective' value
+# per module, matching confidence.py's per-confidence-level PEC-objective scoring, instead of
+# reconstructing one downstream from separately-reported reward/cost measurements (which silently
+# drifts if a measurement's units don't match the objective's internal cost -- see e.g.
+# RuleClusteringCost's squared- vs plain-Euclidean-distance history for CoverageCostObjective).
+
+
+def score_objectives_by_r(
+    modules_decisions : Dict[str, Dict[Any, List[Decision]]],
+    objective_names : List[str],
+    objective_config : Dict[str, Dict[str, Any]],
+    selected_alpha_dict : Dict[str, float],
+    lambda_dict : Dict[str, float],
+    data : NDArray,
+    y : List[Set[int]],
+    n_select : int,
+) -> Dict[str, Dict[str, Dict[Any, float]]]:
+    """
+    Scores every module's per-r decision set against each objective in `objective_names`, using a
+    FIXED lambda per objective (`lambda_dict`, keyed by the base 'dscluster; <objective>; ensemble'
+    module name -- the same lambda* PEC itself was fit with) rather than re-searching for one. This
+    puts comparison models (Decision-Tree, ExKMC, CBA, IDS, CN2) and PEC on the same objective axis
+    PEC actually optimized, mirroring confidence.py's `run_confidence_level` PEC-objective scoring
+    but swept over rule budget `r` instead of confidence threshold.
+
+    Args:
+        modules_decisions: {module_name: {r: decisions}} -- per-module, per-r decision lists.
+            A module's decisions may be None for a given r (e.g. not yet fit / empty pool); that
+            r is scored as NaN.
+        objective_names: objectives to score (e.g. ['coverage-mistake', 'coverage-cost',
+            'coverage-pairwise-distance']).
+        objective_config: {objective_name: {..._make_objective kwargs, minus alpha_val/lambda_val
+            -- i.e. 'objective_type' and, for coverage-cost, 'cluster_centers'/
+            'cluster_cost_method'/'data_to_center_distances'}}.
+        selected_alpha_dict: {'dscluster; <objective>; ensemble': alpha_val}.
+        lambda_dict: {'dscluster; <objective>; ensemble': lambda_val}. A NaN/None lambda (the
+            degenerate no-valid-lambda* case) scores every module as NaN for that objective.
+        data, y, n_select: as in score_decision_set. n_select must match the budget the lambda in
+            `lambda_dict` was probed at.
+
+    Returns:
+        {module_name: {objective_name: {r: score}}}
+    """
+    result = {
+        name: {obj_name: {} for obj_name in objective_names}
+        for name in modules_decisions
+    }
+    for obj_name in objective_names:
+        base_name = f'dscluster; {obj_name}; ensemble'
+        alpha = selected_alpha_dict[base_name]
+        lambda_val = lambda_dict[base_name]
+        lambda_invalid = lambda_val is None or (
+            isinstance(lambda_val, float) and np.isnan(lambda_val)
+        )
+        cfg = objective_config[obj_name]
+
+        for module_name, decisions_by_r in modules_decisions.items():
+            for r, decisions in decisions_by_r.items():
+                if lambda_invalid or decisions is None:
+                    result[module_name][obj_name][r] = np.nan
+                    continue
+                result[module_name][obj_name][r] = score_decision_set(
+                    decisions,
+                    data,
+                    y,
+                    n_select=n_select,
+                    objective_type=cfg['objective_type'],
+                    alpha_val=alpha,
+                    lambda_val=lambda_val,
+                    cluster_centers=cfg.get('cluster_centers'),
+                    cluster_cost_method=cfg.get('cluster_cost_method', 'kmeans'),
+                    weights=cfg.get('weights'),
+                    data_to_center_distances=cfg.get('data_to_center_distances'),
+                )
+    return result
 
 
 ####################################################################################################

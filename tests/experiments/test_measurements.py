@@ -103,15 +103,17 @@ def test_mistakes():
 
 
 def test_clustering_cost():
+    # 'kmeans' uses squared Euclidean distance (SSE): cluster 0 = {0,0,10}, center = 10/3,
+    # squared dists = (10/3)^2 + (10/3)^2 + (20/3)^2 = 200/3; cluster 1 = {10}, dist 0.
     fn = ClusteringCost(data = X)
-    assert np.isclose(fn(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 40/3)
+    assert np.isclose(fn(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 200/3)
     assert np.isnan(fn(DATA_TO_RULE, RULE_TO_CLUSTER, None))
 
     fn_medians = ClusteringCost(data = X, method = 'kmedians')
     assert fn_medians(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER) == 10.0
 
     fn_normalized = ClusteringCost(data = X, normalize = True)
-    assert np.isclose(fn_normalized(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 40/3/4)
+    assert np.isclose(fn_normalized(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 200/3/4)
 
     with pytest.raises(ValueError):
         ClusteringCost(data = X, method = 'bad-method')
@@ -122,12 +124,14 @@ def test_rule_clustering_cost():
     # exactly with ClusteringCost on the same (rule-consistent) partition.
     fn_auto = RuleClusteringCost(data = X)
     assert np.isclose(
-        fn_auto(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 40/3
+        fn_auto(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER), 200/3
     )
 
+    # Fixed centers [0.], [10.]: rule 0 covers {0,0,10} vs center 0 -> squared dists 0+0+100=100;
+    # rule 1 covers {10} vs center 10 -> 0.
     fixed_centers = np.array([[0.], [10.]])
     fn_fixed = RuleClusteringCost(data = X, cluster_centers = fixed_centers)
-    assert fn_fixed(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER) == 10.0
+    assert fn_fixed(DATA_TO_RULE, RULE_TO_CLUSTER, DATA_TO_CLUSTER) == 100.0
     assert np.isnan(fn_fixed(None, RULE_TO_CLUSTER, DATA_TO_CLUSTER))
 
 

@@ -639,13 +639,31 @@ pd.DataFrame(alpha_val_dict)
 # docstring in the helpers cell above. Deterministic modules (PEC, ExKMC, CBA, CN2)
 # get 0 (no visible error bar).
 
-def _module_bar_series(module_dict, reward, cost, lambd, alpha):
-    """Returns (obj_values, obj_err) arrays over r (in dict-iteration order).
-    obj_err is the standard error of the combined objective across trials for
-    stochastic modules, else 0."""
-    reward_vals = list(module_dict[reward].values())
-    cost_vals = list(module_dict[cost].values())
-    length_vals = list(module_dict['sum-rule-length'].values())
+def _module_bar_series(module_dict, objective_name, x, reward, cost, lambd, alpha):
+    """Returns (obj_values, obj_err) arrays over r (in `x` order).
+
+    Prefers the module's stored TRUE objective score, `module_dict['objective'][objective_name]`
+    -- written directly by max_rules.py via `score_objectives_by_r`/`score_decision_set`, i.e.
+    the actual g - lambda*h the PEC objective optimizes for that module's fixed lambda*/alpha.
+    Falls back to reconstructing `reward - lambda*(cost + alpha*length)` from separately-reported
+    measurements only for cached exp*.json files predating that field (pre-fix, not yet re-run)
+    -- matching this notebook's existing defensive-loading convention (see the "Loading
+    experiment data" cell above) rather than assuming a reconstruction whose units can silently
+    drift from the objective's actual internal cost (see RuleClusteringCost's squared- vs
+    plain-Euclidean-distance history for CoverageCostObjective).
+
+    obj_err is the standard error of the combined objective across trials for stochastic
+    modules (Decision-Tree, IDS), else 0.
+    """
+    stored = module_dict.get('objective', {}).get(objective_name)
+    if stored is not None:
+        obj_values = np.array([_scalar(stored[r]) for r in x])
+        obj_err = np.nan_to_num(np.array([_se(stored[r]) for r in x]), nan=0.0)
+        return obj_values, obj_err
+
+    reward_vals = [module_dict[reward][r] for r in x]
+    cost_vals = [module_dict[cost][r] for r in x]
+    length_vals = [module_dict['sum-rule-length'][r] for r in x]
     obj_values = np.array([
         _scalar(rv) - lambd * (_scalar(cv) + alpha * _scalar(lv))
         for rv, cv, lv in zip(reward_vals, cost_vals, length_vals)
@@ -680,14 +698,16 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
         for cmod in comparison_modules:
             if cmod not in experiment_dict['modules']:
                 continue
-            obj_values, obj_err = _module_bar_series(experiment_dict['modules'][cmod], reward, cost, lambd, alpha)
+            obj_values, obj_err = _module_bar_series(
+                experiment_dict['modules'][cmod], objective, x, reward, cost, lambd, alpha
+            )
             bar_dict[dataset][objective][cmod] = (
                 x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
             )
 
         # DSCluster Module (distorted-greedy, the paper's main model):
         obj_values, obj_err = _module_bar_series(
-            experiment_dict['modules'][selected_dscluster_module], reward, cost, lambd, alpha
+            experiment_dict['modules'][selected_dscluster_module], objective, x, reward, cost, lambd, alpha
         )
         bar_dict[dataset][objective][selected_dscluster_module] = (
             x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
@@ -709,7 +729,7 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
         if scaled_matches:
             selected_scaled_module = scaled_matches[0] # there should only be one per objective!!
             obj_values, obj_err = _module_bar_series(
-                experiment_dict['modules'][selected_scaled_module], reward, cost, lambd, alpha
+                experiment_dict['modules'][selected_scaled_module], objective, x, reward, cost, lambd, alpha
             )
             bar_dict[dataset][objective][selected_scaled_module] = (
                 x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
@@ -945,13 +965,15 @@ for dataset, experiment_dict in dataset_experiment_dict_ids_alt.items():
         for cmod in comparison_modules:
             if cmod not in experiment_dict['modules']:
                 continue
-            obj_values, obj_err = _module_bar_series(experiment_dict['modules'][cmod], reward, cost, lambd, alpha)
+            obj_values, obj_err = _module_bar_series(
+                experiment_dict['modules'][cmod], objective, x, reward, cost, lambd, alpha
+            )
             bar_dict_ids_alt[dataset][objective][cmod] = (
                 x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
             )
 
         obj_values, obj_err = _module_bar_series(
-            experiment_dict['modules'][selected_dscluster_module], reward, cost, lambd, alpha
+            experiment_dict['modules'][selected_dscluster_module], objective, x, reward, cost, lambd, alpha
         )
         bar_dict_ids_alt[dataset][objective][selected_dscluster_module] = (
             x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
@@ -964,7 +986,7 @@ for dataset, experiment_dict in dataset_experiment_dict_ids_alt.items():
         if scaled_matches:
             selected_scaled_module = scaled_matches[0]  # there should only be one per objective!!
             obj_values, obj_err = _module_bar_series(
-                experiment_dict['modules'][selected_scaled_module], reward, cost, lambd, alpha
+                experiment_dict['modules'][selected_scaled_module], objective, x, reward, cost, lambd, alpha
             )
             bar_dict_ids_alt[dataset][objective][selected_scaled_module] = (
                 x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']

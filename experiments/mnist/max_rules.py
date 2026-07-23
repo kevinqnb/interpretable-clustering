@@ -278,6 +278,16 @@ objective_dict = {
     },
 }
 
+# The 3 unweighted objectives examples/experiments.ipynb's Bar Plots section actually reads an
+# 'objective' value for (weighted objectives are read directly off their own measurements
+# instead -- see the Uncertainty/Rule-Length-Distribution sections -- so scoring them here would
+# be wasted work). Every module below is rescored against each of these using its OWN fixed
+# lambda*/alpha (see `score_objectives_by_r`), the same way confidence.py scores its
+# per-confidence-level comparison models against PEC's lambda -- rather than leaving the notebook
+# to reconstruct an objective value from separately-reported reward/cost measurements, which
+# silently drifts if a measurement's units don't exactly match the objective's internal cost.
+SCORING_OBJECTIVE_NAMES = ['coverage-mistake', 'coverage-cost', 'coverage-pairwise-distance']
+
 ####################################################################################################
 # Decision Set Clustering Modules:
 #
@@ -416,6 +426,45 @@ start = time.time()
 exp_results = exp.run()
 
 ####################################################################################################
+# Objective re-scoring: ExKMC / CBA / PEC (distorted-greedy + lazy-greedy)
+#
+# `Experiment.run()` now retains each fit's raw decision set under
+# `exp_results['modules'][name]['decisions']` (see DecisionSetMod/DecisionTreeMod.get_decisions()
+# and Experiment._run_fit) -- rescore every one of them against each of SCORING_OBJECTIVE_NAMES's
+# fixed lambda*/alpha, exactly like confidence.py's per-confidence-level scoring. This gives
+# max_rules.py a TRUE 'objective' value per (module, r) instead of leaving the analysis notebook
+# to reconstruct one from separately-reported reward/cost measurements.
+#
+# `objective_dict` (built above for PEC's own precomputed-cache fits) doubles as the scoring
+# config here: score_objectives_by_r only reads 'objective_type'/'cluster_centers'/
+# 'cluster_cost_method'/'data_to_center_distances' off it, so the extra 'precomputed_path' key
+# is harmlessly ignored.
+_scoring_modules_decisions = {
+    name: exp_results['modules'][name]['decisions']
+    for name in (
+        ['ExKMC', 'CBA'] +
+        [
+            f'dscluster; {obj_name}; ensemble{suffix}'
+            for obj_name in SCORING_OBJECTIVE_NAMES
+            for suffix in ('', '; lazy-greedy')
+        ]
+    )
+    if name in exp_results['modules']
+}
+_objective_scores = score_objectives_by_r(
+    modules_decisions = _scoring_modules_decisions,
+    objective_names = SCORING_OBJECTIVE_NAMES,
+    objective_config = objective_dict,
+    selected_alpha_dict = fixed_parameters['alpha'],
+    lambda_dict = lambda_star_dict,
+    data = data,
+    y = kmeans_labels,
+    n_select = fixed_parameters['n_select'],
+)
+for _name, _obj_by_name in _objective_scores.items():
+    exp_results['modules'][_name]['objective'] = _obj_by_name
+
+####################################################################################################
 # Stochastic module trials
 #
 # Decision-Tree and IDS each have a fitted solution that depends on randomness.
@@ -459,6 +508,40 @@ def _module_trial_result(mod, assignments, measurement_fns):
     }
 
 
+def _score_decisions_all_objectives(decisions):
+    """
+    Scores one fitted module's decisions against each of SCORING_OBJECTIVE_NAMES's fixed
+    lambda*/alpha (see the ExKMC/CBA/PEC re-scoring pass above), for models fit outside
+    `Experiment.run()` (Decision-Tree/IDS per trial, CN2 per r) and so not covered by
+    `score_objectives_by_r` there. Returns {objective_name: score}, NaN wherever that
+    objective's lambda* is degenerate or `decisions` is empty/None.
+    """
+    scores = {}
+    for obj_name in SCORING_OBJECTIVE_NAMES:
+        base_name = f'dscluster; {obj_name}; ensemble'
+        lambda_val = lambda_star_dict.get(base_name)
+        if not decisions or lambda_val is None or (
+            isinstance(lambda_val, float) and np.isnan(lambda_val)
+        ):
+            scores[obj_name] = np.nan
+            continue
+        cfg = objective_dict[obj_name]
+        scores[obj_name] = score_decision_set(
+            decisions,
+            data,
+            kmeans_labels,
+            n_select = fixed_parameters['n_select'],
+            objective_type = cfg['objective_type'],
+            alpha_val = fixed_parameters['alpha'][base_name],
+            lambda_val = lambda_val,
+            cluster_centers = cfg.get('cluster_centers'),
+            cluster_cost_method = cfg.get('cluster_cost_method', 'kmeans'),
+            weights = cfg.get('weights'),
+            data_to_center_distances = cfg.get('data_to_center_distances'),
+        )
+    return scores
+
+
 def fit_stochastic_varying(mod, params_by_r, trial_seeds, measurement_fns, seed_key='random_state'):
     """
     Refits `mod` once per (rule-count r, trial seed) pair -- for modules whose
@@ -469,22 +552,38 @@ def fit_stochastic_varying(mod, params_by_r, trial_seeds, measurement_fns, seed_
     from the rest of the per-trial fields rather than run through `aggregate_trials`: that helper
     computes np.mean/np.std over trial values, which isn't meaningful for a dict-valued metric.
     It's instead stored per-r as the raw list of per-trial breakdowns.
+
+    `objective` (the true PEC-objective score per SCORING_OBJECTIVE_NAMES entry, via
+    `_score_decisions_all_objectives`) is likewise collected separately and reduced to
+    {'mean', 'std', 'values'} per objective, mirroring confidence.py's aggregation for these
+    same two stochastic modules.
     """
     result = (
         {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
-         'sum-rule-length': {}, 'weighted-avg-length': {}, 'rule-source-counts': {}} |
+         'sum-rule-length': {}, 'weighted-avg-length': {}, 'rule-source-counts': {},
+         'objective': {obj_name: {} for obj_name in SCORING_OBJECTIVE_NAMES}} |
         {fn.name: {} for fn in measurement_fns}
     )
     for r, base_params in params_by_r.items():
         trial_dicts = []
         rule_source_counts_by_trial = []
+        trial_objective_dicts = {obj_name: [] for obj_name in SCORING_OBJECTIVE_NAMES}
         for trial_seed in trial_seeds:
             assignments = _seed_and_fit(mod, dict(base_params) | {seed_key: trial_seed}, trial_seed)
             trial_dicts.append(_module_trial_result(mod, assignments, measurement_fns))
             rule_source_counts_by_trial.append(getattr(mod, 'rule_source_counts', None))
+            decisions = mod.get_decisions() if hasattr(mod, 'get_decisions') else None
+            for obj_name, score in _score_decisions_all_objectives(decisions).items():
+                trial_objective_dicts[obj_name].append(score)
         for key, agg_val in aggregate_trials(trial_dicts).items():
             result[key][r] = agg_val
         result['rule-source-counts'][r] = {'values': rule_source_counts_by_trial}
+        for obj_name, vals in trial_objective_dicts.items():
+            result['objective'][obj_name][r] = {
+                'mean': float(np.nanmean(vals)) if vals else np.nan,
+                'std': float(np.nanstd(vals)) if vals else np.nan,
+                'values': vals,
+            }
     return result
 
 
@@ -514,7 +613,8 @@ print("Stochastic modules done.")
 def fit_cn2_varying(n_rules_list, measurement_fns):
     result = (
         {'lambda': {}, 'lambda_n_rules': {}, 'max-rule-length': {},
-         'sum-rule-length': {}, 'weighted-avg-length': {}} |
+         'sum-rule-length': {}, 'weighted-avg-length': {},
+         'objective': {obj_name: {} for obj_name in SCORING_OBJECTIVE_NAMES}} |
         {fn.name: {} for fn in measurement_fns}
     )
     cn2 = CN2()
@@ -538,6 +638,8 @@ def fit_cn2_varying(n_rules_list, measurement_fns):
         }
         for key, val in trial_result.items():
             result[key][r] = val
+        for obj_name, score in _score_decisions_all_objectives(cn2.decision_set).items():
+            result['objective'][obj_name][r] = score
     return result
 
 

@@ -85,6 +85,7 @@ def _run_fit(
         'sum-rule-length': module.sum_rule_length,
         'weighted-avg-length': module.weighted_average_rule_length,
         'rule-source-counts': getattr(module, 'rule_source_counts', None),
+        'decisions': module.get_decisions() if hasattr(module, 'get_decisions') else None,
         'measurements': measurements,
         '_profile': prof if profile else None,
     }
@@ -257,7 +258,8 @@ class Experiment:
                 'max-rule-length' : {},
                 'sum-rule-length' : {},
                 'weighted-avg-length' : {},
-                'rule-source-counts' : {}
+                'rule-source-counts' : {},
+                'decisions' : {},
             } |
             {
                 fn.name : {}
@@ -280,6 +282,7 @@ class Experiment:
                 result['sum-rule-length'][p] = record['sum-rule-length']
                 result['weighted-avg-length'][p] = record['weighted-avg-length']
                 result['rule-source-counts'][p] = record['rule-source-counts']
+                result['decisions'][p] = record['decisions']
                 for fn_name, value in record['measurements'].items():
                     result[fn_name][p] = value
 
@@ -343,10 +346,17 @@ class Experiment:
     def save_results(self, path, identifier = ''):
         """
         Saves the results of the experiment as a JSON file.
-        
+
+        `modules[*]['decisions']` (raw fitted Decision objects, per r -- see `_run_fit`) is
+        dropped before serializing: it exists for in-process objective re-scoring (e.g.
+        `experiments.modules.score_objectives_by_r`, called by max_rules.py-style scripts
+        against `self.result_dict` before this is invoked), not as a persisted field, and
+        Decision/Rule objects aren't JSON-serializable. `self.result_dict` itself is left
+        untouched, so callers can keep using it after saving.
+
         Args:
             path (str): File path to save the results to.
-            
+
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
         import math
@@ -362,11 +372,22 @@ class Experiment:
                 if isinstance(obj, np.ndarray):
                     return obj.tolist()
                 return super().default(obj)
-            
+
+        serializable = {
+            k: (
+                {
+                    name: {kk: vv for kk, vv in mod_result.items() if kk != 'decisions'}
+                    for name, mod_result in v.items()
+                }
+                if k == 'modules' else v
+            )
+            for k, v in self.result_dict.items()
+        }
+
         os.makedirs(path, exist_ok=True)
         fname = os.path.join(path, 'exp' + str(identifier) + '.json')
         with open(fname, 'w') as f:
-            json.dump(self.result_dict, f, indent=4, cls=NumpyEncoder)
+            json.dump(serializable, f, indent=4, cls=NumpyEncoder)
 
 
 ####################################################################################################
