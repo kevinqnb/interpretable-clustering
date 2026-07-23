@@ -17,12 +17,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data.preprocessing import *
 from experiments.experiment import Experiment
 from experiments.modules import *
-from experiments.mnist.config import (
+from experiments.fashion.config import (
     SEED, N_CLUSTERS, N_SELECT_DEFAULT, MAX_RULES, SHALLOW_TREE_DEPTH_FACTOR,
     N_FOREST, FOREST_MAX_DEPTH, CAR_MIN_SUPPORT, CAR_MIN_CONFIDENCE,
     CAR_MAX_RULE_LENGTH, CONFIDENCE_DEFAULT, OUTFILE_REF, RULES_DIR, ALPHAS_DIR,
     LAMBDA_DIR,
 )
+
+OUTFILE_REF = '_conf_50'  # matches the config.py default, but can be overridden by command-line args
 
 ####################################################################################################
 
@@ -69,7 +71,7 @@ def _memoryview_safe(x):
 
 ####################################################################################################
 # Read and process data:
-data, data_labels, feature_labels, scaler = load_preprocessed_mnist()
+data, data_labels, feature_labels, scaler = load_preprocessed_fashion()
 data = _memoryview_safe(data)
 n,d = data.shape
 

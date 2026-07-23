@@ -24,6 +24,8 @@ from experiments.mnist.config import (
     LAMBDA_DIR,
 )
 
+OUTFILE_REF = '_conf_50'  # matches the config.py default, but can be overridden by command-line args
+
 ####################################################################################################
 
 import os
