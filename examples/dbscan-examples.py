@@ -21,6 +21,7 @@ from sklearn import datasets
 from sklearn.cluster import KMeans, DBSCAN
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from scipy.optimize import linear_sum_assignment
 import seaborn as sns
 from intercluster import *
 from intercluster.decision_trees import *
@@ -69,6 +70,22 @@ color_dict[-1] = 'grey'
 cmap2 = ListedColormap(sns.color_palette("tab20", 20))
 color_dict2 = {i: cmap2(i) for i in range(len(cmap2.colors))}
 color_dict2[-1] = 'grey'
+
+def align_color_dict(true_labels, pred_labels, base_color_dict, n_clusters):
+    """
+    ExKMC's cluster indices come from an independent KMeans fit, so they have no
+    reason to line up with the reference clustering's label numbering. Build a
+    color_dict for the predicted labels by finding the permutation that maximizes
+    overlap with the reference labels (Hungarian algorithm on the contingency
+    table), so the ExKMC panel's colors match the reference scatter plot.
+    """
+    contingency = np.zeros((n_clusters, n_clusters), dtype=int)
+    for t, p in zip(true_labels, pred_labels):
+        if t == -1:
+            continue
+        contingency[p, t] += 1
+    pred_ind, true_ind = linear_sum_assignment(-contingency)
+    return {pred: base_color_dict[true] for pred, true in zip(pred_ind, true_ind)}
 
 # This assumes tex is installed in your system, 
 # if not, you may simply remove most of this, aside from font.size 
@@ -152,6 +169,7 @@ exkmc_tree_leaf_labels = exkmc_tree.get_leaf_labels()
 exkmc_tree_rule_assignment = labels_to_assignment(exkmc_tree_leaf_labels, n_labels = dbscan_n_clusters)
 exkmc_tree_data_to_rule_assignment = exkmc_tree.get_data_to_rules_assignment(data)
 exkmc_tree_data_to_cluster_assignment = exkmc_tree_data_to_rule_assignment @ exkmc_tree_rule_assignment
+exkmc_color_dict = align_color_dict(dbscan_labels_, exkmc_tree_labels_, color_dict, dbscan_n_clusters)
 
 # %%
 ####################################################################################################
@@ -252,7 +270,7 @@ plot_decision_boundaries(dtree, data, color_dict, ax = axs[1], resolution = 1000
 
 
 # ExKMC
-plot_decision_boundaries(exkmc_tree, data, color_dict, ax = axs[2], resolution = 1000, label_array = False)
+plot_decision_boundaries(exkmc_tree, data, exkmc_color_dict, ax = axs[2], resolution = 1000, label_array = False)
 #axs[2].set_xlabel(r'$x_1$')
 #axs[2].set_title(r"\texttt{ExKMC}")
 
@@ -344,6 +362,7 @@ exkmc_tree_leaf_labels = exkmc_tree.get_leaf_labels()
 exkmc_tree_rule_assignment = labels_to_assignment(exkmc_tree_leaf_labels, n_labels = dbscan_n_clusters)
 exkmc_tree_data_to_rule_assignment = exkmc_tree.get_data_to_rules_assignment(data)
 exkmc_tree_data_to_cluster_assignment = exkmc_tree_data_to_rule_assignment @ exkmc_tree_rule_assignment
+exkmc_color_dict = align_color_dict(dbscan_labels_, exkmc_tree_labels_, color_dict, dbscan_n_clusters)
 
 # %%
 ####################################################################################################
@@ -444,7 +463,7 @@ axs[1].set_title(r"\texttt{Decision-Tree}")
 
 
 # ExKMC
-plot_decision_boundaries(exkmc_tree, data, color_dict, ax = axs[2], resolution = 1000, label_array = False)
+plot_decision_boundaries(exkmc_tree, data, exkmc_color_dict, ax = axs[2], resolution = 1000, label_array = False)
 #axs[2].set_xlabel(r'$x_1$')
 axs[2].set_title(r"\texttt{ExKMC}")
 
@@ -534,6 +553,7 @@ exkmc_tree_leaf_labels = exkmc_tree.get_leaf_labels()
 exkmc_tree_rule_assignment = labels_to_assignment(exkmc_tree_leaf_labels, n_labels = dbscan_n_clusters)
 exkmc_tree_data_to_rule_assignment = exkmc_tree.get_data_to_rules_assignment(data)
 exkmc_tree_data_to_cluster_assignment = exkmc_tree_data_to_rule_assignment @ exkmc_tree_rule_assignment
+exkmc_color_dict = align_color_dict(dbscan_labels_, exkmc_tree_labels_, color_dict, dbscan_n_clusters)
 
 # %%
 ####################################################################################################
@@ -635,7 +655,7 @@ axs[1].set_xlabel(r'$x_1$')
 
 
 # ExKMC
-plot_decision_boundaries(exkmc_tree, data, color_dict, ax = axs[2], resolution = 1000, label_array = False)
+plot_decision_boundaries(exkmc_tree, data, exkmc_color_dict, ax = axs[2], resolution = 1000, label_array = False)
 axs[2].set_xlabel(r'$x_1$')
 #axs[2].set_title(r"\texttt{ExKMC}")
 
