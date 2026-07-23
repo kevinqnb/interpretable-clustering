@@ -44,6 +44,13 @@ from intercluster.decision_sets.objectives import *
 
 
 # %%
+# Single source of truth for which experiment output files this notebook loads, used
+# throughout instead of the previous per-section duplicated ref dicts (each of which
+# just mapped every dataset to the same "_conf_50" suffix anyway).
+EXP_REF = "_conf_50"
+DATASETS = ["climate", "anuran", "protein", "yeast", "mnist", "fashion"]
+
+# %%
 # This assumes tex is installed in your system,
 # if not you may simply remove most of this aside from font.size
 # To get tex working on linux run the following:
@@ -60,7 +67,7 @@ plt.rcParams.update({
 palette = sns.color_palette("husl", 8)
 cmap = ListedColormap(palette)
 
-#cmap = ListedColormap(sns.color_palette("tab10", 10))
+cmap = ListedColormap(sns.color_palette("tab10", 10))
 
 # Comparison-model set: Decision-Tree, ExKMC, WRA, IDS, CBA, CN2, vs. PEC
 # (unweighted and weighted). Colors are assigned with a step-3 stride over the
@@ -85,6 +92,26 @@ color_dict = {
     #'dscluster; ensemble; weighted': cmap(2),
     'Reference': 'black',
 }
+
+color_dict = {
+    'Decision-Tree': cmap(0),
+    'ExKMC': cmap(1),
+    #'WRA': cmap(6),
+    'IDS': cmap(2),
+    'CBA': cmap(3),
+    'CN2': cmap(4),
+    'dscluster; ensemble': cmap(9),
+    # cmap(4) (teal) is otherwise unused in this palette, keeping PEC's
+    # scaled-greedy ablation visually distinct from every comparison model
+    # and from PEC itself -- previously plain 'darkgrey', which read as
+    # ugly/washed-out next to the husl hues used everywhere else. The
+    # bicriteria-plot cells apply `_muted` on top of this base color to keep
+    # scaled-greedy deliberately understated there without falling back to grey.
+    'dscluster; ensemble; lazy-greedy': cmap(5),
+    #'dscluster; ensemble; weighted': cmap(2),
+    'Reference': 'black',
+}
+
 
 # NOTE: dashed-vs-solid line style for the confidence-sweep plots (see the
 # "Confidence Experiment" section) is decided per (dataset, objective, model)
@@ -348,22 +375,14 @@ def _muted(color, amount=0.55):
 
 # %%
 # Load experiment data
-# NOTE: This assumes you have computed the experiment for all datasets and objectives. 
-# If any are missing, simply comment them out from the ref_dict and objective_names lists. 
+# NOTE: This assumes you have computed the experiment for all datasets and objectives.
+# If any are missing, simply comment them out from the DATASETS and objective_names lists.
 
-dataset_ref_dict = {
-    "climate": "_conf_50",
-    "anuran": "_conf_50",
-    "protein": "_conf_50",
-    "yeast": "_conf_50",
-    "mnist": "_conf_50",
-    "fashion": "_conf_50",
-}
 objective_names = ['coverage-cost', 'coverage-mistake', 'coverage-pairwise-distance']
 
 dataset_alpha_experiment_dict = {}
-for dataset, ref in dataset_ref_dict.items():
-    fname = "../data/experiments/" + dataset + "/alphas/exp" + ref + ".json"
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/alphas/exp" + EXP_REF + ".json"
     with open(fname, 'r') as f:
         experiment_dict = json.load(f)
     dataset_alpha_experiment_dict[dataset] = experiment_dict
@@ -519,14 +538,6 @@ plt.savefig(
 # generated yet (data/experiments/<dataset>/max_rules/exp<ref>.json missing)
 # are skipped with a warning rather than raising.
 
-dataset_ref_dict = {
-    "climate": "_conf_50",
-    "anuran": "_conf_50",
-    "protein": "_conf_50",
-    "yeast": "_conf_50",
-    "mnist": "_conf_50",
-    "fashion": "_conf_50",
-}
 objective_names = ['coverage-cost', 'coverage-mistake', 'coverage-pairwise-distance']
 
 # Explicit comparison set -- previously auto-derived from every non-dscluster
@@ -549,8 +560,8 @@ comparison_modules = {'Decision-Tree', 'ExKMC', 'IDS', 'CBA', 'CN2'}
 dscluster_modules = set()
 scaled_dscluster_modules = set()
 dataset_experiment_dict = {}
-for dataset, ref in dataset_ref_dict.items():
-    fname = "../data/experiments/" + dataset + "/max_rules/exp" + ref + ".json"
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/max_rules/exp" + EXP_REF + ".json"
     if not os.path.exists(fname):
         print(f"[max_rules] skipping {dataset}: {fname} not found")
         continue
@@ -769,6 +780,7 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict.items()):
                 width=width,
                 label=mod_name,
                 color=color_dict.get(mod_name, 'grey'),
+                alpha = 0.75,
                 hatch=hatch,
                 edgecolor='black',
                 capsize=3,
@@ -857,6 +869,7 @@ for mod in module_order:
     legend_elements.append(
         mpatches.Patch(
             facecolor=color_dict[mod_name],
+            alpha = 0.75,
             edgecolor='black',
             linewidth=1.5,
             hatch=hatch_dict.get(mod_name, ''),
@@ -877,9 +890,196 @@ plt.savefig(
 plt.show()
 
 # %% [markdown]
+# ### Bar Plots (IDS Alt)
+#
+# Same bar-plot layout as the Max Rules bar plots above, but sourced from `max_rules_ids_alt.py` / `max_rules_combine_ids_alt.py`'s output -- IDS tuned by coordinate ascent to directly maximize the PEC objective (`ids_lambda_search_alt.py`), rather than the held-out-AUC-tuned IDS used everywhere else in this notebook. Only the k-means (`coverage-cost`) objective has been run for this experiment so far, so this shows a single row rather than one row per objective.
+
+# %%
+# Load experiment data for the max_rules_ids_alt.py / max_rules_combine_ids_alt.py comparison.
+# NOTE: Loading is defensive, same as the main max_rules loading cell above.
+
+ids_alt_objective_names = objective_names[:1]  # only coverage-cost (k-means) has been run
+
+dscluster_modules_ids_alt = set()
+scaled_dscluster_modules_ids_alt = set()
+dataset_experiment_dict_ids_alt = {}
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/max_rules/exp" + EXP_REF + "_ids_alt.json"
+    if not os.path.exists(fname):
+        print(f"[max_rules_ids_alt] skipping {dataset}: {fname} not found")
+        continue
+    with open(fname, 'r') as f:
+        experiment_dict = json.load(f)
+    dataset_experiment_dict_ids_alt[dataset] = experiment_dict
+    dscluster_modules_ids_alt.update(
+        [m for m in experiment_dict['modules'].keys() if ('dscluster' in m) and ('lazy-greedy' not in m)]
+    )
+    scaled_dscluster_modules_ids_alt.update(
+        [m for m in experiment_dict['modules'].keys() if ('dscluster' in m) and ('lazy-greedy' in m) and ('weighted' not in m)]
+    )
+
+dscluster_modules_ids_alt = list(dscluster_modules_ids_alt)
+scaled_dscluster_modules_ids_alt = list(scaled_dscluster_modules_ids_alt)
+
+# %%
+# Collect experiment data for the IDS-alt bar plot -- identical logic to the main Max Rules
+# bar_dict collection cell above, restricted to ids_alt_objective_names.
+
+bar_dict_ids_alt = {
+    dataset: {objective: {} for objective in ids_alt_objective_names} for dataset in dataset_experiment_dict_ids_alt.keys()
+}
+for dataset, experiment_dict in dataset_experiment_dict_ids_alt.items():
+    fixed_parameters = experiment_dict['fixed-parameters']
+    for objective in ids_alt_objective_names:
+        selected_dscluster_module = [
+            m for m in dscluster_modules_ids_alt if objective == m.split(';')[1].strip()
+        ][0]  # there should only be one per objective!!
+        reward = objective_cost_reward_dict[objective]['reward']
+        cost = objective_cost_reward_dict[objective]['cost']
+        alpha = fixed_parameters['alpha'][selected_dscluster_module]
+        lambd = max(list(experiment_dict['modules'][selected_dscluster_module]['lambda'].values()))
+
+        x = np.array(list(experiment_dict['modules'][selected_dscluster_module][reward].keys()))
+        idxs = np.where(x.astype(int) <= min(np.max(x.astype(int)), np.min(x.astype(int) + 6)))[0][::2]
+
+        for cmod in comparison_modules:
+            if cmod not in experiment_dict['modules']:
+                continue
+            obj_values, obj_err = _module_bar_series(experiment_dict['modules'][cmod], reward, cost, lambd, alpha)
+            bar_dict_ids_alt[dataset][objective][cmod] = (
+                x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+            )
+
+        obj_values, obj_err = _module_bar_series(
+            experiment_dict['modules'][selected_dscluster_module], reward, cost, lambd, alpha
+        )
+        bar_dict_ids_alt[dataset][objective][selected_dscluster_module] = (
+            x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+        )
+
+        scaled_matches = [
+            m for m in scaled_dscluster_modules_ids_alt
+            if objective == m.split(';')[1].strip() and m in experiment_dict['modules']
+        ]
+        if scaled_matches:
+            selected_scaled_module = scaled_matches[0]  # there should only be one per objective!!
+            obj_values, obj_err = _module_bar_series(
+                experiment_dict['modules'][selected_scaled_module], reward, cost, lambd, alpha
+            )
+            bar_dict_ids_alt[dataset][objective][selected_scaled_module] = (
+                x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+            )
+
+# %%
+# Plot results -- identical styling to the main Max Rules bar plot above, restricted to the
+# single coverage-cost (k-means) row this experiment has data for. Figure height is scaled
+# down proportionally (1 row instead of 3) to keep the same per-row size as the main plot.
+
+fig, ax = plt.subplots(
+    len(ids_alt_objective_names), len(dataset_experiment_dict_ids_alt),
+    figsize=(34, 12 * len(ids_alt_objective_names) / len(objective_names)), squeeze=False,
+)
+
+module_order = [
+    'Decision-Tree',
+    'ExKMC',
+    #'WRA',
+    'IDS',
+    'CBA',
+    'CN2',
+    'dscluster; ensemble; lazy-greedy',
+    'dscluster; ensemble',
+]
+
+function_name_dict = {0: 'K', 1: 'M', 2: 'P'}
+
+for i, (dataset, objective_result_dict) in enumerate(bar_dict_ids_alt.items()):
+    for j, (objective, module_result_dict) in enumerate(objective_result_dict.items()):
+        # plot bars
+        module_order[-2] = f'dscluster; {objective}; ensemble; lazy-greedy'
+        module_order[-1] = f'dscluster; {objective}; ensemble'
+
+        obj_min = np.inf
+        obj_max = -np.inf
+        for k, module in enumerate(module_order):
+            if module not in module_result_dict:
+                continue
+            x, obj_values, obj_err = module_result_dict[module]
+            if 'dscluster' in module:
+                mod_name = module.split(';')[0].strip() + "; " + "; ".join(
+                    part.strip() for part in module.split(';')[2:]
+                )
+            else:
+                mod_name = module
+            hatch = hatch_dict.get(mod_name, '')
+
+            # Plot bar for a single module:
+            width = 0.225
+            ax[j,i].bar(
+                x.astype(int) + k * width,
+                obj_values,
+                yerr=obj_err,
+                width=width,
+                label=mod_name,
+                color=color_dict.get(mod_name, 'grey'),
+                alpha = 0.75,
+                hatch=hatch,
+                edgecolor='black',
+                capsize=3,
+                error_kw={'elinewidth': 1.2, 'ecolor': 'black'},
+            )
+
+            if np.min(obj_values) < obj_min:
+                obj_min = np.min(obj_values)
+            if np.max(obj_values) > obj_max:
+                obj_max = np.max(obj_values)
+
+        # Set y limits and ticks
+        obj_rng = obj_max - obj_min
+        pad = 0.01 * obj_rng
+        y_lo, y_hi, yticks = nice_lim_for_3_ticks(obj_min - pad, obj_max + pad, clip=(BAR_Y_MIN, 1.0))
+        ax[j,i].set_ylim(y_lo, y_hi)
+        ax[j,i].set_yticks(yticks)
+        ax[j,i].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+        # Set x ticks and labels
+        ax[j,i].set_xticks(x.astype(int) + (len(module_result_dict)-1) * 0.2 / 2)
+        if j != len(ids_alt_objective_names) - 1:
+            ax[j,i].set_xticklabels([])
+        else:
+            ax[j,i].set_xticklabels([str(int(val)) for val in x.astype(int)])
+
+        # Y-label with objective
+        if i == 0:
+            ax[j,i].set_ylabel(
+                rf"$\bar{{f}}_{function_name_dict[j]}$", rotation=0, labelpad=40, fontsize = 36
+            )
+
+        # Title with dataset name
+        if j == 0:
+            ax[j,i].set_title(rf"${dataset.capitalize()}$")
+
+        # Gridlines:
+        ax[j,i].grid(which='major', linestyle='-', linewidth=0.8, alpha = 0.5)
+        ax[j,i].axhline(0.0, color="black", linewidth=2.0, alpha=0.7)
+
+
+fig.supxlabel(r"Number of Rules, $\ell$", y=0.05, x = 0.525)
+plt.tight_layout()
+
+plt.savefig(
+    "../figures/experiments/objectives_ids_alt.pdf",
+    bbox_inches='tight',
+    dpi=300
+)
+
+# %% [markdown]
 # ### Rule Provenance
 #
 # Breakdown of the (distorted-greedy) PEC module's selected rules by mining source -- Decision-Tree (DT), Random-Forest (RF), or Class-Association-Rule (CAR) -- at the smallest `max_rules.py` rule budget (`r = k`, the number of clusters, i.e. `n_rules_list[0]`). One row per objective, one column per dataset.
+
+# %%
+cmap
 
 # %%
 # Rule provenance: rule-source-counts breakdown for the (distorted-greedy) PEC module at the
@@ -889,6 +1089,7 @@ plt.show()
 source_order = ['decision_tree', 'random_forest', 'car']
 source_label_dict = {'decision_tree': 'DT', 'random_forest': 'RF', 'car': 'CAR'}
 source_color_dict = dict(zip(source_order, sns.color_palette("husl", 3)))
+
 
 fig, ax = plt.subplots(
     len(objective_names), len(dataset_experiment_dict), figsize=(28, 12), squeeze=False
@@ -911,6 +1112,7 @@ for i, (dataset, experiment_dict) in enumerate(dataset_experiment_dict.items()):
                 heights,
                 color=[source_color_dict[src] for src in source_order],
                 edgecolor='black',
+                alpha = 0.75
             )
         except:
             continue
@@ -949,18 +1151,9 @@ plt.show()
 # yet (data/experiments/<dataset>/lambda/exp<ref>.json missing) are skipped with a
 # warning rather than raising.
 
-lambda_dataset_ref_dict = {
-    "climate": "_conf_50",
-    "anuran": "_conf_50",
-    "protein": "_conf_50",
-    "yeast": "_conf_50",
-    "mnist": "_conf_50",
-    "fashion": "_conf_50",
-}
-
 dataset_lambda_experiment_dict = {}
-for dataset, ref in lambda_dataset_ref_dict.items():
-    fname = "../data/experiments/" + dataset + "/lambda/exp" + ref + ".json"
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/lambda/exp" + EXP_REF + ".json"
     if not os.path.exists(fname):
         print(f"[lambda] skipping {dataset}: {fname} not found")
         continue
@@ -1275,6 +1468,13 @@ def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zo
             arrow_length_ratio=0.6, normalize=False, zorder=zorder,
         )
 
+# Pastel (pre-lightened) tab10 colors, used only in this 3D scatter -- relying on alpha for a
+# light/diluted look (as the 2D bar/line/scatter plots elsewhere in this notebook do) doesn't
+# render consistently in mplot3d, since translucent markers there don't composite against a
+# fixed background the way ordinary 2D alpha does (compositing order instead depends on each
+# artist's per-draw camera distance). Pre-lightening the colors themselves sidesteps that.
+pastel_color_dict = {k: _muted(v, amount=0.35) for k, v in color_dict.items()}
+
 # One figure per objective (rather than one giant figure with an
 # objective-per-row grid), each laid out as 3 columns x 2 rows over datasets
 # -- gives every dataset panel enough size to stay legible, and lets each
@@ -1302,17 +1502,17 @@ for objective in objective_names:
             lam = pts['lam']
             lambda_star_idx = pts['lambda_star_idx']
             is_scaled = module.endswith('lazy-greedy')
-            # Muted (blended toward white) for scaled-greedy -- keeps it
-            # visually distinct from every other series via its own hue,
-            # while staying deliberately understated so it never competes
-            # with distorted-greedy PEC, the paper's main model.
-            color = _muted(color_dict.get(module, 'grey')) if is_scaled else color_dict.get(module, 'grey')
+            # Further muted (blended toward white) on top of the already-pastel base for
+            # scaled-greedy -- keeps it visually distinct from every other series via its own
+            # hue, while staying deliberately understated so it never competes with
+            # distorted-greedy PEC, the paper's main model.
+            color = _muted(pastel_color_dict.get(module, 'grey')) if is_scaled else pastel_color_dict.get(module, 'grey')
 
             # Floor drop-line + projection marker (drawn first, low
             # zorder, so the actual data points render on top of them).
             for xi, yi, zi in zip(x, y, z):
-                ax.plot([xi, xi], [yi, yi], [0, zi], color=color, alpha=0.65, linewidth=1.0, zorder=1)
-                ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.85, edgecolor='none', zorder=1)
+                ax.plot([xi, xi], [yi, yi], [0, zi], color=color, alpha=0.5, linewidth=1.0, zorder=1)
+                ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.5, edgecolor='none', zorder=1)
 
             # Per-axis error segments (only nonzero for Decision-Tree/IDS).
             x_err_disp, y_err_disp, z_err_disp = _visible_err(x_err), _visible_err(y_err), _visible_err(z_err)
@@ -1327,10 +1527,13 @@ for objective in objective_names:
 
             if is_scaled:
                 # Faint, edge-less markers -- deliberately understated so this
-                # secondary curve doesn't compete with distorted-greedy.
+                # secondary curve doesn't compete with distorted-greedy. Now that the
+                # color itself is pre-lightened (pastel_color_dict above), alpha here
+                # only needs to add a little extra fade relative to the main model
+                # below, not do the heavy lifting of lightening the color.
                 ax.scatter(
                     x, y, z,
-                    color=color, marker='o', s=80, alpha=0.65,
+                    color=color, marker='o', s=80, alpha=0.75,
                     edgecolor='black', depthshade=False, zorder=2,
                 )
                 _draw_lambda_arrows(
@@ -1342,7 +1545,7 @@ for objective in objective_names:
                     ax.scatter(
                         x[lambda_star_idx], y[lambda_star_idx], z[lambda_star_idx],
                         marker='*', s=600, color=color, edgecolor='black',
-                        alpha=0.85, linewidth=1.0, depthshade=False, zorder=5,
+                        alpha=0.9, linewidth=1.0, depthshade=False, zorder=5,
                     )
             else:
                 # Floor drop-line + projection marker (drawn first, low
@@ -1351,6 +1554,10 @@ for objective in objective_names:
                 #    ax.plot([xi, xi], [yi, yi], [0, zi], color=color, alpha=0.3, linewidth=1.0, zorder=1)
                 #    ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.3, edgecolor='none', zorder=1)
 
+                # Opaque now that the color itself is pre-lightened (pastel_color_dict
+                # above) -- alpha < 1 here previously was doing double duty trying (and,
+                # per the 3D-specific compositing quirk noted above, failing) to also
+                # dilute the color.
                 ax.scatter(
                     x, y, z,
                     label=module,
@@ -1358,21 +1565,21 @@ for objective in objective_names:
                     marker='o',#marker_style_dict.get(module, 'o'),
                     s=240,
                     edgecolor='black',
-                    alpha=0.85,
+                    alpha=1.0,
                     depthshade=False,
                     zorder=3,
                 )
 
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
-                    dashed=False, alpha=0.7, linewidth=2.0, zorder=2,
+                    dashed=False, alpha=0.9, linewidth=2.0, zorder=2,
                 )
 
                 if lambda_star_idx is not None:
                     ax.scatter(
                         x[lambda_star_idx], y[lambda_star_idx], z[lambda_star_idx],
                         marker='*', s=600, color=color, edgecolor='black',
-                        linewidth=1.2, depthshade=False, zorder=6,
+                        linewidth=1.2, depthshade=False, zorder=6, alpha=1.0
                     )
 
         ax.set_xlim(-0.05, 1.05)
@@ -1402,14 +1609,20 @@ for objective in objective_names:
         if dataset == "kddcup":
             ax.set_title(rf"$KDDCup$", pad=6)
         else:
-            ax.set_title(rf"${dataset.capitalize()}$", pad=6)
+            ax.set_title(rf"${dataset.capitalize()}$", pad=6, fontsize=28)
 
         # Axis titles on every panel, same as x and z below -- consistent
         # rather than shown only on an edge, since each panel shares the same
         # view angle and axis meaning throughout the grid.
-        ax.set_ylabel(rf"$\beta_{{{beta_subscript_dict.get(objective, '')}}}$", labelpad=6, fontsize=22)
-        ax.set_xlabel(r"$g$", labelpad=2, fontsize=22)
-        ax.set_zlabel(r"$|R|$", labelpad=10, fontsize=22)
+        ax.set_ylabel(rf"$\bar{{\beta}}_{{{beta_subscript_dict.get(objective, '')}}}$", labelpad=6, fontsize=22)
+        ax.set_xlabel(r"$\bar{g}$", labelpad=2, fontsize=22)
+        # set_rotate_label(False) + rotation=0 keeps the z-label horizontal/upright instead of
+        # mplot3d's default of rotating it to run vertically alongside the z-axis -- with
+        # text.usetex on, that default rotation also made the label's true render extent read
+        # wrong at savefig time, which was clipping it off the right edge of the rightmost
+        # column's panels.
+        ax.zaxis.set_rotate_label(False)
+        ax.set_zlabel(r"$\bar{s}$", labelpad=14, fontsize=22, rotation=0)
 
         # Light, uncluttered panes/gridlines so points stay legible in print
         ax.xaxis.pane.set_alpha(0.05)
@@ -1427,7 +1640,10 @@ for objective in objective_names:
     # rotation), which makes plt.tight_layout() leave excess whitespace and
     # doesn't resolve corner tick-label crowding -- pack the grid manually
     # instead, slightly overlapping the reserved (not visible-content) margins.
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.05, wspace=-0.05, hspace=0.2)
+    # right is pulled in further (0.98 -> 0.90) and wspace opened back up
+    # (-0.05 -> 0.15) to leave the rightmost column's now-horizontal z-label
+    # room to sit fully inside the figure instead of running off its edge.
+    fig.subplots_adjust(left=0.02, right=0.90, top=0.90, bottom=0.05, wspace=0.15, hspace=0.2)
 
     plt.savefig(
         f"../figures/experiments/bicriteria_3d_{objective}.pdf",
@@ -1822,11 +2038,11 @@ fig.supylabel(r"$\delta(\mathcal{W}, \mathcal{U})$", x=0.02, rotation = 0)
 fig.supxlabel(r"$\textup{distance-ratio}$", y=0.05, x = 0.525)
 plt.tight_layout()
 
-#plt.savefig(
-#    "../figures/experiments/uncertainty.pdf",
-#    bbox_inches='tight',
-#    dpi=300
-#)
+plt.savefig(
+    "../figures/experiments/uncertainty.pdf",
+    bbox_inches='tight',
+    dpi=300
+)
 
 plt.show()
 
@@ -1839,8 +2055,8 @@ plt.show()
 # Load confidence-experiment data (defensive: most/all datasets may be missing).
 
 dataset_confidence_dict = {}
-for dataset in dataset_ref_dict:
-    fname = f"../data/experiments/{dataset}/confidence/exp_confidence_conf_50.json"
+for dataset in DATASETS:
+    fname = f"../data/experiments/{dataset}/confidence/exp_confidence{EXP_REF}.json"
     if not os.path.exists(fname):
         print(f"[confidence] skipping {dataset}: {fname} not found")
         continue
@@ -1887,6 +2103,7 @@ confidence_line_dict = {
 for dataset, conf_json in dataset_confidence_dict.items():
     conf_keys = sorted((k for k in conf_json if k != 'fixed-parameters'), key=float)
     conf_x = np.array([float(k) for k in conf_keys])
+    n = conf_json['fixed-parameters']['n']
 
     for objective in objective_names:
         dscluster_key = f'dscluster; {objective}; ensemble'
@@ -1899,8 +2116,12 @@ for dataset, conf_json in dataset_confidence_dict.items():
                 raw = level.get(module, {}).get('objective', {}).get(objective, np.nan)
                 y_vals.append(_scalar(raw))
                 y_errs.append(_se(raw))
-            y_vals = np.array(y_vals, dtype=float)
-            y_errs = np.array(y_errs, dtype=float)
+            # Normalize the objective by n, the size of this dataset, matching every other
+            # objective-value plot in this notebook (e.g. the Max Rules bar_dict cell above),
+            # which all divide by fixed_parameters['n'] -- this plot's $\bar{f}$ axis label
+            # already implied that normalization even though the values weren't actually scaled.
+            y_vals = np.array(y_vals, dtype=float) / n
+            y_errs = np.array(y_errs, dtype=float) / n
 
             if module == dscluster_key:
                 mod_name = 'dscluster; ensemble'
@@ -1944,6 +2165,7 @@ for i, dataset in enumerate(dataset_confidence_dict.keys()):
             axs[j, i].plot(
                 r['x'][mask], r['y'][mask],
                 color=color,
+                alpha = 0.75,
                 #marker=marker_style_dict.get(module, 'o'),
                 linestyle='dashed' if r['is_flat'] else 'solid',
                 linewidth=5, markersize=10, markeredgecolor='black',
@@ -1993,6 +2215,7 @@ legend_elements = [
     mlines.Line2D(
         [], [],
         color=color_dict.get(m, 'grey'),
+        alpha=0.75,
         marker=None,#marker_style_dict.get(m, 'o'),
         markersize=20,
         markeredgecolor='k',
@@ -2100,181 +2323,3 @@ plt.savefig(
     bbox_inches='tight',
     dpi=300
 )
-
-# %% [markdown]
-# # Input Sensitivity Experiment
-# Plots results from the `input_sensitivity.py` experiment: a sweep over the fraction `p` of
-# class-association rules (CARs) randomly drawn into the pool (`base_rules` -- decision-tree +
-# random-forest rules -- are always included; `p` controls how much of the CAR pool is added on
-# top). At each `p`, `n_trials=10` independent random draws are taken, and *every* pool-dependent
-# algorithm is refit from scratch on each draw's own rule pool.
-#
-# This differs from the Confidence Experiment above in an important way: there, the rule pool at
-# each swept value is fixed, so only Decision-Tree and IDS (whose own fitting procedure is
-# stochastic) carry repeat-to-repeat uncertainty. Here, the randomness is in the *input* itself --
-# the CAR subset drawn at each repeat -- so uncertainty applies to every pool-dependent algorithm:
-# both PEC variants, CBA, and IDS (and, for the PEC-objective score specifically, ExKMC/CN2 too,
-# since that score is evaluated against each repeat's own PEC lambda*). The spread across repeats
-# *is* the quantity this experiment measures, not just estimator noise -- so error bands here are
-# the whole point, not an afterthought.
-
-# %%
-# Load input-sensitivity-experiment data (defensive: most/all datasets may be missing).
-# "aniso" is included alongside the standard dataset_ref_dict list because it's the only
-# dataset input_sensitivity.py has been run for so far; the others activate automatically
-# once their own input_sensitivity.py has been run, with no further edits needed here.
-
-input_sensitivity_dataset_ref_dict = dict(dataset_ref_dict)
-
-dataset_input_sensitivity_dict = {}
-for dataset, ref in input_sensitivity_dataset_ref_dict.items():
-    fname = f"../data/experiments/{dataset}/input_sensitivity/exp_input_sensitivity{ref}.json"
-    if not os.path.exists(fname):
-        print(f"[input_sensitivity] skipping {dataset}: {fname} not found")
-        continue
-    with open(fname) as f:
-        dataset_input_sensitivity_dict[dataset] = json.load(f)
-
-if not dataset_input_sensitivity_dict:
-    print("No input-sensitivity experiment data found yet -- run input_sensitivity.py for at least one dataset.")
-
-# %%
-# Collect experiment data for the input-sensitivity sweep line plots.
-#
-# Uncertainty: unlike the Confidence Experiment, EVERY module's 'objective' entry here is an
-# aggregate_trials dict ({'mean','std','values'}) -- the CAR draw varies every repeat, so PEC
-# (both variants), CBA, and IDS all refit from scratch each time, and ExKMC/CN2's fixed decision
-# sets are still rescored against each repeat's own PEC lambda*. No per-module special-casing is
-# needed: `_std` just works uniformly across the whole module set.
-
-input_sensitivity_line_dict = {
-    dataset: {objective: {} for objective in objective_names}
-    for dataset in dataset_input_sensitivity_dict
-}
-
-for dataset, p_json in dataset_input_sensitivity_dict.items():
-    p_keys = sorted((k for k in p_json if k != 'fixed-parameters'), key=float)
-    p_x = np.array([float(k) for k in p_keys])
-
-    for objective in objective_names:
-        dscluster_key = f'dscluster; {objective}; ensemble'
-        scaled_dscluster_key = f'{dscluster_key}; lazy-greedy'
-        for module in list(comparison_modules) + [dscluster_key, scaled_dscluster_key]:
-            y_vals = []
-            y_stds = []
-            for k in p_keys:
-                level = p_json[k]
-                raw = level.get(module, {}).get('objective', {}).get(objective, np.nan)
-                y_vals.append(_scalar(raw))
-                y_stds.append(_std(raw))
-            y_vals = np.array(y_vals, dtype=float)
-            y_stds = np.array(y_stds, dtype=float)
-
-            if module == dscluster_key:
-                mod_name = 'dscluster; ensemble'
-            elif module == scaled_dscluster_key:
-                mod_name = 'dscluster; ensemble; lazy-greedy'
-            else:
-                mod_name = module
-            input_sensitivity_line_dict[dataset][objective][mod_name] = {
-                'x': p_x, 'y': y_vals, 'y_std': y_stds, 'is_flat': _is_flat(y_vals),
-            }
-
-# %%
-# Plot results:
-# Shaded bands = +/-1 std across n_trials=10 random CAR-subset draws, for EVERY module (see
-# this section's intro markdown for why this differs from the Confidence Experiment above).
-
-function_name_dict = {0: 'K', 1: 'M', 2: 'P'}
-# Drawn in this order so PEC (plotted last) renders on top of PEC Scaled
-# Greedy where their lines/bands sit right on top of each other -- PEC is
-# the paper's main model and should win visibility ties.
-module_order = list(comparison_modules) + ['dscluster; ensemble; lazy-greedy', 'dscluster; ensemble']
-
-fig, axs = plt.subplots(len(objective_names), len(dataset_input_sensitivity_dict), figsize=(34, 14), squeeze=False)
-
-for i, dataset in enumerate(dataset_input_sensitivity_dict.keys()):
-    for j, objective in enumerate(objective_names):
-        module_result_dict = input_sensitivity_line_dict[dataset][objective]
-        finite_ys = [r['y'][~np.isnan(r['y'])] for r in module_result_dict.values()]
-        y_concat = np.concatenate(finite_ys) if any(y.size for y in finite_ys) else np.array([0.0, 1.0])
-        y_min, y_max, y_pad_std = y_concat.min(), y_concat.max(), y_concat.std()
-
-        for module in module_order:
-            if module not in module_result_dict:
-                continue
-            r = module_result_dict[module]
-            mask = ~np.isnan(r['y'])
-            color = color_dict.get(module, 'grey')
-            axs[j, i].plot(
-                r['x'][mask], r['y'][mask],
-                color=color,
-                linestyle='dashed' if r['is_flat'] else 'solid',
-                linewidth=5, markersize=10, markeredgecolor='black',
-                label=title_dict.get(module, module),
-            )
-            std_mask = mask & ~np.isnan(r['y_std'])
-            if np.any(std_mask):
-                axs[j, i].fill_between(
-                    r['x'][std_mask],
-                    r['y'][std_mask] - r['y_std'][std_mask],
-                    r['y'][std_mask] + r['y_std'][std_mask],
-                    color=color, alpha=0.15, linewidth=0,
-                )
-
-        axs[j, i].grid(which='major', linestyle='-', linewidth=0.8, alpha=0.5)
-        axs[j, i].set_xlim(-0.02, 1.02)
-        y_pad = 0.01 * y_pad_std
-        y_lo, y_hi, yticks = nice_lim_for_3_ticks(y_min - y_pad, y_max + y_pad, clip=(-np.inf, np.inf))
-        axs[j, i].set_ylim(y_lo, y_hi)
-        axs[j, i].set_yticks(yticks)
-        axs[j, i].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-
-        if i == 0:
-            axs[j, i].set_ylabel(rf"$\bar{{f}}_{{{function_name_dict[j]}}}$", rotation=0, labelpad=40, fontsize=36)
-        if j == 0:
-            axs[j, i].set_title(rf"${dataset.capitalize()}$")
-        if j == len(objective_names) - 1:
-            axs[j, i].set_xlabel(r"\textup{CAR fraction } $p$")
-
-fig.tight_layout()
-
-#plt.savefig(
-#    "../figures/experiments/input_sensitivity_sweep.pdf",
-#    bbox_inches='tight',
-#    dpi=300
-#)
-
-# %%
-# Create a separate legend for the input-sensitivity sweep plot
-fig, ax = plt.subplots(figsize=(12, 2))
-
-legend_labels = dict(title_dict) | {
-    'dscluster; ensemble; lazy-greedy': title_dict.get('dscluster; ensemble', 'PEC') + r' (Scaled Greedy)',
-}
-
-legend_elements = [
-    mlines.Line2D(
-        [], [],
-        color=color_dict.get(m, 'grey'),
-        marker=None,
-        markersize=20,
-        markeredgecolor='k',
-        markeredgewidth=1.5,
-        linewidth=10,
-        linestyle='solid',
-        label=legend_labels.get(m, m),
-    )
-    for m in module_order
-]
-
-ax.legend(handles=legend_elements, ncol=7, loc='center', frameon=False)
-ax.axis('off')
-
-#plt.savefig(
-#    "../figures/experiments/input_sensitivity_legend.pdf",
-#    bbox_inches='tight',
-#    dpi=300
-#)
-
-plt.show()
