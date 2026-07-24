@@ -874,7 +874,7 @@ module_order = [
 # Local override -- 'dscluster; ensemble; lazy-greedy' isn't in the global
 # title_dict, same pattern as the Bicriteria-plot legend cell above.
 legend_labels = dict(title_dict) | {
-    'dscluster; ensemble; lazy-greedy': title_dict.get('dscluster; ensemble', 'PEC') + r' (Scaled Greedy)',
+    'dscluster; ensemble; lazy-greedy': r'\texttt{ScaledGreedy}',
 }
 
 legend_elements = []
@@ -1393,7 +1393,7 @@ for dataset in DATASETS:
 # budget as in max_rules.py. lambda.py fits two PEC selection-algorithm
 # variants per objective -- 'lazy-greedy' (valid across the full swept grid,
 # and the secondary/reference curve in the plot below, shown under the
-# "Scaled Greedy" label) and 'distorted-greedy' (the paper's main model,
+# "ScaledGreedy" label) and 'distorted-greedy' (the paper's main model,
 # valid only for lambda >= lambda*) -- we keep both, each under its own key
 # ('dscluster; ensemble' for distorted-greedy, 'dscluster; ensemble;
 # lazy-greedy' for scaled-greedy) so the plotting cell can render them with
@@ -1890,7 +1890,7 @@ module_order = [
 ]
 
 legend_labels = dict(title_dict) | {
-    'dscluster; ensemble; lazy-greedy': title_dict.get('dscluster; ensemble', 'PEC') + r' (Scaled Greedy)',
+    'dscluster; ensemble; lazy-greedy': r'\texttt{ScaledGreedy}',
 }
 
 legend_elements = []
@@ -2134,6 +2134,21 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
         dmod_weighted_avg_length_se = _se(dmod_weighted_avg_lengths[smallest_r])
         weighted_avg_dict[(objective, dataset)][dmod_name] = (dmod_weighted_avg_length, dmod_weighted_avg_length_se)
 
+        # PEC scaled-greedy (selection-algorithm ablation), optional per the
+        # "missing_scaled" note in the loading cell above.
+        scaled_matches = [
+            m for m in scaled_dscluster_modules
+            if objective == m.split(';')[1].strip() and m in experiment_dict['modules']
+        ]
+        if scaled_matches:
+            selected_scaled_module = scaled_matches[0]
+            smod_name = selected_scaled_module.split(';')[0] + ';' + selected_scaled_module.split(';')[2] + ';' + selected_scaled_module.split(';')[3]
+            smod_weighted_avg_lengths = experiment_dict['modules'][selected_scaled_module]['weighted-avg-length']
+            smallest_r = str(min([int(l) for l in smod_weighted_avg_lengths.keys()]))
+            smod_weighted_avg_length = _scalar(smod_weighted_avg_lengths[smallest_r])
+            smod_weighted_avg_length_se = _se(smod_weighted_avg_lengths[smallest_r])
+            weighted_avg_dict[(objective, dataset)][smod_name] = (smod_weighted_avg_length, smod_weighted_avg_length_se)
+
 
 # %%
 # Weighted rule length table. "mean +/- SE" (standard error across n_trials=10
@@ -2149,6 +2164,89 @@ pd.DataFrame({
     col: {row: _fmt_weighted_avg(val) for row, val in rows.items()}
     for col, rows in weighted_avg_dict.items()
 })
+
+# %% [markdown]
+# ### Weighted Average Rule Length (LaTeX Table)
+
+# %%
+# LaTeX table built from `weighted_avg_dict` above: one row per algorithm,
+# one column per dataset. ScaledGreedy is shown only for the k-Means
+# (coverage-cost) objective -- it's PEC's selection-algorithm ablation, not a
+# full second baseline, so it doesn't get a row per objective the way PEC
+# does. The 3 smallest (best) means in each dataset column are bolded;
+# comparing means only (not SE), ties broken by whichever sorts first.
+_pec_key = 'dscluster; ensemble'
+_scaled_greedy_key = 'dscluster; ensemble; lazy-greedy'
+
+_table_rows = [
+    (r'\texttt{DecisionTree}', 'coverage-cost', 'Decision-Tree'),
+    (r'\texttt{ExKMC}', 'coverage-cost', 'ExKMC'),
+    (r'\texttt{CBA}', 'coverage-cost', 'CBA'),
+    (r'\texttt{CN2}', 'coverage-cost', 'CN2'),
+    (r'\texttt{IDS}', 'coverage-cost', 'IDS'),
+    (r'\texttt{ScaledGreedy} (\emph{k-Means}, $h_K$)', 'coverage-cost', _scaled_greedy_key),
+    (r'\texttt{PEC} (\emph{k-Means}, $h_K$)', 'coverage-cost', _pec_key),
+    (r'\texttt{PEC} (\emph{Mistakes}, $h_M$)', 'coverage-mistake', _pec_key),
+    (r'\texttt{PEC} (\emph{Pairwise Distance}, $h_P$)', 'coverage-pairwise-distance', _pec_key),
+]
+
+_datasets = list(dataset_experiment_dict.keys())
+
+def _dataset_header(dataset):
+    return "KDDCup" if dataset == "kddcup" else dataset.capitalize()
+
+# cell_values[label][dataset] = (mean, se) or None if that module has no
+# entry for that (objective, dataset) -- e.g. a dataset missing scaled-greedy.
+_cell_values = {
+    label: {
+        dataset: weighted_avg_dict.get((objective, dataset), {}).get(module_key)
+        for dataset in _datasets
+    }
+    for label, objective, module_key in _table_rows
+}
+
+# Per dataset (column), the 3 rows with the smallest mean get bolded.
+_bold_labels = {
+    dataset: {
+        label for label, _ in sorted(
+            (
+                (label, _cell_values[label][dataset][0])
+                for label, _, _ in _table_rows
+                if _cell_values[label][dataset] is not None
+            ),
+            key=lambda t: t[1],
+        )[:3]
+    }
+    for dataset in _datasets
+}
+
+def _fmt_latex_cell(label, dataset):
+    entry = _cell_values[label][dataset]
+    if entry is None:
+        return "--"
+    mean, se = entry
+    text = f"{mean:.3f}" if np.isnan(se) else rf"{mean:.3f} $\pm$ {se:.3f}"
+    return rf"\textbf{{{text}}}" if label in _bold_labels[dataset] else text
+
+_lines = [
+    r"\begin{table}[t]",
+    r"\centering",
+    rf"\begin{{tabular}}{{l{'c' * len(_datasets)}}}",
+    r"\toprule",
+    "Model & " + " & ".join(rf"\emph{{{_dataset_header(d)}}}" for d in _datasets) + r" \\",
+    r"\midrule",
+]
+for label, _, _ in _table_rows:
+    _lines.append(label + " & " + " & ".join(_fmt_latex_cell(label, d) for d in _datasets) + r" \\")
+_lines += [
+    r"\bottomrule",
+    r"\end{tabular}",
+    r"\caption{Weighted average rule length (mean $\pm$ SE where applicable).}",
+    r"\label{tab:weighted-avg-rule-length}",
+    r"\end{table}",
+]
+
+print("\n".join(_lines))
 
 # %%
 
@@ -2434,7 +2532,7 @@ plt.savefig(
 fig, ax = plt.subplots(figsize=(12, 2))
 
 legend_labels = dict(title_dict) | {
-    'dscluster; ensemble; lazy-greedy': title_dict.get('dscluster; ensemble', 'PEC') + r' (Scaled Greedy)',
+    'dscluster; ensemble; lazy-greedy': r'\texttt{ScaledGreedy}',
 }
 
 legend_elements = [
