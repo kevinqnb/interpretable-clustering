@@ -1096,6 +1096,201 @@ plt.savefig(
 )
 
 # %% [markdown]
+# ### Bar Plots (Alpha Zero)
+#
+# Same bar-plot layout as the Max Rules bar plots above (all three objectives, one row each), but sourced from `max_rules_alpha_zero.py` / `max_rules_alpha_zero_combine.py`'s output -- PEC fit with `alpha_val=0` for every objective (no rule-length penalty) instead of the elbow-selected alpha used everywhere else in this notebook. Comparison models (Decision-Tree, ExKMC, IDS, CBA, CN2) don't take an alpha parameter, so their bars are effectively unchanged from the main Max Rules plot; only PEC (`dscluster`) differs. Shares the main Bar Plots legend above (same module names/colors), so no separate legend cell.
+
+# %%
+# Load experiment data for the max_rules_alpha_zero.py / max_rules_alpha_zero_combine.py
+# comparison (PEC fit with alpha=0 for every objective). Loading is defensive, same as the main
+# max_rules loading cell above.
+
+dscluster_modules_alpha_zero = set()
+scaled_dscluster_modules_alpha_zero = set()
+dataset_experiment_dict_alpha_zero = {}
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/max_rules/exp" + EXP_REF + "_alpha_zero.json"
+    if not os.path.exists(fname):
+        print(f"[max_rules_alpha_zero] skipping {dataset}: {fname} not found")
+        continue
+    with open(fname, 'r') as f:
+        experiment_dict = json.load(f)
+    dataset_experiment_dict_alpha_zero[dataset] = experiment_dict
+    dscluster_modules_alpha_zero.update(
+        [m for m in experiment_dict['modules'].keys() if ('dscluster' in m) and ('lazy-greedy' not in m)]
+    )
+    scaled_dscluster_modules_alpha_zero.update(
+        [m for m in experiment_dict['modules'].keys() if ('dscluster' in m) and ('lazy-greedy' in m) and ('weighted' not in m)]
+    )
+    missing = [m for m in comparison_modules if m not in experiment_dict['modules']]
+    if missing:
+        print(f"[max_rules_alpha_zero] warning: {dataset} is missing modules {missing}")
+
+dscluster_modules_alpha_zero = list(dscluster_modules_alpha_zero)
+scaled_dscluster_modules_alpha_zero = list(scaled_dscluster_modules_alpha_zero)
+
+for dataset, experiment_dict in dataset_experiment_dict_alpha_zero.items():
+    missing_scaled = [
+        objective for objective in objective_names
+        if not any(
+            objective == m.split(';')[1].strip() and m in experiment_dict['modules']
+            for m in scaled_dscluster_modules_alpha_zero
+        )
+    ]
+    if missing_scaled:
+        print(f"[max_rules_alpha_zero] note: {dataset} has no PEC scaled-greedy results for objective(s) {missing_scaled}")
+
+# %%
+# Collect experiment data for the alpha-zero bar plot -- identical logic to the main Max Rules
+# bar_dict collection cell above, sourced from dataset_experiment_dict_alpha_zero.
+
+bar_dict_alpha_zero = {
+    dataset: {objective: {} for objective in objective_names} for dataset in dataset_experiment_dict_alpha_zero.keys()
+}
+for dataset, experiment_dict in dataset_experiment_dict_alpha_zero.items():
+    fixed_parameters = experiment_dict['fixed-parameters']
+    for objective in objective_names:
+        selected_dscluster_module = [
+            m for m in dscluster_modules_alpha_zero if objective == m.split(';')[1].strip()
+        ][0]  # there should only be one per objective!!
+        reward = objective_cost_reward_dict[objective]['reward']
+        cost = objective_cost_reward_dict[objective]['cost']
+        alpha = fixed_parameters['alpha'][selected_dscluster_module]
+        lambd = max(list(experiment_dict['modules'][selected_dscluster_module]['lambda'].values()))
+
+        x = np.array(list(experiment_dict['modules'][selected_dscluster_module][reward].keys()))
+        idxs = np.where(x.astype(int) <= min(np.max(x.astype(int)), np.min(x.astype(int) + 6)))[0][::2]
+
+        for cmod in comparison_modules:
+            if cmod not in experiment_dict['modules']:
+                continue
+            obj_values, obj_err = _module_bar_series(
+                experiment_dict['modules'][cmod], objective, x, reward, cost, lambd, alpha
+            )
+            bar_dict_alpha_zero[dataset][objective][cmod] = (
+                x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+            )
+
+        obj_values, obj_err = _module_bar_series(
+            experiment_dict['modules'][selected_dscluster_module], objective, x, reward, cost, lambd, alpha
+        )
+        bar_dict_alpha_zero[dataset][objective][selected_dscluster_module] = (
+            x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+        )
+
+        scaled_matches = [
+            m for m in scaled_dscluster_modules_alpha_zero
+            if objective == m.split(';')[1].strip() and m in experiment_dict['modules']
+        ]
+        if scaled_matches:
+            selected_scaled_module = scaled_matches[0]  # there should only be one per objective!!
+            obj_values, obj_err = _module_bar_series(
+                experiment_dict['modules'][selected_scaled_module], objective, x, reward, cost, lambd, alpha
+            )
+            bar_dict_alpha_zero[dataset][objective][selected_scaled_module] = (
+                x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
+            )
+
+# %%
+# Plot results -- identical styling to the main Max Rules bar plot above (all three objectives),
+# sourced from the alpha=0 PEC fits instead of the elbow-selected-alpha fits.
+
+fig,ax = plt.subplots(len(objective_names), len(dataset_experiment_dict_alpha_zero), figsize=(34, 12))
+
+module_order = [
+    'Decision-Tree',
+    'ExKMC',
+    #'WRA',
+    'IDS',
+    'CBA',
+    'CN2',
+    'dscluster; ensemble; lazy-greedy',
+    'dscluster; ensemble',
+]
+
+function_name_dict = {0: 'K', 1: 'M', 2: 'P'}
+
+for i, (dataset, objective_result_dict) in enumerate(bar_dict_alpha_zero.items()):
+    for j, (objective, module_result_dict) in enumerate(objective_result_dict.items()):
+        # plot bars
+        module_order[-2] = f'dscluster; {objective}; ensemble; lazy-greedy'
+        module_order[-1] = f'dscluster; {objective}; ensemble'
+
+        obj_min = np.inf
+        obj_max = -np.inf
+        for k, module in enumerate(module_order):
+            if module not in module_result_dict:
+                continue
+            x, obj_values, obj_err = module_result_dict[module]
+            if 'dscluster' in module:
+                mod_name = module.split(';')[0].strip() + "; " + "; ".join(
+                    part.strip() for part in module.split(';')[2:]
+                )
+            else:
+                mod_name = module
+            hatch = hatch_dict.get(mod_name, '')
+
+            # Plot bar for a single module:
+            width = 0.225
+            ax[j,i].bar(
+                x.astype(int) + k * width,
+                obj_values,
+                yerr=obj_err,
+                width=width,
+                label=mod_name,
+                color=color_dict.get(mod_name, 'grey'),
+                alpha = 0.75,
+                hatch=hatch,
+                edgecolor='black',
+                capsize=3,
+                error_kw={'elinewidth': 1.2, 'ecolor': 'black'},
+            )
+
+            if np.min(obj_values) < obj_min:
+                obj_min = np.min(obj_values)
+            if np.max(obj_values) > obj_max:
+                obj_max = np.max(obj_values)
+
+        # Set y limits and ticks
+        obj_rng = obj_max - obj_min
+        pad = 0.01 * obj_rng
+        y_lo, y_hi, yticks = nice_lim_for_3_ticks(obj_min - pad, obj_max + pad, clip=(BAR_Y_MIN, 1.0))
+        ax[j,i].set_ylim(y_lo, y_hi)
+        ax[j,i].set_yticks(yticks)
+        ax[j,i].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+        # Set x ticks and labels
+        ax[j,i].set_xticks(x.astype(int) + (len(module_result_dict)-1) * 0.2 / 2)
+        if j != len(objective_names) - 1:
+            ax[j,i].set_xticklabels([])
+        else:
+            ax[j,i].set_xticklabels([str(int(val)) for val in x.astype(int)])
+
+        # Y-label with objective
+        if i == 0:
+            ax[j,i].set_ylabel(
+                rf"$\bar{{f}}_{function_name_dict[j]}$", rotation=0, labelpad=40, fontsize = 36
+            )
+
+        # Title with dataset name
+        if j == 0:
+            ax[j,i].set_title(rf"${dataset.capitalize()}$")
+
+        # Gridlines:
+        ax[j,i].grid(which='major', linestyle='-', linewidth=0.8, alpha = 0.5)
+        ax[j,i].axhline(0.0, color="black", linewidth=2.0, alpha=0.7)
+
+
+fig.supxlabel(r"Number of Rules, $\ell$", y=0.05, x = 0.525)
+plt.tight_layout()
+
+plt.savefig(
+    "../figures/experiments/objectives_alpha_zero.pdf",
+    bbox_inches='tight',
+    dpi=300
+)
+
+# %% [markdown]
 # ### Rule Provenance
 #
 # Breakdown of the (distorted-greedy) PEC module's selected rules by mining source -- Decision-Tree (DT), Random-Forest (RF), or Class-Association-Rule (CAR) -- at the smallest `max_rules.py` rule budget (`r = k`, the number of clusters, i.e. `n_rules_list[0]`). One row per objective, one column per dataset.
