@@ -24,7 +24,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.collections import LineCollection
-from matplotlib.ticker import MaxNLocator, FormatStrFormatter
+from matplotlib.ticker import MaxNLocator, FormatStrFormatter, AutoMinorLocator
 import matplotlib.lines as mlines
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -1751,7 +1751,7 @@ for objective in objective_names:
                 ax.scatter(
                     x, y, z,
                     color=color, marker='o', s=80, alpha=0.75,
-                    edgecolor='black', depthshade=False, zorder=2,
+                    edgecolor='none', depthshade=False, zorder=2,
                 )
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
@@ -1781,7 +1781,7 @@ for objective in objective_names:
                     color=color,
                     marker='o',#marker_style_dict.get(module, 'o'),
                     s=240,
-                    edgecolor='black',
+                    edgecolor='none',
                     alpha=1.0,
                     depthshade=False,
                     zorder=3,
@@ -1833,13 +1833,18 @@ for objective in objective_names:
         # view angle and axis meaning throughout the grid.
         ax.set_ylabel(rf"$\bar{{\beta}}_{{{beta_subscript_dict.get(objective, '')}}}$", labelpad=6, fontsize=22)
         ax.set_xlabel(r"$\bar{g}$", labelpad=2, fontsize=22)
-        # set_rotate_label(False) + rotation=0 keeps the z-label horizontal/upright instead of
-        # mplot3d's default of rotating it to run vertically alongside the z-axis -- with
-        # text.usetex on, that default rotation also made the label's true render extent read
-        # wrong at savefig time, which was clipping it off the right edge of the rightmost
-        # column's panels.
-        ax.zaxis.set_rotate_label(False)
-        ax.set_zlabel(r"$\bar{s}$", labelpad=14, fontsize=22, rotation=0)
+        # mplot3d's set_zlabel (even with set_rotate_label(False) + rotation=0, to avoid a
+        # text.usetex extent-measurement bug that otherwise clipped the rotated label off the
+        # right edge of the rightmost column) places the label far from the z-axis itself --
+        # anchored near the x-axis side rather than next to the z-ticks/y-axis corner where it
+        # actually sits. Drawing it manually with text2D in axes-fraction coordinates instead
+        # pins it right next to the z-axis (and therefore the adjoining y-axis corner) and keeps
+        # it fully inside the panel at savefig time regardless of column position.
+        ax.set_zlabel("")
+        ax.text2D(
+            0.86, 0.58, r"$\bar{s}$",
+            transform=ax.transAxes, fontsize=22, ha='left', va='center',
+        )
 
         # Light, uncluttered panes/gridlines so points stay legible in print
         ax.xaxis.pane.set_alpha(0.05)
@@ -1972,7 +1977,10 @@ fig, axs = plt.subplots(
 for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
     for j, (objective, module_result_dict) in enumerate(objective_result_dict.items()):
         ax = axs[j, i]
-        ax.grid(True, linestyle=':', linewidth=0.8, alpha=0.9)
+        ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.grid(True, which='major', linestyle=':', linewidth=0.8, alpha=0.9)
+        ax.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.5)
 
         for module, pts in module_result_dict.items():
             x, y4 = pts['x'], pts['y4']
@@ -1998,7 +2006,7 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                 ax.scatter(
                     x, y4,
                     color=color, marker='o', s=100, alpha=0.35,
-                    edgecolor='black', zorder=2,
+                    edgecolor='none', zorder=2,
                 )
                 if len(lam) > 1:
                     order = np.argsort(lam)
@@ -2036,9 +2044,9 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                     label=module,
                     color=color,
                     marker='o',#marker_style_dict.get(module, 'o'),
-                    s=240,
-                    edgecolor='black',
-                    alpha=0.9,
+                    s=280,
+                    edgecolor='none',
+                    alpha=0.75,
                     zorder=3,
                 )
 
@@ -2065,7 +2073,7 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
         ax.set_ylim(-0.05, 1.05)
         ax.set_xticks([0, 0.5, 1])
         ax.set_yticks([0, 0.5, 1])
-        ax.tick_params(axis='both', which='major', labelsize=16)
+        ax.tick_params(axis='both', which='major', labelsize=20)
 
         if j == 0:
             if dataset == "kddcup":
@@ -2074,8 +2082,9 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                 ax.set_title(rf"${dataset.capitalize()}$", pad=10)
 
         if j == len(objective_names) - 1:
-            ax.set_xlabel(r"$g$", fontsize=22)
-        ax.set_ylabel(rf"$h_{{{function_name_dict[j]}}}$", fontsize=22)
+            ax.set_xlabel(r"$g$", fontsize=26)
+        if i == 0:
+            ax.set_ylabel(rf"$h_{{{function_name_dict[j]}}}$", fontsize=26, rotation=0, labelpad=20)
 
 plt.tight_layout()
 
@@ -2382,7 +2391,7 @@ for i, dataset in enumerate(dataset_confidence_dict.keys()):
             axs[j, i].plot(
                 r['x'][mask], r['y'][mask],
                 color=color,
-                alpha = 0.75,
+                alpha=1.0 if module == 'dscluster; ensemble' else 0.75,
                 #marker=marker_style_dict.get(module, 'o'),
                 linestyle='dashed' if r['is_flat'] else 'solid',
                 linewidth=5, markersize=10, markeredgecolor='black',
