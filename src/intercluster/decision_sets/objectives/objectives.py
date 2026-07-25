@@ -60,8 +60,7 @@ def _load_precomputed_blob(path: Union[str, Path]) -> dict:
 
 
 class Objective:
-    """
-    Base class for a selector, which is used to select rules based on a given objective.
+    """Base class for a selector, which selects rules based on a given objective.
 
     Args:
         n_select (int): The *maximum* number of rules to select.
@@ -70,18 +69,13 @@ class Objective:
         lambda_val (float): A hyperparameter that controls tradeoff between reward and cost.
             Defaults to None, in which case it may be selected automatically.
         cluster_centers (NDArray): (k x d) Array of cluster centers for computing coverage.
-        weights (NDArray): (n,) Array of weights for each data point. Defaults to None,
+        weights (NDArray): (n,) Array of weights for each data point. Defaults to None.
         selection_algorithm (str): The selection algorithm to use. Options are
             'distorted-greedy', 'lazy-greedy', and 'heap-distorted-greedy'. Defaults to
             'distorted-greedy'.
         precomputed_path (Union[str, Path]): Path to precomputed data for the objective. Defaults to None.
         output_path (Union[str, Path]): Path to save output data. Defaults to None.
         pack_bits (bool): Whether to pack boolean matrices as bit vectors for memory efficiency. Defaults to True.
-
-    Attrs:
-        name (str): Name of the objective.
-        data_initialized (bool): Whether the data has been initialized.
-        decision_set_initialized (bool): Whether the decision set has been initialized.
     """
     def __init__(
         self,
@@ -548,7 +542,7 @@ class Objective:
                 # The coverage accumulators are still empty on the first pass, so the scan above
                 # evaluated g(e | {}) for every decision in the pool and discarded exactly those
                 # failing g(e | {}) - lambda * h(e) > 0. Whatever is left is what this algorithm
-                # ever gets to choose from -- discards are permanent.
+                # ever gets to choose from.
                 self.n_available_decisions = len(self.decision_info_dict) - len(discarded_decisions)
 
             if best_decision_score > 0 and best_decision is not None:

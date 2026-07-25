@@ -7,13 +7,13 @@
 #
 # Dependency graph:
 #   mine_rules.py
-#      -> [ alphas.py || ids_lambda_search.py ]              (parallel, independent)
-#      -> select_alphas.py                                    (needs alphas.py's output)
-#      -> [ max_rules.py || lambda.py || confidence.py || input_sensitivity.py ]
-#                                                              (parallel; all four depend only
-#                                                                on select_alphas.py's and
-#                                                                ids_lambda_search.py's output,
-#                                                                not on each other)
+#      -> [ alphas.py || ids_lambda_search.py ]   (parallel, independent)
+#      -> select_alphas.py                         (needs alphas.py's output)
+#      -> [ max_rules.py || lambda.py || confidence.py ]
+#                                                   (parallel; all three depend only on
+#                                                     select_alphas.py's and
+#                                                     ids_lambda_search.py's output,
+#                                                     not on each other)
 #
 # Each stage is a standalone module-level script (not an importable function), so stages are
 # driven via subprocess rather than direct function calls.
@@ -82,8 +82,8 @@ def main():
         help=(
             "Total CPU budget for the whole run. At each stage below, this is "
             "divided evenly across however many scripts run concurrently at "
-            "that point in the pipeline (e.g. 4-way in the final stage, where "
-            "max_rules.py/lambda.py/confidence.py/input_sensitivity.py run at once) so no stage "
+            "that point in the pipeline (e.g. 3-way in the final stage, where "
+            "max_rules.py/lambda.py/confidence.py run at once) so no stage "
             "oversubscribes the machine. Defaults to "
             "experiments/protein/config.py's TOTAL_CPU_COUNT, which itself "
             "defaults to the machine's detected core count."

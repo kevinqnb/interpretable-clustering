@@ -60,13 +60,8 @@ class CBA(DecisionSet):
         self.default_class = None
 
 
-    # ------------------------------------------------------------------
-    # Core selection
-    # ------------------------------------------------------------------
-
     def select(self, X: NDArray, y: List[Set[int]]) -> set[Decision]:
-        """
-        Run the CBA M1 algorithm on the current candidate decision set.
+        """Run the CBA M1 algorithm on the current candidate decision set.
 
         Args:
             X (NDArray): Input dataset of shape (n, d).
@@ -81,9 +76,7 @@ class CBA(DecisionSet):
 
         n = X.shape[0]
 
-        # ----------------------------------------------------------------
-        # Stage 1: compute (confidence, support) per Decision
-        # ----------------------------------------------------------------
+        # Stage 1: compute (confidence, support) per Decision.
         # Generation order is the index of the rule in self.rules (the original
         # input list), giving a deterministic tiebreaker. Rules not in self.rules
         # (e.g. when rule_labels was supplied and set_labels created a different
@@ -110,11 +103,9 @@ class CBA(DecisionSet):
 
             scored.append((confidence, support, rule_len, gen_order, decision))
 
-        # ----------------------------------------------------------------
-        # Stage 2: keep one (rule, label) pair per unique rule
-        # Multi-label resolution: highest precedence = highest confidence,
-        # then support, then shorter rule, then earlier generation order.
-        # ----------------------------------------------------------------
+        # Stage 2: keep one (rule, label) pair per unique rule. Multi-label resolution:
+        # highest precedence = highest confidence, then support, then shorter rule,
+        # then earlier generation order.
         rule_to_best: dict[Rule, tuple] = {}
         for entry in scored:
             rule = entry[4].rule
@@ -125,18 +116,14 @@ class CBA(DecisionSet):
                 if _has_higher_precedence(entry, existing):
                     rule_to_best[rule] = entry
 
-        # ----------------------------------------------------------------
-        # Stage 3: sort candidates by precedence, highest first
+        # Stage 3: sort candidates by precedence, highest first.
         # Key: (-confidence, -support, rule_length, gen_order)
-        # ----------------------------------------------------------------
         candidates = sorted(
             rule_to_best.values(),
             key=lambda e: (-e[0], -e[1], e[2], e[3]),
         )
 
-        # ----------------------------------------------------------------
-        # Stage 4: M1 algorithm
-        # ----------------------------------------------------------------
+        # Stage 4: M1 algorithm.
         uncovered = set(range(n))
         classifier: list[Decision] = []
         default_classes: list[int | None] = []
@@ -179,9 +166,7 @@ class CBA(DecisionSet):
             default_classes.append(default_class)
             total_errors.append(cumulative_rule_errors + default_errors)
 
-        # ----------------------------------------------------------------
-        # Stage 5: cut at minimum-error prefix
-        # ----------------------------------------------------------------
+        # Stage 5: cut at minimum-error prefix.
         if total_errors:
             min_err = min(total_errors)
             cut = total_errors.index(min_err)
@@ -193,9 +178,7 @@ class CBA(DecisionSet):
             label_counts = Counter(lbl for yi in y for lbl in yi)
             self.default_class = label_counts.most_common(1)[0][0] if label_counts else None
 
-        # ----------------------------------------------------------------
-        # Stage 6: apply n_select cap (top-precedence prefix)
-        # ----------------------------------------------------------------
+        # Stage 6: apply n_select cap (top-precedence prefix).
         if self.n_select is not None:
             final_classifier = final_classifier[: self.n_select]
 

@@ -127,10 +127,10 @@ def oracle_find_max(items, t):
 
 
 class TestKineticHeapBasics:
-    """Test construction, size reporting, and the empty heap."""
+    """Construction, size reporting, and the empty heap."""
 
     def test_make_heap_is_empty(self):
-        """Test that a new heap is empty and starts at a current time of negative infinity."""
+        """A new heap is empty and starts at a current time of negative infinity."""
         heap = KineticHeap.make_heap()
         assert heap.is_empty()
         assert len(heap) == 0
@@ -138,14 +138,14 @@ class TestKineticHeapBasics:
         check_invariants(heap)
 
     def test_empty_heap_find_max_returns_none(self):
-        """Test that find_max on an empty heap returns None rather than raising."""
+        """`find_max` on an empty heap returns None rather than raising."""
         heap = KineticHeap()
         assert heap.find_max(0.0) is None
         assert heap.delete_max(1.0) is None
         assert heap.current_time == 1.0
 
     def test_single_item(self):
-        """Test that a heap of one item always returns that item."""
+        """A heap of one item always returns that item."""
         heap = KineticHeap()
         heap.insert('a', 2.0, -1.0)
         check_invariants(heap)
@@ -156,7 +156,7 @@ class TestKineticHeapBasics:
             check_invariants(heap)
 
     def test_delete_last_item_empties_heap(self):
-        """Test that deleting the only item leaves a valid empty heap."""
+        """Deleting the only item leaves a valid empty heap."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 1.0)
         heap.delete('a')
@@ -166,7 +166,7 @@ class TestKineticHeapBasics:
         check_invariants(heap)
 
     def test_delete_max_returns_and_removes(self):
-        """Test that delete_max returns the maximum and removes it from the heap."""
+        """`delete_max` returns the maximum and removes it from the heap."""
         heap = KineticHeap()
         heap.insert('flat', 0.0, 10.0)
         heap.insert('steep', 1.0, 0.0)
@@ -178,21 +178,21 @@ class TestKineticHeapBasics:
         assert heap.is_empty()
 
     def test_duplicate_item_raises_error(self):
-        """Test that inserting an item already in the heap raises ValueError."""
+        """Inserting an item already in the heap raises ValueError."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         with pytest.raises(ValueError, match="already in the heap"):
             heap.insert('a', 2.0, 3.0)
 
     def test_delete_missing_item_raises_error(self):
-        """Test that deleting an item not in the heap raises ValueError."""
+        """Deleting an item not in the heap raises ValueError."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         with pytest.raises(ValueError, match="not in the heap"):
             heap.delete('b')
 
     def test_reinsertion_after_deletion(self):
-        """Test that an item may be reinserted with a new key after being deleted."""
+        """An item may be reinserted with a new key after being deleted."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         heap.insert('b', 2.0, 0.0)
@@ -208,15 +208,15 @@ class TestKineticHeapBasics:
 
 
 class TestPeekMax:
-    """Test the read-only peek_max operation."""
+    """The read-only peek_max operation."""
 
     def test_peek_max_empty_heap_returns_none(self):
-        """Test that peek_max on an empty heap returns None rather than raising."""
+        """`peek_max` on an empty heap returns None rather than raising."""
         heap = KineticHeap()
         assert heap.peek_max() is None
 
     def test_peek_max_item_matches_find_max_before_any_query(self):
-        """Test that peek_max's item agrees with find_max at the initial current_time of -inf.
+        """`peek_max`'s item agrees with find_max at the initial current_time of -inf.
 
         The key value itself is not checked here: at t=-inf, a*t+b is -inf for any a != 0,
         so the raw value is degenerate (uninformative) even though the winning item, resolved
@@ -229,7 +229,7 @@ class TestPeekMax:
         assert item == heap.find_max(-np.inf)
 
     def test_peek_max_matches_find_max_after_query(self):
-        """Test that peek_max reports the same item and value as the preceding find_max."""
+        """`peek_max` reports the same item and value as the preceding find_max."""
         heap = KineticHeap()
         heap.insert('a', 2.0, -1.0)
         heap.insert('b', 1.0, 5.0)
@@ -240,7 +240,7 @@ class TestPeekMax:
         assert value == item_a_times_t_plus_b(heap, item, 3.0)
 
     def test_peek_max_after_delete_max(self):
-        """Test that peek_max reflects the new winner after delete_max removes the old one."""
+        """`peek_max` reflects the new winner after delete_max removes the old one."""
         heap = KineticHeap()
         heap.insert('flat', 0.0, 10.0)
         heap.insert('steep', 1.0, 0.0)
@@ -250,7 +250,7 @@ class TestPeekMax:
         assert value == pytest.approx(1.0 * 0.0 + 0.0)
 
     def test_peek_max_does_not_mutate_heap(self):
-        """Test that peek_max leaves current_time, length, and structural invariants untouched."""
+        """`peek_max` leaves current_time, length, and structural invariants untouched."""
         heap = KineticHeap()
         heap.insert('a', 2.0, -1.0)
         heap.insert('b', 1.0, 5.0)
@@ -280,10 +280,10 @@ def item_a_times_t_plus_b(heap, item, t):
 
 
 class TestMonotonicity:
-    """Test that query times are required to be nondecreasing."""
+    """Query times are required to be nondecreasing."""
 
     def test_decreasing_query_time_raises_error(self):
-        """Test that a query preceding the current time raises ValueError."""
+        """A query preceding the current time raises ValueError."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         heap.find_max(5.0)
@@ -291,14 +291,14 @@ class TestMonotonicity:
             heap.find_max(4.999)
 
     def test_decreasing_query_time_raises_on_empty_heap(self):
-        """Test that monotonicity is enforced even when the heap holds no items."""
+        """Monotonicity is enforced even when the heap holds no items."""
         heap = KineticHeap()
         heap.find_max(3.0)
         with pytest.raises(ValueError, match="nondecreasing"):
             heap.find_max(2.0)
 
     def test_repeated_query_time_allowed(self):
-        """Test that querying the same time twice is permitted and stable."""
+        """Querying the same time twice is permitted and stable."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         heap.insert('b', -1.0, 0.0)
@@ -307,7 +307,7 @@ class TestMonotonicity:
         check_invariants(heap)
 
     def test_delete_max_does_not_rewind_time(self):
-        """Test that a delete_max advances the current time like any other query."""
+        """A delete_max advances the current time like any other query."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 0.0)
         heap.insert('b', 2.0, 0.0)
@@ -323,11 +323,11 @@ class TestMonotonicity:
 
 
 class TestSwapCorrectness:
-    """Test that winners switch at exactly the time their key lines cross."""
+    """Winners switch at exactly the time their key lines cross."""
 
     def test_winner_flips_at_crossing_time(self):
         """
-        Test two lines crossing at a known time. The flat line leads strictly before the crossing,
+        Two lines crossing at a known time. The flat line leads strictly before the crossing,
         and the steeper line leads at and after it, the swap being treated as having fired once the
         current time reaches it.
         """
@@ -346,7 +346,7 @@ class TestSwapCorrectness:
         check_invariants(heap)
 
     def test_winner_flips_in_max_heap_direction(self):
-        """Test that it is the steeper line, not the flatter one, that wins after the crossing."""
+        """It is the steeper line, not the flatter one, that wins after the crossing."""
         heap = KineticHeap()
         heap.insert('shallow', -2.0, 10.0)
         heap.insert('steep', 3.0, -5.0)
@@ -356,7 +356,7 @@ class TestSwapCorrectness:
         assert heap.find_max(3.1) == 'steep'
 
     def test_winner_never_switches_back(self):
-        """Test that once the steeper line takes the lead it keeps it forever."""
+        """Once the steeper line takes the lead it keeps it forever."""
         heap = KineticHeap()
         heap.insert('flat', 0.0, 0.0)
         heap.insert('steep', 1.0, -1.0)
@@ -366,7 +366,7 @@ class TestSwapCorrectness:
             check_invariants(heap)
 
     def test_crossing_skipped_over_in_one_advance(self):
-        """Test that a swap is applied even when the current time jumps straight past it."""
+        """A swap is applied even when the current time jumps straight past it."""
         heap = KineticHeap()
         heap.insert('flat', 0.0, 0.0)
         heap.insert('steep', 1.0, -1.0)
@@ -376,7 +376,7 @@ class TestSwapCorrectness:
         check_invariants(heap)
 
     def test_many_crossings_in_one_advance(self):
-        """Test a fan of lines through a common point, all of which swap in a single advance."""
+        """A fan of lines through a common point, all of which swap in a single advance."""
         heap = KineticHeap()
         # Every line passes through (2, 4), so all of them cross one another at t = 2.
         for n in range(8):
@@ -397,11 +397,11 @@ class TestSwapCorrectness:
 
 
 class TestAsymptotics:
-    """Test the behavior of the heap at extreme times."""
+    """The behavior of the heap at extreme times."""
 
     def test_large_time_returns_largest_coefficient(self):
         """
-        Test that for large times the item of largest key coefficient wins. This is what the leaf
+        For large times the item of largest key coefficient wins. This is what the leaf
         ordering exists to arrange, and would fail were the ordering left in its min-heap direction.
         """
         heap = KineticHeap()
@@ -415,7 +415,7 @@ class TestAsymptotics:
         check_invariants(heap)
 
     def test_large_time_ties_broken_by_largest_constant(self):
-        """Test that among items of equal largest coefficient, the largest constant wins."""
+        """Among items of equal largest coefficient, the largest constant wins."""
         heap = KineticHeap()
         heap.insert('low', 2.0, 0.0)
         heap.insert('high', 2.0, 1.0)
@@ -425,7 +425,7 @@ class TestAsymptotics:
 
     def test_initial_current_time_is_negative_infinity(self):
         """
-        Test that before any query the winner is the item that leads as time tends to negative
+        Before any query the winner is the item that leads as time tends to negative
         infinity, namely the one of smallest coefficient, ties going to the largest constant.
         """
         heap = KineticHeap()
@@ -438,10 +438,10 @@ class TestAsymptotics:
 
 
 class TestDegenerateKeys:
-    """Test keys that are parallel, constant, or otherwise degenerate."""
+    """Keys that are parallel, constant, or otherwise degenerate."""
 
     def test_all_coefficients_equal(self):
-        """Test parallel lines, which never cross and so never swap."""
+        """Parallel lines, which never cross and so never swap."""
         heap = KineticHeap()
         for n in range(6):
             heap.insert(n, 2.0, float(n))
@@ -454,7 +454,7 @@ class TestDegenerateKeys:
             check_invariants(heap)
 
     def test_all_constants_equal(self):
-        """Test a pencil of lines through a common intercept."""
+        """A pencil of lines through a common intercept."""
         heap = KineticHeap()
         for n in range(6):
             heap.insert(n, float(n) - 3.0, 4.0)
@@ -468,7 +468,7 @@ class TestDegenerateKeys:
         check_invariants(heap)
 
     def test_all_keys_constant(self):
-        """Test items whose keys do not vary with time at all."""
+        """Items whose keys do not vary with time at all."""
         heap = KineticHeap()
         heap.insert('a', 0.0, 3.0)
         heap.insert('b', 0.0, 7.0)
@@ -480,7 +480,7 @@ class TestDegenerateKeys:
 
     def test_zero_coefficient_at_initial_time(self):
         """
-        Test that an item of zero coefficient is handled at the initial current time of -inf, where
+        An item of zero coefficient is handled at the initial current time of -inf, where
         evaluating its key as a * t + b would produce a nan.
         """
         heap = KineticHeap()
@@ -503,10 +503,10 @@ class TestDegenerateKeys:
 
 
 class TestTieBreaking:
-    """Test items whose keys are identical or momentarily tied."""
+    """Items whose keys are identical or momentarily tied."""
 
     def test_identical_keys_are_all_retained(self):
-        """Test that items with identical keys remain a valid tree and none are lost."""
+        """Items with identical keys remain a valid tree and none are lost."""
         heap = KineticHeap()
         for n in range(10):
             heap.insert(n, 1.0, 2.0)
@@ -525,7 +525,7 @@ class TestTieBreaking:
         assert heap.is_empty()
 
     def test_ties_broken_by_largest_coefficient(self):
-        """Test that among items momentarily tied, the largest coefficient is returned."""
+        """Among items momentarily tied, the largest coefficient is returned."""
         heap = KineticHeap()
         # At t = 0 all three keys equal 5, but the coefficients differ.
         heap.insert('flat', 0.0, 5.0)
@@ -535,7 +535,7 @@ class TestTieBreaking:
         check_invariants(heap)
 
     def test_ties_broken_by_largest_constant_then_latest_insertion(self):
-        """Test the second and third components of the tie breaking rule."""
+        """The second and third components of the tie breaking rule."""
         heap = KineticHeap()
         heap.insert('first', 1.0, 0.0)
         heap.insert('second', 1.0, 0.0)
@@ -554,11 +554,11 @@ class TestTieBreaking:
 
 
 class TestNumericalEdgeCases:
-    """Test near degenerate arithmetic in the swap times."""
+    """Near degenerate arithmetic in the swap times."""
 
     def test_near_equal_coefficients(self):
         """
-        Test coefficients differing by a very small amount. The crossing is real but enormously far
+        Coefficients differing by a very small amount. The crossing is real but enormously far
         in the future, and must simply be pruned rather than cause a failure.
         """
         heap = KineticHeap()
@@ -574,7 +574,7 @@ class TestNumericalEdgeCases:
         check_invariants(heap)
 
     def test_overflowing_swap_time(self):
-        """Test that a swap time too large to represent is treated as no swap at all."""
+        """A swap time too large to represent is treated as no swap at all."""
         heap = KineticHeap()
         heap.insert('a', 1.0, 1e308)
         heap.insert('b', 1.0 + 1e-10, -1e308)
@@ -587,7 +587,7 @@ class TestNumericalEdgeCases:
         check_invariants(heap)
 
     def test_query_exactly_at_swap_time_repeatedly(self):
-        """Test that querying repeatedly at exactly a swap time is stable and consumes the swap."""
+        """Querying repeatedly at exactly a swap time is stable and consumes the swap."""
         heap = KineticHeap()
         heap.insert('flat', 0.0, 0.0)
         heap.insert('steep', 1.0, -1.0)
@@ -601,7 +601,7 @@ class TestNumericalEdgeCases:
         check_invariants(heap)
 
     def test_swap_time_coincident_with_initial_time(self):
-        """Test parallel lines, whose swap time is negative infinity like the initial time."""
+        """Parallel lines, whose swap time is negative infinity like the initial time."""
         heap = KineticHeap()
         heap.insert('low', 1.0, 0.0)
         heap.insert('high', 1.0, 1.0)
@@ -619,11 +619,11 @@ class TestNumericalEdgeCases:
 
 
 class TestAgainstBruteForce:
-    """Test the heap against a brute force oracle over randomized operation sequences."""
+    """Differential testing against a brute force oracle over randomized operation sequences."""
 
     def test_random_operations_match_oracle(self):
         """
-        Test randomized sequences of inserts, deletes and queries against an oracle that computes
+        Randomized sequences of inserts, deletes and queries against an oracle that computes
         the maximum key directly. Every structural invariant is checked after every operation.
 
         Half of the seeds draw small integer keys and step the query time in whole units, so that
@@ -672,7 +672,7 @@ class TestAgainstBruteForce:
 
     def test_random_delete_max_drains_in_key_order(self):
         """
-        Test that repeatedly deleting the maximum at a fixed time drains the heap in decreasing
+        Repeatedly deleting the maximum at a fixed time drains the heap in decreasing
         order of key, agreeing with the oracle at every step.
         """
         samples = 50
@@ -698,7 +698,7 @@ class TestAgainstBruteForce:
             assert heap.is_empty()
 
     def test_large_heap_stays_balanced(self):
-        """Test that the tree stays balanced and correct at a size where its height matters."""
+        """The tree stays balanced and correct at a size where its height matters."""
         np.random.seed(7)
         heap = KineticHeap()
         items = {}
@@ -721,7 +721,7 @@ class TestAgainstBruteForce:
         check_invariants(heap)
 
     def test_sorted_insertion_stays_balanced(self):
-        """Test the worst case for an unbalanced tree: items inserted in increasing key order."""
+        """The worst case for an unbalanced tree: items inserted in increasing key order."""
         heap = KineticHeap()
         items = {}
         n = 200

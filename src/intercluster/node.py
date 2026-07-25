@@ -2,44 +2,25 @@ from numpy.typing import NDArray
 from intercluster import Condition
 
 class Node():
-    """
-    Node object to be used within a logical decision tree, with simple 
-    axis aligned splitting conditions.
-    
-    Args:
-        None
-    Attributes:
-        random_val (float): Uniform random sample used to split ties / and create
-            a relative order of nodes. Note that in the creation of the tree, nodes are chosen
-            based on their cost, and this value is simply used to break ties. 
-            
-        type (str): Internally set to 'node' or 'leaf' depending on if the node is a
-            normal node or a leaf node.
+    """Node in a logical decision tree, with simple axis-aligned splitting conditions.
 
-        leaf_num (int): (For leaf nodes only) Leaf identifying number.
-            
-        label (int): (For leaf nodes only) Prediction label to be associated with this node.
-        
-        left_child (Node): (For non-leaf nodes only) Pointer to the left branch of the current node.
-        
-        right_child (Node): (For non-leaf nodes only) Pointer to the right branch of the 
-            current node. 
-        
-        condition (Condition): Logical or functional condition for evaluating and 
-                splitting the data points.
-        
-        cost (float): The cost associated with points belonging to this node.
-            
-        indices (np.ndarray): The subset of data indices from the training set 
-            belonging to this node.
-        
-        depth (int): The depth of the current node in the tree.
-        
+    Call `tree_node()` or `leaf_node()` after construction to initialize as an internal
+    or leaf node.
+
+    Attributes:
+        type (str): 'node' or 'leaf'.
+        leaf_num (int): (Leaf nodes only) Leaf identifying number.
+        label (int): (Leaf nodes only) Prediction label associated with this node.
+        left_child (Node): (Internal nodes only) Left branch.
+        right_child (Node): (Internal nodes only) Right branch.
+        condition (Condition): (Internal nodes only) Condition for splitting the data points.
+        cost (float): Cost associated with points belonging to this node.
+        indices (np.ndarray): Data indices from the training set belonging to this node.
+        depth (int): Depth of this node in the tree.
         centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
     """
-    
+
     def __init__(self):
-        #self.random_val = np.random.uniform()
         self.type = None
         self.leaf_num = None
         self.label = None
@@ -61,24 +42,15 @@ class Node():
         depth : int,
         centroid_indices : NDArray = None
     ):
-        """
-        Initializes this as a normal node in the tree.
+        """Initializes this as an internal node in the tree.
 
         Args:
-            left_child (Node): Pointer to the left child of the current node.
-            
-            right_child (Node): Pointer to the right child of the current node. 
-            
-            condition (Condition): Logical or functional condition for evaluating and 
-                splitting the data points.
-            
-            cost (float): The cost associated with points belonging to this node.
-            
-            indices (np.ndarray): The subset of data indices from the training set 
-                belonging to this node.
-            
-            depth (int): The depth of the current node in the tree.
-            
+            left_child (Node): Left child of this node.
+            right_child (Node): Right child of this node.
+            condition (Condition): Condition for splitting the data points.
+            cost (float): Cost associated with points belonging to this node.
+            indices (np.ndarray): Data indices from the training set belonging to this node.
+            depth (int): Depth of this node in the tree.
             centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'internal'
@@ -102,21 +74,14 @@ class Node():
         depth : int,
         centroid_indices : NDArray = None
     ):
-        """
-        Initializes this to be a leaf node in the tree.
+        """Initializes this as a leaf node in the tree.
 
         Args:
             leaf_num (int): Leaf identifying number.
-
-            label (int): Prediction label to be associated with this node.
-            
-            cost (float): The cost associated with points belonging to this node. 
-            
-            indices (np.ndarray): The subset of data indices from the training set 
-                belonging to this node.
-            
-            depth (int): The depth of the current node in the tree.
-            
+            label (int): Prediction label associated with this node.
+            cost (float): Cost associated with points belonging to this node.
+            indices (np.ndarray): Data indices from the training set belonging to this node.
+            depth (int): Depth of this node in the tree.
             centroid_indices (np.ndarray): Indices of the cluster centers belonging to this node.
         """
         self.type = 'leaf'

@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -42,15 +41,13 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
-# alphas.py (alpha selection) is a one-time, cached hyperparameter-selection
-# step rather than a model under evaluation, so it is run once under this
-# single seed rather than repeated across trials -- see experiments/README.md
-# ("Reproducibility") for which downstream models (IDS, ExplanationTree,
-# DecisionTree, ShallowTree) are instead re-fit across multiple trial seeds in
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
+# alphas.py is a one-time, cached hyperparameter-selection step rather than a
+# model under evaluation, so it runs once under this single seed instead of
+# across multiple trial seeds -- see experiments/README.md ("Reproducibility")
+# for which downstream models (IDS, DecisionTree) are re-fit per trial in
 # max_rules.py/confidence.py.
 seed = SEED
 
@@ -90,7 +87,6 @@ fixed_parameters = {
 
 np.random.seed(fixed_parameters['seed'])
 
-# Do baseline clustering
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels

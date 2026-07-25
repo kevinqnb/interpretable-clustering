@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -15,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 #
 # Mirrors the `select_alphas` function in examples/experiments.ipynb exactly, so this can run
 # standalone as part of the scripted pipeline instead of requiring a manual notebook pass.
-# Reads alphas/exp_resub.json, writes alphas/selected_alphas_resub.json.
+# Reads alphas/exp{OUTFILE_REF}.json, writes alphas/selected_alphas{OUTFILE_REF}.json.
 
 import json
 import numpy as np

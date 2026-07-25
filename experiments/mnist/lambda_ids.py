@@ -1,6 +1,4 @@
 ####################################################################################################
-# Path setup
-
 import sys
 from pathlib import Path
 
@@ -59,10 +57,9 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 # IDS has inherent randomness in its fitted solution (randomized-greedy/SLS
 # selection), so it's refit across `trial_seeds` below and its results
 # recorded as mean/std/values instead of a single point estimate.
@@ -111,7 +108,6 @@ n_select = fixed_parameters['n_select']
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels

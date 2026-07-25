@@ -19,40 +19,33 @@ from intercluster import Rule, Decision
 
 
 class Baseline:
-    """
-    Experiment module for a non-variable, baseline method. 
-    
+    """Experiment module for a non-variable, baseline method.
+
     Args:
         name (str, optional): Name of the baseline method. Defaults to Class name.
     """
     def __init__(self, name : str = None):
         self.name = name or self.__class__.__name__
-    
+
     def assign(self):
-        """
-        Assigns data points to clusters.
-        """
+        """Assigns data points to clusters."""
         pass
 
 
 class Module:
-    """
-    Experiment module for a clustering method run over selected parameter settings.
-    
-    Args:        
+    """Experiment module for a clustering method run over selected parameter settings.
+
+    Args:
         name (str, optional): Name of the module. Defaults to Class name.
-        
     """
     def __init__(
-        self, 
+        self,
         name : str = None
     ):
         self.name = name or self.__class__.__name__
-    
+
     def reset(self):
-        """
-        Resets the module to its initial state.
-        """
+        """Resets the module to its initial state."""
         pass
     
     
@@ -60,14 +53,11 @@ class Module:
 
     
 class KMeansBase(Baseline):
-    """
-    Baseline KMeans clustering method.
-    
+    """Baseline KMeans clustering method.
+
     Args:
         n_clusters (int): Number of clusters.
-        
-        random_seed (int): Random seed. Defaults to None.                                           
-        
+        random_seed (int): Random seed. Defaults to None.
         name (str, optional): Name of the baseline method. Defaults to 'KMeans'.
     """
     def __init__(
@@ -91,12 +81,10 @@ class KMeansBase(Baseline):
         self.weighted_average_rule_length = np.nan
         
     def assign(self, X : NDArray) -> NDArray:
-        """
-        Fits the KMeans model and returns the cluster assignment.
-        
+        """Fits the KMeans model and returns the cluster assignment.
+
         Args:
             X (np.ndarray): Data matrix.
-            
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
                 with entry (i,j) being True if point i belongs to cluster j and False otherwise.
@@ -119,16 +107,13 @@ class KMeansBase(Baseline):
 
 
 class DBSCANBase(Baseline):
-    """
-    Baseline DBSCAN clustering method.
-    
+    """Baseline DBSCAN clustering method.
+
     Args:
-        eps (float): The maximum distance between two samples for one to be considered 
-            as in the neighborhood of the other.
-        
-        min_samples (int): The number of samples in a neighborhood for a point to be 
-            considered as a core point.
-        
+        eps (float): Maximum distance between two samples for one to be considered
+            in the neighborhood of the other.
+        min_samples (int): Number of samples in a neighborhood for a point to be
+            considered a core point.
         name (str, optional): Name of the baseline method. Defaults to 'DBSCAN'.
     """
     def __init__(
@@ -149,12 +134,10 @@ class DBSCANBase(Baseline):
 
         
     def assign(self, X : NDArray) -> NDArray:
-        """
-        Fits the DBSCAN model and returns the cluster assignment.
-        
+        """Fits the DBSCAN model and returns the cluster assignment.
+
         Args:
             X (np.ndarray): Data matrix.
-            
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
                 with entry (i,j) being True if point i belongs to cluster j and False otherwise.
@@ -176,14 +159,11 @@ class DBSCANBase(Baseline):
 
 
 class AgglomerativeBase(Baseline):
-    """
-    Baseline Agglomerative clustering method.
-    
+    """Baseline Agglomerative clustering method.
+
     Args:
         n_clusters (int): Number of clusters.
-
         linkage (str): Linkage criterion to use.
-        
         name (str, optional): Name of the baseline method. Defaults to 'DBSCAN'.
     """
     def __init__(
@@ -204,12 +184,10 @@ class AgglomerativeBase(Baseline):
 
         
     def assign(self, X : NDArray) -> NDArray:
-        """
-        Fits the Agglomerative model and returns the cluster assignment.
-        
+        """Fits the Agglomerative model and returns the cluster assignment.
+
         Args:
             X (np.ndarray): Data matrix.
-            
         Returns:
             assignment (np.ndarray): Cluster assignment boolean array of size n x k
                 with entry (i,j) being True if point i belongs to cluster j and False otherwise.
@@ -231,15 +209,11 @@ class AgglomerativeBase(Baseline):
 
 
 class DecisionTreeMod(Module):
-    """
-    Experiment module for a decision tree clustering method.
-    
-    Args:
-        model (Any): Tree model. 
+    """Experiment module for a decision tree clustering method.
 
-        fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
-            prior to fitting. 
-        
+    Args:
+        model (Any): Tree model.
+        fitting_params (Dict[str, Any]): Parameters to pass to the tree model prior to fitting.
         name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
     """
     def __init__(
@@ -255,9 +229,7 @@ class DecisionTreeMod(Module):
 
 
     def reset(self):
-        """
-        Resets experiments by returning parametrs to their default values.
-        """
+        """Resets experiments by returning parameters to their default values."""
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.sum_rule_length = np.nan
@@ -265,40 +237,33 @@ class DecisionTreeMod(Module):
         self.n_available_decisions = np.nan
         self.tree = None
 
-    
+
     def update_fitting_params(self, fitting_params : Dict[str, Any]):
-        """
-        Updates the fitting parameters for the model.
-        
+        """Updates the fitting parameters for the model.
+
         Args:
-            kwargs (Dict[str, Any]): Dictionary of parameters to update.
+            kwargs (Dict[str, Any]): Parameters to update.
         """
         self.fitting_params = fitting_params
 
 
     def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray, NDArray]:
-        """
-        Increases the number of rules by one and fits the model.
-        
+        """Increases the number of rules by one and fits the model.
+
         Args:
             X (np.ndarray): Data matrix.
-            
             y (np.ndarray, optional): Data labels.
-        
         Returns:
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+            data_to_rules_assignment (NDArray): Boolean matrix where entry (i,j) is `True` if
                 data point i is assigned to rule j and `False` otherwise.
-
-            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
-                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must
                 be assigned to a single cluster.
-
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be
+                assigned to multiple clusters.
         """
         n_unique = len(unique_labels(y))
-        # Fit the model with the current number of rules
         self.tree = self.model(**self.fitting_params)
         self.tree.fit(X, y)
         tree_labels = self.tree.predict(X)
@@ -311,7 +276,6 @@ class DecisionTreeMod(Module):
             tree_labels, n_labels = n_unique
         )
 
-        # A few data things to record:
         self.n_rules = self.tree.leaf_count
         self.max_rule_length = self.tree.depth
         self.sum_rule_length = self.tree.get_sum_of_depths()
@@ -324,9 +288,8 @@ class DecisionTreeMod(Module):
         )
     
     def predict(self, X : NDArray) -> List[Set[int]]:
-        """
-        Predicts cluster assignments for new data points.
-        
+        """Predicts cluster assignments for new data points.
+
         Args:
             X (np.ndarray): Data matrix.
         Returns:
@@ -379,23 +342,16 @@ def _rule_source_counts(decision_set) -> Dict[str, int]:
 
 
 class DecisionSetMod(Module):
-    """
-    Experiment module for a decision tree clustering method.
-    
+    """Experiment module for a decision tree clustering method.
+
     Args:
         model (Any): Decision Set Model to use.
-
-        fitting_params (Dict[str, Any]): Dictionary of parameters to pass to the tree model 
-            prior to fitting.
-
-        rules (List[List[Condition]], optional): Pre-mined rules to use. If None, rules will be mined
-            using the rule_miner. Defaults to None.
-
+        fitting_params (Dict[str, Any]): Parameters to pass to the tree model prior to fitting.
+        rules (List[List[Condition]], optional): Pre-mined rules to use. If None, rules will be
+            mined using the rule_miner. Defaults to None.
         rule_labels (List[Set[int]], optional): Pre-mined rule labels to use. If None, rule labels
             will be mined using the rule_miner. Defaults to None.
-
         rule_miner (Any): Rule miner used to generate the rules.
-        
         name (str, optional): Name of the module. Defaults to 'Decision-Tree'.
     """
     def __init__(
@@ -415,9 +371,7 @@ class DecisionSetMod(Module):
     
 
     def reset(self):
-        """
-        Resets experiments by giving previous outputs their default values.
-        """
+        """Resets experiments by giving previous outputs their default values."""
         self.n_rules = np.nan
         self.max_rule_length = np.nan
         self.sum_rule_length = np.nan
@@ -429,37 +383,30 @@ class DecisionSetMod(Module):
 
 
     def update_fitting_params(self, fitting_params : Dict[str, Any] = None):
-        """
-        Updates the fitting parameters for the model.
-        
+        """Updates the fitting parameters for the model.
+
         Args:
-            kwargs (Dict[str, Any]): Dictionary of parameters to update.
+            kwargs (Dict[str, Any]): Parameters to update.
         """
         self.fitting_params = fitting_params
 
 
     def fit(self, X : NDArray, y : NDArray) -> Tuple[NDArray, NDArray, NDArray]:
-        """
-        Increases the number of rules by one and fits the model.
-        
+        """Increases the number of rules by one and fits the model.
+
         Args:
             X (np.ndarray): Data matrix.
-            
             y (np.ndarray, optional): Data labels.
-        
         Returns:
-            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if 
+            data_to_rules_assignment (NDArray): Boolean matrix where entry (i,j) is `True` if
                 data point i is assigned to rule j and `False` otherwise.
-
-            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is 
-                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must 
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must
                 be assigned to a single cluster.
-
-            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is 
-                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be 
-                assigned to multiple clusters. 
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be
+                assigned to multiple clusters.
         """
-        # Fit the model with the current number of rules
         self.dset = self.model(
             **(self.fitting_params | {'rules' : self.rules, 'rule_labels' : self.rule_labels})
         )
@@ -490,9 +437,8 @@ class DecisionSetMod(Module):
     
 
     def predict(self, X : NDArray) -> List[Set[int]]:
-        """
-        Predicts cluster assignments for new data points.
-        
+        """Predicts cluster assignments for new data points.
+
         Args:
             X (np.ndarray): Data matrix.
         Returns:
@@ -517,25 +463,22 @@ class DecisionSetMod(Module):
 
 
 def aggregate_trials(trial_results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """
-    Aggregates a list of per-trial result dictionaries (all sharing the same keys,
-    e.g. one dict of measurement values per random seed) into per-key summary
-    statistics.
+    """Aggregates per-trial result dictionaries (sharing the same keys) into per-key
+    summary statistics.
 
     Used for modules whose fitted solution has inherent randomness (e.g. IDS,
-    ExplanationTree, DecisionTree, ShallowTree), where a single fit is not
-    representative and results should instead be reported across several
-    random trials.
+    ExplanationTree, DecisionTree, ShallowTree), where a single fit isn't representative
+    and results are instead reported across several random trials.
 
     Args:
         trial_results (List[Dict[str, Any]]): Length n_trials list of result
             dictionaries, each mapping metric name to a scalar value.
 
     Returns:
-        aggregated (Dict[str, Dict[str, Any]]): Dictionary mapping each metric name
-            to {'mean': float, 'std': float, 'values': List[Any]} computed across
-            trials. Non-numeric or NaN entries are passed through in 'values' and
-            excluded from the mean/std computation.
+        aggregated (Dict[str, Dict[str, Any]]): Each metric name mapped to
+            {'mean': float, 'std': float, 'values': List[Any]} computed across trials.
+            Non-numeric/NaN entries pass through in 'values' but are excluded from
+            mean/std.
     """
     if not trial_results:
         return {}
@@ -556,17 +499,15 @@ def aggregate_trials(trial_results: List[Dict[str, Any]]) -> Dict[str, Dict[str,
 #
 # Objective re-scoring utilities.
 #
-# `score_decision_set` (scores an arbitrary, already-fitted decision set against a FIXED lambda,
-# as opposed to fitting a PEC objective which searches for its own decisions and lambda*) already
-# lives in intercluster.decision_sets.objectives.scoring and is imported into this module's
-# namespace via the `from intercluster.decision_sets.objectives import *` above -- confidence.py
-# used to shadow it with an identical local redefinition, which has been removed there too.
-# `score_objectives_by_r` below is the new part: it batches `score_decision_set` calls across
-# every (module, r) pair so max_rules.py's per-rule-budget sweep can get a TRUE 'objective' value
-# per module, matching confidence.py's per-confidence-level PEC-objective scoring, instead of
-# reconstructing one downstream from separately-reported reward/cost measurements (which silently
-# drifts if a measurement's units don't match the objective's internal cost -- see e.g.
-# RuleClusteringCost's squared- vs plain-Euclidean-distance history for CoverageCostObjective).
+# `score_decision_set` scores an already-fitted decision set against a FIXED lambda (unlike
+# fitting a PEC objective, which searches for its own decisions and lambda*). It lives in
+# intercluster.decision_sets.objectives.scoring and is imported here via the
+# `from intercluster.decision_sets.objectives import *` above.
+# `score_objectives_by_r` batches `score_decision_set` calls across every (module, r) pair, so
+# max_rules.py's per-rule-budget sweep gets a TRUE 'objective' value per module -- matching
+# confidence.py's per-confidence-level PEC-objective scoring -- instead of reconstructing one
+# downstream from separately-reported reward/cost measurements, which silently drifts if a
+# measurement's units don't match the objective's internal cost.
 
 
 def score_objectives_by_r(
@@ -579,13 +520,12 @@ def score_objectives_by_r(
     y : List[Set[int]],
     n_select : int,
 ) -> Dict[str, Dict[str, Dict[Any, float]]]:
-    """
-    Scores every module's per-r decision set against each objective in `objective_names`, using a
-    FIXED lambda per objective (`lambda_dict`, keyed by the base 'dscluster; <objective>; ensemble'
-    module name -- the same lambda* PEC itself was fit with) rather than re-searching for one. This
-    puts comparison models (Decision-Tree, ExKMC, CBA, IDS, CN2) and PEC on the same objective axis
-    PEC actually optimized, mirroring confidence.py's `run_confidence_level` PEC-objective scoring
-    but swept over rule budget `r` instead of confidence threshold.
+    """Scores every module's per-r decision set against each objective in `objective_names`, using
+    a FIXED lambda per objective (`lambda_dict`, keyed by the base 'dscluster; <objective>;
+    ensemble' module name -- the same lambda* PEC itself was fit with) rather than re-searching
+    for one. This puts comparison models (Decision-Tree, ExKMC, CBA, IDS, CN2) and PEC on the same
+    objective axis PEC actually optimized, mirroring confidence.py's `run_confidence_level`
+    PEC-objective scoring but swept over rule budget `r` instead of confidence threshold.
 
     Args:
         modules_decisions: {module_name: {r: decisions}} -- per-module, per-r decision lists.

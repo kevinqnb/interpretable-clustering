@@ -7,12 +7,10 @@ from intercluster.utils import *
 
 
 def test_tiebreak():
-    # Test proxy tiebreak
     scores = np.array([1, 1, 1, 1, 1])
     proxy = np.array([1, 2, 3, 4, 5])
     assert np.array_equal(tiebreak(scores, proxy), [0, 1, 2, 3, 4])
 
-    # Test random tiebreak
     scores = np.array([1, 1, 1, 2, 2])
     proxy = np.array([1, 1, 2, 3, 4])
     samples = 1000

@@ -80,7 +80,6 @@ def test_display():
     Xminmax = minmax_scaler.fit_transform(X)
     feature_labels = ["one", "two", "three"]
 
-    # Test some basic printing of conditions
     cond1 = LinearCondition(
         features = np.array([0, 1]),
         weights = np.array([2, 1]),
@@ -98,7 +97,6 @@ def test_display():
     assert cond1.display() == r"2$\cdot$$x_0$ $+$" + "\n" + r"$x_1$" + "\n" + r"$\leq$ 2"
     assert cond2.display() == r"3$\cdot$$x_1$ $+$" + "\n" + r"4$\cdot$$x_2$" + "\n" + r"$>$ 6"
 
-    # Test with standard scaling
     cond3 = LinearCondition(
         features = np.array([0]),
         weights = np.array([1]),
@@ -114,7 +112,6 @@ def test_display():
     assert cond3.display(scaler=standard_scaler) == r"$x_0$" + "\n" + r"$>$ 7.0"
     assert cond4.display(scaler=standard_scaler) == r"$x_0$" + "\n" + r"$\leq$ 1.0"
 
-    # Test with MinMax Scaling
     cond5 = LinearCondition(
         features = np.array([1]),
         weights = np.array([1]),
@@ -130,7 +127,6 @@ def test_display():
     assert cond5.display(scaler=minmax_scaler) == r"$x_1$" + "\n" + r"$>$ 5.0"
     assert cond6.display(scaler=minmax_scaler) == r"$x_1$" + "\n" + r"$\leq$ 3.0"
 
-    # Test with scaling and feature labels
     cond7 = LinearCondition(
         features = np.array([1, 2]),
         weights = np.array([1, 1]),

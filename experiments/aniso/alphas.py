@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -42,16 +41,11 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
-# alphas.py (alpha selection) is a one-time, cached hyperparameter-selection
-# step rather than a model under evaluation, so it is run once under this
-# single seed rather than repeated across trials -- see experiments/README.md
-# ("Reproducibility") for which downstream models (IDS, ExplanationTree,
-# DecisionTree, ShallowTree) are instead re-fit across multiple trial seeds in
-# max_rules.py/confidence.py.
+# REMINDER: Initialize the seed only here, not inside any sub-function or class (except
+# select baseline experiments like KMeans) -- passing a seed there resets it on every call.
+# alphas.py is a one-time hyperparameter-selection step rather than a model under evaluation,
+# so it runs once under this seed rather than across trials -- unlike IDS/DecisionTree, which
+# are refit per trial seed in max_rules.py/confidence.py instead.
 seed = SEED
 
 def _memoryview_safe(x):
@@ -83,14 +77,13 @@ fixed_parameters = {
     'forest_max_depth': FOREST_MAX_DEPTH,
     'car_min_support': CAR_MIN_SUPPORT,
     'car_min_confidence': CAR_MIN_CONFIDENCE,
-    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (zmax=3 passed to pyfim; +1 for the class item)
     'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
 
-# Do baseline clustering
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels

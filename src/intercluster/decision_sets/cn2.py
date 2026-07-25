@@ -23,25 +23,12 @@ class CN2(DecisionSet):
     rule list naturally interleaves classes instead of grouping all of one
     class's rules before the next.
 
-    When n_select is set, the first n_select non-default rules are retained.
-    Since classes interleave rather than group, a small n_select still tends
-    to yield rules spanning multiple classes, rather than exhausting one
-    class before any other appears.
-
     NOTE: Orange's rule list is technically a *decision list* -- a rule's
     majority-vote label is only exactly valid relative to the residual
     population left after earlier rules have "claimed" their covered points.
-    This DecisionSet (like the rest of intercluster) applies every kept rule
-    independently to the full dataset (see DecisionSet.predict()), with no
-    first-match-wins or residual bookkeeping. That mismatch grows with a
-    rule's position in the list, since later rules are fit against an
-    increasingly carved-down residual; it is mild for the earliest rules
-    (fit against near-full class counts), which is the regime a small
-    n_select actually keeps. This is an accepted tradeoff, not a bug.
-
-    Orange's ``>=`` operator is represented exactly (inclusively) as a negated
-    ``<=`` condition, since LinearCondition has no native inclusive ``>=``
-    direction -- see ``_selector_to_condition``.
+    On the other hand, intercluster's DecisionSet is a *decision set* -- each rule
+    is applied independently to the full population, and the majority-vote label
+    is only valid relative to the full population. 
 
     Args:
         n_select (int, optional): Maximum number of rules to retain. Takes the
@@ -153,15 +140,13 @@ class CN2(DecisionSet):
     def induce(self, X: NDArray, y: List[Set[int]] = None):
         """
         Runs the CN2 beam search once and caches the full, untruncated,
-        non-default rule list. This is the expensive part of `fit()` --
-        induction does not depend on `n_select` at all, only `finalize()`'s
-        truncation does. Idempotent: a second call on an instance that has
-        already induced is a no-op, so a caller sweeping n_select cheaply
-        against a single induction (see `finalize()`) can call this
-        unconditionally before each `finalize()` without re-triggering the
-        search.
+        non-default rule list. This is the expensive part of `fit()`.
 
-        NOTE: because of that idempotence, a given CN2 instance should only
+        NOTE: This was designed to be idempotent: induction will not run again
+        for a second call on an instance that has already induced, 
+        so a caller sweeping n_select cheaply against a single induction (see `finalize()`) 
+        can call this before each `finalize()` without re-triggering the search.
+        Because of that, however, a given CN2 instance should only
         ever be induced against one `(X, y)` pair -- the same "fresh instance
         per fit" convention already used for every DecisionSet subclass in
         this codebase.
@@ -214,9 +199,7 @@ class CN2(DecisionSet):
     def finalize(self, n_select: int = None):
         """
         Truncates the cached induction (see `induce()`) to `n_select` rules
-        and rebuilds `decision_set`/`max_rule_length` -- the only
-        n_select-dependent work. Cheap: no re-induction, just list-slicing
-        and trimming. Must be called after `induce()`.
+        and rebuilds `decision_set`/`max_rule_length`. Must be called after `induce()`.
 
         Args:
             n_select (int, optional): Maximum number of rules to retain, as
@@ -246,11 +229,6 @@ class CN2(DecisionSet):
 
     def fit(self, X: NDArray, y: List[Set[int]] = None):
         """
-        Run CN2 rule induction and store the resulting decision set
-        at `self.n_select`. Equivalent to `induce(X, y)` followed by
-        `finalize(self.n_select)` -- see those methods to sweep n_select
-        cheaply against a single induction.
-
         Args:
             X (NDArray): Input dataset of shape (n, d).
             y (List[Set[int]]): Cluster labels. Each inner set must contain

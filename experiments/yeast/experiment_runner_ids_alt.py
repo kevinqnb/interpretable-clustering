@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
 ####################################################################################################
-# End-to-end runner for the yeast experiment pipeline, at the single default confidence
-# threshold defined in config.py. Replaces the old run_confidence_sweep.sh -- there is no
-# confidence loop and no --emit-grid barrier stage, since there is now only one confidence
-# threshold to fit against.
-#
-# Dependency graph:
-#   mine_rules.py
-#      -> [ alphas.py || ids_lambda_search.py ]              (parallel, independent)
-#      -> select_alphas.py                                    (needs alphas.py's output)
-#      -> [ max_rules.py || lambda.py || confidence.py || input_sensitivity.py ]
-#                                                              (parallel; all four depend only
-#                                                                on select_alphas.py's and
-#                                                                ids_lambda_search.py's output,
-#                                                                not on each other)
+# Runs the IDS-alt variant of the yeast pipeline: ids_lambda_search_alt.py (lambdas via
+# coordinate ascent on the PEC objective, instead of held-out AUC) followed by
+# max_rules_ids_alt.py (max_rules.py re-run against those lambdas). Both stages assume
+# mine_rules.py, alphas.py, and select_alphas.py have already been run via experiment_runner.py --
+# this script only covers the IDS-alt-specific pair.
 #
 # Each stage is a standalone module-level script (not an importable function), so stages are
 # driven via subprocess rather than direct function calls.
@@ -75,18 +66,15 @@ def _run_stage(scripts: list[str], total_cpu_count: int) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run the yeast experiment pipeline end-to-end."
+        description="Run the yeast pipeline's IDS-alt variant end-to-end."
     )
     parser.add_argument(
         "--total-cpu-count", type=int, default=None,
         help=(
-            "Total CPU budget for the whole run. At each stage below, this is "
-            "divided evenly across however many scripts run concurrently at "
-            "that point in the pipeline (e.g. 4-way in the final stage, where "
-            "max_rules.py/lambda.py/confidence.py/input_sensitivity.py run at once) so no stage "
-            "oversubscribes the machine. Defaults to "
-            "experiments/yeast/config.py's TOTAL_CPU_COUNT, which itself "
-            "defaults to the machine's detected core count."
+            "Total CPU budget for the run. Both stages below run a single "
+            "script each, so the full budget goes to whichever is running. "
+            "Defaults to experiments/yeast/config.py's TOTAL_CPU_COUNT, "
+            "which itself defaults to the machine's detected core count."
         ),
     )
     args = parser.parse_args()

@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -273,11 +272,6 @@ pool_indep_measurements = {
 # kept so the PEC-objective score (computed inside the confidence sweep below,
 # since it depends on that level's PEC lambda) can also be aggregated across
 # trials.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here the same way, but neither
-# is in `comparison_modules` in examples/experiments.ipynb's confidence-sweep
-# plots -- they were being refit (with the attendant per-trial objective scoring
-# across all confidence levels below) for no consumer. Dropped.
 
 def _fit_pool_indep_trials(model_cls, base_params, seed_key):
     """
@@ -481,10 +475,6 @@ def run_confidence_level(
 
     # ----------------------------------------------------------------
     # CBA (pool-dependent)
-    #
-    # NOTE: WRA and WRA-weighted used to be fit here too, but neither is in
-    # `comparison_modules` in examples/experiments.ipynb's confidence-sweep plots.
-    # Dropped (along with their per-objective score_decision_set calls below).
     # ----------------------------------------------------------------
     pool_dep = {}
 

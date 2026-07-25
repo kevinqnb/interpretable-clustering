@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -41,12 +40,11 @@ from intercluster.rules import save_rules, load_rules
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 # Rule mining here (TreeMiner/RandomForestMiner/ClassAssociationRuleMiner) is a
-# one-time, cached step -- like alphas.py's alpha selection -- so it is run once
+# one-time, cached step -- like alphas.py's alpha selection -- so it runs once
 # under this single seed rather than repeated across trials. See
 # experiments/README.md ("Reproducibility") for which downstream models (IDS,
 # DecisionTree) are instead re-fit across multiple trial seeds in
@@ -79,7 +77,6 @@ fixed_parameters = {
 
 np.random.seed(fixed_parameters['seed'])
 
-# Do baseline clustering
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels

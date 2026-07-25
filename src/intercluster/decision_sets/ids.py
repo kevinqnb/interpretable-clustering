@@ -532,7 +532,7 @@ class IDS(DecisionSet):
       - Accepts any Rule type (decision tree rules, forest rules, CARs, etc.).
       - IDSCoverageCache can be precomputed once and reused across n_select
         values or confidence-sweep subsets via cache.subset(indices).
-      - Native n_select cap via backward elimination inside SLS.
+      - Native n_select cap via backward elimination inside SLS (standard for RandomGreedy)
 
     Args:
         rules:                     Candidate rule pool.

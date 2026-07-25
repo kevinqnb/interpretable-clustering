@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -41,12 +40,12 @@ from intercluster.measurements import *
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. Classes with their own
-# internal randomness (IDS, DecisionTree) accept an explicit random_state
-# instead of relying on this global seed -- see `trial_seeds` below, which
-# derives one seed per trial so those modules can be refit across multiple
-# trials and reported as mean/std rather than a single, arbitrarily-seeded
-# point estimate.
+# REMINDER: Initialize the seed only here, not inside any sub-function or class (except
+# select baseline experiments like KMeans) -- passing a seed there resets it on every call.
+# Classes with their own internal randomness (IDS, DecisionTree) accept an explicit
+# random_state instead of relying on this global seed -- see `trial_seeds` below, which
+# derives one seed per trial so those modules can be refit across multiple trials and
+# reported as mean/std rather than a single, arbitrarily-seeded point estimate.
 seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
@@ -133,25 +132,20 @@ os.makedirs(outfile, exist_ok=True)
 
 ####################################################################################################
 # Objective configuration
-# No precomputed_paths: the rule pool changes at each confidence level, so everything
-# must be computed from scratch each iteration.
-#
-# The point-to-center distance matrix is the one exception: it depends only on the data and the
-# kmeans centers, neither of which changes with the rule pool, so it is computed once here and
-# handed to every cost-based objective. Otherwise each of the many objectives built per confidence
-# level (one per PEC fit, plus one per score_decision_set call) would rebuild the same (n x k)
-# matrix from scratch.
+# No precomputed_paths: the rule pool changes at each confidence level, so everything must be
+# computed from scratch each iteration. The point-to-center distance matrix is the one
+# exception -- it depends only on the data and kmeans centers, neither of which changes with
+# the rule pool, so it's computed once here and handed to every cost-based objective instead of
+# being rebuilt per PEC fit / score_decision_set call at every confidence level.
 data_to_center_distances = compute_data_to_center_distances(
     data, kmeans_base.centers, 'kmeans'
 )
 
-# Only the 3 unweighted objectives -- examples/experiments.ipynb's confidence-sweep
-# plots (confidence_line_dict, confidence_lambda_dict, confidence_component_dict) all
-# loop `objective_names`, which never includes a `-weighted` entry. The weighted
-# objectives' alpha values are still selected in alphas.py (needed by max_rules.py's
-# Uncertainty section), but nothing here reads a per-confidence-level weighted PEC
-# fit or a weighted objective score, so refitting/scoring them at every one of the
-# 20 confidence levels below would be pure waste.
+# Only the 3 unweighted objectives -- examples/experiments.ipynb's confidence-sweep plots all
+# loop `objective_names`, which never includes a `-weighted` entry. Weighted objectives' alpha
+# values are still selected in alphas.py (needed by max_rules.py's Uncertainty section), but
+# nothing here reads a per-confidence-level weighted PEC fit or score, so refitting/scoring
+# them at every one of the 20 confidence levels below would be pure waste.
 objective_config = {
     'coverage-mistake': {
         'objective_type': 'coverage-mistake',
@@ -170,9 +164,10 @@ objective_config = {
 ####################################################################################################
 # Helpers
 #
-# _make_objective, score_decision_set, and tree_to_decisions now live in experiments/modules.py
-# (imported above via `from experiments.modules import *`) -- factored out so max_rules.py's
-# per-rule-budget objective re-scoring can share the identical logic instead of duplicating it.
+# score_decision_set lives in intercluster.decision_sets.objectives.scoring (imported above via
+# the `objectives import *`), and tree_to_decisions lives in experiments/modules.py (imported
+# above) -- both shared with max_rules.py's identical per-rule-budget objective re-scoring
+# rather than duplicated here.
 
 def _tree_info(tree, decisions, data, n_labels):
     return {
@@ -273,20 +268,13 @@ pool_indep_measurements = {
 # kept so the PEC-objective score (computed inside the confidence sweep below,
 # since it depends on that level's PEC lambda) can also be aggregated across
 # trials.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here the same way, but neither
-# is in `comparison_modules` in examples/experiments.ipynb's confidence-sweep
-# plots -- they were being refit (with the attendant per-trial objective scoring
-# across all confidence levels below) for no consumer. Dropped.
 
 def _fit_pool_indep_trials(model_cls, base_params, seed_key):
     """
-    NOTE: sets the global NumPy seed immediately before each trial's fit, in
-    addition to passing the trial seed as `seed_key`. Some dependencies (e.g.
-    ExplanationTree's compiled Cython splitter -- see explanation_tree.py's
-    `random_state` docstring caveat) read the global RNG state directly and
-    aren't fully parameterized by a passed-in random_state alone. This runs
-    single-process, so setting the global seed here is safe and sufficient.
+    NOTE: sets the global NumPy seed immediately before each trial's fit, in addition to
+    passing the trial seed as `seed_key`, as a defensive precaution in case a fitted class
+    reads global RNG state directly instead of fully honoring a passed random_state.
+    Single-process, so setting the global seed here is safe.
     """
     trial_infos = []
     trial_measurements = []
@@ -481,10 +469,6 @@ def run_confidence_level(
 
     # ----------------------------------------------------------------
     # CBA (pool-dependent)
-    #
-    # NOTE: WRA and WRA-weighted used to be fit here too, but neither is in
-    # `comparison_modules` in examples/experiments.ipynb's confidence-sweep plots.
-    # Dropped (along with their per-objective score_decision_set calls below).
     # ----------------------------------------------------------------
     pool_dep = {}
 

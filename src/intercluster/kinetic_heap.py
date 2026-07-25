@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Any, Optional, Tuple
 
+# NOTE: This was experimental and is not currently in use for the main experiments. 
 
 ####################################################################################################
 
@@ -11,48 +12,33 @@ class KineticNode():
     carry an item and its linear key, or internal nodes, which carry no item and serve only to
     route searches and to cache the state of their subtree.
 
-    Args:
-        None
     Attributes:
         type (str): Internally set to 'internal' or 'leaf' depending on if the node is a
             routing node or an external node holding an item.
-
         item (Any): (For leaf nodes only) The identifier of the item held by this node.
-
         a (float): (For leaf nodes only) The key coefficient of this node's item, i.e. the slope
             of its key line.
-
         b (float): (For leaf nodes only) The key constant of this node's item, i.e. the intercept
             of its key line.
-
         seq (int): (For leaf nodes only) Insertion sequence number. Used as the final tiebreaker
             of the leaf ordering so that items with identical keys still receive a strict order.
-
         left (KineticNode): (For internal nodes only) Pointer to the left child of this node.
-
         right (KineticNode): (For internal nodes only) Pointer to the right child of this node.
-
         parent (KineticNode): Pointer to the parent of this node, or `None` at the root. Needed to
             retrace from a leaf back up to the root during deletion.
-
         height (int): Height of this node's subtree, with leaves at height zero. Used to maintain
             the AVL balance condition.
-
         winner (KineticNode): The leaf of this node's subtree whose item has maximum key at the
             heap's current time. For a leaf, this is the leaf itself.
-
         swap_time (float): (For internal nodes only) The time at which this node's winner switches
             from its left child's winner to its right child's winner. `-inf` when the two key lines
             are parallel and therefore never cross.
-
         min_future_swap (float): The smallest swap time strictly greater than the heap's current
             time among this node and its descendants, or `inf` if there is none. This is what
             allows a subtree with no upcoming swap to be pruned when time advances.
-
         predecessor (KineticNode): (For internal nodes only) The rightmost leaf of this node's left
             subtree. Its key is the largest in the left subtree, which makes it the router used to
             guide an insertion search down from the root.
-
         max_leaf (KineticNode): The rightmost leaf of this node's subtree. Cached so that
             `predecessor` can be pulled up from a node's children in constant time rather than
             found by a downward walk.
@@ -89,11 +75,8 @@ class KineticNode():
 
         Args:
             item (Any): The identifier of the item held by this node.
-
             a (float): The key coefficient of the item, i.e. the slope of its key line.
-
             b (float): The key constant of the item, i.e. the intercept of its key line.
-
             seq (int): Insertion sequence number, used as the final tiebreaker of the leaf ordering.
         """
         self.type = 'leaf'
@@ -124,7 +107,6 @@ class KineticNode():
 
         Args:
             left (KineticNode): Pointer to the left child of this node.
-
             right (KineticNode): Pointer to the right child of this node.
         """
         self.type = 'internal'
@@ -188,14 +170,10 @@ class KineticHeap():
     small amount produce a correspondingly enormous swap time, which is the correct answer: the
     lines do cross, but so far in the future that the swap is pruned away.
 
-    Args:
-        None
     Attributes:
         root (KineticNode): The root of the tree, or `None` when the heap is empty.
-
         current_time (float): The current time `t_c`, i.e. the time of the most recent query, or
             `-inf` if no query has occurred yet.
-
         leaves (Dict[Any, KineticNode]): Maps each item in the heap to the leaf holding it, so that
             `delete` can locate an item in constant time.
     """

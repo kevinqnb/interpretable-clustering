@@ -95,7 +95,7 @@ def main():
     _run_stage(["mine_rules.py"], total_cpu_count)
     _run_stage(["alphas.py", "ids_lambda_search.py"], total_cpu_count)
     _run_stage(["select_alphas.py"], total_cpu_count)
-    _run_stage(["max_rules.py", "lambda.py", "confidence.py", "input_sensitivity.py"], total_cpu_count)
+    _run_stage(["max_rules.py", "lambda.py", "confidence.py"], total_cpu_count)
 
     print("=== aniso pipeline complete ===")
 

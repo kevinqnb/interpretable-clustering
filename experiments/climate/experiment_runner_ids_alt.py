@@ -1,19 +1,8 @@
 #!/usr/bin/env python3
 ####################################################################################################
-# End-to-end runner for the climate experiment pipeline, at the single default confidence
-# threshold defined in config.py. Replaces the old run_confidence_sweep.sh -- there is no
-# confidence loop and no --emit-grid barrier stage, since there is now only one confidence
-# threshold to fit against.
-#
-# Dependency graph:
-#   mine_rules.py
-#      -> [ alphas.py || ids_lambda_search.py ]              (parallel, independent)
-#      -> select_alphas.py                                    (needs alphas.py's output)
-#      -> [ max_rules.py || lambda.py || confidence.py || input_sensitivity.py ]
-#                                                              (parallel; all four depend only
-#                                                                on select_alphas.py's and
-#                                                                ids_lambda_search.py's output,
-#                                                                not on each other)
+# End-to-end runner for the climate pipeline's IDS-alt variant: ids_lambda_search_alt.py, then
+# max_rules_ids_alt.py. Both are single-script stages that reuse rule mining / alphas outputs
+# from a prior experiment_runner.py run rather than regenerating them.
 #
 # Each stage is a standalone module-level script (not an importable function), so stages are
 # driven via subprocess rather than direct function calls.
@@ -59,13 +48,8 @@ def _wait(procs_with_names):
 def _run_stage(scripts: list[str], total_cpu_count: int) -> None:
     """
     Runs `scripts` concurrently, each getting an equal share of `total_cpu_count`
-    (via the CLIMATE_CPU_COUNT env var, which config.py's CPU_COUNT reads) -- so a
-    stage with 3 concurrent scripts gives each 1/3 of the budget, rather than
-    each independently requesting the full machine the way a single CPU_COUNT
-    constant did before. Scripts that don't actually use joblib (mine_rules.py,
-    ids_lambda_search.py, select_alphas.py) just ignore the env var, so their
-    share of the split is unused overhead, not lost capacity -- see each
-    script's own CPU_COUNT usage (or lack of it).
+    (via the CLIMATE_CPU_COUNT env var, which config.py's CPU_COUNT reads). Both
+    stages here run a single script, so each simply gets the full budget.
     """
     per_script = max(1, total_cpu_count // len(scripts))
     env = dict(os.environ) | {"CLIMATE_CPU_COUNT": str(per_script)}
@@ -75,18 +59,15 @@ def _run_stage(scripts: list[str], total_cpu_count: int) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run the climate experiment pipeline end-to-end."
+        description="Run the climate pipeline's IDS-alt variant end-to-end."
     )
     parser.add_argument(
         "--total-cpu-count", type=int, default=None,
         help=(
-            "Total CPU budget for the whole run. At each stage below, this is "
-            "divided evenly across however many scripts run concurrently at "
-            "that point in the pipeline (e.g. 4-way in the final stage, where "
-            "max_rules.py/lambda.py/confidence.py/input_sensitivity.py run at once) so no stage "
-            "oversubscribes the machine. Defaults to "
-            "experiments/climate/config.py's TOTAL_CPU_COUNT, which itself "
-            "defaults to the machine's detected core count."
+            "Total CPU budget for the whole run. Each stage here is a single script, so it "
+            "gets the full budget rather than sharing it with concurrent stage-mates. Defaults "
+            "to experiments/climate/config.py's TOTAL_CPU_COUNT, which itself defaults to the "
+            "machine's detected core count."
         ),
     )
     args = parser.parse_args()

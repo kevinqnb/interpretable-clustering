@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -47,22 +46,18 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
-# Classes with their own internal randomness (IDS, DecisionTree) accept an
-# explicit random_state instead of relying on this global seed -- see
-# `trial_seeds` below, which derives one seed per trial so those modules can be
-# refit across multiple trials and their results reported as mean/std rather
-# than a single, arbitrarily-seeded point estimate.
+# REMINDER: Initialize the seed only here, not inside any sub-function or class (except
+# select baseline experiments like KMeans) -- passing a seed there resets it on every call.
+# Classes with their own internal randomness (IDS, DecisionTree) accept an explicit
+# random_state instead of relying on this global seed -- see `trial_seeds` below, which
+# derives one seed per trial so those modules can be refit across multiple trials and their
+# results reported as mean/std rather than a single, arbitrarily-seeded point estimate.
 seed = SEED
 
-# Number of independent random-seed trials used to evaluate stochastic modules
-# (IDS, Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA) are fit
-# once, since repeating them would just reproduce the same result. `trial_seeds`
-# is derived deterministically from `seed` so that re-running this script
-# reproduces the exact same set of trials.
+# Number of independent random-seed trials used to evaluate stochastic modules (IDS,
+# Decision-Tree). Deterministic modules (PEC, ExKMC, CN2, CBA) are fit once, since repeating
+# them would just reproduce the same result. `trial_seeds` is derived deterministically from
+# `seed` so that re-running this script reproduces the exact same set of trials.
 n_trials = N_TRIALS
 trial_seeds = TRIAL_SEEDS
 
@@ -95,7 +90,7 @@ fixed_parameters = {
     'forest_max_depth': FOREST_MAX_DEPTH,
     'car_min_support': CAR_MIN_SUPPORT,
     'car_min_confidence': CAR_MIN_CONFIDENCE,
-    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (zmax=3 passed to pyfim; +1 for the class item)
     'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed,
     'n_trials': n_trials,
@@ -106,7 +101,6 @@ n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -123,8 +117,11 @@ fixed_parameters['alpha'] = selected_alpha_dict
 decision_info_dict_directory = RULES_DIR
 
 outfile = MAX_RULES_DIR
-# This script is identical to max_rules.py except for the IDS lambdas it loads (below) and this
-# output ref -- so its results (and IDS's, in particular) don't clobber max_rules.py's own output.
+# Same sweep as max_rules.py, but loading ids_lambda_search_alt.py's PEC-objective-tuned IDS
+# lambdas instead of ids_lambda_search.py's held-out-AUC ones (see below), under this distinct
+# output ref so its results don't clobber max_rules.py's own output. Unlike max_rules.py, this
+# script does not rescore modules against SCORING_OBJECTIVE_NAMES -- no 'objective' key is
+# added to its results.
 outfile_ref = OUTFILE_REF + '_ids_alt'
 
 ####################################################################################################
@@ -143,29 +140,20 @@ rule_miner_dict = {
 ####################################################################################################
 # Comparison Modules:
 #
-# NOTE on reproducibility: Decision-Tree and IDS both have inherent randomness in
-# their fitted solution (sklearn tree tie-breaking and randomized-greedy/SLS
-# selection respectively). Rather than fit each once under the single global
-# `seed`, these two are refit across `trial_seeds` further below (see
-# "Stochastic module trials") and their results are recorded as mean/std/values
-# instead of a single point estimate. Their *_params dicts below therefore omit
-# any seed -- the per-trial seed is injected at fit time. PEC, ExKMC, CBA,
-# and CN2 have no internal randomness given fixed inputs, so they keep the
-# original single-fit-per-parameter-value treatment via `Experiment`.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here too (Exp-Tree once,
-# Shallow-Tree once, each broadcast across every rule budget r), but neither
-# appears in examples/experiments.ipynb's `comparison_modules`. Dropped.
+# NOTE on reproducibility: Decision-Tree and IDS have inherent randomness in their fitted
+# solution (sklearn tree tie-breaking / randomized-greedy selection), so instead of one fit under
+# the global `seed`, both are refit across `trial_seeds` below ("Stochastic module trials")
+# and reported as mean/std/values rather than a single point estimate -- their *_params dicts
+# below omit any seed since it's injected per-trial at fit time. PEC, ExKMC, CBA, and CN2 have
+# no internal randomness given fixed inputs, so they keep the original single-fit-per-
+# parameter-value treatment via `Experiment`.
 
-# Decision Tree
 decision_tree_params_by_r = {i : {'max_leaf_nodes' : i} for i in n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
     name = 'Decision-Tree'
 )
 
-
-# ExKMC
 exkmc_params = {
     (i,) : {
         'k' : fixed_parameters['n_clusters'],
@@ -178,7 +166,6 @@ exkmc_mod = DecisionTreeMod(
     name = 'ExKMC'
 )
 
-# CBA:
 cba_params = {(r,): {'n_select': r} for r in n_rules_list}
 cba_mod = DecisionSetMod(
     model=CBA,
@@ -187,11 +174,8 @@ cba_mod = DecisionSetMod(
     name='CBA'
 )
 
-
-
-# IDS:
-# Loads the lambdas ids_lambda_search_alt.py found via coordinate ascent maximizing the PEC
-# objective (rather than ids_lambda_search.py's held-out-AUC lambdas).
+# IDS lambdas: loaded from ids_lambda_search_alt.py's coordinate ascent, which maximizes the
+# PEC objective (rather than ids_lambda_search.py's held-out-AUC lambdas).
 with open(RULES_DIR + f'ids_lambdas{OUTFILE_REF}_ids_alt.json') as f:
     ids_lambdas = json.load(f)
 if isinstance(ids_lambdas, dict):
@@ -205,13 +189,11 @@ if os.path.exists(_ids_cache_path):
     print(f"IDS cache loaded ({len(ids_cache.decisions)} decisions).")
 else:
     print("Pre-computing IDS cache...")
-    # Built exactly the way ids_lambda_search.py builds it -- IDSCoverageCache.from_rules over the
-    # ensemble rules and their labels -- so this fallback reproduces the cached file rather than a
-    # different one. Two things make that worth being careful about: from_rules keys decisions to
-    # rule order and keeps one per rule, whereas routing through IDS.fit()/set_labels builds a set
-    # (hash order, and duplicate decisions silently collapse), and the IDS optimizer indexes into
-    # that ordering. from_rules also runs no optimizer, unlike fit(), which would run a full
-    # selection pass over the whole pool purely as a side effect and then discard it.
+    # Mirrors ids_lambda_search.py's own cache construction exactly, so this fallback reproduces
+    # that file rather than a different one: from_rules() keys decisions to rule order (one per
+    # rule, no dedup-by-hash) and runs no optimizer -- unlike routing through IDS.fit(), which
+    # would build the decision set as a hash-ordered set (duplicates collapsing) and pay for a
+    # selection pass that's immediately discarded.
     ids_cache = IDSCoverageCache.from_rules(
         ensemble_rules, ensemble_labels, data, kmeans_labels
     )
@@ -327,12 +309,10 @@ for obj_name, obj_params in objective_dict.items():
             lambda_params = {'lambda_val' : lambda_star}
             lambda_star_dict[module_name] = float(lambda_star)
 
-        # Weighted objectives are read by examples/experiments.ipynb's Uncertainty
-        # section only, which looks up a single fixed budget (the smallest r
-        # present, i.e. n_select) rather than sweeping the rule budget the way the
-        # unweighted objectives' Bar Plots / Weighted Average Rule Length sections
-        # do. Fitting them across all of n_rules_list wasted 6 of every 7 PEC fits,
-        # so restrict weighted objectives to just that one budget.
+        # Weighted objectives are read only by examples/experiments.ipynb's Uncertainty section,
+        # at a single fixed budget (n_select) rather than swept like the unweighted objectives'
+        # Bar Plots / Weighted Average Rule Length sections -- restrict them to that one budget
+        # instead of wasting 6 of every 7 PEC fits across n_rules_list.
         r_values = [fixed_parameters['n_select']] if obj_name.endswith('-weighted') else n_rules_list
 
         dsclust_params = {
@@ -347,12 +327,9 @@ for obj_name, obj_params in objective_dict.items():
         dscluster_module_list.append((dsclust_mod, dsclust_params))
 
         # Lazy-greedy counterpart: same objective/alpha/lambda as the distorted-greedy module
-        # above (reusing `lambda_params`, including the degenerate-case empty dict -- so a
-        # degenerate objective's lazy-greedy module lets PEC recompute the same lambda=0
-        # fallback per fit, rather than being handed a stale lambda_star), but with
-        # selection_algorithm='lazy-greedy' instead of 'distorted-greedy'. This is a genuine
-        # second model (lazy-greedy carries no approximation-guarantee threshold on lambda), not
-        # just the degenerate-case fallback.
+        # above (reusing `lambda_params`, so a degenerate objective's lazy-greedy fit recomputes
+        # the same lambda=0 fallback rather than reusing a stale lambda_star), but with
+        # selection_algorithm='lazy-greedy' -- a genuine second model, not just the fallback path.
         lazy_dsclust_params = {
             (r,) : {'n_select' : r, 'alpha_val' : alpha_val} | obj_params | lambda_params |
                    {'selection_algorithm' : 'lazy-greedy'}
@@ -372,16 +349,13 @@ fixed_parameters['lambda_star'] = lambda_star_dict
 
 
 baseline = kmeans_base
-# Decision-Tree and IDS are handled separately below via `fit_stochastic_varying`
-# (see "Stochastic module trials"), since they need to be refit per trial seed
-# rather than dispatched once through `Experiment`'s joblib-parallel `run()`
-# (whose worker processes do not inherit this script's seeded global NumPy
-# state, which would make single-fit results irreproducible for exactly these
-# randomized modules). CN2 is also handled separately below, via
-# `fit_cn2_varying` -- its induction doesn't depend on the rule budget r at
-# all, so sweeping it through Experiment's per-(module, param) joblib
-# dispatch the way ExKMC/CBA are swept would rerun the same expensive
-# induction once per r for an identical result each time.
+# Decision-Tree and IDS are handled separately below via `fit_stochastic_varying` ("Stochastic
+# module trials"), not dispatched through `Experiment`'s joblib-parallel `run()` -- worker
+# processes don't inherit this script's seeded global NumPy state, which would make these
+# randomized modules' results irreproducible. CN2 is also handled separately, via
+# `fit_cn2_varying`: its induction doesn't depend on the rule budget r at all, so sweeping it
+# through Experiment's per-(module, param) dispatch like ExKMC/CBA would rerun the same
+# expensive induction once per r for an identical result each time.
 module_list = [
     (exkmc_mod, exkmc_params),
     (cba_mod, cba_params),
@@ -423,27 +397,19 @@ exp_results = exp.run()
 ####################################################################################################
 # Stochastic module trials
 #
-# Decision-Tree and IDS each have a fitted solution that depends on randomness.
-# Rather than record one arbitrarily-seeded fit, each is refit once per seed in
-# `trial_seeds` and the results across trials are aggregated into
-# {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
-# This runs single-process (not through `Experiment`'s joblib dispatch) specifically
-# so each trial's explicit seed is what controls its randomness.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here too, but neither appears in
-# examples/experiments.ipynb's `comparison_modules`. Dropped.
+# Decision-Tree and IDS are refit once per seed in `trial_seeds` (single-process, so each
+# trial's explicit seed controls its randomness) and aggregated into {'mean', 'std', 'values'}
+# via `aggregate_trials` (experiments/modules.py), rather than recording one arbitrarily-seeded
+# fit.
 
 def _seed_and_fit(mod, params, trial_seed):
     """
-    Fits `mod` for one trial. Sets the trial's explicit seed both as a fitting
-    parameter (for classes that thread it through properly, e.g. IDS,
-    DecisionTree, ShallowTree) AND as the global NumPy seed immediately before
-    fit() -- some dependencies (e.g. ExplanationTree's compiled Cython splitter,
-    see explanation_tree.py's `random_state` docstring caveat) still read the
-    global RNG state directly and aren't fully parameterized by a passed-in
-    random_state alone. This call runs single-process, so setting the global
-    seed here is safe and sufficient for reproducibility (unlike doing so at
-    the top of the script, which does not survive joblib worker dispatch).
+    Fits `mod` for one trial. Sets the trial's explicit seed both as a fitting parameter
+    (IDS/DecisionTree both take one directly) AND as the global NumPy seed immediately before
+    fit(), as a defensive precaution in case a fitted class reads global RNG state directly
+    instead of fully honoring a passed random_state. Single-process, so setting the global seed
+    here is safe (unlike at the top of the script, which would not survive joblib worker
+    dispatch).
     """
     np.random.seed(trial_seed)
     mod.update_fitting_params(params)
@@ -507,14 +473,11 @@ print("Stochastic modules done.")
 ####################################################################################################
 # CN2
 #
-# CN2's beam-search induction doesn't depend on n_select -- only the post-hoc
-# truncation to the first n_select rules does (see cn2.py's induce()/
-# finalize() split). Sweeping it through Experiment's per-(module, param)
-# joblib dispatch, the way ExKMC/CBA are swept, would rerun the same
-# induction from scratch once per rule budget in n_rules_list for an
-# otherwise-identical result. CN2 is deterministic (no seed dependence), so
-# it's fit outside `Experiment.run()` here: induce once, then finalize +
-# measure cheaply per budget.
+# CN2's beam-search induction doesn't depend on n_select -- only the post-hoc truncation to the
+# first n_select rules does (see cn2.py's induce()/finalize() split). Sweeping it through
+# Experiment's per-(module, param) dispatch like ExKMC/CBA would rerun the same induction from
+# scratch once per rule budget for an otherwise-identical result, so it's fit outside
+# `Experiment.run()` here instead: induce once, then finalize + measure cheaply per budget.
 
 def fit_cn2_varying(n_rules_list, measurement_fns):
     result = (

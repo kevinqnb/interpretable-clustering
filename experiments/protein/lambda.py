@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -47,15 +46,14 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 # Classes with their own internal randomness (IDS, DecisionTree) accept an
 # explicit random_state instead of relying on this global seed -- see
-# `trial_seeds` below, which derives one seed per trial so those modules can be
-# refit across multiple trials and their results reported as mean/std rather
-# than a single, arbitrarily-seeded point estimate.
+# `trial_seeds` below, which derives one seed per trial so those modules can
+# be refit across multiple trials and reported as mean/std rather than a
+# single, arbitrarily-seeded point estimate.
 seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
@@ -69,7 +67,7 @@ trial_seeds = TRIAL_SEEDS
 def _memoryview_safe(x):
     """
     Make array safe to run in a Cython memoryview-based kernel.
-    As far as I can tell, this sometimes is an issue when data is pickled in
+    Non-writeable arrays sometimes occur after data is pickled in
     multiprocessing environments.
     """
     if not x.flags.writeable:
@@ -95,7 +93,7 @@ fixed_parameters = {
     'forest_max_depth': FOREST_MAX_DEPTH,
     'car_min_support': CAR_MIN_SUPPORT,
     'car_min_confidence': CAR_MIN_CONFIDENCE,
-    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 6 by pyfim convention)
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
     'filter_confidence': CONFIDENCE_DEFAULT,
     'seed': seed,
     'n_trials': n_trials,
@@ -109,7 +107,6 @@ n_select = fixed_parameters['n_select']
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -156,12 +153,7 @@ rule_miner_dict = {
 # So -- unlike max_rules.py, which refits each comparison model once per rule budget r
 # -- every comparison model here is fit exactly ONCE, at the fixed `n_select` budget,
 # and its result is simply broadcast across every lambda value in the sweep.
-#
-# NOTE: Exp-Tree, Shallow-Tree, WRA, and WRA-weighted used to be fit here too, but
-# none appears in examples/experiments.ipynb's `comparison_modules` for the
-# Bicriteria/3D-scatter section this experiment feeds. Dropped.
 
-# Decision Tree
 decision_tree_shared_params = {'max_leaf_nodes': n_select}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
@@ -169,7 +161,6 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 
-# ExKMC
 exkmc_shared_params = {
     'k' : fixed_parameters['n_clusters'],
     'kmeans': kmeans_base.clustering,
@@ -181,7 +172,6 @@ exkmc_mod = DecisionTreeMod(
 )
 
 
-# CBA:
 cba_shared_params = {'n_select': n_select}
 cba_mod = DecisionSetMod(
     model=CBA,
@@ -191,7 +181,6 @@ cba_mod = DecisionSetMod(
 )
 
 
-# CN2:
 cn2_shared_params = {'n_select': n_select}
 cn2_mod = DecisionSetMod(
     model=CN2,
@@ -449,9 +438,6 @@ exp_results = exp.run()
 # Decision-Tree and IDS varied with the rule budget r -- both are handled with
 # `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
 # result is broadcast across every value in `all_lambda_values`.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here too, but neither appears in
-# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """

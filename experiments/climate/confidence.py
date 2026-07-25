@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -41,12 +40,13 @@ from intercluster.measurements import *
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. Classes with their own
-# internal randomness (IDS, DecisionTree) accept an explicit random_state
-# instead of relying on this global seed -- see `trial_seeds` below, which
-# derives one seed per trial so those modules can be refit across multiple
-# trials and reported as mean/std rather than a single, arbitrarily-seeded
-# point estimate.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call. Classes with their own internal randomness
+# (IDS, DecisionTree) accept an explicit random_state instead of relying on
+# this global seed -- see `trial_seeds` below, which derives one seed per
+# trial so those modules can be refit across multiple trials and reported as
+# mean/std rather than a single, arbitrarily-seeded point estimate.
 seed = SEED
 
 # Number of independent random-seed trials used to evaluate stochastic modules
@@ -273,11 +273,6 @@ pool_indep_measurements = {
 # kept so the PEC-objective score (computed inside the confidence sweep below,
 # since it depends on that level's PEC lambda) can also be aggregated across
 # trials.
-#
-# NOTE: Exp-Tree and Shallow-Tree used to be fit here the same way, but neither
-# is in `comparison_modules` in examples/experiments.ipynb's confidence-sweep
-# plots -- they were being refit (with the attendant per-trial objective scoring
-# across all confidence levels below) for no consumer. Dropped.
 
 def _fit_pool_indep_trials(model_cls, base_params, seed_key):
     """
@@ -481,10 +476,6 @@ def run_confidence_level(
 
     # ----------------------------------------------------------------
     # CBA (pool-dependent)
-    #
-    # NOTE: WRA and WRA-weighted used to be fit here too, but neither is in
-    # `comparison_modules` in examples/experiments.ipynb's confidence-sweep plots.
-    # Dropped (along with their per-objective score_decision_set calls below).
     # ----------------------------------------------------------------
     pool_dep = {}
 

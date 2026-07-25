@@ -1,6 +1,4 @@
 ####################################################################################################
-# Path setup
-
 import sys
 from pathlib import Path
 
@@ -49,10 +47,9 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # split max_rules across files.
 experiment_cpu_count = 1
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 seed = SEED
 
 def _memoryview_safe(x):
@@ -93,7 +90,6 @@ n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -125,7 +121,6 @@ rule_miner_dict = {
 ####################################################################################################
 # Comparison Modules:
 
-# ExKMC
 exkmc_params = {
     (i,) : {
         'k' : fixed_parameters['n_clusters'],

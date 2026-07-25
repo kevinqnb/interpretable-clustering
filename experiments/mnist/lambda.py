@@ -1,6 +1,4 @@
 ####################################################################################################
-# Path setup
-
 import sys
 from pathlib import Path
 
@@ -47,10 +45,9 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 # Classes with their own internal randomness (IDS, DecisionTree) accept an
 # explicit random_state instead of relying on this global seed -- see
 # `trial_seeds` below, which derives one seed per trial so those modules can be
@@ -112,7 +109,6 @@ n_select = fixed_parameters['n_select']
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -160,16 +156,7 @@ rule_miner_dict = {
 # So -- unlike max_rules.py, which refits each comparison model once per rule budget r
 # -- every comparison model here is fit exactly ONCE, at the fixed `n_select` budget,
 # and its result is simply broadcast across every lambda value in the sweep.
-#
-# NOTE: Shallow-Tree used to be fit here too, and Exp-Tree used to be fit in its
-# own `lambda_exp.py` script (merged in by `lambda_combine.py`), but neither
-# appears in examples/experiments.ipynb's `comparison_modules`. Both dropped --
-# lambda_exp.py (and its max_rules.py counterpart, max_rules_exp.py) are deleted
-# entirely, and lambda_combine.py/max_rules_combine.py no longer merge an "_exp"
-# ref. WRA and WRA-weighted used to be fit here too; neither appears in
-# `comparison_modules` either. Dropped.
 
-# Decision Tree
 decision_tree_shared_params = {'max_leaf_nodes': n_select}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
@@ -177,7 +164,6 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 
-# CBA:
 cba_shared_params = {'n_select': n_select}
 cba_mod = DecisionSetMod(
     model=CBA,
@@ -187,7 +173,6 @@ cba_mod = DecisionSetMod(
 )
 
 
-# CN2:
 cn2_shared_params = {'n_select': n_select}
 cn2_mod = DecisionSetMod(
     model=CN2,
@@ -451,9 +436,6 @@ exp_results = exp.run()
 # Neither varies with lambda (only PEC does), so both are handled with
 # `fit_stochastic_shared`: fit once per trial seed, and the trial-aggregated
 # result is broadcast across every value in `all_lambda_values`.
-#
-# NOTE: Shallow-Tree used to be fit here too, but it doesn't appear in
-# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """

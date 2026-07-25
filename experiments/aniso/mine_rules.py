@@ -1,5 +1,4 @@
 ####################################################################################################
-# Path setup
 
 import sys
 from pathlib import Path
@@ -41,17 +40,12 @@ from intercluster.rules import save_rules, load_rules
 # Prevents memory leakage for KMeans:
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
-# Rule mining here (TreeMiner/RandomForestMiner/ClassAssociationRuleMiner) is a
-# one-time, cached step -- like alphas.py's alpha selection -- so it is run once
-# under this single seed rather than repeated across trials. See
-# experiments/README.md ("Reproducibility") for which downstream models (IDS,
-# ExplanationTree, DecisionTree, ShallowTree) are instead re-fit across multiple
-# trial seeds in max_rules.py/confidence.py, since their fitted solution has
-# inherent randomness.
+# REMINDER: Initialize the seed only here, not inside any sub-function or class (except
+# select baseline experiments like KMeans) -- passing a seed there resets it on every call.
+# Rule mining (TreeMiner/RandomForestMiner/ClassAssociationRuleMiner) is a one-time, cached
+# step like alphas.py's alpha selection, so it runs once under this seed rather than across
+# trials -- unlike IDS/DecisionTree, whose fitted solution has inherent randomness and are
+# refit per trial seed in max_rules.py/confidence.py instead.
 seed = SEED
 
 def _memoryview_safe(x):
@@ -85,14 +79,13 @@ fixed_parameters = {
     'forest_max_depth': FOREST_MAX_DEPTH,
     'car_min_support': CAR_MIN_SUPPORT,
     'car_min_confidence': CAR_MIN_CONFIDENCE,
-    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (really means 4 by pyfim convention)
+    'car_max_rule_length': CAR_MAX_RULE_LENGTH, # (zmax=3 passed to pyfim; +1 for the class item)
     'filter_confidence': confidence,
     'seed': seed
 }
 
 np.random.seed(fixed_parameters['seed'])
 
-# Do baseline clustering
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -105,15 +98,10 @@ rules_directory = RULES_DIR
 os.makedirs(rules_directory, exist_ok = True)
 
 ####################################################################################################
-# Cache helpers for the pre-filtration mining stage below.
-#
-# Every cached artifact (bin_df, each miner's rule pool) is accompanied by a
-# `.params.json` sidecar recording the parameters that produced it. On each
-# run, the sidecar is compared against the current parameters: a match loads
-# the cache, a mismatch (or a missing/deleted cache) re-derives it and
-# overwrites both files. This makes the cache self-invalidating when e.g.
-# `car_min_support` changes, instead of relying on manually deleting stale
-# `.pkl`/`.csv` files.
+# Cache helpers for the pre-filtration mining stage below. Every cached artifact (bin_df, each
+# miner's rule pool) is accompanied by a `.params.json` sidecar recording the parameters that
+# produced it; a parameter mismatch (or missing cache) re-derives and overwrites both files, so
+# the cache self-invalidates instead of relying on manually deleting stale `.pkl`/`.csv` files.
 
 def _cache_params_match(params_path, params):
     if not os.path.exists(params_path):
@@ -152,15 +140,12 @@ else:
     _save_cache_params(bin_df_params_path, bin_df_cache_params)
 
 ####################################################################################################
-# Mine for rules. Each rule pool is cached to disk, keyed to the parameters
-# that produced it (see cache helpers above): if a cache from a previous run
-# is still valid, it is loaded rather than re-mined, so that rule sets stay
-# identical across runs regardless of any residual non-determinism in the
-# underlying miners. Delete the corresponding .pkl/.params.json files (or
-# just change a relevant parameter) to force a fresh mine.
+# Mine for rules. Each rule pool is cached to disk, keyed to the parameters that produced it
+# (see cache helpers above), so rule sets stay identical across runs regardless of any residual
+# non-determinism in the underlying miners. Delete the corresponding .pkl/.params.json files (or
+# change a relevant parameter) to force a fresh mine.
 #
-# NOTE: Shallow-tree rule mining is disabled -- it is no longer part of the
-# pre-filter ensemble.
+# NOTE: Shallow-tree rule mining is disabled -- it is no longer part of the pre-filter ensemble.
 
 decision_tree_rules_path = rules_directory + 'decision_tree_rules.pkl'
 decision_tree_params_path = rules_directory + 'decision_tree_rules.params.json'

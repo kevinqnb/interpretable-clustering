@@ -53,14 +53,14 @@ CPU_COUNT = int(os.environ.get('MNIST_CPU_COUNT', TOTAL_CPU_COUNT))
 # Suffix threaded through every confidence-dependent artifact filename this
 # pipeline saves or reads (mined+filtered rule pools, precomputed cost/mistake/
 # pairwise-distance caches, IDS lambdas/caches, selected alphas, and every
-# stage's own exp*.json results) -- not just the top-level experiment JSON
-# files. Change this (together with CONFIDENCE_DEFAULT, if that's why you're
-# switching) whenever you want a run's artifacts to land somewhere that won't
+# stage's own exp*.json results), not just the top-level experiment JSON files.
+# Change this (together with CONFIDENCE_DEFAULT, if that's why you're
+# switching) whenever a run's artifacts should land somewhere that won't
 # collide with a previous run's. Pre-filter mining artifacts (bin_df.csv, the
 # raw per-miner rule files, pre_filter_ensemble_rules/labels.pkl,
-# ids_coverage_cache_prefilter.pkl) are the one exception -- they're produced
-# once from the unfiltered pool before any confidence filtering, so they don't
-# vary with OUTFILE_REF and stay unsuffixed; retagging them would force an
+# ids_coverage_cache_prefilter.pkl) are the exception: they're produced once
+# from the unfiltered pool before any confidence filtering, so they stay
+# unsuffixed and don't vary with OUTFILE_REF -- retagging them would force an
 # expensive recompute (see mine_rules.py's ~24h bin_df note in
 # experiments/README.md) for no benefit.
 OUTFILE_REF = '_conf_00'

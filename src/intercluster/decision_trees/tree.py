@@ -22,9 +22,7 @@ from ..node import Node
 
 
 class Tree():
-    """
-    Base class for a Tree object. 
-    """
+    """Base class for a Tree object."""
     def __init__(
         self,
         splitter : Callable,
@@ -38,22 +36,15 @@ class Tree():
         """
         Args:
             splitter (Callable): Function/Object which determines how to split leaf nodes.
-
             base_tree (Node, optional): Root node of a baseline tree to start from.
                 Defaults to None, in which case the tree is grown from root.
-
-            max_leaf_nodes (int, optional): Optional constraint for maximum number of leaf nodes.
+            max_leaf_nodes (int, optional): Constraint for maximum number of leaf nodes.
                 Defaults to None.
-
-            max_depth (int, optional): Optional constraint for maximum depth.
-                Defaults to None.
-
-            min_points_leaf (int, optional): Optional constraint for the minimum number of points.
+            max_depth (int, optional): Constraint for maximum depth. Defaults to None.
+            min_points_leaf (int, optional): Constraint for the minimum number of points
                 within a single leaf. Defaults to 1.
-
             selector (Callable, optional): Function/Object used to select branches of the tree.
                 Defaults to None, in which case no pruning is performed.
-
             random_state (int | np.random.Generator, optional): Seed or Generator controlling
                 the random tie-breaker used to order equal-gain leaves in the growth heap.
                 Passing an explicit value makes tree growth reproducible independent of
@@ -61,15 +52,10 @@ class Tree():
 
         Attributes:
             root (Node): Root node of the tree.
-
             heap (heapq list): Maintains the heap structure of the tree.
-
             leaf_count (int): Number of leaves in the tree.
-
             node_count (int): Number of nodes in the tree.
-
             depth (int): The maximum depth of the tree.
-
         """
         self.splitter = splitter
         self.base_tree = copy.deepcopy(base_tree)
@@ -92,17 +78,13 @@ class Tree():
         X : NDArray,
         y : List[Set[int]] = None
     ):
-        """
-        Initiates and builds a decision tree around a given dataset. 
-        Keeps a heap queue for all current leaf nodes in the tree,
-        which prioritizes splitting the leaves with the largest costs (gain in cost performance).
+        """Builds a decision tree around the given dataset, using a heap queue over current
+        leaf nodes that prioritizes splitting the leaf with the largest cost gain.
 
         Args:
             X (np.ndarray): Input dataset.
-            
             y (List[Set[int]], optional): Target labels. Defaults to None.
         """
-        # Reset the heap and tree:
         self.heap = []
         self.leaf_count = 0
         self.node_count = 0
@@ -177,12 +159,11 @@ class Tree():
         self,
         node : Node
     ):
-        """
-        Adds a new leaf node to the heap.
+        """Adds a new leaf node to the heap.
 
-        NOTE: I store -1*gain because heapq pops items with minimum value by default, whereas
-        we really want to search for largest gain.
-        
+        NOTE: Stores -1*gain because heapq pops the minimum by default, but we want the
+        largest gain.
+
         Args:
             node (Node): Leaf node to add to the heap.
         """
@@ -272,10 +253,7 @@ class Tree():
     def grow(
         self
     ):
-        """
-        Builds the decision tree by splitting leaf nodes.
-        """
-        # pop an object from the heap
+        """Builds the decision tree by splitting leaf nodes."""
         heap_leaf_obj = heapq.heappop(self.heap)
         gain = -1*heap_leaf_obj[0]
         node = heap_leaf_obj[2]
@@ -297,10 +275,7 @@ class Tree():
 
     
     def select(self):
-        """
-        selects the decision tree by selecting a subset of leaf nodes which best satisfy the 
-        pruning objective.
-        """
+        """Selects a subset of leaf nodes that best satisfy the pruning objective."""
         pass
 
         

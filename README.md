@@ -46,4 +46,13 @@ within `data/climate` and the anuran dataset in `data/anuran`.
 * Colonna, J., Nakamura, E., Cristo, M., & Gordo, M. (2015). Anuran Calls (MFCCs) [Dataset]. 
 UCI Machine Learning Repository. https://doi.org/10.24432/C5CC9H.
 
+## Note
+
+Please note that there are some naming differences between things in the code, and 
+how they are referred to in the paper. This is just a result of having iterated 
+on the paper, while trying to leave the code structurally intact. Here are a few 
+cases, although there may be more (we are working on updating this):
+* `ScaledGreedy` is referred to as lazy greedy in the code. 
+* `PEC` may sometimes be referred to as `DSCluster` in the experiment results 
+
 

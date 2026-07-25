@@ -1,6 +1,4 @@
 ####################################################################################################
-# Path setup
-
 import sys
 from pathlib import Path
 
@@ -48,10 +46,9 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 experiment_cpu_count = CPU_COUNT
 
-# REMINDER: The seed should only be initialized here. It should NOT
-# within the parameters of any sub-function or class (except for select
-# baseline experiments like KMeans), since these will
-# reset the seed each time they are given one.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class (except select baseline experiments like KMeans) -- passing a seed
+# there resets it on every call.
 # Classes with their own internal randomness (IDS, DecisionTree) accept an
 # explicit random_state instead of relying on this global seed -- see
 # `trial_seeds` below, which derives one seed per trial so those modules can be
@@ -110,7 +107,6 @@ n_rules_list = list(range(fixed_parameters['n_clusters'], fixed_parameters['max_
 
 np.random.seed(fixed_parameters['seed'])
 
-# Baseline KMeans
 kmeans_base = KMeansBase(n_clusters = fixed_parameters['n_clusters'], random_seed = fixed_parameters['seed'])
 kmeans_assignment = kmeans_base.assign(data)
 kmeans_labels = kmeans_base.labels
@@ -159,15 +155,7 @@ rule_miner_dict = {
 # have no internal randomness given fixed inputs, so they keep the original
 # single-fit-per-parameter-value treatment via `Experiment`. ExKMC is handled in
 # the separate `max_rules_exkmc.py` script (see `max_rules_combine.py`).
-#
-# NOTE: Shallow-Tree used to be fit here too, and Exp-Tree used to be fit in its
-# own `max_rules_exp.py` script (merged in by `max_rules_combine.py`), but
-# neither appears in examples/experiments.ipynb's `comparison_modules`. Both
-# dropped -- max_rules_exp.py and lambda_exp.py (its lambda.py counterpart) are
-# deleted entirely, and max_rules_combine.py/lambda_combine.py no longer merge
-# an "_exp" ref.
 
-# Decision Tree
 decision_tree_params_by_r = {i : {'max_leaf_nodes' : i} for i in n_rules_list}
 decision_tree_mod = DecisionTreeMod(
     model = DecisionTree,
@@ -175,7 +163,6 @@ decision_tree_mod = DecisionTreeMod(
 )
 
 
-# CBA:
 cba_params = {(r,): {'n_select': r} for r in n_rules_list}
 cba_mod = DecisionSetMod(
     model=CBA,
@@ -479,9 +466,6 @@ for _name, _obj_by_name in _objective_scores.items():
 # {'mean', 'std', 'values'} via `aggregate_trials` (see experiments/modules.py).
 # This runs single-process (not through `Experiment`'s joblib dispatch) specifically
 # so each trial's explicit seed is what controls its randomness.
-#
-# NOTE: Shallow-Tree used to be fit here too, but it doesn't appear in
-# examples/experiments.ipynb's `comparison_modules`. Dropped.
 
 def _seed_and_fit(mod, params, trial_seed):
     """

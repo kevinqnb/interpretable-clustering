@@ -20,9 +20,8 @@ def _run_fit(
     measurement_fns : List[Callable],
     profile : bool = False,
 ) -> dict[str, any]:
-    """
-    Fits one module at one parameter setting and measures the result. This is the unit of work
-    dispatched to a joblib worker (see Experiment.run).
+    """Fits one module at one parameter setting and measures the result. This is the unit of
+    work dispatched to a joblib worker (see Experiment.run).
 
     Deliberately a module-level function rather than an Experiment method: joblib pickles the
     callable together with its arguments, so dispatching a bound method would ship the whole
@@ -95,43 +94,29 @@ def _run_fit(
 
 
 class Experiment:
-    """ 
-    Perfroms an experiment comparing baseline and module performance as
-    across a suite of given measurement functions.
+    """Runs an experiment comparing baseline and module performance across a suite of
+    measurement functions.
 
     Args:
         data (np.ndarray): Input dataset.
-        
-        baseline (Baseline): Single baseline model to use and record results for. 
-        
-        module_list (List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]]): List of 
-            (module, parameter dictionary) pairs to use and record results for. 
-            Each module should be a runnable experiment object, and each parameter dictionary 
-            should contain pairs {(i,j,k,..) : {fitting params}} to pass to the module. 
-            More specifically, each parameter dictionary key should be a tuple of values 
-            representing some varying model parameters. Each value should be a 
-            corresponding dictionary with of input fitting parameters to pass to the module. 
-            The output of the fitting process for those parameters is then associated 
-            each of the items in the corresponding key list. 
-        
-        measurement_fns (List[Callable]): List of MeasurementFunction objects
-            used to compute results.
-
-        fixed_parameters (dict[str, any], optional): Dictionary of fixed parameters to 
-            use throughout the experiment. Defaults to {}.
-
+        baseline (Baseline): Single baseline model to use and record results for.
+        module_list (List[Tuple[Module, Dict[Tuple[float], Dict[str, Any]]]]): List of
+            (module, parameter dictionary) pairs to use and record results for. Each module
+            should be a runnable experiment object. Each parameter dictionary maps a tuple of
+            varying model parameters {(i,j,k,..): {fitting params}} to the fitting params to
+            pass to the module; the fit's output is then associated with every item in that
+            key tuple.
+        measurement_fns (List[Callable]): MeasurementFunction objects used to compute results.
+        fixed_parameters (dict[str, any], optional): Fixed parameters to use throughout the
+            experiment. Defaults to {}.
         cpu_count (int, optional): Number of CPU cores to use. Defaults to 1.
-        
-        verbose (bool, optional): Allows for optional printing of status. Defaults to False.
-        
+        verbose (bool, optional): Print status updates. Defaults to False.
+
     Attrs:
-        result_dict (Dict): Dictionary with key, value pairs for 'baseline', 'modules',
-            and 'fixed-parameters'. The value for 'baseline' is itself a dictionary of results
-            in the form {measurement name : measurement result}. The value for 'modules' is
-            a dictionary of results in the form 
-            {module name : {measurement name : {lambda value : measurement result}}}.
-            The value for 'fixed-parameters' is a dictionary of fixed parameters used
-            throughout the experiment.
+        result_dict (Dict): Keys 'baseline', 'modules', and 'fixed-parameters'. 'baseline' maps
+            to {measurement name: measurement result}; 'modules' maps to
+            {module name: {measurement name: {lambda value: measurement result}}};
+            'fixed-parameters' holds the fixed parameters used throughout the experiment.
     """
     def __init__(
         self, 
@@ -159,13 +144,12 @@ class Experiment:
 
 
     def run_baseline(self) -> dict[str, dict[str, any]]:
-        """
-        Runs the baseline modules, simply finding their assignment matrices instead of 
-        computing results.
+        """Runs the baseline modules, finding their assignment matrices rather than computing
+        results.
 
-        Returns: 
-            result_dict (dict[str, dict[str, any]]): Dictionary of results
-                in the form {baseline name : {measurement name : measurement result}}
+        Returns:
+            result_dict (dict[str, dict[str, any]]): {baseline name: {measurement name:
+                measurement result}}
         """
         bassign = self.baseline.assign(self.data)
 
@@ -344,8 +328,7 @@ class Experiment:
 
 
     def save_results(self, path, identifier = ''):
-        """
-        Saves the results of the experiment as a JSON file.
+        """Saves the results of the experiment as a JSON file.
 
         `modules[*]['decisions']` (raw fitted Decision objects, per r -- see `_run_fit`) is
         dropped before serializing: it exists for in-process objective re-scoring (e.g.
@@ -356,7 +339,6 @@ class Experiment:
 
         Args:
             path (str): File path to save the results to.
-
             identifier (str, optional): Unique identifier for the results. Defaults to blank.
         """
         import math

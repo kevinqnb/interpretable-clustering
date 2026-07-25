@@ -1,6 +1,4 @@
 ####################################################################################################
-# Path setup
-
 import sys
 from pathlib import Path
 
@@ -32,10 +30,10 @@ from sklearn.model_selection import train_test_split
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
-# REMINDER: The seed should only be initialized here. IDS is given this seed
-# explicitly below (random_state=seed) rather than relying on this global
-# np.random.seed call, so this lambda search is reproducible independent of
-# global NumPy state.
+# REMINDER: Initialize the seed only here, not inside any sub-function or
+# class -- except IDS, which is given this seed explicitly below
+# (random_state=seed) rather than relying on this global np.random.seed call,
+# so this lambda search is reproducible independent of global NumPy state.
 seed = SEED
 
 # Suffix distinguishing this alternate pipeline's own outputs from the AUC-based
