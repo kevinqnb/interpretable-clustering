@@ -447,12 +447,20 @@ wheels = [
 [[package]]
 name = "exkmc"
 version = "0.1.0"
-source = { git = "https://github.com/kevinqnb/ExKMC.git#245a7493809e4dbca08b054947959cbeaf2c70cb" }
+source = { directory = "third_party/exkmc" }
 dependencies = [
     { name = "cython" },
     { name = "numpy" },
     { name = "setuptools" },
     { name = "wheel" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cython", specifier = ">=3.2.2" },
+    { name = "numpy", specifier = ">=2.3.5" },
+    { name = "setuptools", specifier = ">=80.9.0" },
+    { name = "wheel", specifier = ">=0.45.1" },
 ]
 
 [[package]]
@@ -579,7 +587,6 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarc" },
     { name = "pyclustering" },
-    { name = "pyids" },
     { name = "pytest" },
     { name = "scikit-learn" },
     { name = "seaborn" },
@@ -592,18 +599,17 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cython", specifier = ">=3.2.2" },
-    { name = "exkmc", git = "https://github.com/kevinqnb/ExKMC.git" },
+    { name = "exkmc", directory = "third_party/exkmc" },
     { name = "geopandas", specifier = ">=1.1.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.10.7" },
-    { name = "mdlp-discretization", git = "https://github.com/kevinqnb/mdlp-discretization.git" },
+    { name = "mdlp-discretization", directory = "third_party/mdlp_discretization" },
     { name = "networkx", specifier = ">=3.6" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "orange3", specifier = ">=3.39.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pyarc", specifier = ">=1.1.4" },
     { name = "pyclustering", specifier = ">=0.10.1.2" },
-    { name = "pyids", git = "https://github.com/kevinqnb/pyIDS.git" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "seaborn", specifier = ">=0.13.2" },
@@ -1149,11 +1155,18 @@ wheels = [
 [[package]]
 name = "mdlp-discretization"
 version = "0.3.3"
-source = { git = "https://github.com/kevinqnb/mdlp-discretization.git#2ce29070cde3e0a2154433f47503df5beac9f970" }
+source = { directory = "third_party/mdlp_discretization" }
 dependencies = [
     { name = "numpy" },
     { name = "scikit-learn" },
     { name = "scipy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=1.11.2" },
+    { name = "scikit-learn", specifier = ">=0.18.1" },
+    { name = "scipy", specifier = ">=0.18.1" },
 ]
 
 [[package]]
@@ -1617,19 +1630,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
-]
-
-[[package]]
-name = "pyids"
-version = "0.1.0"
-source = { git = "https://github.com/kevinqnb/pyIDS.git#eaa6385dcbe796cd6acd1d6b55430d783a827bcd" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "pyarc" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "setuptools" },
 ]
 
 [[package]]

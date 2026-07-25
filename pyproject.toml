@@ -17,7 +17,6 @@ dependencies = [
     "pandas>=2.3.3",
     "pyarc>=1.1.4",
     "pyclustering>=0.10.1.2",
-    "pyids",
     "pytest>=9.0.1",
     "scikit-learn>=1.7.2",
     "seaborn>=0.13.2",
@@ -27,7 +26,6 @@ dependencies = [
     "wheel>=0.45.1",
 ]
 
-
 [build-system]
 requires = ["setuptools", "cython", "wheel", "numpy"]
 build-backend = "setuptools.build_meta"
@@ -35,10 +33,22 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.uv.extra-build-dependencies]
 exkmc = ["numpy"]
 
 [tool.uv.sources]
-exkmc = { git = "https://github.com/kevinqnb/ExKMC.git" }
-mdlp-discretization = { git = "https://github.com/kevinqnb/mdlp-discretization.git" }
-pyids = { git = "https://github.com/kevinqnb/pyIDS.git" }
+# Vendored, patched copies of two unmaintained packages that no longer build against
+# modern numpy/scikit-learn/Python
+exkmc = { path = "third_party/exkmc" }
+mdlp-discretization = { path = "third_party/mdlp_discretization" }
+
+# pyids is deliberately NOT declared as a dependency (in [project.dependencies], an
+# optional-dependencies extra, or here): pyids is only used by two tests in
+# tests/decision_sets/test_ids.py that cross-check the from-scratch IDS
+# reimplementation in src/intercluster/decision_sets/ids.py against it; those tests
+# skip themselves if pyids isn't importable. To run them, install it manually. 
+# Note that this is anonymized since we forked the repo to update unmaintained dependency issues. 
+#     uv pip install git+https://github.com/kevinqnb/pyIDS.git

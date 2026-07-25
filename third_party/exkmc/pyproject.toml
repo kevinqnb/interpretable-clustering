@@ -1,0 +1,12 @@
+[project]
+name = "exkmc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.12.4"
+dependencies = [
+    "cython>=3.2.2",
+    "numpy>=2.3.5",
+    "setuptools>=80.9.0",
+    "wheel>=0.45.1",
+]
