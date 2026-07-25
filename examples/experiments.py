@@ -26,11 +26,9 @@ from matplotlib.colors import ListedColormap
 from matplotlib.collections import LineCollection
 from matplotlib.ticker import MaxNLocator, FormatStrFormatter, AutoMinorLocator
 import matplotlib.lines as mlines
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import seaborn as sns
-from sklearn.cluster import KMeans, DBSCAN
 from data.preprocessing import *
 from intercluster.plotting import *
 from intercluster import *
@@ -44,10 +42,8 @@ from intercluster.decision_sets.objectives import *
 
 
 # %%
-# Single source of truth for which experiment output files this notebook loads, used
-# throughout instead of the previous per-section duplicated ref dicts (each of which
-# just mapped every dataset to the same "_conf_50" suffix anyway).
-EXP_REF = "_conf_50"
+# Which experiment output files this notebook loads (shared by every section below).
+EXP_REF = "_conf_00"
 DATASETS = ["climate", "anuran", "protein", "yeast", "mnist", "fashion"]
 
 # %%
@@ -69,30 +65,9 @@ cmap = ListedColormap(palette)
 
 cmap = ListedColormap(sns.color_palette("tab10", 10))
 
-# Comparison-model set: Decision-Tree, ExKMC, WRA, IDS, CBA, CN2, vs. PEC
-# (unweighted and weighted). Colors are assigned with a step-3 stride over the
-# 8 husl hues (gcd(3,8)=1, so consecutive assignments are 135 degrees apart in
-# hue rather than 45), and every model additionally gets a distinct marker
-# shape / hatch pattern as a second visual channel.
-color_dict = {
-    'Decision-Tree': cmap(5),
-    'ExKMC': cmap(1),
-    #'WRA': cmap(6),
-    'IDS': cmap(0),
-    'CBA': cmap(3),
-    'CN2': cmap(7),
-    'dscluster; ensemble': cmap(6),
-    # cmap(4) (teal) is otherwise unused in this palette, keeping PEC's
-    # scaled-greedy ablation visually distinct from every comparison model
-    # and from PEC itself -- previously plain 'darkgrey', which read as
-    # ugly/washed-out next to the husl hues used everywhere else. The
-    # bicriteria-plot cells apply `_muted` on top of this base color to keep
-    # scaled-greedy deliberately understated there without falling back to grey.
-    'dscluster; ensemble; lazy-greedy': cmap(4),
-    #'dscluster; ensemble; weighted': cmap(2),
-    'Reference': 'black',
-}
-
+# Per-model color/hatch, keyed by module name as it appears in the JSON
+# (after the objective segment is stripped, for PEC variants). Every model
+# also gets a distinct hatch pattern as a second visual channel.
 color_dict = {
     'Decision-Tree': cmap(0),
     'ExKMC': cmap(1),
@@ -101,42 +76,12 @@ color_dict = {
     'CBA': cmap(3),
     'CN2': cmap(4),
     'dscluster; ensemble': cmap(9),
-    # cmap(4) (teal) is otherwise unused in this palette, keeping PEC's
-    # scaled-greedy ablation visually distinct from every comparison model
-    # and from PEC itself -- previously plain 'darkgrey', which read as
-    # ugly/washed-out next to the husl hues used everywhere else. The
-    # bicriteria-plot cells apply `_muted` on top of this base color to keep
-    # scaled-greedy deliberately understated there without falling back to grey.
+    # PEC's scaled-greedy ablation gets its own hue (kept visually distinct
+    # from PEC itself); bicriteria-plot cells additionally apply `_muted` on
+    # top to keep it deliberately understated there.
     'dscluster; ensemble; lazy-greedy': cmap(5),
     #'dscluster; ensemble; weighted': cmap(2),
     'Reference': 'black',
-}
-
-
-# NOTE: dashed-vs-solid line style for the confidence-sweep plots (see the
-# "Confidence Experiment" section) is decided per (dataset, objective, model)
-# line via an empirical flatness check, not from this dict.
-linestyle_dict = {
-    'dscluster; ensemble' : 'solid',
-    'dscluster; ensemble; weighted' : 'solid',
-    'Decision-Tree': 'solid',
-    'ExKMC': 'solid',
-    'WRA': 'solid',
-    'CBA': 'solid',
-    'CN2': 'solid',
-    'IDS': 'solid',
-    'Reference' : 'dashed',
-}
-
-hatch_dict = {
-    'Decision-Tree': '//',
-    'ExKMC': '\\\\',
-    'WRA': '|',
-    'CBA': 'O',
-    'CN2': '|',
-    'IDS': '+',
-    'dscluster; ensemble': '..',
-    'dscluster; ensemble; weighted': 'o',
 }
 
 hatch_dict = {
@@ -149,17 +94,6 @@ hatch_dict = {
     'dscluster; ensemble': '//',
     'dscluster; ensemble; weighted': '',
     'dscluster; ensemble; lazy-greedy': '\\',
-}
-
-marker_style_dict = {
-    'dscluster; ensemble' : 'D',
-    #'dscluster; ensemble; weighted' : 'd',
-    'Decision-Tree': 'o',
-    'ExKMC': 'o',
-    'WRA': 'o',
-    'CBA': 'o',
-    'CN2': 'o',
-    'IDS': 'o',
 }
 
 title_dict = {
@@ -186,8 +120,7 @@ cmap
 
 # %% [markdown]
 # # Experiment Plotting:
-# The following notebook is used to gather computed information and produce plots/tables for our paper. 
-# Note that these are reliant upon having run experimenets from `experiments/`.
+# Gathers results and produces plots/tables for the paper. Requires the experiments in `experiments/` to have been run first.
 
 # %%
 objective_cost_reward_dict = {
@@ -207,10 +140,7 @@ objective_cost_reward_dict = {
 
 
 # %%
-# This is a helper function for Picking nice axis limits and ticks for our plots.
-# We want to ensure that the limits and ticks are "nice" numbers (e.g., multiples of 1, 2, or 5)
-# and that we have exactly 3 ticks (the endpoints and the midpoint).
-# This makes our plots look cleaner and more interpretable.
+# Helpers for picking "nice" (multiple of 1/2/5) axis limits with exactly 3 ticks.
 def _nice_step(x: float) -> float:
     """Return a 'nice' step size near x using the 1-2-5 rule."""
     if not np.isfinite(x) or x <= 0:
@@ -277,10 +207,9 @@ def nice_lim_for_3_ticks(raw_min: float, raw_max: float, *, clip=(0.0, 1.0)):
     return ymin, ymax, ticks
 
 def _scalar(v):
-    """Stochastic modules (Decision-Tree, Exp-Tree, Shallow-Tree, IDS) store per-r
-    values as {'mean', 'std', 'values'} (via `aggregate_trials`); deterministic
-    modules (PEC/dscluster, ExKMC, WRA, CBA, CN2) store a bare float/int. Normalize
-    to a scalar (the mean); treat None (JSON-encoded NaN) as missing too.
+    """Stochastic modules (Decision-Tree, IDS) store per-r values as
+    {'mean', 'std', 'values'}; deterministic modules store a bare float/int.
+    Normalize to a scalar (the mean); None (JSON-encoded NaN) -> NaN.
     """
     if isinstance(v, dict):
         return v.get('mean', np.nan)
@@ -288,36 +217,16 @@ def _scalar(v):
 
 
 def _values(v):
-    """Raw per-trial values for stochastic modules ({'mean', 'std', 'values'} dicts,
-    produced by `aggregate_trials`); None for deterministic modules with no repeats.
-    """
+    """Raw per-trial values dict for stochastic modules; None otherwise."""
     if isinstance(v, dict):
         return v.get('values', None)
     return None
 
 
 def _std(v):
-    """Std across trial repeats for stochastic modules ({'mean', 'std', 'values'}
-    dicts); NaN for deterministic modules with no repeats (renders as no band /
-    no error bar downstream).
-
-    This notebook distinguishes two different uncertainty questions and uses a
-    different statistic for each:
-      - Std (this function): "how much might a single fresh fit differ?" -- the
-        per-run SPREAD itself. Used as-is only in the Input Sensitivity section
-        below, where that spread across randomly-drawn input pools IS the
-        quantity the experiment measures -- dividing it down would understate
-        exactly what that section is trying to show.
-      - SE (`_se` below): "how precisely do we know this model's average
-        performance?" -- used everywhere else (Max Rules, Bicriteria,
-        Confidence), where the point of a plotted band is to support a
-        comparison between models' average performance, and std alone
-        (inflated ~sqrt(n_trials)x by within-model noise) can make a real,
-        consistent gap between two lines look like noise when it isn't.
-    In every section this only applies to Decision-Tree and IDS -- the only
-    models whose own fitting procedure is stochastic when the rule pool is
-    fixed -- except Input Sensitivity, where the rule pool itself is randomly
-    resampled per repeat, so it applies to every pool-dependent algorithm.
+    """Raw std across trial repeats (Decision-Tree/IDS only); NaN otherwise.
+    Used only in Input Sensitivity, where the spread itself (not the average)
+    is the quantity being measured -- see `_se` for everywhere else.
     """
     if isinstance(v, dict):
         return v.get('std', np.nan)
@@ -325,10 +234,11 @@ def _std(v):
 
 
 def _se(v):
-    """Standard error of the mean (std / sqrt(n_trials)) for stochastic modules;
-    NaN for deterministic modules. See `_std`'s docstring above for when to use
-    which -- this is the one used for comparative claims between models' average
-    performance (Max Rules, Bicriteria, Confidence sections).
+    """Standard error of the mean (std / sqrt(n_trials)); NaN for deterministic
+    modules. Used everywhere a plotted band supports a comparison between
+    models' average performance (Max Rules, Bicriteria, Confidence) -- raw std
+    would overstate noise there. See `_std` for the one section (Input
+    Sensitivity) where spread itself, not SE, is the right statistic.
     """
     if isinstance(v, dict):
         values = v.get('values', None)
@@ -339,30 +249,20 @@ def _se(v):
     return np.nan
 
 
-
-MIN_VISIBLE_ERR = 0.025  # floor for on-screen visibility only, in the same
-                          # normalized [0,1]-ish units as x/y/z -- tuned to
-                          # exceed the marker's own on-screen radius (~0.02 at
-                          # s=240 in this figure's layout) so a nonzero-but-tiny
-                          # SE isn't fully swallowed by its own mean marker.
-                          # Keep in sync with the other bicriteria plot cell.
+# Floor for on-screen error-bar visibility (same [0,1]-ish units as x/y/z),
+# tuned to exceed the marker's own radius. Keep in sync with the other
+# bicriteria plot cell.
+MIN_VISIBLE_ERR = 0.025
 
 def _visible_err(err):
-    """Floor a nonzero error up to MIN_VISIBLE_ERR for legibility; leave exact
-    zeros (deterministic modules) at 0. Does not shrink real errors already
-    above the floor."""
+    """Floor nonzero error up to MIN_VISIBLE_ERR; exact zeros stay 0."""
     err = np.asarray(err, dtype=float)
     return np.where(err > 0, np.maximum(err, MIN_VISIBLE_ERR), 0.0)
 
 
-def _muted(color, amount=0.55):
-    """Blend `color` toward white by `amount` (0 = color, 1 = white).
-
-    Used to render PEC's scaled-greedy ablation in a deliberately understated
-    tone in the bicriteria scatter plots, so it stays visually distinct from
-    (rather than literal grey like before) but never competes with distorted-
-    greedy PEC, the paper's main model.
-    """
+def _muted(color, amount=1/3):
+    """Blend `color` toward white by `amount` (0 = color, 1 = white); used to
+    keep PEC's scaled-greedy ablation visually understated vs. PEC itself."""
     r, g, b = mcolors.to_rgb(color)
     return (r + (1 - r) * amount, g + (1 - g) * amount, b + (1 - b) * amount)
 
@@ -540,23 +440,15 @@ plt.savefig(
 
 objective_names = ['coverage-cost', 'coverage-mistake', 'coverage-pairwise-distance']
 
-# Explicit comparison set -- previously auto-derived from every non-dscluster
-# key present in the JSON, which silently pulled in Exp-Tree/Shallow-Tree/
-# WRA-weighted even though only some of those had style-dict entries.
+# Explicit comparison set -- objective-agnostic, unlike PEC's own modules below.
 comparison_modules = {'Decision-Tree', 'ExKMC', 'IDS', 'CBA', 'CN2'}
 
 # PEC's distorted-greedy (main model) and scaled-greedy (selection-algorithm
-# ablation; internally still keyed by the JSON's "; lazy-greedy" suffix, since
-# that's what max_rules.py actually writes) modules are tracked separately
-# from comparison_modules, NOT merged into it: unlike the comparison models
-# above, they're objective-specific (each objective gets its own
-# distorted-greedy/scaled-greedy module name), so the bar-plot cells below
-# must pick out the one matching the current objective rather than treating
-# them as a fixed, objective-agnostic set. Merging scaled-greedy into
-# comparison_modules previously caused a given dataset's coverage-cost-tuned
-# scaled-greedy module to also get plotted in the coverage-mistake /
-# coverage-pairwise-distance panels, since its module dict still carries every
-# measurement regardless of which objective it was fit for.
+# ablation, keyed by max_rules.py's "; lazy-greedy" suffix) modules are kept
+# separate from comparison_modules: each is objective-specific, so bar-plot
+# cells must pick the one matching the current objective rather than treat
+# them as a fixed set (merging scaled-greedy in previously leaked a dataset's
+# coverage-cost-tuned module into the other objectives' panels).
 dscluster_modules = set()
 scaled_dscluster_modules = set()
 dataset_experiment_dict = {}
@@ -581,10 +473,9 @@ for dataset in DATASETS:
 dscluster_modules = list(dscluster_modules)
 scaled_dscluster_modules = list(scaled_dscluster_modules)
 
-# PEC scaled-greedy results come from a separate script (max_rules_pec_lazy.py)
-# merged in via max_rules_combine.py, so a dataset may legitimately have no
-# scaled-greedy module yet for one or more objectives -- flag it rather than
-# silently dropping the comparison bar later.
+# PEC scaled-greedy comes from a separate script (max_rules_pec_lazy.py, merged
+# via max_rules_combine.py), so a dataset may legitimately be missing it for
+# some objective -- flag rather than silently drop the comparison bar later.
 for dataset, experiment_dict in dataset_experiment_dict.items():
     missing_scaled = [
         objective for objective in objective_names
@@ -595,8 +486,6 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
     ]
     if missing_scaled:
         print(f"[max_rules] note: {dataset} has no PEC scaled-greedy results for objective(s) {missing_scaled}")
-
-baseline_module = 'KMeans'
 
 # %%
 lambda_val_dict = {}
@@ -610,7 +499,7 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
         lambda_val_dict[dataset][module] = list(experiment_dict['modules'][module]['lambda'].values())[0]
 
 # %%
-# Lambda values for eacc and dataset and objective:
+# Lambda values for each dataset and objective:
 pd.DataFrame(lambda_val_dict) 
 
 # %%
@@ -627,33 +516,15 @@ pd.DataFrame(alpha_val_dict)
 # ### Bar Plots
 
 # %%
-# Collect experiment data for bar plots.
-#
-# Uncertainty: for stochastic modules (Decision-Tree, IDS), the plotted quantity is
-# derived (obj1 - lambda*(obj2 + alpha*obj3)), so its uncertainty can't just be read
-# off one key -- `_module_bar_series` combines it from the raw per-trial 'values'
-# lists (aligned across the reward/cost/rule-length keys, which share the same
-# trial order), then reports the STANDARD ERROR of that combined quantity
-# (std/sqrt(n_trials)) -- these bars support a comparison between models' average
-# objective value, so SE (not raw std) is the right statistic; see `_se`'s
-# docstring in the helpers cell above. Deterministic modules (PEC, ExKMC, CBA, CN2)
-# get 0 (no visible error bar).
+# Collect experiment data for bar plots. obj_err is ±1 SE; see `_se`.
 
 def _module_bar_series(module_dict, objective_name, x, reward, cost, lambd, alpha):
     """Returns (obj_values, obj_err) arrays over r (in `x` order).
 
-    Prefers the module's stored TRUE objective score, `module_dict['objective'][objective_name]`
-    -- written directly by max_rules.py via `score_objectives_by_r`/`score_decision_set`, i.e.
-    the actual g - lambda*h the PEC objective optimizes for that module's fixed lambda*/alpha.
-    Falls back to reconstructing `reward - lambda*(cost + alpha*length)` from separately-reported
-    measurements only for cached exp*.json files predating that field (pre-fix, not yet re-run)
-    -- matching this notebook's existing defensive-loading convention (see the "Loading
-    experiment data" cell above) rather than assuming a reconstruction whose units can silently
-    drift from the objective's actual internal cost (see RuleClusteringCost's squared- vs
-    plain-Euclidean-distance history for CoverageCostObjective).
-
-    obj_err is the standard error of the combined objective across trials for stochastic
-    modules (Decision-Tree, IDS), else 0.
+    Prefers the module's stored true objective score, `module_dict['objective'][objective_name]`
+    (written by max_rules.py) since it's the actual g - lambda*h being optimized. Falls back to
+    reconstructing `reward - lambda*(cost + alpha*length)` only for cached exp*.json files
+    predating that field.
     """
     stored = module_dict.get('objective', {}).get(objective_name)
     if stored is not None:
@@ -713,15 +584,9 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
             x[idxs], obj_values[idxs] / fixed_parameters['n'], obj_err[idxs] / fixed_parameters['n']
         )
 
-        # DSCluster Module (scaled-greedy counterpart -- selection-algorithm
-        # ablation). Optional: only present once max_rules_pec_lazy.py +
-        # max_rules_combine.py have been run for this dataset/objective (see
-        # the loading cell's defensive "missing_scaled" check above). Uses the
-        # SAME alpha/lambda as the distorted-greedy module above, since
-        # scaled-greedy was fit at that identical lambda_star (see
-        # max_rules_pec_lazy.py) -- this keeps the comparison an
-        # apples-to-apples test of the two PEC selection algorithms rather
-        # than two independently-tuned models.
+        # Scaled-greedy counterpart (optional, see missing_scaled check above).
+        # Scored at the SAME alpha/lambda as distorted-greedy above (it was fit
+        # at that identical lambda_star), for an apples-to-apples comparison.
         scaled_matches = [
             m for m in scaled_dscluster_modules
             if objective == m.split(';')[1].strip() and m in experiment_dict['modules']
@@ -736,18 +601,12 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
             )
 
 # %%
-# Plot results
-# Error bars: +/-1 standard error (std/sqrt(n_trials=10)) across random-seed
-# repeats for stochastic modules (Decision-Tree, IDS); no visible whisker for
-# deterministic modules (PEC, scaled-greedy-PEC, ExKMC, CBA, CN2). SE (not raw
-# std) is used because these bars support a comparison between models' average
-# objective value -- see `_se`'s docstring in the helpers cell.
+# Plot results. Error bars: ±1 SE (see `_se`); none for deterministic modules.
 
-# Configurable lower bound for the objective-value y-axis, so subplots don't
-# waste space below the region where bars actually fall.
+# Lower bound for the objective-value y-axis, so subplots don't waste space.
 BAR_Y_MIN = 0.0
 
-fig,ax = plt.subplots(len(objective_names), len(dataset_experiment_dict), figsize=(34, 12))
+fig,ax = plt.subplots(len(objective_names), len(dataset_experiment_dict), figsize=(36, 12))
 
 module_order = [
     'Decision-Tree',
@@ -777,13 +636,8 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict.items()):
                 continue
             x, obj_values, obj_err = module_result_dict[module]
             if 'dscluster' in module:
-                # Keep everything after the objective segment (rule-miner
-                # name, plus '; lazy-greedy' when present) rather than just
-                # the last ';'-separated part, so 4-part scaled-greedy module
-                # names ('dscluster; <objective>; ensemble; lazy-greedy')
-                # still resolve to the same 'dscluster; ensemble; lazy-greedy'
-                # style-dict key used elsewhere in the notebook instead of
-                # collapsing to 'dscluster; lazy-greedy'.
+                # Strip the objective segment so 4-part scaled-greedy names
+                # resolve to the same style-dict key as everywhere else.
                 mod_name = module.split(';')[0].strip() + "; " + "; ".join(
                     part.strip() for part in module.split(';')[2:]
                 )
@@ -799,8 +653,8 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict.items()):
                 yerr=obj_err,
                 width=width,
                 label=mod_name,
-                color=color_dict.get(mod_name, 'grey'),
-                alpha = 0.75,
+                color=_muted(color_dict.get(mod_name, 'grey')),
+                alpha = 1.0,
                 hatch=hatch,
                 edgecolor='black',
                 capsize=3,
@@ -842,7 +696,6 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict.items()):
         ax[j,i].axhline(0.0, color="black", linewidth=2.0, alpha=0.7)
 
 
-#fig.supylabel(r"$\bar{f}(\mathcal{D})$", x=0.02, rotation = 0)
 fig.supxlabel(r"Number of Rules, $\ell$", y=0.05, x = 0.525)
 plt.tight_layout()
 
@@ -854,8 +707,6 @@ plt.savefig(
 
 # %%
 # Create a separate legend for the bar plot with hatch patterns
-import matplotlib.patches as mpatches
-
 fig, ax = plt.subplots(figsize=(12, 2))
 
 dataset = list(dataset_experiment_dict.keys())[0]
@@ -878,18 +729,15 @@ legend_labels = dict(title_dict) | {
 }
 
 legend_elements = []
-#for mod in bar_dict[dataset][objective].keys():
 for mod in module_order:
-    # module_order entries are already short-form keys (no objective
-    # segment), so they're valid color_dict/hatch_dict/legend_labels keys
-    # as-is -- no reconstruction needed here (unlike the plotting cell above,
-    # which has to strip the objective out of real JSON module names).
+    # module_order entries are already short-form keys, no stripping needed
+    # (unlike the plotting cell above, which reads real JSON module names).
     mod_name = mod
 
     legend_elements.append(
         mpatches.Patch(
-            facecolor=color_dict[mod_name],
-            alpha = 0.75,
+            facecolor=_muted(color_dict[mod_name]),
+            alpha = 1.0,
             edgecolor='black',
             linewidth=1.5,
             hatch=hatch_dict.get(mod_name, ''),
@@ -912,7 +760,7 @@ plt.show()
 # %% [markdown]
 # ### Bar Plots (IDS Alt)
 #
-# Same bar-plot layout as the Max Rules bar plots above, but sourced from `max_rules_ids_alt.py` / `max_rules_combine_ids_alt.py`'s output -- IDS tuned by coordinate ascent to directly maximize the PEC objective (`ids_lambda_search_alt.py`), rather than the held-out-AUC-tuned IDS used everywhere else in this notebook. Only the k-means (`coverage-cost`) objective has been run for this experiment so far, so this shows a single row rather than one row per objective.
+# Same layout as the Max Rules bar plots, but IDS is tuned to directly maximize the PEC objective (via `ids_lambda_search_alt.py`) instead of held-out AUC. Only `coverage-cost` has been run so far.
 
 # %%
 # Load experiment data for the max_rules_ids_alt.py / max_rules_combine_ids_alt.py comparison.
@@ -999,7 +847,7 @@ for dataset, experiment_dict in dataset_experiment_dict_ids_alt.items():
 
 fig, ax = plt.subplots(
     len(ids_alt_objective_names), len(dataset_experiment_dict_ids_alt),
-    figsize=(34, 12 * len(ids_alt_objective_names) / len(objective_names)), squeeze=False,
+    figsize=(36, 6), squeeze=False,
 )
 
 module_order = [
@@ -1043,8 +891,8 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict_ids_alt.items()):
                 yerr=obj_err,
                 width=width,
                 label=mod_name,
-                color=color_dict.get(mod_name, 'grey'),
-                alpha = 0.75,
+                color=_muted(color_dict.get(mod_name, 'grey')),
+                alpha = 1.0,
                 hatch=hatch,
                 edgecolor='black',
                 capsize=3,
@@ -1098,12 +946,10 @@ plt.savefig(
 # %% [markdown]
 # ### Bar Plots (Alpha Zero)
 #
-# Same bar-plot layout as the Max Rules bar plots above (all three objectives, one row each), but sourced from `max_rules_alpha_zero.py` / `max_rules_alpha_zero_combine.py`'s output -- PEC fit with `alpha_val=0` for every objective (no rule-length penalty) instead of the elbow-selected alpha used everywhere else in this notebook. Comparison models (Decision-Tree, ExKMC, IDS, CBA, CN2) don't take an alpha parameter, so their bars are effectively unchanged from the main Max Rules plot; only PEC (`dscluster`) differs. Shares the main Bar Plots legend above (same module names/colors), so no separate legend cell.
+# Same as the Max Rules bar plots, but PEC is fit with `alpha_val=0` (no rule-length penalty) instead of the elbow-selected alpha. Only PEC's bars differ; comparison models are unaffected. Shares the main Bar Plots legend above.
 
 # %%
-# Load experiment data for the max_rules_alpha_zero.py / max_rules_alpha_zero_combine.py
-# comparison (PEC fit with alpha=0 for every objective). Loading is defensive, same as the main
-# max_rules loading cell above.
+# Load experiment data (PEC fit with alpha=0). Loading is defensive, as above.
 
 dscluster_modules_alpha_zero = set()
 scaled_dscluster_modules_alpha_zero = set()
@@ -1195,7 +1041,7 @@ for dataset, experiment_dict in dataset_experiment_dict_alpha_zero.items():
 # Plot results -- identical styling to the main Max Rules bar plot above (all three objectives),
 # sourced from the alpha=0 PEC fits instead of the elbow-selected-alpha fits.
 
-fig,ax = plt.subplots(len(objective_names), len(dataset_experiment_dict_alpha_zero), figsize=(34, 12))
+fig,ax = plt.subplots(len(objective_names), len(dataset_experiment_dict_alpha_zero), figsize=(36, 12))
 
 module_order = [
     'Decision-Tree',
@@ -1238,8 +1084,8 @@ for i, (dataset, objective_result_dict) in enumerate(bar_dict_alpha_zero.items()
                 yerr=obj_err,
                 width=width,
                 label=mod_name,
-                color=color_dict.get(mod_name, 'grey'),
-                alpha = 0.75,
+                color=_muted(color_dict.get(mod_name, 'grey')),
+                alpha = 1.0,
                 hatch=hatch,
                 edgecolor='black',
                 capsize=3,
@@ -1293,16 +1139,12 @@ plt.savefig(
 # %% [markdown]
 # ### Rule Provenance
 #
-# Breakdown of the (distorted-greedy) PEC module's selected rules by mining source -- Decision-Tree (DT), Random-Forest (RF), or Class-Association-Rule (CAR) -- at the smallest `max_rules.py` rule budget (`r = k`, the number of clusters, i.e. `n_rules_list[0]`). One row per objective, one column per dataset.
+# Breakdown of PEC's selected rules by mining source (Decision-Tree, Random-Forest, CAR) at the smallest rule budget (`r = k`). One row per objective, one column per dataset.
 
 # %%
 cmap
 
 # %%
-# Rule provenance: rule-source-counts breakdown for the (distorted-greedy) PEC module at the
-# smallest rule budget (r = k, i.e. max_rules.py's n_rules_list[0]), one row per objective and
-# one column per dataset.
-
 source_order = ['decision_tree', 'random_forest', 'car']
 source_label_dict = {'decision_tree': 'DT', 'random_forest': 'RF', 'car': 'CAR'}
 source_color_dict = dict(zip(source_order, sns.color_palette("husl", 3)))
@@ -1327,9 +1169,9 @@ for i, (dataset, experiment_dict) in enumerate(dataset_experiment_dict.items()):
             ax[j, i].bar(
                 [source_label_dict[src] for src in source_order],
                 heights,
-                color=[source_color_dict[src] for src in source_order],
+                color=[_muted(source_color_dict[src]) for src in source_order],
                 edgecolor='black',
-                alpha = 0.75
+                alpha = 1.0
             )
         except:
             continue
@@ -1357,16 +1199,12 @@ plt.show()
 # %% [markdown]
 # ### Bicriteria Plots
 #
-# 3D scatter over all three objectives (`x` = obj1/coverage, `y` = obj2/cost, `z` = obj3/rule length), each scaled to `[0, 1]`. Points come from the `lambda.py` experiment: each point is one swept value of PEC's lambda hyperparameter at a fixed rule budget, rather than a swept rule budget as in `max_rules.py`.
+# 3D scatter over all three objectives (coverage, cost, rule length), each scaled to `[0, 1]`. Points come from `lambda.py`: each is one swept lambda value at a fixed rule budget, not a rule-budget sweep.
 
 # %%
-# Load experiment data for the bicriteria/3D scatter plots below, which read from
-# `lambda.py`'s output instead of `max_rules.py`'s -- each point in these plots
-# corresponds to a different swept value of PEC's lambda hyperparameter (fixed rule
-# budget n_select), not a different rule budget.
-# NOTE: Loading is defensive -- datasets whose lambda.py output hasn't been generated
-# yet (data/experiments/<dataset>/lambda/exp<ref>.json missing) are skipped with a
-# warning rather than raising.
+# Load experiment data for the bicriteria/3D scatter plots, from `lambda.py`'s output
+# (each point = one swept lambda value at a fixed rule budget, not a rule-budget sweep).
+# Loading is defensive, as above.
 
 dataset_lambda_experiment_dict = {}
 for dataset in DATASETS:
@@ -1379,56 +1217,25 @@ for dataset in DATASETS:
 
 
 # %%
-# Collect experiment data for the bicriteria / 3D scatter plots:
+# Collect experiment data for the bicriteria / 3D scatter plots.
 #
-# Rather than folding the cost and rule-length objectives into a single
-# lambda-weighted axis, we keep all three objectives (obj1 = coverage/reward,
-# obj2 = cost, obj3 = summed rule length) separate and min-max scale each to
-# [0, 1]. Normalization constants are computed jointly across every module for
-# a given (dataset, objective) pair, so the scaled values stay comparable
-# across modules within a subplot.
+# obj1 = reward, obj2 = cost, obj3 = summed rule length, each min-max scaled to
+# [0, 1] jointly across modules so values stay comparable within a subplot.
+# lambda.py fits two PEC variants per objective -- 'lazy-greedy' (valid across
+# the whole grid, shown as "ScaledGreedy") and 'distorted-greedy' (the paper's
+# main model, valid only for lambda >= lambda*) -- both kept under their own
+# scatter_dict key. Each variant's own (sorted) lambda values and the index of
+# lambda* within them are carried along so the plot can draw direction-of-
+# change arrows and a lambda* star for both.
 #
-# Each point plotted here corresponds to one swept lambda value from
-# lambda.py's grid (fixed rule budget n_select, varying lambda), not a rule
-# budget as in max_rules.py. lambda.py fits two PEC selection-algorithm
-# variants per objective -- 'lazy-greedy' (valid across the full swept grid,
-# and the secondary/reference curve in the plot below, shown under the
-# "ScaledGreedy" label) and 'distorted-greedy' (the paper's main model,
-# valid only for lambda >= lambda*) -- we keep both, each under its own key
-# ('dscluster; ensemble' for distorted-greedy, 'dscluster; ensemble;
-# lazy-greedy' for scaled-greedy) so the plotting cell can render them with
-# distinct emphasis. Comparison models don't depend on lambda, so they're
-# recorded once per (dataset, objective) using scaled-greedy's grid of lambda
-# values (broadcast to an identical value at every point).
+# scatter_dict_2d additionally collapses obj2/obj3 into PEC's actual weighted-
+# cost term, obj4 = obj2 + alpha*obj3 (using each dataset/objective's selected
+# alpha), computed from raw obj2/obj3 and min-max scaled on its own.
 #
-# We also carry along each dscluster variant's own lambda values (sorted
-# ascending) so the plotting cell can draw direction-of-change arrows between
-# consecutive-lambda points, plus the index of lambda* (the smallest lambda
-# for which distorted-greedy is valid) within EACH variant's own lambda array
-# -- lambda* is a grid point for both (scaled-greedy is valid across the whole
-# grid, which includes it), so both get a star at that point, not just
-# distorted-greedy.
-#
-# Alongside scatter_dict (the 3-axis version), we also build scatter_dict_2d:
-# a 2-axis collapse where obj4 = obj2 + alpha * obj3 recombines cost and rule
-# length back into the single weighted-cost term PEC's objective actually
-# optimizes (mirroring the y2 term in the alpha-selection cell above), using
-# each (dataset, objective)'s already-selected alpha (fixed-parameters['alpha'],
-# keyed the same way as lambda_star). obj4 is computed from RAW obj2/obj3 (not
-# the separately-normalized x/y/z above) and then min-max scaled on its own,
-# since it's a different derived quantity with its own range; obj1 (x = g) is
-# reused as-is since it's already comparable between the two plots.
-#
-# Uncertainty: only Decision-Tree/IDS are stochastic here (the rule pool is
-# fixed at each lambda value; only these two models refit with fresh
-# randomness per trial seed). Their STANDARD ERROR (std/sqrt(n_trials), not raw
-# std -- these bars support a comparison between models' average position, see
-# `_se`'s docstring in the helpers cell) is combined from the raw per-trial
-# 'values' lists (aligned by lambda-grid position) using the SAME linear
-# combination as the mean (obj4 = obj2 + alpha*obj3), then scaled by the same
-# min-max range used for the mean -- SE scales linearly under an affine
-# transform, same as std. Deterministic modules (both PEC variants, ExKMC, CBA,
-# CN2) get 0.
+# Uncertainty: only Decision-Tree/IDS are stochastic here. Their SE is combined
+# from per-trial values using the same linear combination as the mean, then
+# scaled the same way (SE scales linearly under an affine transform); all
+# other modules get 0.
 
 scatter_dict = {
     dataset: {objective: {} for objective in objective_names} for dataset in dataset_lambda_experiment_dict.keys()
@@ -1602,43 +1409,24 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
 # All three axes (`x` = obj1, `y` = obj2, `z` = obj3) are shown directly, each scaled to `[0, 1]`. Kept simple -- one fixed viewing angle, matching color/marker encoding used elsewhere -- to stay legible in print.
 
 # %%
-# Plot results (Option 2): 3D scatter over (obj1, obj2, obj3).
+# Plot results: 3D scatter over (obj1, obj2, obj3). Each point gets a drop-line
+# to the z=0 floor plus a faint projection marker, since exact positions are
+# hard to read once a point is lifted off the floor in 3D.
 #
-# Reading exact axis values off a 3D scatter is hard -- once a point is lifted
-# off the floor, the eye has no fixed reference for its position. Each point
-# gets a thin drop-line straight down to the z=0 floor plus a faint marker at
-# that projection: the marker's (x, y) position is then readable directly
-# against the floor grid, and the stem length conveys z.
+# 'distorted-greedy' PEC (paper's main model) is a bold, opaque diamond;
+# 'scaled-greedy' is a small, faint, edge-less circle -- deliberately
+# understated so the two stay legible where they nearly overlap. Both get
+# direction-of-change arrows between consecutive lambda values (solid vs.
+# dashed) and a star at lambda*.
 #
-# Two PEC variants are shown per (dataset, objective) panel, each with its
-# own color (color_dict) so they're distinguishable even where their
-# objective values nearly overlap:
-#   - 'distorted-greedy' is the paper's main model: full-strength diamond
-#     markers, opaque, with a floor drop-line like the comparison models.
-#   - 'scaled-greedy' is the secondary reference: small, faint, edge-less
-#     circle markers so it never visually competes with distorted-greedy --
-#     understating it (smaller, fainter, a different marker shape, AND its
-#     own color) is what keeps the two legible as distinct series where they
-#     nearly overlap.
-# Both change with lambda (comparison models don't), so both get thin arrows
-# chained between consecutive lambda values, smallest to largest -- solid for
-# distorted-greedy, dashed for scaled-greedy. lambda* (the smallest lambda for
-# which distorted-greedy is valid) is a grid point for both variants, so both
-# get a star there, each in its own color.
-#
-# Uncertainty: Decision-Tree/IDS get thin per-axis error segments (x/y/z_err
-# from the collection cell above) through each point, drawn under the marker;
-# all other modules' err arrays are 0 (deterministic), so no segment is drawn
-# for them.
+# Uncertainty: Decision-Tree/IDS get thin per-axis error segments; all other
+# modules' err arrays are 0, so no segment is drawn for them.
 
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (registers the '3d' projection)
 
-# mplot3d's default zorder is recomputed every draw from each artist's camera
-# distance, which ignores the static zorder= kwargs passed below (that's why
-# scaled-greedy's points/lines could render on top of distorted-greedy's even
-# though they're given a lower zorder). ax.computed_zorder = False switches
-# an Axes3D to respect the zorder values we actually pass, like a normal 2D
-# Axes -- set per-axis below, right after each ax is created.
+# mplot3d recomputes zorder every draw from camera distance, ignoring static
+# zorder= kwargs. ax.computed_zorder = False restores normal 2D-style zorder
+# (set per-axis below, right after each ax is created).
 
 # Beta's subscript names the objective's cost term, not just "beta".
 beta_subscript_dict = {
@@ -1647,12 +1435,9 @@ beta_subscript_dict = {
     'coverage-pairwise-distance': 'P',
 }
 
-# Fixed length (in the shared [0,1]-normalized x/y/z units) for the solid
-# arrowhead on the direction-of-change arrows below. Axes3D.quiver's own
-# arrow_length_ratio scales the head with that arrow's shaft length, so the
-# long first segment (lambda=0 to the next grid point) got a huge head;
-# drawing the head as its own short, fixed-length quiver call instead keeps
-# it a constant size regardless of segment length.
+# Fixed arrowhead length (shared [0,1]-normalized units) for the lambda arrows
+# below -- quiver's own arrow_length_ratio scales with shaft length, which
+# made the long first segment's head huge, so the head is drawn separately.
 ARROW_HEAD_LEN = 0.2
 
 def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zorder):
@@ -1685,17 +1470,13 @@ def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zo
             arrow_length_ratio=0.6, normalize=False, zorder=zorder,
         )
 
-# Pastel (pre-lightened) tab10 colors, used only in this 3D scatter -- relying on alpha for a
-# light/diluted look (as the 2D bar/line/scatter plots elsewhere in this notebook do) doesn't
-# render consistently in mplot3d, since translucent markers there don't composite against a
-# fixed background the way ordinary 2D alpha does (compositing order instead depends on each
-# artist's per-draw camera distance). Pre-lightening the colors themselves sidesteps that.
+# Pastel (pre-lightened) tab10 colors, used only in this 3D scatter -- alpha-based
+# translucency doesn't composite consistently in mplot3d (compositing order depends
+# on per-draw camera distance), so colors are pre-lightened instead.
 pastel_color_dict = {k: _muted(v, amount=0.35) for k, v in color_dict.items()}
 
-# One figure per objective (rather than one giant figure with an
-# objective-per-row grid), each laid out as 3 columns x 2 rows over datasets
-# -- gives every dataset panel enough size to stay legible, and lets each
-# objective's figure be saved to (and read from) its own output file.
+# One figure per objective, 3 columns x 2 rows over datasets, so each panel
+# stays legible and each objective saves to its own output file.
 n_cols = 3
 n_datasets = len(scatter_dict)
 n_rows = int(np.ceil(n_datasets / n_cols))
@@ -1719,14 +1500,12 @@ for objective in objective_names:
             lam = pts['lam']
             lambda_star_idx = pts['lambda_star_idx']
             is_scaled = module.endswith('lazy-greedy')
-            # Further muted (blended toward white) on top of the already-pastel base for
-            # scaled-greedy -- keeps it visually distinct from every other series via its own
-            # hue, while staying deliberately understated so it never competes with
-            # distorted-greedy PEC, the paper's main model.
-            color = _muted(pastel_color_dict.get(module, 'grey')) if is_scaled else pastel_color_dict.get(module, 'grey')
+            # Scaled-greedy is further muted on top of the pastel base to stay
+            # understated relative to distorted-greedy PEC, the main model.
+            color = _muted(pastel_color_dict.get(module, 'grey'), amount=1/3) if is_scaled else pastel_color_dict.get(module, 'grey')
 
-            # Floor drop-line + projection marker (drawn first, low
-            # zorder, so the actual data points render on top of them).
+            # Floor drop-line + projection marker (drawn first, low zorder,
+            # so the actual data points render on top of them).
             for xi, yi, zi in zip(x, y, z):
                 ax.plot([xi, xi], [yi, yi], [0, zi], color=color, alpha=0.5, linewidth=1.0, zorder=1)
                 ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.5, edgecolor='none', zorder=1)
@@ -1734,7 +1513,6 @@ for objective in objective_names:
             # Per-axis error segments (only nonzero for Decision-Tree/IDS).
             x_err_disp, y_err_disp, z_err_disp = _visible_err(x_err), _visible_err(y_err), _visible_err(z_err)
             for xi, yi, zi, xe, ye, ze in zip(x, y, z, x_err_disp, y_err_disp, z_err_disp):
-            #for xi, yi, zi, xe, ye, ze in zip(x, y, z, x_err, y_err, z_err):
                 if xe > 0:
                     ax.plot([xi - xe, xi + xe], [yi, yi], [zi, zi], color=color, alpha=0.5, linewidth=1.5, zorder=2)
                 if ye > 0:
@@ -1744,18 +1522,15 @@ for objective in objective_names:
 
             if is_scaled:
                 # Faint, edge-less markers -- deliberately understated so this
-                # secondary curve doesn't compete with distorted-greedy. Now that the
-                # color itself is pre-lightened (pastel_color_dict above), alpha here
-                # only needs to add a little extra fade relative to the main model
-                # below, not do the heavy lifting of lightening the color.
+                # secondary curve doesn't compete with distorted-greedy.
                 ax.scatter(
                     x, y, z,
-                    color=color, marker='o', s=80, alpha=0.75,
-                    edgecolor='none', depthshade=False, zorder=2,
+                    color=color, marker='o', s=80, alpha=0.9,
+                    edgecolor='k', depthshade=False, zorder=2,
                 )
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
-                    dashed=True, alpha=0.7, linewidth=2.0, zorder=1,
+                    dashed=True, alpha=0.9, linewidth=2.0, zorder=1,
                 )
 
                 if lambda_star_idx is not None:
@@ -1765,24 +1540,14 @@ for objective in objective_names:
                         alpha=0.9, linewidth=1.0, depthshade=False, zorder=5,
                     )
             else:
-                # Floor drop-line + projection marker (drawn first, low
-                # zorder, so the actual data points render on top of them).
-                #for xi, yi, zi in zip(x, y, z):
-                #    ax.plot([xi, xi], [yi, yi], [0, zi], color=color, alpha=0.3, linewidth=1.0, zorder=1)
-                #    ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.3, edgecolor='none', zorder=1)
-
-                # Opaque now that the color itself is pre-lightened (pastel_color_dict
-                # above) -- alpha < 1 here previously was doing double duty trying (and,
-                # per the 3D-specific compositing quirk noted above, failing) to also
-                # dilute the color.
                 ax.scatter(
                     x, y, z,
                     label=module,
                     color=color,
-                    marker='o',#marker_style_dict.get(module, 'o'),
+                    marker='o',
                     s=240,
-                    edgecolor='none',
-                    alpha=1.0,
+                    edgecolor='k',
+                    alpha=0.9,
                     depthshade=False,
                     zorder=3,
                 )
@@ -1796,7 +1561,7 @@ for objective in objective_names:
                     ax.scatter(
                         x[lambda_star_idx], y[lambda_star_idx], z[lambda_star_idx],
                         marker='*', s=600, color=color, edgecolor='black',
-                        linewidth=1.2, depthshade=False, zorder=6, alpha=1.0
+                        linewidth=1.2, depthshade=False, zorder=6, alpha=0.9
                     )
 
         ax.set_xlim(-0.05, 1.05)
@@ -1810,8 +1575,8 @@ for objective in objective_names:
         # z=0 against y=1's corner) -- drop those two labels rather than let
         # them collide; the floor/wall gridlines still make the origin
         # readable.
-        ax.set_yticklabels(['', '0.5', '1.0'])
-        ax.set_zticklabels(['', '0.5', '1.0'])
+        ax.set_yticklabels(['0.0', '0.5', '1.0'])
+        ax.set_zticklabels(['0.0', '0.5', '1.0'])
         ax.tick_params(axis='both', which='major', labelsize=16, pad=0)
         # Zoom the cube slightly within its own bounding box to claw back
         # some of the whitespace 3D subplots otherwise reserve for rotation.
@@ -1819,30 +1584,19 @@ for objective in objective_names:
 
         ax.view_init(elev=22, azim=-60)
 
-        # Title with dataset name -- every subplot gets one now (each panel
-        # is a distinct dataset within a single-objective figure, rather than
-        # sharing a title with the rest of its column as in the old
-        # objective-per-row layout).
         if dataset == "kddcup":
             ax.set_title(rf"$KDDCup$", pad=6)
         else:
             ax.set_title(rf"${dataset.capitalize()}$", pad=6, fontsize=28)
 
-        # Axis titles on every panel, same as x and z below -- consistent
-        # rather than shown only on an edge, since each panel shares the same
-        # view angle and axis meaning throughout the grid.
         ax.set_ylabel(rf"$\bar{{\beta}}_{{{beta_subscript_dict.get(objective, '')}}}$", labelpad=6, fontsize=22)
         ax.set_xlabel(r"$\bar{g}$", labelpad=2, fontsize=22)
-        # mplot3d's set_zlabel (even with set_rotate_label(False) + rotation=0, to avoid a
-        # text.usetex extent-measurement bug that otherwise clipped the rotated label off the
-        # right edge of the rightmost column) places the label far from the z-axis itself --
-        # anchored near the x-axis side rather than next to the z-ticks/y-axis corner where it
-        # actually sits. Drawing it manually with text2D in axes-fraction coordinates instead
-        # pins it right next to the z-axis (and therefore the adjoining y-axis corner) and keeps
-        # it fully inside the panel at savefig time regardless of column position.
+        # set_zlabel places the label far from the z-axis regardless of rotation
+        # settings (and clips under usetex); text2D in axes-fraction coords pins
+        # it next to the z-axis instead.
         ax.set_zlabel("")
         ax.text2D(
-            0.86, 0.58, r"$\bar{s}$",
+            1.12, 0.58, r"$\bar{s}$",
             transform=ax.transAxes, fontsize=22, ha='left', va='center',
         )
 
@@ -1852,19 +1606,13 @@ for objective in objective_names:
         ax.zaxis.pane.set_alpha(0.05)
         ax.grid(True, linestyle=':', linewidth=0.6, alpha=0.5)
 
-    # Hide any trailing unused panels (only if n_datasets isn't a multiple of
-    # n_cols -- with the expected 6 datasets this loop body never runs).
+    # Hide any trailing unused panels (n_datasets not a multiple of n_cols).
     for idx in range(n_datasets, n_rows * n_cols):
         row, col = divmod(idx, n_cols)
         axs[row, col].set_axis_off()
 
-    # 3D subplots report an inflated layout bbox (extra margin reserved for
-    # rotation), which makes plt.tight_layout() leave excess whitespace and
-    # doesn't resolve corner tick-label crowding -- pack the grid manually
-    # instead, slightly overlapping the reserved (not visible-content) margins.
-    # right is pulled in further (0.98 -> 0.90) and wspace opened back up
-    # (-0.05 -> 0.15) to leave the rightmost column's now-horizontal z-label
-    # room to sit fully inside the figure instead of running off its edge.
+    # 3D subplots reserve extra layout margin for rotation, which makes
+    # tight_layout() leave excess whitespace -- pack the grid manually instead.
     fig.subplots_adjust(left=0.02, right=0.90, top=0.90, bottom=0.05, wspace=0.15, hspace=0.2)
 
     plt.savefig(
@@ -1895,21 +1643,17 @@ legend_labels = dict(title_dict) | {
 
 legend_elements = []
 for cmod in module_order:
-    is_scaled = cmod.endswith('lazy-greedy')
-    # Scaled-greedy has its own color_dict entry (distinct from distorted-
-    # greedy's) and is drawn as a faint, edge-less circle with a dashed
-    # connector -- matching the scatter plot cells' muted treatment.
-    color = _muted(color_dict[cmod]) if is_scaled else color_dict[cmod]
+    color = _muted(color_dict[cmod])
     legend_elements.append(
         mlines.Line2D(
             [], [],
             color=color,
-            marker='o',# if is_scaled else marker_style_dict.get(cmod, 'o'),
+            marker='o',
             markersize=30,
             markeredgecolor='k',
             markeredgewidth=1.5,
-            alpha=0.55 if is_scaled else 1.0,
-            linestyle='--' if is_scaled else 'None',
+            alpha=0.9,
+            linestyle='None',
             linewidth=2.0,
             label=legend_labels.get(cmod, cmod)
         )
@@ -1944,31 +1688,19 @@ plt.show()
 # %% [markdown]
 # ### Bicriteria Plots (2D, Collapsed)
 #
-# Same data as the 3D scatter above, but with the cost and rule-length axes collapsed into a single term: `obj4 = obj2 + alpha * obj3`, i.e. PEC's actual weighted-cost objective (obj2 = cost, obj3 = summed rule length, `alpha` = the value selected for that dataset/objective in the alpha-selection step). `obj1` (`x = g`) is unchanged. Distorted-greedy vs. scaled-greedy are distinguished the same way as the 3D version (see the legend above), and this collapse is what makes the two clearly separable on a single axis where the 3D view often has them nearly overlapping.
+# Same data as the 3D scatter, but cost and rule length are collapsed into PEC's actual weighted-cost term, `obj4 = obj2 + alpha * obj3` -- this is what makes distorted-greedy and scaled-greedy clearly separable on a single axis where the 3D view often has them nearly overlapping.
 
 # %%
-# Plot results: 2D scatter over (obj1, obj4) -- the collapsed-cost version of
-# the bicriteria plot above.
-#
-# Same visual encoding as the 3D scatter: 'distorted-greedy' (PEC's main
-# model) is a bold, opaque diamond with a solid direction-of-change arrow
-# (smallest to largest lambda) and a star at lambda*; 'scaled-greedy' is a
-# faint, edge-less circle with a dashed arrow and its own color_dict color
-# (distinct from distorted-greedy's) so the two stay legible even where they
-# nearly overlap. lambda* is a grid point for both, so both get a star there.
-# Comparison models don't depend on lambda, so they're drawn as plain points
-# with no arrows.
-#
-# Uncertainty: Decision-Tree/IDS get errorbar whiskers (xerr/yerr from the
-# collection cell above); all other modules' err arrays are 0 (deterministic),
-# so `ax.errorbar` renders no visible whisker for them -- safe to call
-# unconditionally.
+# Plot results: 2D scatter over (obj1, obj4), same visual encoding as the 3D
+# scatter (distorted-greedy = bold diamond + solid arrow; scaled-greedy =
+# faint circle + dashed arrow; comparison models = plain points, no arrows).
+# Uncertainty: Decision-Tree/IDS get errorbar whiskers; safe to call
+# unconditionally since other modules' err arrays are 0.
 
 function_name_dict = {0: 'K', 1: 'M', 2: 'P'}
 
-# Sized per-panel (rather than a fixed figsize) so panel aspect ratio -- and
-# with it, the quiver arrows below -- stays reasonable regardless of how many
-# datasets are actually loaded.
+# Sized per-panel so aspect ratio (and the quiver arrows) stays reasonable
+# regardless of how many datasets are loaded.
 fig, axs = plt.subplots(
     len(objective_names), len(scatter_dict_2d),
     figsize=(6.5 * len(scatter_dict_2d), 4.5 * len(objective_names)), squeeze=False,
@@ -1988,25 +1720,18 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
             lam = pts['lam']
             lambda_star_idx = pts['lambda_star_idx']
             is_scaled = module.endswith('lazy-greedy')
-            # Muted, same as the 3D scatter cell and the shared bicriteria
-            # legend, so scaled-greedy reads as understated here too instead
-            # of showing up in full-strength color.
-            color = _muted(color_dict.get(module, 'grey')) if is_scaled else color_dict.get(module, 'grey')
+            color = _muted(color_dict.get(module, 'grey'))
 
             if is_scaled:
-                #ax.errorbar(
-                #    x, y4, xerr=x_err, yerr=y4_err, fmt='none',
-                #    ecolor=color, alpha=0.3, capsize=3, zorder=1,
-                #)
                 ax.errorbar(
                     x, y4, xerr=_visible_err(x_err), yerr=_visible_err(y4_err), fmt='none',
-                    ecolor=color, alpha=0.3, capsize=3, zorder=1,
+                    ecolor=color, alpha=0.5, capsize=3, zorder=1,
                 )
                 
                 ax.scatter(
                     x, y4,
-                    color=color, marker='o', s=100, alpha=0.35,
-                    edgecolor='none', zorder=2,
+                    color=color, marker='o', s=250, alpha=0.9,
+                    edgecolor='k', zorder=2,
                 )
                 if len(lam) > 1:
                     order = np.argsort(lam)
@@ -2014,39 +1739,35 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                     dx, dy = np.diff(xs), np.diff(ys)
                     arrows = ax.quiver(
                         xs[:-1], ys[:-1], dx, dy,
-                        angles='xy', scale_units='xy', scale=1,
+                        angles='xy', scale_units='xy', scale=1,linestyle="dashed",
                         # 'dots' keeps the arrow shaft width an absolute size
                         # (independent of axes aspect ratio), so it doesn't
                         # balloon if a panel ends up short and wide.
                         units='dots', width=4.0,
-                        color=color, alpha=0.45,
-                        headwidth=3, headlength=4, zorder=2,
+                        color=color, alpha=0.5,
+                        headwidth=5, headlength=6, zorder=2,
                     )
                     arrows.set_linestyle('dashed')
 
                 if lambda_star_idx is not None:
                     ax.scatter(
                         x[lambda_star_idx], y4[lambda_star_idx],
-                        marker='*', s=600, color=color, edgecolor='black',
-                        alpha=0.7, linewidth=1.0, zorder=5,
+                        marker='*', s=700, color=color, edgecolor='black',
+                        alpha=0.9, linewidth=1.0, zorder=5,
                     )
             else:
-                #ax.errorbar(
-                #    x, y4, xerr=x_err, yerr=y4_err, fmt='none',
-                #    ecolor=color, alpha=0.4, capsize=3, zorder=2,
-                #)
                 ax.errorbar(
                     x, y4, xerr=_visible_err(x_err), yerr=_visible_err(y4_err), fmt='none',
-                    ecolor=color, alpha=0.3, capsize=3, zorder=1,
+                    ecolor=color, alpha=0.5, capsize=3, zorder=1,
                 )
                 ax.scatter(
                     x, y4,
                     label=module,
                     color=color,
-                    marker='o',#marker_style_dict.get(module, 'o'),
-                    s=280,
-                    edgecolor='none',
-                    alpha=0.75,
+                    marker='o',
+                    s=500,
+                    edgecolor='k',
+                    alpha=0.9,
                     zorder=3,
                 )
 
@@ -2056,24 +1777,24 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                     dx, dy = np.diff(xs), np.diff(ys)
                     ax.quiver(
                         xs[:-1], ys[:-1], dx, dy,
-                        angles='xy', scale_units='xy', scale=1,
+                        angles='xy', scale_units='xy', scale=1, linestyle="dashed",
                         units='dots', width=4.8,
-                        color=color, alpha=0.8,
-                        headwidth=4, headlength=5, zorder=4,
+                        color=color, alpha=0.5,
+                        headwidth=5, headlength=6, zorder=4,
                     )
 
                 if lambda_star_idx is not None:
                     ax.scatter(
                         x[lambda_star_idx], y4[lambda_star_idx],
-                        marker='*', s=600, color=color, edgecolor='black',
-                        linewidth=1.2, zorder=6,
+                        marker='*', s=700, color=color, edgecolor='black',
+                        linewidth=1.2, zorder=6, alpha=0.9
                     )
 
         ax.set_xlim(-0.05, 1.05)
-        ax.set_ylim(-0.05, 1.05)
+        ax.set_ylim(-0.05, 0.5)
         ax.set_xticks([0, 0.5, 1])
-        ax.set_yticks([0, 0.5, 1])
-        ax.tick_params(axis='both', which='major', labelsize=20)
+        ax.set_yticks([0, 0.25, 0.5])
+        ax.tick_params(axis='both', which='major', labelsize=28)
 
         if j == 0:
             if dataset == "kddcup":
@@ -2082,9 +1803,9 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_2d.items()):
                 ax.set_title(rf"${dataset.capitalize()}$", pad=10)
 
         if j == len(objective_names) - 1:
-            ax.set_xlabel(r"$g$", fontsize=26)
+            ax.set_xlabel(r"$g$", fontsize=36)
         if i == 0:
-            ax.set_ylabel(rf"$h_{{{function_name_dict[j]}}}$", fontsize=26, rotation=0, labelpad=20)
+            ax.set_ylabel(rf"$h_{{{function_name_dict[j]}}}$", fontsize=36, rotation=0, labelpad=40)
 
 plt.tight_layout()
 
@@ -2093,18 +1814,14 @@ plt.savefig(
     bbox_inches='tight',
     dpi=300
 )
+plt.show()
 
 # %% [markdown]
 # ### Weighted Average Rule Length
 
 # %%
-# Collect the weighted average lengths for each dataset and objective.
-# Uncertainty: for Decision-Tree/IDS, 'weighted-avg-length' at the smallest
-# rule budget is an aggregate_trials dict; stored here as (mean, SE) tuples so
-# the table cell below can render "mean +/- SE" (standard error, not raw std --
-# this table supports a comparison between models' average rule length, see
-# `_se`'s docstring in the helpers cell). Deterministic modules (PEC, ExKMC,
-# CBA, CN2) get SE=NaN, rendered as a plain number.
+# Collect the weighted average lengths for each dataset and objective, as
+# (mean, SE) tuples (SE=NaN for deterministic modules; see `_se`).
 weighted_avg_dict = {
     (objective, dataset): {}
     for dataset in dataset_experiment_dict.keys()
@@ -2151,9 +1868,7 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
 
 
 # %%
-# Weighted rule length table. "mean +/- SE" (standard error across n_trials=10
-# random-seed repeats) for Decision-Tree/IDS; a plain number for deterministic
-# modules (PEC, ExKMC, CBA, CN2), which have no repeats.
+# Weighted rule length table: "mean ± SE" for Decision-Tree/IDS, plain number otherwise.
 def _fmt_weighted_avg(cell):
     mean, se = cell
     if np.isnan(se):
@@ -2248,16 +1963,13 @@ _lines += [
 
 print("\n".join(_lines))
 
-# %%
-
 # %% [markdown]
 # ### Uncertainty
 
 # %%
-# Finally, we collect the distributions of covered weights for each dataset and objective.
-# Note: this section only compares weighted vs. unweighted PEC, both deterministic
-# single-fit models (no Decision-Tree/IDS here) -- no repeated-trial uncertainty
-# applies, so this plot is unaffected by the notebook's uncertainty changes elsewhere.
+# Collect the distributions of covered weights for each dataset and objective.
+# Compares weighted vs. unweighted PEC only, both deterministic single-fit
+# models -- no repeated-trial uncertainty applies here.
 
 distribution_dict = {
     dataset: {objective: None for objective in objective_names} for dataset in dataset_experiment_dict.keys()
@@ -2276,14 +1988,12 @@ for dataset, experiment_dict in dataset_experiment_dict.items():
         mod_covered_set = mod_covered_sets[
                 str(min([int(l) for l in mod_covered_sets.keys()]))
             ]
-        mod_covered_weights = weights[mod_covered_set]
 
         selected_dscluster_weighted_module = selected_dscluster_module.split(';')[0] + '; ' + objective + '-weighted;' + selected_dscluster_module.split(';')[2]
         weighted_mod_covered_sets = experiment_dict['modules'][selected_dscluster_weighted_module]['cluster-coverage-set']
         weighted_mod_covered_set = weighted_mod_covered_sets[
                 str(min([int(l) for l in weighted_mod_covered_sets.keys()]))
             ]
-        weighted_mod_covered_weights = weights[weighted_mod_covered_set]
 
         samples1 = np.log(weights[mod_covered_set]) / -5
         samples2 = np.log(weights[weighted_mod_covered_set]) / -5
@@ -2296,9 +2006,6 @@ fig, axs = plt.subplots(len(objective_names), len(dataset_experiment_dict), figs
 
 for i, (dataset, objective_result_dict) in enumerate(distribution_dict.items()):
     for j, (objective, (samples1, samples2)) in enumerate(objective_result_dict.items()):
-        # Plot histograms
-        #all_vals = np.concatenate([samples1, samples2]) if (samples1.size and samples2.size) else (samples1 if samples1.size else samples2)
-        #edges = np.histogram_bin_edges(all_vals, bins=20)
         edges = np.linspace(0.0, 1.0, 31)  # 20 equal-width bins in [0, 1]
         h1, _ = np.histogram(samples1, bins=edges)
         h2, _ = np.histogram(samples2, bins=edges)
@@ -2347,12 +2054,6 @@ for i, (dataset, objective_result_dict) in enumerate(distribution_dict.items()):
             else:
                 axs[j,i].set_title(rf"${dataset.capitalize()}$")
 
-        # Y-label with objective
-        #if i == 0:
-        #    axs[j,i].set_ylabel(
-        #        rf"{objective_name_dict[objective]}"
-        #    )
-
         # Gridlines:
         axs[j,i].grid(which='major', linestyle='-', linewidth=0.8, alpha = 0.5)
         axs[j,i].axhline(0.0, color="black", linewidth=2.0, alpha=0.7)
@@ -2372,8 +2073,7 @@ plt.show()
 
 # %% [markdown]
 # # Confidence Experiment
-# Plots results from the `confidence.py` experiment: each comparison model's PEC-objective score as the rule-pool confidence-filter threshold varies. Loading is defensive -- run `experiments/<dataset>/confidence.py` to generate `data/experiments/<dataset>/confidence/exp_confidence.json` for a dataset before it will appear here.
-#
+# Plots each model's PEC-objective score as the rule-pool confidence-filter threshold varies (from `confidence.py`). Loading is defensive -- run it per-dataset to generate the data first.
 
 # %%
 # Load confidence-experiment data (defensive: most/all datasets may be missing).
@@ -2392,16 +2092,8 @@ if not dataset_confidence_dict:
 
 
 # %%
-# Collect experiment data for the confidence-sweep line plots.
-#
-# Uncertainty: for Decision-Tree/IDS, 'objective' at each confidence level is
-# already an aggregate_trials dict ({'mean','std','values'}) -- no derived
-# combination needed here (unlike the max_rules bar plot), just read '_se' off
-# the same raw value. SE (not raw std) is used because this plot's bands
-# support a comparison between models' average objective score -- see `_se`'s
-# docstring in the helpers cell. Deterministic modules (PEC, scaled-greedy-PEC,
-# ExKMC, CBA, CN2) get NaN, which fill_between (in the plot cell below) renders
-# as an empty band.
+# Collect experiment data for the confidence-sweep line plots. ±1 SE per
+# `_se`; deterministic modules get NaN, rendered as an empty band.
 
 def _is_flat(y, rel_std_threshold=0.02):
     """Empirically detect whether a model's confidence-sweep line is ~constant.
@@ -2458,17 +2150,10 @@ for dataset, conf_json in dataset_confidence_dict.items():
             }
 
 # %%
-# Plot results:
-# Shaded bands = +/-1 standard error (std/sqrt(n_trials=10)) across random-seed
-# repeats (Decision-Tree, IDS); no band for deterministic modules (PEC,
-# scaled-greedy-PEC, ExKMC, CBA, CN2). SE (not raw std) is used because these
-# bands support a comparison between models' average objective score -- see
-# `_se`'s docstring in the helpers cell.
+# Plot results. Shaded bands = ±1 SE (see `_se`); no band for deterministic modules.
 
 function_name_dict = {0: 'K', 1: 'M', 2: 'P'}
-# Drawn in this order so PEC (plotted last) renders on top of PEC Scaled
-# Greedy where their lines/bands sit right on top of each other -- PEC is
-# the paper's main model and should win visibility ties.
+# PEC drawn last so it renders on top of ScaledGreedy where lines/bands overlap.
 module_order = list(comparison_modules) + ['dscluster; ensemble; lazy-greedy', 'dscluster; ensemble']
 
 fig, axs = plt.subplots(len(objective_names), len(dataset_confidence_dict), figsize=(34, 14), squeeze=False)
@@ -2485,14 +2170,13 @@ for i, dataset in enumerate(dataset_confidence_dict.keys()):
                 continue
             r = module_result_dict[module]
             mask = ~np.isnan(r['y'])
-            color = color_dict.get(module, 'grey')
+            color = _muted(color_dict.get(module, 'grey'))
             axs[j, i].plot(
                 r['x'][mask], r['y'][mask],
                 color=color,
-                alpha=1.0 if module == 'dscluster; ensemble' else 0.75,
-                #marker=marker_style_dict.get(module, 'o'),
+                alpha=1.0,
                 linestyle='dashed' if r['is_flat'] else 'solid',
-                linewidth=5, markersize=10, markeredgecolor='black',
+                linewidth=6, markersize=10, markeredgecolor='black',
                 label=title_dict.get(module, module),
             )
             err_mask = mask & ~np.isnan(r['y_err'])
@@ -2538,9 +2222,9 @@ legend_labels = dict(title_dict) | {
 legend_elements = [
     mlines.Line2D(
         [], [],
-        color=color_dict.get(m, 'grey'),
-        alpha=0.75,
-        marker=None,#marker_style_dict.get(m, 'o'),
+        color=_muted(color_dict.get(m, 'grey')),
+        alpha=1.0,
+        marker=None,
         markersize=20,
         markeredgecolor='k',
         markeredgewidth=1.5,
@@ -2550,10 +2234,6 @@ legend_elements = [
     )
     for m in module_order
 ]
-#legend_elements += [
-#    mlines.Line2D([], [], color='black', linestyle='solid', linewidth=3, label='Varies with confidence'),
-#    mlines.Line2D([], [], color='black', linestyle='dashed', linewidth=3, label='Constant'),
-#]
 
 ax.legend(handles=legend_elements, ncol=7, loc='center', frameon=False)
 ax.axis('off')
@@ -2569,19 +2249,12 @@ plt.show()
 # %% [markdown]
 # ### $\lambda^*$ Sweep
 #
-# Shows how the PEC objective's fitted $\lambda^*$ (the coverage/cost trade-off multiplier chosen by distorted greedy) shifts as the confidence threshold filters the rule pool. Unlike the objective-score plots above, $\lambda^*$ is fit once per confidence level and shared across every comparison model scored at that level, so each panel below shows a single curve rather than one line per model.
+# How PEC's fitted $\lambda^*$ shifts as the confidence threshold filters the rule pool -- one value per confidence level (shared across models), so each panel is a single curve.
 
 # %%
-# Collect the PEC lambda* values as they vary with the confidence threshold.
-# lambda* is saved per confidence level in conf_json[k]['lambda'][objective]
-# (see the "PEC" block of run_confidence_level in confidence.py) -- one value
-# per (confidence level, objective), not per comparison model.
-#
-# No uncertainty band here: in confidence.py, lambda* is a plain scalar per
-# confidence level (a single PEC fit against a fixed, deterministically-
-# filtered rule pool) -- not a per-trial quantity, unlike its counterpart in
-# the Input Sensitivity section below, where the rule pool itself is randomly
-# resampled per repeat.
+# Collect the PEC lambda* values as they vary with the confidence threshold
+# (one scalar per confidence level/objective, shared across comparison models;
+# no uncertainty band since it's a single deterministic fit, not per-trial).
 
 confidence_lambda_dict = {
     dataset: {objective: {} for objective in objective_names}
@@ -2647,3 +2320,5 @@ plt.savefig(
     bbox_inches='tight',
     dpi=300
 )
+
+# %%
