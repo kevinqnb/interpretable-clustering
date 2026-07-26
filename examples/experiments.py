@@ -1458,6 +1458,8 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
 # modules' err arrays are 0, so no segment is drawn for them.
 
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (registers the '3d' projection)
+from mpl_toolkits.mplot3d import proj3d
+from matplotlib.patches import FancyArrowPatch
 
 # mplot3d recomputes zorder every draw from camera distance, ignoring static
 # zorder= kwargs. ax.computed_zorder = False restores normal 2D-style zorder
@@ -1470,57 +1472,53 @@ beta_subscript_dict = {
     'coverage-pairwise-distance': 'P',
 }
 
-# Fixed arrowhead length, as a fraction of each segment's length -- quiver's
-# own arrow_length_ratio scales with shaft length, which made the long first
-# segment's head huge, so the head is drawn separately. Expressed as a
-# fraction rather than an absolute length since x, y, z no longer share a
-# common [0, 1] scale (see _draw_lambda_arrows).
-ARROW_HEAD_FRAC = 0.2
+class _Arrow3D(FancyArrowPatch):
+    """A FancyArrowPatch whose 3D endpoints are (re)projected to 2D at draw
+    time. Unlike quiver -- whose arrowhead is built from data-space vectors,
+    so its on-screen size gets distorted once x, y, z no longer share a
+    common scale -- FancyArrowPatch's `mutation_scale` sizes the head in
+    points, a fixed physical unit independent of any axis's data range.
+    """
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        super().__init__((0, 0), (0, 0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
 
-def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zorder, x_range, y_range, z_range):
+    def do_3d_projection(self, renderer=None):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+        return min(zs)
+
+# Single parameter controlling arrowhead size, in points -- constant on
+# screen in every panel regardless of that panel's y/z data ranges.
+ARROW_HEAD_SIZE = 14
+
+def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zorder):
     """Direction-of-change arrows between consecutive (sorted-by-lambda)
-    points: a plain line for the shaft (dashed or solid per `dashed`) and a
-    fixed-size, always-solid arrowhead at its tip.
-
-    x, y, z are no longer all on a shared [0, 1] scale, so segment length and
-    direction are computed after dividing each axis by its own plotted range
-    (x_range, y_range, z_range) -- keeping the arrow geometry isotropic in
-    display space -- and the resulting head vector is mapped back to each
-    axis's own units before drawing.
+    points, one FancyArrowPatch (shaft + head) per segment -- see _Arrow3D
+    for why this keeps the head a constant size across panels.
     """
     if lam is None or len(lam) <= 1:
         return
     order = np.argsort(lam)
     xs, ys, zs = x[order], y[order], z[order]
     for k in range(len(xs) - 1):
-        x0, y0, z0 = xs[k], ys[k], zs[k]
-        dxk, dyk, dzk = xs[k + 1] - x0, ys[k + 1] - y0, zs[k + 1] - z0
-        ndx, ndy, ndz = dxk / x_range, dyk / y_range, dzk / z_range
-        seg_len = np.sqrt(ndx ** 2 + ndy ** 2 + ndz ** 2)
-        if seg_len == 0:
-            continue
-        head_len = min(ARROW_HEAD_FRAC, 0.5 * seg_len)
-        ux, uy, uz = ndx / seg_len, ndy / seg_len, ndz / seg_len
-        hx, hy, hz = ux * head_len * x_range, uy * head_len * y_range, uz * head_len * z_range
-        xh, yh, zh = x0 + dxk - hx, y0 + dyk - hy, z0 + dzk - hz
-
-        ax.plot(
-            [x0, xh], [y0, yh], [z0, zh],
-            color=color, alpha=alpha, linewidth=linewidth,
+        arrow = _Arrow3D(
+            [xs[k], xs[k + 1]], [ys[k], ys[k + 1]], [zs[k], zs[k + 1]],
+            mutation_scale=ARROW_HEAD_SIZE, lw=linewidth, arrowstyle='-|>',
+            shrinkA=0, shrinkB=0, color=color, alpha=alpha,
             linestyle='dashed' if dashed else 'solid', zorder=zorder,
         )
-        ax.quiver(
-            xh, yh, zh, hx, hy, hz,
-            color=color, alpha=alpha, linewidth=linewidth,
-            arrow_length_ratio=0.6, normalize=False, zorder=zorder,
-        )
+        ax.add_artist(arrow)
 
-def _panel_axis_ticks(module_result_dict, key, err_key):
+def _panel_axis_ticks(module_result_dict, key, err_key, exclude_keys=()):
     """3 'nice' ticks spanning [0, max(value + error)] across every module in
-    this panel, via the shared nice_lim_for_3_ticks helper (unclipped above,
-    since y/z are no longer bounded to [0, 1])."""
-    values = np.concatenate([pts[key] for pts in module_result_dict.values()])
-    errs = np.concatenate([pts[err_key] for pts in module_result_dict.values()])
+    this panel except those in `exclude_keys`, via the shared
+    nice_lim_for_3_ticks helper (unclipped above, since y/z are no longer
+    bounded to [0, 1])."""
+    included = {m: pts for m, pts in module_result_dict.items() if m not in exclude_keys}
+    values = np.concatenate([pts[key] for pts in included.values()])
+    errs = np.concatenate([pts[err_key] for pts in included.values()])
     raw_max = float(np.nanmax(values + errs)) if values.size else 0.0
     return nice_lim_for_3_ticks(0.0, raw_max, clip=(0.0, np.inf))
 
@@ -1567,8 +1565,17 @@ for objective in objective_names:
         # this way -- their scale depends on this dataset's n and cost
         # normalizer -- so this panel gets its own "nice" 3-tick range for
         # each, computed from its own data (+ error) before anything is drawn.
+        #
+        # ScaledGreedy (lazy-greedy) is excluded from the y range specifically:
+        # its lambda=0 point can have a far larger cost than every other
+        # algorithm, and letting it set the axis scale would squeeze
+        # everything else into a sliver near the floor. The y limit is instead
+        # sized to the other algorithms, and any ScaledGreedy point above it
+        # is simply clipped off the top of the panel.
         x_lo, x_hi = 0.0, 1.0
-        y_lo, y_hi, y_ticks = _panel_axis_ticks(module_result_dict, 'y', 'y_err')
+        y_lo, y_hi, y_ticks = _panel_axis_ticks(
+            module_result_dict, 'y', 'y_err', exclude_keys={'dscluster; ensemble; lazy-greedy'}
+        )
         z_lo, z_hi, z_ticks = _panel_axis_ticks(module_result_dict, 'z', 'z_err')
         y_range = y_hi - y_lo
         z_range = z_hi - z_lo
@@ -1614,7 +1621,6 @@ for objective in objective_names:
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
                     dashed=True, alpha=0.9, linewidth=2.0, zorder=1,
-                    x_range=1.0, y_range=y_range, z_range=z_range,
                 )
 
                 if lambda_star_idx is not None:
@@ -1639,7 +1645,6 @@ for objective in objective_names:
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
                     dashed=False, alpha=0.9, linewidth=2.0, zorder=2,
-                    x_range=1.0, y_range=y_range, z_range=z_range,
                 )
 
                 if lambda_star_idx is not None:
