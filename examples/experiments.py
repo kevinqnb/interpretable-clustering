@@ -1907,6 +1907,148 @@ plt.savefig(
 plt.show()
 
 # %% [markdown]
+# ### Bicriteria Plots (2D, Sized by Rule Length)
+#
+# Same `(g, beta)` axes and per-axis normalization as the 3D scatter above (`scatter_dict`: `x = obj1 / n`, `y = obj2 / cost_normalizer` -- unlike the collapsed-`obj4` 2D plot's joint min-max scaling), but rule length (`s`) is dropped as a third axis and instead drives marker size, inversely and per-panel: within each (dataset, objective) panel, the point with the smallest `s` gets the largest marker and the point with the largest `s` gets the smallest. Layout/coloring/error-bar conventions otherwise match the 2D collapsed plot above. The one deliberate change: the connector arrows between consecutive lambda values are dashed for both PEC variants here (the 2D collapsed plot above draws distorted-greedy's arrows solid) -- drawn with `FancyArrowPatch` rather than `quiver`, since `quiver`'s shaft is a filled polygon that silently ignores `linestyle`.
+#
+# Marker size is *not* used to separate PEC from ScaledGreedy here (unlike the 2D collapsed plot's 500-vs-250 split) -- color already does that, and size is spent entirely on encoding `s`. No shared size legend is provided since the size scale is renormalized per panel.
+
+# %%
+# Plot results: 2D scatter over (obj1, obj2) = (g, beta), same data/normalization
+# as the 3D scatter (scatter_dict), with rule length (obj3) encoded as marker
+# size instead of a third axis. Uncertainty: Decision-Tree/IDS get errorbar
+# whiskers; safe to call unconditionally since other modules' err arrays are 0.
+
+from matplotlib.patches import FancyArrowPatch
+
+# Marker-size range (points^2, matplotlib's `s` units) that panel-local,
+# inverse-normalized rule length is mapped into.
+SIZE_MIN, SIZE_MAX = 80, 550
+
+def _size_from_length(z, z_lo, z_hi):
+    """Inverse min-max map: smallest z -> SIZE_MAX, largest z -> SIZE_MIN."""
+    rng = z_hi - z_lo
+    t = (z_hi - z) / rng if rng > 0 else np.ones_like(z)
+    return SIZE_MIN + t * (SIZE_MAX - SIZE_MIN)
+
+# quiver() draws its shaft as a filled polygon, not a stroked line, so
+# set_linestyle('dashed') on it is a silent no-op -- confirmed by rendering
+# and checking arrows.get_linestyle() after the call (always resolves to the
+# empty [0, [0, 0]] dash pattern regardless of what's passed in). FancyArrowPatch
+# strokes its shaft instead (same primitive the 3D scatter's _Arrow3D uses),
+# so it dashes correctly; used here in place of quiver for that reason alone.
+def _draw_lambda_arrows_2d(ax, x, y, lam, color, *, linewidth, zorder):
+    if lam is None or len(lam) <= 1:
+        return
+    order = np.argsort(lam)
+    xs, ys = x[order], y[order]
+    for k in range(len(xs) - 1):
+        arrow = FancyArrowPatch(
+            (xs[k], ys[k]), (xs[k + 1], ys[k + 1]),
+            mutation_scale=16, lw=linewidth, arrowstyle='-|>',
+            shrinkA=0, shrinkB=0, color=color, alpha=0.5,
+            linestyle='dashed', zorder=zorder,
+        )
+        ax.add_patch(arrow)
+
+fig, axs = plt.subplots(
+    len(objective_names), len(scatter_dict),
+    figsize=(6.5 * len(scatter_dict), 4.5 * len(objective_names)), squeeze=False,
+)
+
+for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
+    for j, objective in enumerate(objective_names):
+        module_result_dict = objective_result_dict[objective]
+        ax = axs[j, i]
+        ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.grid(True, which='major', linestyle=':', linewidth=0.8, alpha=0.9)
+        ax.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.5)
+
+        # Rule-length range across every module in this panel (not just
+        # comparison modules) -- matches how the 3D scatter's z ticks are
+        # computed per panel, since s's scale varies by dataset/objective.
+        z_all = np.concatenate([pts['z'] for pts in module_result_dict.values()])
+        z_lo, z_hi = (float(z_all.min()), float(z_all.max())) if z_all.size else (0.0, 0.0)
+
+        # y (beta) is not [0, 1]-bounded like x -- give this panel its own
+        # "nice" 3-tick range, same as the 3D scatter (and again excluding
+        # ScaledGreedy's lambda=0 point, which can dwarf every other cost).
+        y_lo, y_hi, y_ticks = _panel_axis_ticks(
+            module_result_dict, 'y', 'y_err', exclude_keys={'dscluster; ensemble; lazy-greedy'}
+        )
+        y_range = y_hi - y_lo
+
+        for module, pts in module_result_dict.items():
+            x, y, z = pts['x'], pts['y'], pts['z']
+            x_err, y_err = pts['x_err'], pts['y_err']
+            lam = pts['lam']
+            lambda_star_idx = pts['lambda_star_idx']
+            is_scaled = module.endswith('lazy-greedy')
+            color = _muted(color_dict.get(module, 'grey'))
+            sizes = _size_from_length(z, z_lo, z_hi)
+
+            ax.errorbar(
+                x, y, xerr=_visible_err(x_err), yerr=_visible_err_frac(y_err, y_range), fmt='none',
+                ecolor=color, alpha=0.5, capsize=3, zorder=1,
+            )
+            ax.scatter(
+                x, y,
+                label=None if is_scaled else module,
+                color=color,
+                marker='o',
+                s=sizes,
+                edgecolor='k',
+                alpha=0.9,
+                zorder=2 if is_scaled else 3,
+            )
+
+            _draw_lambda_arrows_2d(
+                ax, x, y, lam, color,
+                linewidth=2.5 if is_scaled else 3.0,
+                zorder=2 if is_scaled else 4,
+            )
+
+            if lambda_star_idx is not None:
+                ax.scatter(
+                    x[lambda_star_idx], y[lambda_star_idx],
+                    marker='*', s=700, color=color, edgecolor='black',
+                    linewidth=1.0 if is_scaled else 1.2, zorder=6, alpha=0.9,
+                )
+
+        y_margin = 0.05 * y_range if y_range > 0 else 0.05
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(y_lo - y_margin, y_hi + y_margin)
+        ax.set_xticks([0, 0.5, 1])
+        ax.set_yticks(y_ticks)
+        ax.set_xticklabels(['0.0', '0.5', '1.0'])
+        ax.set_yticklabels(_panel_tick_labels(y_ticks))
+        ax.tick_params(axis='both', which='major', labelsize=28)
+
+        if j == 0:
+            if dataset == "kddcup":
+                ax.set_title(rf"$KDDCup$", pad=10)
+            else:
+                ax.set_title(rf"${dataset.capitalize()}$", pad=10)
+
+        if j == len(objective_names) - 1:
+            ax.set_xlabel(r"$\bar{g}$", fontsize=36)
+        if i == 0:
+            ax.set_ylabel(
+                rf"$\bar{{\beta}}_{{{beta_subscript_dict.get(objective, '')}}}$",
+                fontsize=36, rotation=0, labelpad=60,
+            )
+
+plt.tight_layout()
+
+plt.savefig(
+    "../figures/experiments/bicriteria_2d_sized.pdf",
+    bbox_inches='tight',
+    dpi=300
+)
+plt.show()
+
+# %% [markdown]
 # ### Weighted Average Rule Length
 
 # %%
