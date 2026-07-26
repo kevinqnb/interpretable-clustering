@@ -3,6 +3,7 @@ from numpy.typing import NDArray
 from typing import Any
 from intercluster.measurement_utils import (
     overlap,
+    overlap_std,
     coverage,
     silhouette_score,
     clustering_distance,
@@ -288,8 +289,50 @@ class Overlap(MeasurementFunction):
         """
         if data_to_cluster_assignment is None:
             return np.nan
-        
+
         return overlap(data_to_cluster_assignment)
+
+
+####################################################################################################
+
+
+class OverlapStd(MeasurementFunction):
+    """
+    Computes the standard deviation (across covered points) of cluster overlap --
+    the spread underlying `Overlap`'s mean, over the same covered-points population.
+
+    Args:
+        name (str): Name of the measurement function.
+    """
+    def __init__(self, name = 'overlap-std'):
+        super().__init__(name)
+
+    def __call__(
+        self,
+        data_to_rule_assignment : NDArray = None,
+        rule_to_cluster_assignment : NDArray = None,
+        data_to_cluster_assignment : NDArray = None,
+    ) -> float:
+        """
+        Args:
+            data_to_rules_assignment (NDArray): A boolean matrix where entry (i,j) is `True` if
+                    data point i is assigned to rule j and `False` otherwise.
+
+            rule_to_cluster_assignment (np.ndarray): Size (r x k) boolean array where entry (i,j) is
+                `True` if rule i is assigned to cluster j and `False` otherwise. Each rule must
+                be assigned to a single cluster.
+
+            data_to_cluster_assignment (np.ndarray): Size (n x k) boolean array where entry (i,j) is
+                `True` if point i is assigned to cluster j and `False` otherwise. Data points may be
+                assigned to multiple clusters.
+
+        Returns:
+            float : Computed standard deviation of overlap.
+        """
+        if data_to_cluster_assignment is None:
+            return np.nan
+
+        return overlap_std(data_to_cluster_assignment)
 
 
 ####################################################################################################

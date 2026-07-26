@@ -370,6 +370,7 @@ measurement_fns = [
     ),
     ClusterCoverageSet(baseline_assignment = kmeans_assignment),
     Overlap(),
+    OverlapStd(),
     Mistakes(baseline_assignment = kmeans_assignment),
     ClusteringCost(data = data, average = True, normalize = True, method = "kmeans"),
     RuleClusteringCost(data = data, cluster_centers = kmeans_base.centers, method = "kmeans"),

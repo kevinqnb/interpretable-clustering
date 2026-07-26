@@ -101,7 +101,34 @@ def overlap(assignment : np.ndarray) -> float:
     if np.sum(covered_mask) > 0:
         return np.mean(np.sum(assignment[covered_mask, :], axis = 1))
     else:
-        # undefined when no points are covered. 
+        # undefined when no points are covered.
+        return np.nan
+
+
+####################################################################################################
+
+
+def overlap_std(assignment : np.ndarray) -> float:
+    """
+    Computes the standard deviation (across covered points) of the number of
+    clusters to which points are assigned -- the spread underlying `overlap`'s
+    mean, over the same covered-points population.
+
+    NOTE: The standard deviation is taken over all points which are assigned
+    to at least one cluster, matching `overlap`'s covered-points mask exactly.
+
+    Args:
+        assignment (np.ndarray: bool): n x k boolean (or binary) matrix with entry (i,j)
+            being True (1) if point i belongs to class j and False (0) otherwise.
+
+    Returns:
+        overlap_std (float): Standard deviation over number of overlaps for each point.
+    """
+    covered_mask = np.sum(assignment, axis = 1) > 0
+    if np.sum(covered_mask) > 0:
+        return np.std(np.sum(assignment[covered_mask, :], axis = 1))
+    else:
+        # undefined when no points are covered.
         return np.nan
 
 
