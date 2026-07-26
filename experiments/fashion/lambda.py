@@ -290,7 +290,7 @@ objective_dict = {
 # two linspaces meeting there) since distorted-greedy only starts being valid at
 # that point.
 
-n_lambda_points = 10  # matches alphas.py's n_compare convention
+n_lambda_points = 100  # matches alphas.py's n_compare convention
 half = n_lambda_points // 2 + 1
 
 lambda_star_dict = {}
