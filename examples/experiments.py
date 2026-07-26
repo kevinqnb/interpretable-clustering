@@ -1199,7 +1199,7 @@ plt.show()
 # %% [markdown]
 # ### Bicriteria Plots
 #
-# 3D scatter over all three objectives (coverage, cost, rule length), each scaled to `[0, 1]`. Points come from `lambda.py`: each is one swept lambda value at a fixed rule budget, not a rule-budget sweep.
+# 3D scatter over all three objectives (coverage, cost, rule length). Coverage (`x`) is normalized by `n`; cost (`y`) is normalized per-objective (baseline k-means cost for `coverage-cost`, `n` for `coverage-mistake`, `n choose 2` for `coverage-pairwise-distance`); rule length (`z`) is shown unnormalized. Points come from `lambda.py`: each is one swept lambda value at a fixed rule budget, not a rule-budget sweep.
 
 # %%
 # Load experiment data for the bicriteria/3D scatter plots, from `lambda.py`'s output
@@ -1219,8 +1219,7 @@ for dataset in DATASETS:
 # %%
 # Collect experiment data for the bicriteria / 3D scatter plots.
 #
-# obj1 = reward, obj2 = cost, obj3 = summed rule length, each min-max scaled to
-# [0, 1] jointly across modules so values stay comparable within a subplot.
+# obj1 = reward (coverage), obj2 = cost, obj3 = summed rule length.
 # lambda.py fits two PEC variants per objective -- 'lazy-greedy' (valid across
 # the whole grid, shown as "ScaledGreedy") and 'distorted-greedy' (the paper's
 # main model, valid only for lambda >= lambda*) -- both kept under their own
@@ -1228,9 +1227,28 @@ for dataset in DATASETS:
 # lambda* within them are carried along so the plot can draw direction-of-
 # change arrows and a lambda* star for both.
 #
-# scatter_dict_2d additionally collapses obj2/obj3 into PEC's actual weighted-
-# cost term, obj4 = obj2 + alpha*obj3 (using each dataset/objective's selected
-# alpha), computed from raw obj2/obj3 and min-max scaled on its own.
+# scatter_dict (3D plot) normalizes each axis on principled, per-axis terms
+# rather than a joint min-max to [0, 1]:
+#   x = obj1 / n                        (coverage, as a fraction of all points)
+#   y = obj2 / cost_normalizer, where cost_normalizer is:
+#       - coverage-cost:             the baseline k-means solution's raw SSE
+#                                     cost. `baseline['clustering-cost']` is
+#                                     stored averaged-and-normalized (divided
+#                                     by n, since every point is covered
+#                                     exactly once by k-means -- see
+#                                     ClusteringCost.__call__), so it is
+#                                     multiplied back by n here to match
+#                                     RuleClusteringCost's raw (unaveraged)
+#                                     units.
+#       - coverage-mistake:          n
+#       - coverage-pairwise-distance: n choose 2 = n * (n - 1) / 2
+#   z = obj3                            (summed rule length, unnormalized)
+#
+# scatter_dict_2d is unrelated to the above and keeps its own, separate
+# normalization: it collapses obj2/obj3 into PEC's actual weighted-cost term,
+# obj4 = obj2 + alpha*obj3 (using each dataset/objective's selected alpha),
+# computed from raw obj2/obj3 and min-max scaled to [0, 1] jointly across
+# modules, with x = obj1 min-max scaled the same way.
 #
 # Uncertainty: only Decision-Tree/IDS are stochastic here. Their SE is combined
 # from per-trial values using the same linear combination as the mean, then
@@ -1341,14 +1359,31 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
             rng = hi - lo
             return err / rng if rng > 0 else np.zeros_like(err)
 
+        # Per-axis normalization for the 3D scatter (scatter_dict): coverage by n,
+        # cost by an objective-specific constant, rule length left unnormalized.
+        # See the "Collect experiment data" comment above for the rationale.
+        n = experiment_dict['fixed-parameters']['n']
+        if objective == 'coverage-cost':
+            # baseline['clustering-cost'] is k-means' own cost, stored averaged
+            # (no-op here -- k-means covers every point exactly once) and
+            # normalized (divided by n, since coverage = n). Multiplying back
+            # by n recovers the raw SSE, matching RuleClusteringCost's units.
+            cost_normalizer = experiment_dict['baseline']['KMeans']['clustering-cost'] * n
+        elif objective == 'coverage-mistake':
+            cost_normalizer = n
+        elif objective == 'coverage-pairwise-distance':
+            cost_normalizer = n * (n - 1) / 2
+        else:
+            raise ValueError(f"No cost normalizer defined for objective '{objective}'.")
+
         for mod, (obj1, obj2, obj3) in raw_values.items():
-            x = _minmax(obj1, obj1_lo, obj1_hi)
-            y = _minmax(obj2, obj2_lo, obj2_hi)
-            z = _minmax(obj3, obj3_lo, obj3_hi)
+            x = obj1 / n
+            y = obj2 / cost_normalizer
+            z = obj3
             obj1_err, obj2_err, obj3_err, _ = raw_errs[mod]
-            x_err = _minmax_err(obj1_err, obj1_lo, obj1_hi)
-            y_err = _minmax_err(obj2_err, obj2_lo, obj2_hi)
-            z_err = _minmax_err(obj3_err, obj3_lo, obj3_hi)
+            x_err = obj1_err / n
+            y_err = obj2_err / cost_normalizer
+            z_err = obj3_err
             if mod == distorted_module:
                 lam = raw_lambdas[mod]
                 lambda_star_idx = int(np.argmin(np.abs(lam - lambda_star)))
@@ -1406,7 +1441,7 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
                 }
 
 # %% [markdown]
-# All three axes (`x` = obj1, `y` = obj2, `z` = obj3) are shown directly, each scaled to `[0, 1]`. Kept simple -- one fixed viewing angle, matching color/marker encoding used elsewhere -- to stay legible in print.
+# `x` = obj1 / n stays on a shared `[0, 1]` scale across every panel. `y` = obj2 / cost_normalizer and `z` = obj3 (unnormalized) are not comparable in scale across datasets (n and the cost normalizers vary by orders of magnitude), so each panel gets its own `y`/`z` limits and "nice" 3-tick labels, computed from that panel's own data. Kept simple otherwise -- one fixed viewing angle, matching color/marker encoding used elsewhere -- to stay legible in print.
 
 # %%
 # Plot results: 3D scatter over (obj1, obj2, obj3). Each point gets a drop-line
@@ -1435,15 +1470,23 @@ beta_subscript_dict = {
     'coverage-pairwise-distance': 'P',
 }
 
-# Fixed arrowhead length (shared [0,1]-normalized units) for the lambda arrows
-# below -- quiver's own arrow_length_ratio scales with shaft length, which
-# made the long first segment's head huge, so the head is drawn separately.
-ARROW_HEAD_LEN = 0.2
+# Fixed arrowhead length, as a fraction of each segment's length -- quiver's
+# own arrow_length_ratio scales with shaft length, which made the long first
+# segment's head huge, so the head is drawn separately. Expressed as a
+# fraction rather than an absolute length since x, y, z no longer share a
+# common [0, 1] scale (see _draw_lambda_arrows).
+ARROW_HEAD_FRAC = 0.2
 
-def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zorder):
+def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zorder, x_range, y_range, z_range):
     """Direction-of-change arrows between consecutive (sorted-by-lambda)
     points: a plain line for the shaft (dashed or solid per `dashed`) and a
     fixed-size, always-solid arrowhead at its tip.
+
+    x, y, z are no longer all on a shared [0, 1] scale, so segment length and
+    direction are computed after dividing each axis by its own plotted range
+    (x_range, y_range, z_range) -- keeping the arrow geometry isotropic in
+    display space -- and the resulting head vector is mapped back to each
+    axis's own units before drawing.
     """
     if lam is None or len(lam) <= 1:
         return
@@ -1452,12 +1495,14 @@ def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zo
     for k in range(len(xs) - 1):
         x0, y0, z0 = xs[k], ys[k], zs[k]
         dxk, dyk, dzk = xs[k + 1] - x0, ys[k + 1] - y0, zs[k + 1] - z0
-        seg_len = np.sqrt(dxk ** 2 + dyk ** 2 + dzk ** 2)
+        ndx, ndy, ndz = dxk / x_range, dyk / y_range, dzk / z_range
+        seg_len = np.sqrt(ndx ** 2 + ndy ** 2 + ndz ** 2)
         if seg_len == 0:
             continue
-        head_len = min(ARROW_HEAD_LEN, 0.5 * seg_len)
-        ux, uy, uz = dxk / seg_len, dyk / seg_len, dzk / seg_len
-        xh, yh, zh = x0 + dxk - ux * head_len, y0 + dyk - uy * head_len, z0 + dzk - uz * head_len
+        head_len = min(ARROW_HEAD_FRAC, 0.5 * seg_len)
+        ux, uy, uz = ndx / seg_len, ndy / seg_len, ndz / seg_len
+        hx, hy, hz = ux * head_len * x_range, uy * head_len * y_range, uz * head_len * z_range
+        xh, yh, zh = x0 + dxk - hx, y0 + dyk - hy, z0 + dzk - hz
 
         ax.plot(
             [x0, xh], [y0, yh], [z0, zh],
@@ -1465,10 +1510,33 @@ def _draw_lambda_arrows(ax, x, y, z, lam, color, *, dashed, alpha, linewidth, zo
             linestyle='dashed' if dashed else 'solid', zorder=zorder,
         )
         ax.quiver(
-            xh, yh, zh, ux * head_len, uy * head_len, uz * head_len,
+            xh, yh, zh, hx, hy, hz,
             color=color, alpha=alpha, linewidth=linewidth,
             arrow_length_ratio=0.6, normalize=False, zorder=zorder,
         )
+
+def _panel_axis_ticks(module_result_dict, key, err_key):
+    """3 'nice' ticks spanning [0, max(value + error)] across every module in
+    this panel, via the shared nice_lim_for_3_ticks helper (unclipped above,
+    since y/z are no longer bounded to [0, 1])."""
+    values = np.concatenate([pts[key] for pts in module_result_dict.values()])
+    errs = np.concatenate([pts[err_key] for pts in module_result_dict.values()])
+    raw_max = float(np.nanmax(values + errs)) if values.size else 0.0
+    return nice_lim_for_3_ticks(0.0, raw_max, clip=(0.0, np.inf))
+
+def _panel_tick_labels(ticks):
+    """Format 'nice' ticks with just enough decimals for their step size."""
+    step = ticks[1] - ticks[0]
+    decimals = 0 if step >= 1 or step <= 0 else max(0, int(np.ceil(-np.log10(step))))
+    return [f"{t:.{decimals}f}" for t in ticks]
+
+def _visible_err_frac(err, axis_range, frac=0.03):
+    """Like _visible_err, but the floor is a fraction of this panel's own
+    axis range instead of the fixed [0,1]-scale MIN_VISIBLE_ERR -- y and z no
+    longer share that scale across panels."""
+    err = np.asarray(err, dtype=float)
+    floor = frac * axis_range if axis_range > 0 else 0.0
+    return np.where(err > 0, np.maximum(err, floor), 0.0)
 
 # Pastel (pre-lightened) tab10 colors, used only in this 3D scatter -- alpha-based
 # translucency doesn't composite consistently in mplot3d (compositing order depends
@@ -1494,6 +1562,17 @@ for objective in objective_names:
 
         module_result_dict = scatter_dict[dataset][objective]
 
+        # x = coverage / n is bounded to [0, 1] for every dataset, so it keeps
+        # a fixed, shared scale. y (cost) and z (rule length) are not bounded
+        # this way -- their scale depends on this dataset's n and cost
+        # normalizer -- so this panel gets its own "nice" 3-tick range for
+        # each, computed from its own data (+ error) before anything is drawn.
+        x_lo, x_hi = 0.0, 1.0
+        y_lo, y_hi, y_ticks = _panel_axis_ticks(module_result_dict, 'y', 'y_err')
+        z_lo, z_hi, z_ticks = _panel_axis_ticks(module_result_dict, 'z', 'z_err')
+        y_range = y_hi - y_lo
+        z_range = z_hi - z_lo
+
         for module, pts in module_result_dict.items():
             x, y, z = pts['x'], pts['y'], pts['z']
             x_err, y_err, z_err = pts['x_err'], pts['y_err'], pts['z_err']
@@ -1511,7 +1590,11 @@ for objective in objective_names:
                 ax.scatter(xi, yi, 0, color=color, s=15, alpha=0.5, edgecolor='none', zorder=1)
 
             # Per-axis error segments (only nonzero for Decision-Tree/IDS).
-            x_err_disp, y_err_disp, z_err_disp = _visible_err(x_err), _visible_err(y_err), _visible_err(z_err)
+            # x stays on the shared [0,1] scale (global _visible_err floor);
+            # y/z get a floor relative to this panel's own range instead.
+            x_err_disp = _visible_err(x_err)
+            y_err_disp = _visible_err_frac(y_err, y_range)
+            z_err_disp = _visible_err_frac(z_err, z_range)
             for xi, yi, zi, xe, ye, ze in zip(x, y, z, x_err_disp, y_err_disp, z_err_disp):
                 if xe > 0:
                     ax.plot([xi - xe, xi + xe], [yi, yi], [zi, zi], color=color, alpha=0.5, linewidth=1.5, zorder=2)
@@ -1531,6 +1614,7 @@ for objective in objective_names:
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
                     dashed=True, alpha=0.9, linewidth=2.0, zorder=1,
+                    x_range=1.0, y_range=y_range, z_range=z_range,
                 )
 
                 if lambda_star_idx is not None:
@@ -1555,6 +1639,7 @@ for objective in objective_names:
                 _draw_lambda_arrows(
                     ax, x, y, z, lam, color,
                     dashed=False, alpha=0.9, linewidth=2.0, zorder=2,
+                    x_range=1.0, y_range=y_range, z_range=z_range,
                 )
 
                 if lambda_star_idx is not None:
@@ -1564,19 +1649,19 @@ for objective in objective_names:
                         linewidth=1.2, depthshade=False, zorder=6, alpha=0.9
                     )
 
+        # Small margins proportional to each axis's own range (x keeps a
+        # fixed absolute margin since it's always [0, 1]).
+        y_margin = 0.05 * y_range if y_range > 0 else 0.05
+        z_margin = 0.05 * z_range if z_range > 0 else 0.05
         ax.set_xlim(-0.05, 1.05)
-        ax.set_ylim(-0.05, 1.05)
-        ax.set_zlim(-0.05, 1.05)
+        ax.set_ylim(y_lo - y_margin, y_hi + y_margin)
+        ax.set_zlim(z_lo - z_margin, z_hi + z_margin)
         ax.set_xticks([0, 0.5, 1])
-        ax.set_yticks([0, 0.5, 1])
-        ax.set_zticks([0, 0.5, 1])
-        # The y=0 and z=0 tick labels each land right on top of a neighboring
-        # axis's tick label at this view angle (y=0 against x=1's corner,
-        # z=0 against y=1's corner) -- drop those two labels rather than let
-        # them collide; the floor/wall gridlines still make the origin
-        # readable.
-        ax.set_yticklabels(['0.0', '0.5', '1.0'])
-        ax.set_zticklabels(['0.0', '0.5', '1.0'])
+        ax.set_yticks(y_ticks)
+        ax.set_zticks(z_ticks)
+        ax.set_xticklabels(['0.0', '0.5', '1.0'])
+        ax.set_yticklabels(_panel_tick_labels(y_ticks))
+        ax.set_zticklabels(_panel_tick_labels(z_ticks))
         ax.tick_params(axis='both', which='major', labelsize=16, pad=0)
         # Zoom the cube slightly within its own bounding box to claw back
         # some of the whitespace 3D subplots otherwise reserve for rotation.
@@ -1596,7 +1681,7 @@ for objective in objective_names:
         # it next to the z-axis instead.
         ax.set_zlabel("")
         ax.text2D(
-            1.12, 0.58, r"$\bar{s}$",
+            1.12, 0.58, r"$s$",
             transform=ax.transAxes, fontsize=22, ha='left', va='center',
         )
 
@@ -1962,6 +2047,131 @@ _lines += [
 ]
 
 print("\n".join(_lines))
+
+# %% [markdown]
+# ### Overlap
+
+# %%
+# Collect the average cluster overlap for each dataset and objective, as
+# (mean, SE) tuples (SE=NaN for deterministic modules; see `_se`).
+overlap_dict = {
+    (objective, dataset): {}
+    for dataset in dataset_experiment_dict.keys()
+    for objective in objective_names
+}
+
+for dataset, experiment_dict in dataset_experiment_dict.items():
+    for objective in objective_names:
+
+        for cmod in comparison_modules:
+            if cmod not in experiment_dict['modules']:
+                continue
+
+            cmod_overlaps = experiment_dict['modules'][cmod]['overlap']
+            smallest_r = str(min([int(l) for l in cmod_overlaps.keys()]))
+            cmod_overlap = _scalar(cmod_overlaps[smallest_r])
+            cmod_overlap_se = _se(cmod_overlaps[smallest_r])
+            overlap_dict[(objective, dataset)][cmod] = (cmod_overlap, cmod_overlap_se)
+
+        selected_dscluster_module = [
+            m for m in dscluster_modules if objective == m.split(';')[1].strip()
+        ][0]
+        dmod_name = selected_dscluster_module.split(';')[0] + ';' + selected_dscluster_module.split(';')[2]
+        dmod_overlaps = experiment_dict['modules'][selected_dscluster_module]['overlap']
+        smallest_r = str(min([int(l) for l in dmod_overlaps.keys()]))
+        dmod_overlap = _scalar(dmod_overlaps[smallest_r])
+        dmod_overlap_se = _se(dmod_overlaps[smallest_r])
+        overlap_dict[(objective, dataset)][dmod_name] = (dmod_overlap, dmod_overlap_se)
+
+        # PEC scaled-greedy (selection-algorithm ablation), optional per the
+        # "missing_scaled" note in the loading cell above.
+        scaled_matches = [
+            m for m in scaled_dscluster_modules
+            if objective == m.split(';')[1].strip() and m in experiment_dict['modules']
+        ]
+        if scaled_matches:
+            selected_scaled_module = scaled_matches[0]
+            smod_name = selected_scaled_module.split(';')[0] + ';' + selected_scaled_module.split(';')[2] + ';' + selected_scaled_module.split(';')[3]
+            smod_overlaps = experiment_dict['modules'][selected_scaled_module]['overlap']
+            smallest_r = str(min([int(l) for l in smod_overlaps.keys()]))
+            smod_overlap = _scalar(smod_overlaps[smallest_r])
+            smod_overlap_se = _se(smod_overlaps[smallest_r])
+            overlap_dict[(objective, dataset)][smod_name] = (smod_overlap, smod_overlap_se)
+
+# %%
+# Overlap table: "mean ± SE" for Decision-Tree/IDS, plain number otherwise.
+def _fmt_overlap(cell):
+    mean, se = cell
+    if np.isnan(se):
+        return f"{mean:.3f}"
+    return f"{mean:.3f} ± {se:.3f}"
+
+pd.DataFrame({
+    col: {row: _fmt_overlap(val) for row, val in rows.items()}
+    for col, rows in overlap_dict.items()
+})
+
+# %% [markdown]
+# ### Overlap (LaTeX Table)
+
+# %%
+# LaTeX table built from `overlap_dict` above: one row per algorithm,
+# one column per dataset. ScaledGreedy is shown only for the k-Means
+# (coverage-cost) objective -- it's PEC's selection-algorithm ablation, not a
+# full second baseline, so it doesn't get a row per objective the way PEC
+# does. The 3 smallest (best, i.e. least-overlapping) means in each dataset
+# column are bolded; comparing means only (not SE), ties broken by whichever
+# sorts first.
+_overlap_cell_values = {
+    label: {
+        dataset: overlap_dict.get((objective, dataset), {}).get(module_key)
+        for dataset in _datasets
+    }
+    for label, objective, module_key in _table_rows
+}
+
+# Per dataset (column), the 3 rows with the smallest mean get bolded.
+_overlap_bold_labels = {
+    dataset: {
+        label for label, _ in sorted(
+            (
+                (label, _overlap_cell_values[label][dataset][0])
+                for label, _, _ in _table_rows
+                if _overlap_cell_values[label][dataset] is not None
+            ),
+            key=lambda t: t[1],
+        )[:3]
+    }
+    for dataset in _datasets
+}
+
+def _fmt_overlap_latex_cell(label, dataset):
+    entry = _overlap_cell_values[label][dataset]
+    if entry is None:
+        return "--"
+    mean, se = entry
+    text = f"{mean:.3f}" if np.isnan(se) else rf"{mean:.3f} $\pm$ {se:.3f}"
+    return rf"\textbf{{{text}}}" if label in _overlap_bold_labels[dataset] else text
+
+_overlap_lines = [
+    r"\begin{table}[t]",
+    r"\centering",
+    rf"\begin{{tabular}}{{l{'c' * len(_datasets)}}}",
+    r"\toprule",
+    "Model & " + " & ".join(rf"\emph{{{_dataset_header(d)}}}" for d in _datasets) + r" \\",
+    r"\midrule",
+]
+for label, _, _ in _table_rows:
+    _overlap_lines.append(label + " & " + " & ".join(_fmt_overlap_latex_cell(label, d) for d in _datasets) + r" \\")
+_overlap_lines += [
+    r"\bottomrule",
+    r"\end{tabular}",
+    r"\caption{Average cluster overlap (mean $\pm$ SE where applicable).}",
+    r"\label{tab:overlap}",
+    r"\end{table}",
+]
+
+print("\n".join(_overlap_lines))
 
 # %% [markdown]
 # ### Uncertainty
