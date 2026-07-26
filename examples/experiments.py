@@ -1323,6 +1323,15 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
         raw_values = {}
         raw_errs = {}
         raw_lambdas = {}
+        # 'total-coverage': points hit by at least one rule, right or wrong --
+        # distinct from `reward`/'cluster-coverage' (obj1, plotted as x = g),
+        # which only counts a point as covered if the rule assigning it also
+        # matches its baseline cluster. Kept in its own dict (not folded into
+        # raw_values, which several call sites below unpack as a fixed
+        # 3-tuple) so it can feed the optional coverage-scale knob in the
+        # sized 2D scatter cell further down without touching that tuple's
+        # arity.
+        raw_total_coverage = {}
         modules_to_process = [cmod for cmod in comparison_modules if cmod in experiment_dict['modules']]
         for mod in modules_to_process:
             obj1 = np.array([_scalar(experiment_dict['modules'][mod][reward][k]) for k in scaled_keys])
@@ -1330,6 +1339,9 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
             obj3 = np.array([_scalar(experiment_dict['modules'][mod]['sum-rule-length'][k]) for k in scaled_keys])
             raw_values[mod] = (obj1, obj2, obj3)
             raw_errs[mod] = _module_error_series(experiment_dict['modules'][mod], scaled_keys, reward, cost, alpha_val)
+            raw_total_coverage[mod] = np.array(
+                [_scalar(experiment_dict['modules'][mod]['total-coverage'][k]) for k in scaled_keys]
+            )
 
         for mod, keys, lam_dict in [
             (scaled_module, scaled_keys, scaled_lam_dict),
@@ -1341,6 +1353,9 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
             raw_values[mod] = (obj1, obj2, obj3)
             raw_errs[mod] = _module_error_series(experiment_dict['modules'][mod], keys, reward, cost, alpha_val)
             raw_lambdas[mod] = np.array([lam_dict[k] for k in keys])
+            raw_total_coverage[mod] = np.array(
+                [_scalar(experiment_dict['modules'][mod]['total-coverage'][k]) for k in keys]
+            )
 
         # Min-max normalization constants, shared across modules so scaled
         # values remain directly comparable within this (dataset, objective).
@@ -1384,6 +1399,17 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
             x_err = obj1_err / n
             y_err = obj2_err / cost_normalizer
             z_err = obj3_err
+            # n / total-coverage: multiply into y to rescale each method's
+            # cost by "per point it actually attempted to cover" instead of
+            # "per point in the dataset" -- an optional knob in the sized 2D
+            # scatter cell below (off by default there), not applied to x/z
+            # or to this 3D scatter itself. At high enough lambda, PEC/
+            # ScaledGreedy can select zero rules (total-coverage = 0, cost =
+            # 0 too) -- "cost per point attempted" is undefined there, not
+            # infinite, so that operating point maps to nan (silently
+            # dropped by the plot) rather than a divide-by-zero warning.
+            with np.errstate(divide='ignore', invalid='ignore'):
+                coverage_scale = np.where(raw_total_coverage[mod] > 0, n / raw_total_coverage[mod], np.nan)
             if mod == distorted_module:
                 lam = raw_lambdas[mod]
                 lambda_star_idx = int(np.argmin(np.abs(lam - lambda_star)))
@@ -1391,6 +1417,7 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
                     'x': x, 'y': y, 'z': z,
                     'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
                     'lam': lam, 'lambda_star_idx': lambda_star_idx,
+                    'coverage_scale': coverage_scale,
                 }
             elif mod == scaled_module:
                 lam = raw_lambdas[mod]
@@ -1399,12 +1426,14 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
                     'x': x, 'y': y, 'z': z,
                     'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
                     'lam': lam, 'lambda_star_idx': lambda_star_idx,
+                    'coverage_scale': coverage_scale,
                 }
             else:
                 scatter_dict[dataset][objective][mod] = {
                     'x': x, 'y': y, 'z': z,
                     'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
                     'lam': None, 'lambda_star_idx': None,
+                    'coverage_scale': coverage_scale,
                 }
 
         # obj4 = obj2 + alpha * obj3, collapsed back to a single weighted-cost
@@ -1912,6 +1941,8 @@ plt.show()
 # Same `(g, beta)` axes and per-axis normalization as the 3D scatter above (`scatter_dict`: `x = obj1 / n`, `y = obj2 / cost_normalizer` -- unlike the collapsed-`obj4` 2D plot's joint min-max scaling), but rule length (`s`) is dropped as a third axis and instead drives marker size, inversely and per-panel: within each (dataset, objective) panel, the point with the smallest `s` gets the largest marker and the point with the largest `s` gets the smallest. Layout/coloring/error-bar conventions otherwise match the 2D collapsed plot above. The one deliberate change: the connector arrows between consecutive lambda values are dashed for both PEC variants here (the 2D collapsed plot above draws distorted-greedy's arrows solid) -- drawn with `FancyArrowPatch` rather than `quiver`, since `quiver`'s shaft is a filled polygon that silently ignores `linestyle`.
 #
 # Marker size is *not* used to separate PEC from ScaledGreedy here (unlike the 2D collapsed plot's 500-vs-250 split) -- color already does that, and size is spent entirely on encoding `s`. No shared size legend is provided since the size scale is renormalized per panel.
+#
+# `NORMALIZE_BY_TOTAL_COVERAGE` below is a knob, not a fixed choice: `g` (x-axis) is *correct* coverage -- a point only counts if the rule that covers it also matches its baseline cluster -- so a method that covers few points can still reach a high, cost-competitive `y` while quietly ignoring the rest of the data. Toggling this on multiplies every point's `y` by `n / n_m`, where `n_m` is *total* coverage (points hit by at least one rule, right or wrong; from the same `total-coverage` measurement recorded alongside `cluster-coverage` in the experiment JSON) -- i.e. cost is restated per point the method actually attempted, not per point in the dataset, so low-coverage methods no longer look artificially cheap. This scales cleanly for the K row (cost/point vs. k-means' cost/point) and the M row (mistakes/point), but *under-corrects* for the P row: `rule-pairwise-distance` sums over pairs and is normalized by `n choose 2`, so its coverage-consistent correction is closer to quadratic in `n_m` than linear -- read that row's normalized values with that caveat in mind. The k-Means reference line stays exactly right either way: baseline k-means covers every point, so `y = 1` remains "cost per point attempted equals k-means' cost per point" whether or not the knob is on. Decision-Tree and ExKMC always cover all `n` points, so their markers should not move at all when the knob is toggled -- a useful sanity check when re-running this cell.
 
 # %%
 # Plot results: 2D scatter over (obj1, obj2) = (g, beta), same data/normalization
@@ -1920,6 +1951,25 @@ plt.show()
 # whiskers; safe to call unconditionally since other modules' err arrays are 0.
 
 from matplotlib.patches import FancyArrowPatch
+
+# Knob: rescale every point's y (beta) by n / total-coverage, so cost is
+# stated per point the method actually attempted to cover rather than per
+# point in the dataset. See the markdown note above for what this does and
+# does not correct for. x (g) and marker size (s) are never touched by this.
+NORMALIZE_BY_TOTAL_COVERAGE = False
+
+def _coverage_scaled_view(module_result_dict):
+    """Return `module_result_dict` with 'y'/'y_err' multiplied by each
+    point's precomputed 'coverage_scale' (= n / total-coverage); a no-op
+    passthrough when the knob above is off. Leaves 'x'/'z'/everything else
+    untouched, so callers can use this in place of the raw dict everywhere
+    (axis limits, error bars, markers) without branching per-use."""
+    if not NORMALIZE_BY_TOTAL_COVERAGE:
+        return module_result_dict
+    return {
+        module: {**pts, 'y': pts['y'] * pts['coverage_scale'], 'y_err': pts['y_err'] * pts['coverage_scale']}
+        for module, pts in module_result_dict.items()
+    }
 
 # Marker-size range (points^2, matplotlib's `s` units) that panel-local,
 # inverse-normalized rule length is mapped into.
@@ -1958,7 +2008,7 @@ fig, axs = plt.subplots(
 
 for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
     for j, objective in enumerate(objective_names):
-        module_result_dict = objective_result_dict[objective]
+        module_result_dict = _coverage_scaled_view(objective_result_dict[objective])
         ax = axs[j, i]
         ax.xaxis.set_minor_locator(AutoMinorLocator(5))
         ax.yaxis.set_minor_locator(AutoMinorLocator(5))
@@ -2050,8 +2100,13 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
 
 plt.tight_layout()
 
+if NORMALIZE_BY_TOTAL_COVERAGE:
+    fig.suptitle(r"$\beta$ scaled by $n / n_m$ (total coverage)", y=1.01, fontsize=20)
+
 plt.savefig(
-    "../figures/experiments/bicriteria_2d_sized.pdf",
+    "../figures/experiments/bicriteria_2d_sized"
+    + ("_covnorm" if NORMALIZE_BY_TOTAL_COVERAGE else "")
+    + ".pdf",
     bbox_inches='tight',
     dpi=300
 )
@@ -2116,6 +2171,334 @@ plt.savefig(
     dpi=300
 )
 
+plt.show()
+
+# %% [markdown]
+# ### Bicriteria Plots (2D, Sized by Rule Length) (Alpha Zero)
+#
+# Same as the 2D Sized by Rule Length plot above, but PEC is fit with `alpha_val=0` (no rule-length penalty) instead of the elbow-selected alpha, sourced from `lambda_alpha_zero.py`'s output (`lambda_combine_alpha_zero.py`'s, for mnist/fashion, which merges in `lambda_exkmc_alpha_zero.py`'s ExKMC fit). Only PEC's points/curves differ; comparison models are unaffected. Shares the 2D Sized legend above (`bicriteria_2d_sized_legend.pdf`).
+
+# %%
+# Load experiment data for the alpha=0 bicriteria (2D, sized) scatter plot, from
+# `lambda_alpha_zero.py`'s output (`lambda_combine_alpha_zero.py`'s, for
+# mnist/fashion). Loading is defensive, as above.
+
+dataset_lambda_experiment_dict_alpha_zero = {}
+for dataset in DATASETS:
+    fname = "../data/experiments/" + dataset + "/lambda/exp" + EXP_REF + "_alpha_zero.json"
+    if not os.path.exists(fname):
+        print(f"[lambda_alpha_zero] skipping {dataset}: {fname} not found")
+        continue
+    with open(fname, 'r') as f:
+        dataset_lambda_experiment_dict_alpha_zero[dataset] = json.load(f)
+
+# %%
+# Collect experiment data for the alpha-zero bicriteria (2D, sized) scatter plot -- identical
+# per-axis normalization as the main scatter_dict collection cell above (x = obj1 / n,
+# y = obj2 / cost_normalizer, z = obj3 unnormalized rule length), sourced from
+# dataset_lambda_experiment_dict_alpha_zero instead. scatter_dict_2d's obj4-collapsed view isn't
+# rebuilt here since only the 2D-sized plot (which reads scatter_dict) has an alpha-zero
+# counterpart.
+
+scatter_dict_alpha_zero = {
+    dataset: {objective: {} for objective in objective_names} for dataset in dataset_lambda_experiment_dict_alpha_zero.keys()
+}
+
+def _trial_se(values_list):
+    """Standard error of a per-trial 'values' list; 0.0 if values_list is None
+    (deterministic)."""
+    if values_list is None or len(values_list) == 0:
+        return 0.0
+    return float(np.std(values_list) / np.sqrt(len(values_list)))
+
+
+def _module_error_series(module_dict, keys, reward, cost, alpha):
+    """Standard error across trials for obj1 (reward), obj2 (cost), obj3
+    (sum-rule-length), and obj4 = obj2 + alpha*obj3, aligned to `keys` order.
+    0.0 wherever the underlying entry is deterministic (no 'values' list)."""
+    obj1_err, obj2_err, obj3_err, obj4_err = [], [], [], []
+    for k in keys:
+        rv_t = _values(module_dict[reward][k])
+        cv_t = _values(module_dict[cost][k])
+        lv_t = _values(module_dict['sum-rule-length'][k])
+        obj1_err.append(_trial_se(rv_t))
+        obj2_err.append(_trial_se(cv_t))
+        obj3_err.append(_trial_se(lv_t))
+        if rv_t is not None and cv_t is not None and lv_t is not None:
+            obj4_err.append(float(np.std(np.array(cv_t) + alpha * np.array(lv_t)) / np.sqrt(len(lv_t))))
+        else:
+            obj4_err.append(0.0)
+    return np.array(obj1_err), np.array(obj2_err), np.array(obj3_err), np.array(obj4_err)
+
+
+for dataset, experiment_dict in dataset_lambda_experiment_dict_alpha_zero.items():
+    for objective in objective_names:
+        candidate_modules = [
+            m for m in experiment_dict['modules'].keys()
+            if 'dscluster' in m and objective == m.split(';')[1].strip()
+        ]
+        scaled_module = [m for m in candidate_modules if m.strip().endswith('lazy-greedy')][0]
+        distorted_module = [m for m in candidate_modules if m.strip().endswith('distorted-greedy')][0]
+
+        # lambda* is keyed in fixed-parameters by the module name with the
+        # algorithm suffix stripped, e.g. 'dscluster; coverage-cost; ensemble'.
+        base_module_name = distorted_module.rsplit(';', 1)[0].strip()
+        lambda_star = experiment_dict['fixed-parameters']['lambda_star'][base_module_name]
+        alpha_val = experiment_dict['fixed-parameters']['alpha'][base_module_name]
+
+        reward = objective_cost_reward_dict[objective]['reward']
+        cost = objective_cost_reward_dict[objective]['cost']
+
+        # Each dscluster variant is indexed by its own lambda grid, sorted
+        # ascending -- 'distorted-greedy' is only valid/recorded for
+        # lambda >= lambda*, so its key set is a strict subset of
+        # 'scaled-greedy's, and the sort order is what lets the plotting cell
+        # draw arrows from smaller to larger lambda.
+        scaled_lam_dict = experiment_dict['modules'][scaled_module]['lambda']
+        scaled_keys = sorted(scaled_lam_dict.keys(), key=lambda k: scaled_lam_dict[k])
+        distorted_lam_dict = experiment_dict['modules'][distorted_module]['lambda']
+        distorted_keys = sorted(distorted_lam_dict.keys(), key=lambda k: distorted_lam_dict[k])
+
+        # Gather raw (unnormalized) objective values (and their trial-to-trial
+        # std, for stochastic modules) per module first, matching the main
+        # collection cell above.
+        raw_values = {}
+        raw_errs = {}
+        raw_lambdas = {}
+        # 'total-coverage': points hit by at least one rule, right or wrong --
+        # distinct from `reward`/'cluster-coverage' (obj1, plotted as x = g).
+        # Kept in its own dict so it can feed the optional coverage-scale knob
+        # in the sized 2D scatter cell below without touching the raw_values
+        # 3-tuple's arity.
+        raw_total_coverage = {}
+        modules_to_process = [cmod for cmod in comparison_modules if cmod in experiment_dict['modules']]
+        for mod in modules_to_process:
+            obj1 = np.array([_scalar(experiment_dict['modules'][mod][reward][k]) for k in scaled_keys])
+            obj2 = np.array([_scalar(experiment_dict['modules'][mod][cost][k]) for k in scaled_keys])
+            obj3 = np.array([_scalar(experiment_dict['modules'][mod]['sum-rule-length'][k]) for k in scaled_keys])
+            raw_values[mod] = (obj1, obj2, obj3)
+            raw_errs[mod] = _module_error_series(experiment_dict['modules'][mod], scaled_keys, reward, cost, alpha_val)
+            raw_total_coverage[mod] = np.array(
+                [_scalar(experiment_dict['modules'][mod]['total-coverage'][k]) for k in scaled_keys]
+            )
+
+        for mod, keys, lam_dict in [
+            (scaled_module, scaled_keys, scaled_lam_dict),
+            (distorted_module, distorted_keys, distorted_lam_dict),
+        ]:
+            obj1 = np.array([_scalar(experiment_dict['modules'][mod][reward][k]) for k in keys])
+            obj2 = np.array([_scalar(experiment_dict['modules'][mod][cost][k]) for k in keys])
+            obj3 = np.array([_scalar(experiment_dict['modules'][mod]['sum-rule-length'][k]) for k in keys])
+            raw_values[mod] = (obj1, obj2, obj3)
+            raw_errs[mod] = _module_error_series(experiment_dict['modules'][mod], keys, reward, cost, alpha_val)
+            raw_lambdas[mod] = np.array([lam_dict[k] for k in keys])
+            raw_total_coverage[mod] = np.array(
+                [_scalar(experiment_dict['modules'][mod]['total-coverage'][k]) for k in keys]
+            )
+
+        # Per-axis normalization for the scatter (coverage by n, cost by an
+        # objective-specific constant, rule length left unnormalized). See the
+        # "Collect experiment data" comment in the main collection cell above
+        # for the rationale.
+        n = experiment_dict['fixed-parameters']['n']
+        if objective == 'coverage-cost':
+            # baseline['clustering-cost'] is k-means' own cost, stored averaged
+            # and normalized (divided by n) -- multiplying back by n recovers
+            # the raw SSE, matching RuleClusteringCost's units.
+            cost_normalizer = experiment_dict['baseline']['KMeans']['clustering-cost'] * n
+        elif objective == 'coverage-mistake':
+            cost_normalizer = n
+        elif objective == 'coverage-pairwise-distance':
+            cost_normalizer = n * (n - 1) / 2
+        else:
+            raise ValueError(f"No cost normalizer defined for objective '{objective}'.")
+
+        for mod, (obj1, obj2, obj3) in raw_values.items():
+            x = obj1 / n
+            y = obj2 / cost_normalizer
+            z = obj3
+            obj1_err, obj2_err, obj3_err, _ = raw_errs[mod]
+            x_err = obj1_err / n
+            y_err = obj2_err / cost_normalizer
+            z_err = obj3_err
+            # n / total-coverage: rescales each method's cost by "per point it
+            # actually attempted to cover" instead of "per point in the
+            # dataset" -- an optional knob in the plotting cell below (off by
+            # default). At high enough lambda, PEC/ScaledGreedy can select
+            # zero rules (total-coverage = 0, cost = 0 too) -- that operating
+            # point maps to nan (silently dropped by the plot) rather than a
+            # divide-by-zero warning.
+            with np.errstate(divide='ignore', invalid='ignore'):
+                coverage_scale = np.where(raw_total_coverage[mod] > 0, n / raw_total_coverage[mod], np.nan)
+            if mod == distorted_module:
+                lam = raw_lambdas[mod]
+                lambda_star_idx = int(np.argmin(np.abs(lam - lambda_star)))
+                scatter_dict_alpha_zero[dataset][objective]['dscluster; ensemble'] = {
+                    'x': x, 'y': y, 'z': z,
+                    'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
+                    'lam': lam, 'lambda_star_idx': lambda_star_idx,
+                    'coverage_scale': coverage_scale,
+                }
+            elif mod == scaled_module:
+                lam = raw_lambdas[mod]
+                lambda_star_idx = int(np.argmin(np.abs(lam - lambda_star)))
+                scatter_dict_alpha_zero[dataset][objective]['dscluster; ensemble; lazy-greedy'] = {
+                    'x': x, 'y': y, 'z': z,
+                    'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
+                    'lam': lam, 'lambda_star_idx': lambda_star_idx,
+                    'coverage_scale': coverage_scale,
+                }
+            else:
+                scatter_dict_alpha_zero[dataset][objective][mod] = {
+                    'x': x, 'y': y, 'z': z,
+                    'x_err': x_err, 'y_err': y_err, 'z_err': z_err,
+                    'lam': None, 'lambda_star_idx': None,
+                    'coverage_scale': coverage_scale,
+                }
+
+# %%
+# Plot results (alpha=0) -- identical styling/logic to the main 2D Sized by Rule Length plot
+# above, sourced from scatter_dict_alpha_zero instead of scatter_dict.
+
+from matplotlib.patches import FancyArrowPatch
+
+# Knob: rescale every point's y (beta) by n / total-coverage. See the main 2D
+# Sized by Rule Length section's markdown note above for what this does and
+# does not correct for.
+NORMALIZE_BY_TOTAL_COVERAGE = False
+
+def _coverage_scaled_view(module_result_dict):
+    """Return `module_result_dict` with 'y'/'y_err' multiplied by each
+    point's precomputed 'coverage_scale' (= n / total-coverage); a no-op
+    passthrough when the knob above is off."""
+    if not NORMALIZE_BY_TOTAL_COVERAGE:
+        return module_result_dict
+    return {
+        module: {**pts, 'y': pts['y'] * pts['coverage_scale'], 'y_err': pts['y_err'] * pts['coverage_scale']}
+        for module, pts in module_result_dict.items()
+    }
+
+# Marker-size range (points^2, matplotlib's `s` units) that panel-local,
+# inverse-normalized rule length is mapped into.
+SIZE_MIN, SIZE_MAX = 80, 550
+
+def _size_from_length(z, z_lo, z_hi):
+    """Inverse min-max map: smallest z -> SIZE_MAX, largest z -> SIZE_MIN."""
+    rng = z_hi - z_lo
+    t = (z_hi - z) / rng if rng > 0 else np.ones_like(z)
+    return SIZE_MIN + t * (SIZE_MAX - SIZE_MIN)
+
+def _draw_lambda_arrows_2d(ax, x, y, lam, color, *, linewidth, zorder):
+    if lam is None or len(lam) <= 1:
+        return
+    order = np.argsort(lam)
+    xs, ys = x[order], y[order]
+    for k in range(len(xs) - 1):
+        arrow = FancyArrowPatch(
+            (xs[k], ys[k]), (xs[k + 1], ys[k + 1]),
+            mutation_scale=16, lw=linewidth, arrowstyle='-|>',
+            shrinkA=0, shrinkB=0, color=color, alpha=0.5,
+            linestyle='dashed', zorder=zorder,
+        )
+        ax.add_patch(arrow)
+
+fig, axs = plt.subplots(
+    len(objective_names), len(scatter_dict_alpha_zero),
+    figsize=(6.5 * len(scatter_dict_alpha_zero), 4.5 * len(objective_names)), squeeze=False,
+)
+
+for i, (dataset, objective_result_dict) in enumerate(scatter_dict_alpha_zero.items()):
+    for j, objective in enumerate(objective_names):
+        module_result_dict = _coverage_scaled_view(objective_result_dict[objective])
+        ax = axs[j, i]
+        ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+        ax.grid(True, which='major', linestyle=':', linewidth=0.8, alpha=0.9)
+        ax.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.5)
+
+        if objective == 'coverage-cost':
+            ax.axhline(1.0, color='black', linestyle='dashed', linewidth=2.0, alpha=0.35, zorder=1)
+
+        z_all = np.concatenate([pts['z'] for pts in module_result_dict.values()])
+        z_lo, z_hi = (float(z_all.min()), float(z_all.max())) if z_all.size else (0.0, 0.0)
+
+        y_lo, y_hi, y_ticks = _panel_axis_ticks(
+            module_result_dict, 'y', 'y_err', exclude_keys={'dscluster; ensemble; lazy-greedy'}
+        )
+        y_range = y_hi - y_lo
+
+        for module, pts in module_result_dict.items():
+            x, y, z = pts['x'], pts['y'], pts['z']
+            x_err, y_err = pts['x_err'], pts['y_err']
+            lam = pts['lam']
+            lambda_star_idx = pts['lambda_star_idx']
+            is_scaled = module.endswith('lazy-greedy')
+            color = _muted(color_dict.get(module, 'grey'))
+            sizes = _size_from_length(z, z_lo, z_hi)
+
+            ax.errorbar(
+                x, y, xerr=_visible_err(x_err), yerr=_visible_err_frac(y_err, y_range), fmt='none',
+                ecolor=color, alpha=0.5, capsize=3, zorder=1,
+            )
+            ax.scatter(
+                x, y,
+                label=None if is_scaled else module,
+                color=color,
+                marker='o',
+                s=sizes,
+                edgecolor='k',
+                alpha=0.75 if is_scaled else 0.9,
+                zorder=2 if is_scaled else 3,
+            )
+
+            _draw_lambda_arrows_2d(
+                ax, x, y, lam, color,
+                linewidth=2.5 if is_scaled else 3.0,
+                zorder=2 if is_scaled else 4,
+            )
+
+            if lambda_star_idx is not None:
+                ax.scatter(
+                    x[lambda_star_idx], y[lambda_star_idx],
+                    marker='*', s=700, color=color, edgecolor='black',
+                    linewidth=1.0 if is_scaled else 1.2, zorder=6, alpha=0.9,
+                )
+
+        y_margin = 0.05 * y_range if y_range > 0 else 0.05
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(y_lo - y_margin, y_hi + y_margin)
+        ax.set_xticks([0, 0.5, 1])
+        ax.set_yticks(y_ticks)
+        ax.set_xticklabels(['0.0', '0.5', '1.0'])
+        ax.set_yticklabels(_panel_tick_labels(y_ticks))
+        ax.tick_params(axis='both', which='major', labelsize=28)
+
+        if j == 0:
+            if dataset == "kddcup":
+                ax.set_title(rf"$KDDCup$", pad=10)
+            else:
+                ax.set_title(rf"${dataset.capitalize()}$", pad=10)
+
+        if j == len(objective_names) - 1:
+            ax.set_xlabel(r"$\bar{g}$", fontsize=36)
+        if i == 0:
+            ax.set_ylabel(
+                rf"$\bar{{\beta}}_{{{beta_subscript_dict.get(objective, '')}}}$",
+                fontsize=36, rotation=0, labelpad=60,
+            )
+
+plt.tight_layout()
+
+if NORMALIZE_BY_TOTAL_COVERAGE:
+    fig.suptitle(r"$\beta$ scaled by $n / n_m$ (total coverage)", y=1.01, fontsize=20)
+
+plt.savefig(
+    "../figures/experiments/bicriteria_2d_sized_alpha_zero"
+    + ("_covnorm" if NORMALIZE_BY_TOTAL_COVERAGE else "")
+    + ".pdf",
+    bbox_inches='tight',
+    dpi=300
+)
 plt.show()
 
 # %% [markdown]
