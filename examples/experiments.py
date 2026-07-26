@@ -1938,9 +1938,9 @@ plt.show()
 # %% [markdown]
 # ### Bicriteria Plots (2D, Sized by Rule Length)
 #
-# Same `(g, beta)` axes and per-axis normalization as the 3D scatter above (`scatter_dict`: `x = obj1 / n`, `y = obj2 / cost_normalizer` -- unlike the collapsed-`obj4` 2D plot's joint min-max scaling), but rule length (`s`) is dropped as a third axis and instead drives marker size, inversely and per-panel: within each (dataset, objective) panel, the point with the smallest `s` gets the largest marker and the point with the largest `s` gets the smallest. Layout/coloring/error-bar conventions otherwise match the 2D collapsed plot above. The one deliberate change: the connector arrows between consecutive lambda values are dashed for both PEC variants here (the 2D collapsed plot above draws distorted-greedy's arrows solid) -- drawn with `FancyArrowPatch` rather than `quiver`, since `quiver`'s shaft is a filled polygon that silently ignores `linestyle`.
+# Same `(g, beta)` axes and per-axis normalization as the 3D scatter above (`scatter_dict`: `x = obj1 / n`, `y = obj2 / cost_normalizer` -- unlike the collapsed-`obj4` 2D plot's joint min-max scaling), but rule length (`s`) is dropped as a third axis and instead drives marker size, inversely and per-panel: within each (dataset, objective) panel, the point with the smallest `s` gets the largest marker and the point with the largest `s` gets the smallest. Layout/coloring/error-bar conventions otherwise match the 2D collapsed plot above. The one deliberate change: PEC and ScaledGreedy are drawn as a single line through their swept lambda values (in lambda order) rather than a scatter point per lambda -- the only marker on either curve sits at lambda*, sized the same inverse-rule-length way. PEC's line is solid and drawn above (higher zorder) ScaledGreedy's, which is dashed and half-opaque, so PEC's curve is never occluded.
 #
-# Marker size is *not* used to separate PEC from ScaledGreedy here (unlike the 2D collapsed plot's 500-vs-250 split) -- color already does that, and size is spent entirely on encoding `s`. No shared size legend is provided since the size scale is renormalized per panel.
+# Marker size is *not* used to separate PEC from ScaledGreedy here (unlike the 2D collapsed plot's 500-vs-250 split) -- color (and, for the two swept curves, line style/alpha) already does that, and size is spent entirely on encoding `s` at the lambda* point. No shared size legend is provided since the size scale is renormalized per panel.
 #
 # `NORMALIZE_BY_TOTAL_COVERAGE` below is a knob, not a fixed choice: `g` (x-axis) is *correct* coverage -- a point only counts if the rule that covers it also matches its baseline cluster -- so a method that covers few points can still reach a high, cost-competitive `y` while quietly ignoring the rest of the data. Toggling this on multiplies every point's `y` by `n / n_m`, where `n_m` is *total* coverage (points hit by at least one rule, right or wrong; from the same `total-coverage` measurement recorded alongside `cluster-coverage` in the experiment JSON) -- i.e. cost is restated per point the method actually attempted, not per point in the dataset, so low-coverage methods no longer look artificially cheap. This scales cleanly for the K row (cost/point vs. k-means' cost/point) and the M row (mistakes/point), but *under-corrects* for the P row: `rule-pairwise-distance` sums over pairs and is normalized by `n choose 2`, so its coverage-consistent correction is closer to quadratic in `n_m` than linear -- read that row's normalized values with that caveat in mind. The k-Means reference line stays exactly right either way: baseline k-means covers every point, so `y = 1` remains "cost per point attempted equals k-means' cost per point" whether or not the knob is on. Decision-Tree and ExKMC always cover all `n` points, so their markers should not move at all when the knob is toggled -- a useful sanity check when re-running this cell.
 
@@ -1949,8 +1949,6 @@ plt.show()
 # as the 3D scatter (scatter_dict), with rule length (obj3) encoded as marker
 # size instead of a third axis. Uncertainty: Decision-Tree/IDS get errorbar
 # whiskers; safe to call unconditionally since other modules' err arrays are 0.
-
-from matplotlib.patches import FancyArrowPatch
 
 # Knob: rescale every point's y (beta) by n / total-coverage, so cost is
 # stated per point the method actually attempted to cover rather than per
@@ -1980,26 +1978,6 @@ def _size_from_length(z, z_lo, z_hi):
     rng = z_hi - z_lo
     t = (z_hi - z) / rng if rng > 0 else np.ones_like(z)
     return SIZE_MIN + t * (SIZE_MAX - SIZE_MIN)
-
-# quiver() draws its shaft as a filled polygon, not a stroked line, so
-# set_linestyle('dashed') on it is a silent no-op -- confirmed by rendering
-# and checking arrows.get_linestyle() after the call (always resolves to the
-# empty [0, [0, 0]] dash pattern regardless of what's passed in). FancyArrowPatch
-# strokes its shaft instead (same primitive the 3D scatter's _Arrow3D uses),
-# so it dashes correctly; used here in place of quiver for that reason alone.
-def _draw_lambda_arrows_2d(ax, x, y, lam, color, *, linewidth, zorder):
-    if lam is None or len(lam) <= 1:
-        return
-    order = np.argsort(lam)
-    xs, ys = x[order], y[order]
-    for k in range(len(xs) - 1):
-        arrow = FancyArrowPatch(
-            (xs[k], ys[k]), (xs[k + 1], ys[k + 1]),
-            mutation_scale=16, lw=linewidth, arrowstyle='-|>',
-            shrinkA=0, shrinkB=0, color=color, alpha=0.5,
-            linestyle='dashed', zorder=zorder,
-        )
-        ax.add_patch(arrow)
 
 fig, axs = plt.subplots(
     len(objective_names), len(scatter_dict),
@@ -2051,28 +2029,42 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
                 x, y, xerr=_visible_err(x_err), yerr=_visible_err_frac(y_err, y_range), fmt='none',
                 ecolor=color, alpha=0.5, capsize=3, zorder=1,
             )
-            ax.scatter(
-                x, y,
-                label=None if is_scaled else module,
-                color=color,
-                marker='o',
-                s=sizes,
-                edgecolor='k',
-                alpha=0.75 if is_scaled else 0.9,
-                zorder=2 if is_scaled else 3,
-            )
 
-            _draw_lambda_arrows_2d(
-                ax, x, y, lam, color,
-                linewidth=2.5 if is_scaled else 3.0,
-                zorder=2 if is_scaled else 4,
-            )
+            if lam is not None:
+                # PEC/ScaledGreedy: a single line through every lambda value
+                # (in lambda order), with no per-point markers -- the only
+                # marker on the curve is at lambda* (below). PEC is drawn
+                # solid and above ScaledGreedy (higher zorder), which is
+                # dashed and faint, so PEC's curve is never occluded.
+                order = np.argsort(lam)
+                ax.plot(
+                    x[order], y[order],
+                    label=None if is_scaled else module,
+                    color=color,
+                    linewidth=2.5 if is_scaled else 3.0,
+                    linestyle='dashed' if is_scaled else 'solid',
+                    alpha=0.5 if is_scaled else 0.9,
+                    zorder=2 if is_scaled else 4,
+                )
+            else:
+                ax.scatter(
+                    x, y,
+                    label=module,
+                    color=color,
+                    marker='o',
+                    s=sizes,
+                    edgecolor='k',
+                    alpha=0.9,
+                    zorder=3,
+                )
 
             if lambda_star_idx is not None:
                 ax.scatter(
                     x[lambda_star_idx], y[lambda_star_idx],
-                    marker='*', s=700, color=color, edgecolor='black',
-                    linewidth=1.0 if is_scaled else 1.2, zorder=6, alpha=0.9,
+                    marker='o', s=sizes[lambda_star_idx], color=color, edgecolor='black',
+                    linewidth=1.0 if is_scaled else 1.2,
+                    zorder=3 if is_scaled else 5,
+                    alpha=0.75 if is_scaled else 0.9,
                 )
 
         y_margin = 0.05 * y_range if y_range > 0 else 0.05
@@ -2142,7 +2134,7 @@ legend_elements.append(
     mlines.Line2D(
         [], [],
         color='white',
-        marker='*',
+        marker='o',
         markersize=30,
         markeredgecolor='k',
         markeredgewidth=1.2,
@@ -2360,8 +2352,6 @@ for dataset, experiment_dict in dataset_lambda_experiment_dict_alpha_zero.items(
 # Plot results (alpha=0) -- identical styling/logic to the main 2D Sized by Rule Length plot
 # above, sourced from scatter_dict_alpha_zero instead of scatter_dict.
 
-from matplotlib.patches import FancyArrowPatch
-
 # Knob: rescale every point's y (beta) by n / total-coverage. See the main 2D
 # Sized by Rule Length section's markdown note above for what this does and
 # does not correct for.
@@ -2387,20 +2377,6 @@ def _size_from_length(z, z_lo, z_hi):
     rng = z_hi - z_lo
     t = (z_hi - z) / rng if rng > 0 else np.ones_like(z)
     return SIZE_MIN + t * (SIZE_MAX - SIZE_MIN)
-
-def _draw_lambda_arrows_2d(ax, x, y, lam, color, *, linewidth, zorder):
-    if lam is None or len(lam) <= 1:
-        return
-    order = np.argsort(lam)
-    xs, ys = x[order], y[order]
-    for k in range(len(xs) - 1):
-        arrow = FancyArrowPatch(
-            (xs[k], ys[k]), (xs[k + 1], ys[k + 1]),
-            mutation_scale=16, lw=linewidth, arrowstyle='-|>',
-            shrinkA=0, shrinkB=0, color=color, alpha=0.5,
-            linestyle='dashed', zorder=zorder,
-        )
-        ax.add_patch(arrow)
 
 fig, axs = plt.subplots(
     len(objective_names), len(scatter_dict_alpha_zero),
@@ -2440,28 +2416,42 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict_alpha_zero.ite
                 x, y, xerr=_visible_err(x_err), yerr=_visible_err_frac(y_err, y_range), fmt='none',
                 ecolor=color, alpha=0.5, capsize=3, zorder=1,
             )
-            ax.scatter(
-                x, y,
-                label=None if is_scaled else module,
-                color=color,
-                marker='o',
-                s=sizes,
-                edgecolor='k',
-                alpha=0.75 if is_scaled else 0.9,
-                zorder=2 if is_scaled else 3,
-            )
 
-            _draw_lambda_arrows_2d(
-                ax, x, y, lam, color,
-                linewidth=2.5 if is_scaled else 3.0,
-                zorder=2 if is_scaled else 4,
-            )
+            if lam is not None:
+                # PEC/ScaledGreedy: a single line through every lambda value
+                # (in lambda order), with no per-point markers -- the only
+                # marker on the curve is at lambda* (below). PEC is drawn
+                # solid and above ScaledGreedy (higher zorder), which is
+                # dashed and faint, so PEC's curve is never occluded.
+                order = np.argsort(lam)
+                ax.plot(
+                    x[order], y[order],
+                    label=None if is_scaled else module,
+                    color=color,
+                    linewidth=2.5 if is_scaled else 3.0,
+                    linestyle='dashed' if is_scaled else 'solid',
+                    alpha=0.5 if is_scaled else 0.9,
+                    zorder=2 if is_scaled else 4,
+                )
+            else:
+                ax.scatter(
+                    x, y,
+                    label=module,
+                    color=color,
+                    marker='o',
+                    s=sizes,
+                    edgecolor='k',
+                    alpha=0.9,
+                    zorder=3,
+                )
 
             if lambda_star_idx is not None:
                 ax.scatter(
                     x[lambda_star_idx], y[lambda_star_idx],
-                    marker='*', s=700, color=color, edgecolor='black',
-                    linewidth=1.0 if is_scaled else 1.2, zorder=6, alpha=0.9,
+                    marker='o', s=sizes[lambda_star_idx], color=color, edgecolor='black',
+                    linewidth=1.0 if is_scaled else 1.2,
+                    zorder=3 if is_scaled else 5,
+                    alpha=0.75 if is_scaled else 0.9,
                 )
 
         y_margin = 0.05 * y_range if y_range > 0 else 0.05
