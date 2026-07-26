@@ -1965,6 +1965,15 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
         ax.grid(True, which='major', linestyle=':', linewidth=0.8, alpha=0.9)
         ax.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.5)
 
+        # k-Means baseline reference: y = obj2 / cost_normalizer equals 1
+        # exactly when obj2 (rule-clustering cost) matches the k-means
+        # baseline SSE -- only meaningful for the coverage-cost (K) row,
+        # whose cost_normalizer is defined in those terms (see the
+        # scatter_dict collection cell above); the other two objectives'
+        # cost_normalizer (n, n choose 2) has no such correspondence.
+        if objective == 'coverage-cost':
+            ax.axhline(1.0, color='black', linestyle='dashed', linewidth=2.0, alpha=0.35, zorder=1)
+
         # Rule-length range across every module in this panel (not just
         # comparison modules) -- matches how the 3D scatter's z ticks are
         # computed per panel, since s's scale varies by dataset/objective.
@@ -1999,7 +2008,7 @@ for i, (dataset, objective_result_dict) in enumerate(scatter_dict.items()):
                 marker='o',
                 s=sizes,
                 edgecolor='k',
-                alpha=0.9,
+                alpha=0.75 if is_scaled else 0.9,
                 zorder=2 if is_scaled else 3,
             )
 
@@ -2046,6 +2055,67 @@ plt.savefig(
     bbox_inches='tight',
     dpi=300
 )
+plt.show()
+
+# %%
+# Separate legend for the sized plot above: same module entries as the
+# shared bicriteria legend (module_order / legend_labels, defined in that
+# earlier cell), plus the k-Means baseline reference line -- kept as its own
+# saved legend rather than folded into the shared one, since that line only
+# appears in this plot's coverage-cost row.
+fig, ax = plt.subplots(figsize=(34, 2.2))
+
+legend_elements = []
+for cmod in module_order:
+    color = _muted(color_dict[cmod])
+    legend_elements.append(
+        mlines.Line2D(
+            [], [],
+            color=color,
+            marker='o',
+            markersize=30,
+            markeredgecolor='k',
+            markeredgewidth=1.5,
+            alpha=0.9,
+            linestyle='None',
+            linewidth=2.0,
+            label=legend_labels.get(cmod, cmod)
+        )
+    )
+
+legend_elements.append(
+    mlines.Line2D(
+        [], [],
+        color='white',
+        marker='*',
+        markersize=30,
+        markeredgecolor='k',
+        markeredgewidth=1.2,
+        linestyle='None',
+        label=r'$\lambda^*$'
+    )
+)
+
+legend_elements.append(
+    mlines.Line2D(
+        [], [],
+        color='black',
+        linestyle='dashed',
+        linewidth=2.0,
+        alpha=0.35,
+        label=r'\emph{k-Means}'
+    )
+)
+
+ax.legend(handles=legend_elements, ncol=10, loc='center', frameon=False, columnspacing=1.4, handletextpad=0.5)
+ax.axis('off')
+
+plt.savefig(
+    "../figures/experiments/bicriteria_2d_sized_legend.pdf",
+    bbox_inches='tight',
+    dpi=300
+)
+
 plt.show()
 
 # %% [markdown]
