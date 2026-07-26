@@ -12,8 +12,10 @@ modifications relative to the `0.0.3` PyPI release:
   removed.
 - `ExKMC/Tree.py`: `Tree.plot()` takes a `view` argument controlling whether the
   rendered graph is opened in a viewer, instead of always calling `Source.view()`.
-- `ExKMC/splitters/cut_finder.c`: regenerated from `cut_finder.pyx` for the current
-  Cython/Python toolchain (no behavior change).
+- `setup.py`: always builds `cut_finder` from `cut_finder.pyx` via `cythonize()` (the
+  upstream setup.py only did this behind a `--cython` flag that build tools like `uv`
+  never pass, and otherwise compiled a pre-generated `cut_finder.c` that isn't checked
+  into this repo, per the repo-wide `*.c` `.gitignore` rule). No behavior change.
 
 These are the same fixes present in a couple of still-open/unmerged pull requests
 against the upstream repository.

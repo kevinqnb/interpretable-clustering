@@ -1,26 +1,27 @@
 from setuptools import Extension, setup, find_packages
+from Cython.Build import cythonize
 import numpy
-from ExKMC import __version__
 import sys
+from ExKMC import __version__
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
-if '--cython' in sys.argv:
-    from Cython.Build import cythonize
-    extensions = [
-        Extension(
-            "cut_finder",
-            ["ExKMC/splitters/cut_finder.pyx"],
-            extra_compile_args=['-fopenmp'],
-            extra_link_args=['-fopenmp']
-        )
-    ]
-    extensions = cythonize(extensions)
-    sys.argv.remove("--cython")
-else:
-    extensions = [Extension("cut_finder", ["ExKMC/splitters/cut_finder.c"])]
+# Apple's system clang doesn't support -fopenmp; only pass it on platforms
+# (Linux/gcc) where the OpenMP-parallel prange() sections in cut_finder.pyx
+# can actually be compiled. Elsewhere the pragmas are silently ignored and
+# the loops just run single-threaded.
+openmp_args = ['-fopenmp'] if sys.platform.startswith('linux') else []
+
+extensions = cythonize([
+    Extension(
+        "cut_finder",
+        ["ExKMC/splitters/cut_finder.pyx"],
+        extra_compile_args=openmp_args,
+        extra_link_args=openmp_args,
+    )
+])
 
 
 setup(

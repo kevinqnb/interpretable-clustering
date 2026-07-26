@@ -37,7 +37,7 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.uv.extra-build-dependencies]
-exkmc = ["numpy"]
+exkmc = ["numpy", "cython"]
 
 [tool.uv.sources]
 # Vendored, patched copies of two unmaintained packages that no longer build against
