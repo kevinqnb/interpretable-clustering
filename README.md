@@ -54,3 +54,10 @@ on the paper, while trying to leave the code structurally intact. Here are a few
 cases, although there may be more (we are working on updating this):
 * `ScaledGreedy` is referred to as lazy greedy in the code. 
 * `PEC` may sometimes be referred to as `DSCluster` in the experiment results 
+
+## AI Usage
+
+Parts of this codebase (e.g. boilerplate code in `experiments/`, 
+visualizations in `examples/experiments.ipynb`, tests, and documentation) were 
+developed with the assistance of AI coding tools (Claude Code). All code has been 
+reviewed and tested by the authors.
