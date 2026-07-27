@@ -199,7 +199,7 @@ objective_dict = {
 # broadcast under the same set of keys (`all_lambda_values`) once results are
 # merged by `lambda_combine.py`.
 
-n_lambda_points = 10  # matches alphas.py's n_compare convention
+n_lambda_points = 100  # matches alphas.py's n_compare convention
 half = n_lambda_points // 2 + 1
 
 lambda_star_dict = {}
