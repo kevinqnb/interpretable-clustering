@@ -2166,6 +2166,137 @@ plt.savefig(
 plt.show()
 
 # %% [markdown]
+# ### Sum of Rule Lengths (Bicriteria Figure, LaTeX Table)
+#
+# Numeric companion to the 2D Sized by Rule Length plot above: the summed
+# rule length shown by marker size (obj3, unnormalized) at the same point
+# plotted there -- lambda* for PEC/ScaledGreedy, the single lambda-independent
+# value for every other module. One row per algorithm, one column per
+# dataset, following the same layout/bolding convention as the Weighted
+# Average Rule Length table further below (3 smallest per column bolded,
+# since a shorter summed rule length is the more interpretable result).
+
+# %%
+# Collect the sum-rule-length value plotted (via marker size) in the 2D Sized
+# bicriteria plot, as (mean, SE) tuples -- SE=NaN for deterministic modules
+# (see `_se`). For PEC/ScaledGreedy this is read at the lambda gridpoint
+# closest to lambda* (the same point starred in that plot); for every other
+# module sum-rule-length doesn't vary across lambda gridpoints (it isn't a
+# function of lambda), so any key gives the same value.
+sum_rule_length_dict = {
+    (objective, dataset): {}
+    for dataset in dataset_lambda_experiment_dict.keys()
+    for objective in objective_names
+}
+
+for dataset, experiment_dict in dataset_lambda_experiment_dict.items():
+    for objective in objective_names:
+        candidate_modules = [
+            m for m in experiment_dict['modules'].keys()
+            if 'dscluster' in m and objective == m.split(';')[1].strip()
+        ]
+        scaled_module = [m for m in candidate_modules if m.strip().endswith('lazy-greedy')][0]
+        distorted_module = [m for m in candidate_modules if m.strip().endswith('distorted-greedy')][0]
+        base_module_name = distorted_module.rsplit(';', 1)[0].strip()
+        lambda_star = experiment_dict['fixed-parameters']['lambda_star'][base_module_name]
+
+        for cmod in comparison_modules:
+            if cmod not in experiment_dict['modules']:
+                continue
+            srl = experiment_dict['modules'][cmod]['sum-rule-length']
+            any_key = next(iter(srl))
+            sum_rule_length_dict[(objective, dataset)][cmod] = (_scalar(srl[any_key]), _se(srl[any_key]))
+
+        for mod, out_key in [
+            (distorted_module, 'dscluster; ensemble'),
+            (scaled_module, 'dscluster; ensemble; lazy-greedy'),
+        ]:
+            lam_dict = experiment_dict['modules'][mod]['lambda']
+            star_key = min(lam_dict, key=lambda k: abs(lam_dict[k] - lambda_star))
+            srl = experiment_dict['modules'][mod]['sum-rule-length'][star_key]
+            sum_rule_length_dict[(objective, dataset)][out_key] = (_scalar(srl), _se(srl))
+
+# %%
+# LaTeX table built from `sum_rule_length_dict` above: one row per algorithm,
+# one column per dataset. Same row/column layout as the Weighted Average Rule
+# Length table below -- ScaledGreedy only under k-Means (coverage-cost), PEC
+# gets a row per objective. The 3 smallest (shortest) sums in each dataset
+# column are bolded; comparing means only (not SE), ties broken by whichever
+# sorts first.
+_srl_pec_key = 'dscluster; ensemble'
+_srl_scaled_greedy_key = 'dscluster; ensemble; lazy-greedy'
+
+_srl_table_rows = [
+    (r'\texttt{DecisionTree}', 'coverage-cost', 'Decision-Tree'),
+    (r'\texttt{ExKMC}', 'coverage-cost', 'ExKMC'),
+    (r'\texttt{CBA}', 'coverage-cost', 'CBA'),
+    (r'\texttt{CN2}', 'coverage-cost', 'CN2'),
+    (r'\texttt{IDS}', 'coverage-cost', 'IDS'),
+    (r'\texttt{ScaledGreedy} (\emph{k-Means}, $h_K$)', 'coverage-cost', _srl_scaled_greedy_key),
+    (r'\texttt{PEC} (\emph{k-Means}, $h_K$)', 'coverage-cost', _srl_pec_key),
+    (r'\texttt{PEC} (\emph{Mistakes}, $h_M$)', 'coverage-mistake', _srl_pec_key),
+    (r'\texttt{PEC} (\emph{Pairwise Distance}, $h_P$)', 'coverage-pairwise-distance', _srl_pec_key),
+]
+
+_srl_datasets = list(dataset_lambda_experiment_dict.keys())
+
+def _srl_dataset_header(dataset):
+    return "KDDCup" if dataset == "kddcup" else dataset.capitalize()
+
+# cell_values[label][dataset] = (mean, se) or None if that module has no
+# entry for that (objective, dataset) -- e.g. a dataset missing scaled-greedy.
+_srl_cell_values = {
+    label: {
+        dataset: sum_rule_length_dict.get((objective, dataset), {}).get(module_key)
+        for dataset in _srl_datasets
+    }
+    for label, objective, module_key in _srl_table_rows
+}
+
+# Per dataset (column), the 3 rows with the smallest mean get bolded.
+_srl_bold_labels = {
+    dataset: {
+        label for label, _ in sorted(
+            (
+                (label, _srl_cell_values[label][dataset][0])
+                for label, _, _ in _srl_table_rows
+                if _srl_cell_values[label][dataset] is not None
+            ),
+            key=lambda t: t[1],
+        )[:3]
+    }
+    for dataset in _srl_datasets
+}
+
+def _fmt_srl_latex_cell(label, dataset):
+    entry = _srl_cell_values[label][dataset]
+    if entry is None:
+        return "--"
+    mean, se = entry
+    text = f"{mean:.1f}" if np.isnan(se) else rf"{mean:.1f} $\pm$ {se:.1f}"
+    return rf"\textbf{{{text}}}" if label in _srl_bold_labels[dataset] else text
+
+_srl_lines = [
+    r"\begin{table}[t]",
+    r"\centering",
+    rf"\begin{{tabular}}{{l{'c' * len(_srl_datasets)}}}",
+    r"\toprule",
+    "Model & " + " & ".join(rf"\emph{{{_srl_dataset_header(d)}}}" for d in _srl_datasets) + r" \\",
+    r"\midrule",
+]
+for label, _, _ in _srl_table_rows:
+    _srl_lines.append(label + " & " + " & ".join(_fmt_srl_latex_cell(label, d) for d in _srl_datasets) + r" \\")
+_srl_lines += [
+    r"\bottomrule",
+    r"\end{tabular}",
+    r"\caption{Sum of rule lengths (mean $\pm$ SE where applicable) at the point plotted in the 2D Sized by Rule Length bicriteria figure.}",
+    r"\label{tab:sum-rule-length}",
+    r"\end{table}",
+]
+
+print("\n".join(_srl_lines))
+
+# %% [markdown]
 # ### Bicriteria Plots (2D, Sized by Rule Length) (Alpha Zero)
 #
 # Same as the 2D Sized by Rule Length plot above, but PEC is fit with `alpha_val=0` (no rule-length penalty) instead of the elbow-selected alpha, sourced from `lambda_alpha_zero.py`'s output (`lambda_combine_alpha_zero.py`'s, for mnist/fashion, which merges in `lambda_exkmc_alpha_zero.py`'s ExKMC fit). Only PEC's points/curves differ; comparison models are unaffected. Shares the 2D Sized legend above (`bicriteria_2d_sized_legend.pdf`).
